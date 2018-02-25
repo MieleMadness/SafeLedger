@@ -1,0 +1,3 @@
+[submodule "src/main/installManager"]
+	path = src/main/installManager
+	url = ssh://seufster@cborghome.ddns.net/opt/gitcborg/cborgtech-license.git

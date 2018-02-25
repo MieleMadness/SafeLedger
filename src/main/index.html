@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>SafeLedger</title>
+    <link rel="stylesheet" href="./../../node_modules/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="./../../node_modules/bootstrap/dist/css/bootstrap.min.css">
+    <link id="styleSheet" href="./css/site.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div id="searchArea" class="row">
+        <div class="col-xs-2 dark1bg content-search">
+          <span>&nbsp</span>
+        </div>
+        <div class="col-xs-2 dark2bg content-search">
+          <div class="input-group">
+            <div class="input-group-btn">
+              <input id="groupSearch" class="form-control" placeholder="Search for...">
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-3 dark3bg content-search">
+          <div class="input-group">
+            <div class="input-group-btn">
+              <input id="recordSearch" class="form-control" placeholder="Search for...">
+            </div>
+          </div>
+        </div>
+        <div class="col-xs-5 dark4bg">
+          <div id="statusArea">&nbsp</div>
+        </div>
+      </div>
+      <div id="mainArea" class="row">
+        <div class="col-xs-2 dark1bg content-middle">
+          <div id="vaultArea"></div>
+        </div>
+        <div class="col-xs-2 dark2bg content-middle">
+          <div id="groupArea"></div>
+        </div>
+        <div class="col-xs-3 dark3bg content-middle">
+          <div id="recordArea"></div>
+        </div>
+        <div class="col-xs-5 dark4bg content-middle">
+          <div id="detailArea">
+            <h1 class="page-header">Welcome to SafeLedger !</h1>
+            <hr>
+            <p>Loading <i class="fa fa-refresh fa-spin" style="font-size:24px"></i></p>
+          </div>
+        </div>
+      </div>
+      <div id="buttonArea" class="row">
+        <div class="col-xs-2 dark1bg text-center">
+            <button type="button" id="addVault" class="btn btn-default bottom-space">
+              <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Profile
+            </button>
+        </div>
+        <div class="col-xs-2 dark2bg text-center">
+            <button type="button" id="addGroup" class="btn btn-default bottom-space">
+              <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Wallet
+            </button>
+        </div>
+        <div class="col-xs-3 dark3bg text-center">
+            <button type="button" id="addRecord" class="btn btn-default bottom-space">
+              <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add Coin
+            </button>
+        </div>
+        <div class="col-xs-5 dark4bg">
+          <div class="row">
+            <div class="col-xs-6 ">
+              <button type="button" id="encryptionSettings" class="btn btn-default bottom-space">
+                <i class="fa fa-lock"></i> Encryption
+              </button>
+            </div>
+            <div class="col-xs-6 copy-right">
+              <span class="glyphicon glyphicon-copyright-mark" aria-hidden="true"></span> 2018 SafeLedger. All rights reserved.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="bottomArea" class="row">
+        <div class="col-xs-12">
+          &nbsp
+        </div>
+      </div>
+    </div>
+
+    <script>window.$ = window.jQuery = require('./../../node_modules/jquery/dist/jquery.min');</script>
+    <script src="./../../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script>
+      // You can also require other files to run in this process
+      require('./renderer.js')
+    </script>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+{
+  "name": "safe-ledger",
+  "productName": "SafeLedger",
+  "version": "1.2.0",
+  "description": "Secure Information control system",
+  "main": "src/main/main.js",
+  "scripts": {
+    "buildmac": "rimraf SafeLedger-* && electron-packager . --platform=darwin --arch=x64 --overwrite --out=release-builds --prune=true --icon=sl",
+    "buildwin": "rimraf SafeLedger-* && electron-packager . --platform=win32 --arch=x64 --overwrite --out=release-builds --prune=true --asar --icon=sl",
+    "start": "electron ."
+  },
+  "repository": "https://github.com/seufster71/safe-ledger",
+  "keywords": [
+    "Electron",
+    "SafeLedger"
+  ],
+  "author": "GitHub",
+  "license": "Apache-2.0",
+  "licenses": [
+    {
+      "type": "Apache-2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0"
+    }
+  ],
+  "devDependencies": {
+    "electron": "~1.7.8",
+    "electron-packager": "^10.1.1",
+    "electron-prebuilt": "^1.4.13",
+    "rimraf": "^2.6.2"
+  },
+  "dependencies": {
+    "asar": "^0.14.2",
+    "bootstrap": "^3.3.7",
+    "drivelist": "^6.0.4",
+    "font-awesome": "^4.7.0",
+    "jquery": "^3.2.1"
+  }
+}
