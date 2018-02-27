@@ -5,8 +5,8 @@
   Author: Edward Seufert - Cborgtech, LLC
 */
 
-const electron = require('electron')
-const remote = electron.remote
+const electron = require('electron');
+const remote = electron.remote;
 const {ipcRenderer : ipc } = electron;
 const crypto = require('crypto');
 const vault = require('./vault');
@@ -129,6 +129,9 @@ window.addEventListener("beforeunload", function (event) {
         }
         if (group.backupphrase != null) {
           group.backupphrase = crypto.randomBytes(group.backupphrase.length * 2).toString('hex');
+        }
+        if (group.backuplink != null) {
+          group.backuplink = crypto.randomBytes(group.backuplink.length * 2).toString('hex');
         }
         if (group.notes != null) {
           group.notes = crypto.randomBytes(group.notes.length * 2).toString('hex');
@@ -338,34 +341,8 @@ const createEditVault = (vault) => {
   const divider = document.createElement('hr');
   area.appendChild(divider);
   const form = document.createElement('form');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      saveBtn.disabled = true;
-      const name = document.getElementById('inputName');
-      if (name != null && name.value != "") {
-        if (vault != null) {
-          vault.name = name.value;
-          vault.modified = Date();
-          saving.state = true;
-          status.loadStatus();
-          ipc.send('process-vault-list', {cryptoKey:masterCrypto,action:"modify",vault,vaultList});
-        } else {
-          vault = {};
-          vault.name = name.value;
-          vault.created = Date();
-          saving.state = true;
-          status.loadStatus();
-          ipc.send('process-vault-list', {cryptoKey:masterCrypto,action:"create",vault,vaultList});
-        }
-      } else {
-        saveBtn.disabled = false;
-      }
-    }
-  });
   area.appendChild(form);
+
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
@@ -384,7 +361,7 @@ const createEditVault = (vault) => {
   formgroup.appendChild(input);
 
   const saveBtn = document.createElement('button');
-  saveBtn.type = "button";
+  saveBtn.type = "submit";
   saveBtn.id = "saveBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
@@ -414,7 +391,7 @@ const createEditVault = (vault) => {
       }
     }
   });
-  area.appendChild(saveBtn);
+  form.appendChild(saveBtn);
 };
 
 const showVaultDetail = (vault) => {
@@ -522,35 +499,8 @@ const showLogin = () => {
   area.appendChild(divider);
 
   const form = document.createElement('form');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      saveBtn.disabled = true;
-      let masterCryptoInput = document.getElementById('masterCryptoInput');
-      let statusCode = true;
-      let statusMsg = "";
-      let rx = new RegExp(/[a-z]/);
-      if (!(rx.test(masterCryptoInput.value))) { statusCode = false; statusMsg='Password must contain at least 1 alpha character' };
-      rx = new RegExp(/[0-9]/);
-      if (!(rx.test(masterCryptoInput.value))) { statusCode = false; statusMsg='Password must contain at least 1 number' };
-      rx = new RegExp(/[A-Z]/);
-      if (!(rx.test(masterCryptoInput.value))) { statusCode = false; statusMsg='Password must contain at least 1 Uppercase letter' };
-      if (!(masterCryptoInput.value.length >= 8)) { statusCode = false; statusMsg='Password must be at least 8 character' };
-      if (statusCode == false){
-        saveBtn.disabled = false;
-        status.showStatus({status:'ERROR',statusMsg});
-      } else {
-        saving.state = true;
-        status.loadStatus();
-        masterCrypto = crypto.createHmac('sha256',masterCryptoInput.value.split("").reverse().join("")).update(masterCryptoInput.value).digest();
-        ipc.send('read-vaultlist-init',{cryptoKey:masterCrypto});
-        masterCryptoInput.value = "********************";
-      }
-    }
-  });
   area.appendChild(form);
+
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
@@ -575,7 +525,7 @@ const showLogin = () => {
   text4.innerHTML = "Must contain Uppercase letters";
   area.appendChild(text4);
   const saveBtn = document.createElement('button');
-  saveBtn.type = "button";
+  saveBtn.type = "submit";
   saveBtn.id = "loginBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<i class='fa fa-unlock'></i> Login";
@@ -606,7 +556,7 @@ const showLogin = () => {
       }
     }
   });
-  area.appendChild(saveBtn);
+  form.appendChild(saveBtn);
 };
 
 const showInstallCode = (params) => {
@@ -650,7 +600,7 @@ const showInstallCode = (params) => {
   formgroup.appendChild(input);
 
   const saveBtn = document.createElement('button');
-  saveBtn.type = "button";
+  saveBtn.type = "submit";
   saveBtn.id = "saveBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
@@ -681,7 +631,7 @@ const showInstallCode = (params) => {
       }
     }
   });
-  area.appendChild(saveBtn);
+  form.appendChild(saveBtn);
 };
 
 ipc.on('result-save-install-code',(evt, params) => {

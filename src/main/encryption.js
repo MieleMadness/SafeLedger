@@ -24,38 +24,8 @@ const renderEncryptionDetail = (params) => {
   area.appendChild(created);
 
   const form = document.createElement('form');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (params.saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      editBtn.disabled = true;
-      let statusCode = true;
-      let statusMsg = "";
-      let rx = new RegExp(/[a-z]/);
-      if (!(rx.test(inputNewPassword.value))) { statusCode = false; statusMsg='Password must contain at least 1 alpha character' };
-      rx = new RegExp(/[0-9]/);
-      if (!(rx.test(inputNewPassword.value))) { statusCode = false; statusMsg='Password must contain at least 1 number' };
-      rx = new RegExp(/[A-Z]/);
-      if (!(rx.test(inputNewPassword.value))) { statusCode = false; statusMsg='Password must contain at least 1 Uppercase letter' };
-      if (inputOldPassword.value == inputNewPassword.value) { statusCode = false; statusMsg='Old password can not match new password' };
-      if (!(inputNewPassword.value.length >= 8)) { statusCode = false; statusMsg='Password must be at least 8 character' };
-      if (statusCode == false){
-        editBtn.disabled = false;
-        statusMgr.showStatus({status:'ERROR',statusMsg});
-      } else {
-        params.saving.state = true;
-        statusMgr.loadStatus();
-        const oldCrypto = crypto.createHmac('sha256',inputOldPassword.value.split("").reverse().join("")).update(inputOldPassword.value).digest();
-        const newCrypto= crypto.createHmac('sha256',inputNewPassword.value.split("").reverse().join("")).update(inputNewPassword.value).digest();
-        inputOldPassword.value = "********************";
-        inputNewPassword.value = "********************";
-        ipc.send('process-rotate-crypto', {oldCryptoKey:oldCrypto,newCryptoKey:newCrypto,vaultList:params.vaultList});
-      }
-    }
-  });
-
   area.appendChild(form);
+  
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
@@ -84,7 +54,7 @@ const renderEncryptionDetail = (params) => {
   formgroup.appendChild(inputNewPassword);
 
   const editBtn = document.createElement('button');
-  editBtn.type = "button";
+  editBtn.type = "submit";
   editBtn.id = "encryptionEditBtn";
   editBtn.className = "btn btn-default bottom-space pull-right";
   editBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
@@ -117,7 +87,7 @@ const renderEncryptionDetail = (params) => {
       }
     }
   });
-  area.appendChild(editBtn);
+  form.appendChild(editBtn);
 };
 
 exports.encrypt = (cryptoKey, clearData) => {

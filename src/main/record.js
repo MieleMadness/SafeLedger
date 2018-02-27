@@ -77,10 +77,8 @@ const createEditRecord = (params) => {
   const divider = document.createElement('hr');
   area.appendChild(divider);
   const form = document.createElement('form');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-  });
   area.appendChild(form);
+  
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
@@ -198,7 +196,7 @@ const createEditRecord = (params) => {
   formgroup.appendChild(inputNotes);
 
   const saveBtn = document.createElement('button');
-  saveBtn.type = "button";
+  saveBtn.type = "submit";
   saveBtn.id = "saveBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
@@ -254,7 +252,7 @@ const createEditRecord = (params) => {
       }
     }
   });
-  area.appendChild(saveBtn);
+  form.appendChild(saveBtn);
 };
 
 exports.showRecordDetail = (params) => {

@@ -3,9 +3,10 @@
 */
 
 const electron = require('electron');
+const remote = electron.remote;
 const {ipcRenderer : ipc } = electron;
 const statusMgr = require('./status');
-
+const con = remote.getGlobal('console');
 const record = require('./record');
 const utils = require('./utils');
 
@@ -75,56 +76,16 @@ const createEditGroup = (params) => {
   const divider = document.createElement('hr');
   area.appendChild(divider);
   const form = document.createElement('form');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (params.saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      saveBtn.disabled = true;
-      const name = document.getElementById('inputName');
-      if (name != null && name.value != "") {
-        if (params.group != null) {
-          params.group.name = name.value;
-          params.group.password = inputPassword.value;
-          params.group.backupphrase = inputBackupPhrase.value;
-          params.group.backuplink = inputBackupLink.value;
-          params.group.notes = inputNotes.value;
-          params.group.modified = Date();
-          params.vaultData.groups[params.vaultData.groupSelected] = params.group;
-          params.vaultData.groups.sort(utils.compareIgnoreCase);
-          params.vaultData.groupSelected = params.vaultData.groups.indexOf(params.group);
-          params.saving.state = true;
-          statusMgr.loadStatus();
-          ipc.send('process-group', {cryptoKey:params.cryptoKey,type:"group-modify",vaultData:params.vaultData});
-        } else {
-          let myGroup = {};
-          myGroup.name = name.value;
-          myGroup.password = inputPassword.value;
-          myGroup.backupphrase = inputBackupPhrase.value;
-          myGroup.backuplink = inputBackupLink.value;
-          myGroup.notes = inputNotes.value;
-          myGroup.created = Date();
-          params.vaultData.groups.push(myGroup);
-          params.vaultData.groups.sort(utils.compareIgnoreCase);
-          params.vaultData.groupSelected = params.vaultData.groups.indexOf(myGroup);
-          params.saving.state = true;
-          statusMgr.loadStatus();
-          ipc.send('process-group', {cryptoKey:params.cryptoKey,type:"group-create",vaultData:params.vaultData});
-        }
-      } else {
-        saveBtn.disabled = false;
-      }
-    }
-  });
   area.appendChild(form);
-  const formgroup = document.createElement('div');
-  formgroup.className = "form-group";
-  form.appendChild(formgroup);
+
+  const formGroupName = document.createElement('div');
+  formGroupName.className = "form-group";
+  form.appendChild(formGroupName);
   // name
   const label = document.createElement('label');
   label.for = "inputName";
   label.innerHTML = "Name";
-  formgroup.appendChild(label);
+  formGroupName.appendChild(label);
   const inputName = document.createElement('input');
   inputName.type = "text";
   inputName.className = "form-control";
@@ -133,12 +94,16 @@ const createEditGroup = (params) => {
   if (params.group != null) {
     inputName.value = params.group.name;
   }
-  formgroup.appendChild(inputName);
+  formGroupName.appendChild(inputName);
   //password
+  const formGroupPassword = document.createElement('div');
+  formGroupPassword.className = "form-group";
+  form.appendChild(formGroupPassword);
+
   const labelPassword = document.createElement('label');
   labelPassword.for = "inputPassword";
   labelPassword.innerHTML = "Password";
-  formgroup.appendChild(labelPassword);
+  formGroupPassword.appendChild(labelPassword);
   const inputPassword = document.createElement('input');
   inputPassword.type = "text";
   inputPassword.className = "form-control";
@@ -147,12 +112,16 @@ const createEditGroup = (params) => {
   if (params.group != null && params.group.password != null) {
     inputPassword.value = params.group.password;
   }
-  formgroup.appendChild(inputPassword);
+  formGroupPassword.appendChild(inputPassword);
   //Backup phrase
+  const formGroupPhrase = document.createElement('div');
+  formGroupPhrase.className = "form-group";
+  form.appendChild(formGroupPhrase);
+
   const labelBackupPhrase = document.createElement('label');
   labelBackupPhrase.for = "inputBackupPhrase";
   labelBackupPhrase.innerHTML = "Backup Phrase";
-  formgroup.appendChild(labelBackupPhrase);
+  formGroupPhrase.appendChild(labelBackupPhrase);
   const inputBackupPhrase = document.createElement('input');
   inputBackupPhrase.type = "text";
   inputBackupPhrase.className = "form-control";
@@ -161,12 +130,16 @@ const createEditGroup = (params) => {
   if (params.group != null && params.group.backupphrase != null) {
     inputBackupPhrase.value = params.group.backupphrase;
   }
-  formgroup.appendChild(inputBackupPhrase);
+  formGroupPhrase.appendChild(inputBackupPhrase);
   //Backup link
+  const formGroupLink = document.createElement('div');
+  formGroupLink.className = "form-group";
+  form.appendChild(formGroupLink);
+
   const labelBackupLink = document.createElement('label');
   labelBackupLink.for = "inputBackupLink";
   labelBackupLink.innerHTML = "Backup Link";
-  formgroup.appendChild(labelBackupLink);
+  formGroupLink.appendChild(labelBackupLink);
   const inputBackupLink = document.createElement('input');
   inputBackupLink.type = "text";
   inputBackupLink.className = "form-control";
@@ -175,12 +148,16 @@ const createEditGroup = (params) => {
   if (params.group != null && params.group.backuplink != null) {
     inputBackupLink.value = params.group.backuplink;
   }
-  formgroup.appendChild(inputBackupLink);
+  formGroupLink.appendChild(inputBackupLink);
   // notes
+  const formGroupNotes = document.createElement('div');
+  formGroupNotes.className = "form-group";
+  form.appendChild(formGroupNotes);
+
   const labelNotes = document.createElement('label');
   labelNotes.for = "inputNotes";
   labelNotes.innerHTML = "Notes";
-  formgroup.appendChild(labelNotes);
+  formGroupNotes.appendChild(labelNotes);
   const inputNotes = document.createElement('textarea');
   inputNotes.rows = "5";
   inputNotes.className = "form-control";
@@ -189,10 +166,10 @@ const createEditGroup = (params) => {
   if (params.group != null && params.group.notes != null) {
     inputNotes.value = params.group.notes;
   }
-  formgroup.appendChild(inputNotes);
+  formGroupNotes.appendChild(inputNotes);
 
   const saveBtn = document.createElement('button');
-  saveBtn.type = "button";
+  saveBtn.type = "submit";
   saveBtn.id = "saveBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
@@ -236,7 +213,7 @@ const createEditGroup = (params) => {
       }
     }
   });
-  area.appendChild(saveBtn);
+  form.appendChild(saveBtn);
 };
 
 exports.showGroupDetail = (params) => {
