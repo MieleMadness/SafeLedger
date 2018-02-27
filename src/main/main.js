@@ -67,7 +67,7 @@ function createWindow () {
   const template = [{
       label: "SafeLedger",
       submenu: [
-          { label: "Version 1.6"},
+          { label: "Version 1.7"},
           { type: "separator" },
           { label: "Quit", accelerator: "Command+Q", click: function() { app.quit(); }}
       ]}, {
