@@ -235,7 +235,7 @@ ipc.on('vault-list-delete', (evt, params) => {
 });
 
 ipc.on('process-group', (evt, params) => {
-  //console.log("key " + params.cryptoKey);
+  //console.log("process-group " + JSON.stringify(params.vaultData));
   vault.saveVault(path.join(vaultDir,params.vaultData.file), JSON.stringify(params.vaultData),params.cryptoKey)
     .then((val) => {
       if (val === "SUCCESS") {

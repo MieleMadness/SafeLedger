@@ -85,6 +85,10 @@ const createEditGroup = (params) => {
       if (name != null && name.value != "") {
         if (params.group != null) {
           params.group.name = name.value;
+          params.group.password = inputPassword.value;
+          params.group.backupphrase = inputBackupPhrase.value;
+          params.group.backuplink = inputBackupLink.value;
+          params.group.notes = inputNotes.value;
           params.group.modified = Date();
           params.vaultData.groups[params.vaultData.groupSelected] = params.group;
           params.vaultData.groups.sort(utils.compareIgnoreCase);
@@ -95,6 +99,10 @@ const createEditGroup = (params) => {
         } else {
           let myGroup = {};
           myGroup.name = name.value;
+          myGroup.password = inputPassword.value;
+          myGroup.backupphrase = inputBackupPhrase.value;
+          myGroup.backuplink = inputBackupLink.value;
+          myGroup.notes = inputNotes.value;
           myGroup.created = Date();
           params.vaultData.groups.push(myGroup);
           params.vaultData.groups.sort(utils.compareIgnoreCase);
@@ -112,19 +120,76 @@ const createEditGroup = (params) => {
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
+  // name
   const label = document.createElement('label');
   label.for = "inputName";
   label.innerHTML = "Name";
   formgroup.appendChild(label);
-  const input = document.createElement('input');
-  input.type = "text";
-  input.className = "form-control";
-  input.id = "inputName";
-  input.setAttribute('maxlength','25');
+  const inputName = document.createElement('input');
+  inputName.type = "text";
+  inputName.className = "form-control";
+  inputName.id = "inputName";
+  inputName.setAttribute('maxlength','25');
   if (params.group != null) {
-    input.value = params.group.name;
+    inputName.value = params.group.name;
   }
-  formgroup.appendChild(input);
+  formgroup.appendChild(inputName);
+  //password
+  const labelPassword = document.createElement('label');
+  labelPassword.for = "inputPassword";
+  labelPassword.innerHTML = "Password";
+  formgroup.appendChild(labelPassword);
+  const inputPassword = document.createElement('input');
+  inputPassword.type = "text";
+  inputPassword.className = "form-control";
+  inputPassword.id = "inputPassword";
+  inputPassword.setAttribute('maxlength','500');
+  if (params.group != null && params.group.password != null) {
+    inputPassword.value = params.group.password;
+  }
+  formgroup.appendChild(inputPassword);
+  //Backup phrase
+  const labelBackupPhrase = document.createElement('label');
+  labelBackupPhrase.for = "inputBackupPhrase";
+  labelBackupPhrase.innerHTML = "Backup Phrase";
+  formgroup.appendChild(labelBackupPhrase);
+  const inputBackupPhrase = document.createElement('input');
+  inputBackupPhrase.type = "text";
+  inputBackupPhrase.className = "form-control";
+  inputBackupPhrase.id = "inputBackupPhrase";
+  inputBackupPhrase.setAttribute('maxlength','500');
+  if (params.group != null && params.group.backupphrase != null) {
+    inputBackupPhrase.value = params.group.backupphrase;
+  }
+  formgroup.appendChild(inputBackupPhrase);
+  //Backup link
+  const labelBackupLink = document.createElement('label');
+  labelBackupLink.for = "inputBackupLink";
+  labelBackupLink.innerHTML = "Backup Link";
+  formgroup.appendChild(labelBackupLink);
+  const inputBackupLink = document.createElement('input');
+  inputBackupLink.type = "text";
+  inputBackupLink.className = "form-control";
+  inputBackupLink.id = "inputBackupLink";
+  inputBackupLink.setAttribute('maxlength','500');
+  if (params.group != null && params.group.backuplink != null) {
+    inputBackupLink.value = params.group.backuplink;
+  }
+  formgroup.appendChild(inputBackupLink);
+  // notes
+  const labelNotes = document.createElement('label');
+  labelNotes.for = "inputNotes";
+  labelNotes.innerHTML = "Notes";
+  formgroup.appendChild(labelNotes);
+  const inputNotes = document.createElement('textarea');
+  inputNotes.rows = "5";
+  inputNotes.className = "form-control";
+  inputNotes.id = "inputNotes";
+  inputNotes.setAttribute('maxlength','500');
+  if (params.group != null && params.group.notes != null) {
+    inputNotes.value = params.group.notes;
+  }
+  formgroup.appendChild(inputNotes);
 
   const saveBtn = document.createElement('button');
   saveBtn.type = "button";
@@ -140,6 +205,10 @@ const createEditGroup = (params) => {
       if (name != null && name.value != "") {
         if (params.group != null) {
           params.group.name = name.value;
+          params.group.password = inputPassword.value;
+          params.group.backupphrase = inputBackupPhrase.value;
+          params.group.backuplink = inputBackupLink.value;
+          params.group.notes = inputNotes.value;
           params.group.modified = Date();
           params.vaultData.groups[params.vaultData.groupSelected] = params.group;
           params.vaultData.groups.sort(utils.compareIgnoreCase);
@@ -150,6 +219,10 @@ const createEditGroup = (params) => {
         } else {
           let myGroup = {};
           myGroup.name = name.value;
+          myGroup.password = inputPassword.value;
+          myGroup.backupphrase = inputBackupPhrase.value;
+          myGroup.backuplink = inputBackupLink.value;
+          myGroup.notes = inputNotes.value;
           myGroup.created = Date();
           params.vaultData.groups.push(myGroup);
           params.vaultData.groups.sort(utils.compareIgnoreCase);
@@ -178,6 +251,43 @@ const renderGroupDetail = (params) => {
   area.appendChild(header);
   const divider = document.createElement('hr');
   area.appendChild(divider);
+  // password
+  const password= document.createElement('p');
+  if (params.group.password != null) {
+    password.innerHTML = "<b>Password:</b> "+params.group.password;
+  } else {
+    password.innerHTML = "<b>Password:</b> ";
+  }
+  area.appendChild(password);
+  // backupPhrase
+  const backupPhrase = document.createElement('p');
+  if (params.group.backupphrase != null) {
+    backupPhrase.innerHTML = "<b>Backup Phrase:</b> "+params.group.backupphrase;
+  } else {
+    backupPhrase.innerHTML = "<b>Backup Phrase:</b> ";
+  }
+  area.appendChild(backupPhrase);
+  // backupLink
+  const backupLink = document.createElement('p');
+  if (params.group.backuplink != null) {
+    backupLink.innerHTML = "<b>Backup Link:</b> "+params.group.backuplink;
+  } else {
+    backupLink.innerHTML = "<b>Backup Link:</b> ";
+  }
+  area.appendChild(backupLink);
+  // notes
+  const notes = document.createElement('p');
+  notes.innerHTML = "<b>Notes:</b>";
+  area.appendChild(notes);
+  const notesDetail = document.createElement('p');
+  if (params.group.notes != null) {
+    const r = params.group.notes.replace(/(?:\r\n|\r|\n)/g, '<br />');
+    notesDetail.innerHTML = r;
+  } else {
+    notesDetail.innerHTML = "";
+  }
+  area.appendChild(notesDetail);
+  // created
   const created = document.createElement('p');
   created.innerHTML = "<b>Created:</b> "+params.group.created;
   area.appendChild(created);

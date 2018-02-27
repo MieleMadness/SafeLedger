@@ -121,9 +121,21 @@ window.addEventListener("beforeunload", function (event) {
     if (vaultData.groups != null) {
       vaultData.file = crypto.randomBytes(vaultData.file.length * 2).toString('hex');
       for(let group of vaultData.groups){
+        if (group.name != null) {
+          group.name = crypto.randomBytes(group.name.length * 2).toString('hex');
+        }
+        if (group.password != null) {
+          group.password = crypto.randomBytes(group.password.length * 2).toString('hex');
+        }
+        if (group.backupphrase != null) {
+          group.backupphrase = crypto.randomBytes(group.backupphrase.length * 2).toString('hex');
+        }
+        if (group.notes != null) {
+          group.notes = crypto.randomBytes(group.notes.length * 2).toString('hex');
+        }
         if (group.records != null) {
           for (let record of group.records) {
-            record.name = crypto.randomBytes(record.name.length * 2).toString('hex')
+            record.name = crypto.randomBytes(record.name.length * 2).toString('hex');
             if (record.symbol != null) {
               record.symbol = crypto.randomBytes(record.symbol.length * 2).toString('hex');
             }
@@ -300,11 +312,13 @@ ipc.on('result-rotate-crypto',(evt, params) => {
   if (params.status != null && params.status != ""){
     status.showStatus({status:params.status,statusMsg:params.statusMsg});
   }
-  if (params.status === "SUCCESS") {
+  if (params.status === "SUCCESS") {;
+    //con.log("vault list before " + JSON.stringify(vaultList));
     vaultList = params.vaultList;
     masterCrypto = params.cryptoKey;
     listVaults(vaultList.vaults);
     showAfterLogin();
+    //con.log("vault list after" + JSON.stringify(vaultList));
   } else {
     const editBtn = document.getElementById('encryptionEditBtn');
     editBtn.disabled = false;

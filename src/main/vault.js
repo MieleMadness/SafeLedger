@@ -259,12 +259,13 @@ exports.rotateCrypto = (vaultPath,oldCryptoKey,newCryptoKey,vaultList) => {
         // increment nextVaultFileName
         nextVaultName.id = nextVaultName.id + 1;
         nextVaultName.fileName = "zvault-"+nextVaultName.id+".json";
+
     }
     // wait for all saves to complete
     Promise.all(promises)
       .then((values) => {
         // save the vault list
-        // console.log("save vault List " + JSON.stringify(vaultList));
+        //console.log("save vault List " + JSON.stringify(vaultList));
         getSaveVault(path.join(vaultPath, 'vaultlist.json'), JSON.stringify(vaultList), newCryptoKey)
           .then((val) => {
             // vault list has saved successfully
@@ -323,10 +324,12 @@ const rotateVault = (vaultPath,oldCryptoKey,newCryptoKey,oldVaultName,nextVaultN
         // get data length for later
         if (oldData != null) {
           const fileLength = oldData.length;
+          let oldDataObj = JSON.parse(oldData);
+          oldDataObj.file = nextVaultName;
           // console.log("file length " + fileLength);
           let newData = null;
           try {
-            newData = encryption.encrypt(newCryptoKey, oldData);
+            newData = encryption.encrypt(newCryptoKey, JSON.stringify(oldDataObj));
           } catch (err) {
             reject({status:"ERROR",statusMsg:"Invalid new password"});
           }
