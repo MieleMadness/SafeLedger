@@ -54,7 +54,7 @@ function createWindow () {
   }));
 
   // Open the DevTools.
-   mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
  // Emitted when the window is closed.
   mainWindow.on('closed', function () {
     // Dereference the window object, usually you would store windows
@@ -67,7 +67,7 @@ function createWindow () {
   const template = [{
       label: "SafeLedger",
       submenu: [
-          { label: "Version 1.7"},
+          { label: "Version 1.8"},
           { type: "separator" },
           { label: "Quit", accelerator: "Command+Q", click: function() { app.quit(); }}
       ]}, {
