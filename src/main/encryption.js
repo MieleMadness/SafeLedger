@@ -25,7 +25,7 @@ const renderEncryptionDetail = (params) => {
 
   const form = document.createElement('form');
   area.appendChild(form);
-  
+
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
@@ -58,7 +58,8 @@ const renderEncryptionDetail = (params) => {
   editBtn.id = "encryptionEditBtn";
   editBtn.className = "btn btn-default bottom-space pull-right";
   editBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  editBtn.addEventListener('click', _ => {
+  editBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (params.saving.state == true) {
       alert("Please wait for processing to complete");
     } else {

@@ -35,7 +35,8 @@ window.addEventListener('DOMContentLoaded', _ => {
 
   checkInstallCode();
 
-  addVault.addEventListener('click', _ => {
+  addVault.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -50,7 +51,8 @@ window.addEventListener('DOMContentLoaded', _ => {
       }
     }
   });
-  addGroup.addEventListener('click', _ => {
+  addGroup.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -65,7 +67,8 @@ window.addEventListener('DOMContentLoaded', _ => {
       }
     }
   });
-  addRecord.addEventListener('click', _ => {
+  addRecord.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -80,9 +83,16 @@ window.addEventListener('DOMContentLoaded', _ => {
       }
     }
   });
-  groupSearch.addEventListener('keyup', _ => { group.listGroups({cryptoKey:masterCrypto,vaultData,saving}); });
-  recordSearch.addEventListener('keyup', _ => { record.listRecords({cryptoKey:masterCrypto,vaultData,saving}); });
-  encrytionSettings.addEventListener('click', _ => {
+  groupSearch.addEventListener('keyup', (e) => {
+    e.preventDefault();
+    group.listGroups({cryptoKey:masterCrypto,vaultData,saving});
+  });
+  recordSearch.addEventListener('keyup', (e) => {
+    e.preventDefault();
+    record.listRecords({cryptoKey:masterCrypto,vaultData,saving});
+  });
+  encrytionSettings.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -116,6 +126,10 @@ window.addEventListener("beforeunload", function (event) {
     const mc = new Buffer(masterCrypto,'hex');
     masterCrypto = crypto.randomBytes(mc.length * 2);
   }
+  if (installCode != null) {
+    const ic = new Buffer(installCode,'hex');
+    installCode = crypto.randomBytes(ic.length * 2);
+  }
   //alert("clean group");
   if (vaultData != null) {
     if (vaultData.groups != null) {
@@ -127,35 +141,31 @@ window.addEventListener("beforeunload", function (event) {
         if (group.password != null) {
           group.password = crypto.randomBytes(group.password.length * 2).toString('hex');
         }
-        if (group.backupphrase != null) {
-          group.backupphrase = crypto.randomBytes(group.backupphrase.length * 2).toString('hex');
+        if (group.pin != null) {
+          group.pin = crypto.randomBytes(group.pin.length * 2).toString('hex');
         }
-        if (group.backuplink != null) {
-          group.backuplink = crypto.randomBytes(group.backuplink.length * 2).toString('hex');
+        if (group.seedPhrase != null) {
+          group.seedPhrase = crypto.randomBytes(group.seedPhrase.length * 2).toString('hex');
+        }
+        if (group.recoveryLink != null) {
+          group.recoveryLink = crypto.randomBytes(group.recoveryLink.length * 2).toString('hex');
         }
         if (group.notes != null) {
           group.notes = crypto.randomBytes(group.notes.length * 2).toString('hex');
         }
         if (group.records != null) {
           for (let record of group.records) {
-            record.name = crypto.randomBytes(record.name.length * 2).toString('hex');
+            if (record.name != null) {
+              record.name = crypto.randomBytes(record.name.length * 2).toString('hex');
+            }
             if (record.symbol != null) {
               record.symbol = crypto.randomBytes(record.symbol.length * 2).toString('hex');
             }
-            if (record.address != null) {
-              record.address = crypto.randomBytes(record.address.length * 2).toString('hex');
+            if (record.publicAddress != null) {
+              record.publicAddress = crypto.randomBytes(record.publicAddress.length * 2).toString('hex');
             }
-            if (record.password != null) {
-              record.password = crypto.randomBytes(record.password.length * 2).toString('hex');
-            }
-            if (record.privatekey != null) {
-              record.privatekey = crypto.randomBytes(record.privatekey.length * 2).toString('hex');
-            }
-            if (record.pin != null) {
-              record.pin = crypto.randomBytes(record.pin.length * 2).toString('hex');
-            }
-            if (record.backupphrase != null) {
-              record.backupphrase = crypto.randomBytes(record.backupphrase.length * 2).toString('hex');
+            if (record.privateAddress != null) {
+              record.privateAddress = crypto.randomBytes(record.privateAddress.length * 2).toString('hex');
             }
             if (record.notes != null) {
               record.notes = crypto.randomBytes(record.notes.length * 2).toString('hex');
@@ -281,7 +291,8 @@ const listVaults = (vaults) => {
         const li = document.createElement("LI");
 				ul.appendChild(li);
 				const href = document.createElement("A");
-        href.addEventListener('click', _ => {
+        href.addEventListener('click', (e) => {
+          e.preventDefault();
           if (saving.state == true) {
             alert("Please wait for processing to complete");
           } else {
@@ -365,7 +376,8 @@ const createEditVault = (vault) => {
   saveBtn.id = "saveBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  saveBtn.addEventListener('click', _ => {
+  saveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -398,19 +410,22 @@ const showVaultDetail = (vault) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = "";
   const header = document.createElement('h1');
-  header.innerHTML = "Profile: "+vault.name;
+  header.innerHTML = vault.name;
   area.appendChild(header);
   const divider = document.createElement('hr');
   area.appendChild(divider);
   const created = document.createElement('p');
+  created.className = "dates";
   created.innerHTML = "<b>Created:</b> "+vault.created;
   area.appendChild(created);
   const modified = document.createElement('p');
+  modified.className = "dates";
   if (vault.modified != null) {
     modified.innerHTML = "<b>Modified:</b> "+vault.modified;
   }
   area.appendChild(modified);
   const location = document.createElement('p');
+  location.className = "dates";
   location.innerHTML = "<b>Location:</b> "+vault.path;
   area.appendChild(location);
 
@@ -419,7 +434,8 @@ const showVaultDetail = (vault) => {
   deleteBtn.id = "deleteBtn";
   deleteBtn.className = "btn btn-default bottom-space pull-right";
   deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Delete";
-  deleteBtn.addEventListener('click', _ => {
+  deleteBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -433,7 +449,8 @@ const showVaultDetail = (vault) => {
   editBtn.id = "editBtn";
   editBtn.className = "btn btn-default bottom-space pull-right";
   editBtn.innerHTML = "<span class='glyphicon glyphicon-edit' aria-hidden='true'></span> Edit";
-  editBtn.addEventListener('click', _ => {
+  editBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -459,7 +476,8 @@ const confirmDelete = (params) => {
   deleteBtn.id = "deleteBtn";
   deleteBtn.className = "btn btn-default bottom-space pull-right";
   deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Confirm";
-  deleteBtn.addEventListener('click', _ => {
+  deleteBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     deleteBtn.disabled = true;
     vaultList.vaults.splice(vaultList.vaultSelected,1);
     vaultList.vaultSelected = null;
@@ -529,7 +547,8 @@ const showLogin = () => {
   saveBtn.id = "loginBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<i class='fa fa-unlock'></i> Login";
-  saveBtn.addEventListener('click', _ => {
+  saveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -604,7 +623,8 @@ const showInstallCode = (params) => {
   saveBtn.id = "saveBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  saveBtn.addEventListener('click', _ => {
+  saveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {

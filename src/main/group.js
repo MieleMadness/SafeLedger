@@ -34,17 +34,18 @@ const renderGroups = (params) => {
   				li.setAttribute("data-target","#"+groupsArray[i].name);
   				ul.appendChild(li);
   				const href = document.createElement("A");
-          href.addEventListener('click', _ => {
-              if (params.saving.state == true) {
-                alert("Please wait for processing to complete");
-              } else {
-                params.vaultData.groupSelected = i;
-                params.vaultData.recordSelected = null;
-                renderGroupDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,group:groupsArray[i],saving:params.saving});
-                renderGroups({cryptoKey:params.cryptoKey,vaultData:params.vaultData,groups:params.vaultData.groups,saving:params.saving});
-                record.listRecords({cryptoKey:params.cryptoKey,vaultData:params.vaultData,records:groupsArray[i].records,saving:params.saving});
-              }
-            });
+          href.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (params.saving.state == true) {
+              alert("Please wait for processing to complete");
+            } else {
+              params.vaultData.groupSelected = i;
+              params.vaultData.recordSelected = null;
+              renderGroupDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,group:groupsArray[i],saving:params.saving});
+              renderGroups({cryptoKey:params.cryptoKey,vaultData:params.vaultData,groups:params.vaultData.groups,saving:params.saving});
+              record.listRecords({cryptoKey:params.cryptoKey,vaultData:params.vaultData,records:groupsArray[i].records,saving:params.saving});
+            }
+          });
           let nameString = "";
           if (params.vaultData.groupSelected != null && params.vaultData.groupSelected == i) {
             href.className = "item-selected";
@@ -113,42 +114,61 @@ const createEditGroup = (params) => {
     inputPassword.value = params.group.password;
   }
   formGroupPassword.appendChild(inputPassword);
-  //Backup phrase
-  const formGroupPhrase = document.createElement('div');
-  formGroupPhrase.className = "form-group";
-  form.appendChild(formGroupPhrase);
+  // Pin
+  const formGroupPin = document.createElement('div');
+  formGroupPin.className = "form-group";
+  form.appendChild(formGroupPin);
 
-  const labelBackupPhrase = document.createElement('label');
-  labelBackupPhrase.for = "inputBackupPhrase";
-  labelBackupPhrase.innerHTML = "Backup Phrase";
-  formGroupPhrase.appendChild(labelBackupPhrase);
-  const inputBackupPhrase = document.createElement('input');
-  inputBackupPhrase.type = "text";
-  inputBackupPhrase.className = "form-control";
-  inputBackupPhrase.id = "inputBackupPhrase";
-  inputBackupPhrase.setAttribute('maxlength','500');
-  if (params.group != null && params.group.backupphrase != null) {
-    inputBackupPhrase.value = params.group.backupphrase;
+  const labelPin = document.createElement('label');
+  labelPin.for = "inputPin";
+  labelPin.innerHTML = "Pin code";
+  formGroupPin.appendChild(labelPin);
+  const inputPin = document.createElement('input');
+  inputPin.type = "text";
+  inputPin.className = "form-control";
+  inputPin.id = "inputPin";
+  inputPin.setAttribute('maxlength','500');
+  if (params.group != null && params.group.pin != null) {
+    inputPin.value = params.group.pin;
   }
-  formGroupPhrase.appendChild(inputBackupPhrase);
-  //Backup link
+  formGroupPin.appendChild(inputPin);
+  //Recovery link
   const formGroupLink = document.createElement('div');
   formGroupLink.className = "form-group";
   form.appendChild(formGroupLink);
 
-  const labelBackupLink = document.createElement('label');
-  labelBackupLink.for = "inputBackupLink";
-  labelBackupLink.innerHTML = "Backup Link";
-  formGroupLink.appendChild(labelBackupLink);
-  const inputBackupLink = document.createElement('input');
-  inputBackupLink.type = "text";
-  inputBackupLink.className = "form-control";
-  inputBackupLink.id = "inputBackupLink";
-  inputBackupLink.setAttribute('maxlength','500');
-  if (params.group != null && params.group.backuplink != null) {
-    inputBackupLink.value = params.group.backuplink;
+  const labelRecoveryLink = document.createElement('label');
+  labelRecoveryLink.for = "inputRecoveryLink";
+  labelRecoveryLink.innerHTML = "Recovery link";
+  formGroupLink.appendChild(labelRecoveryLink);
+  const inputRecoveryLink = document.createElement('input');
+  inputRecoveryLink.type = "text";
+  inputRecoveryLink.className = "form-control";
+  inputRecoveryLink.id = "inputRecoveryLink";
+  inputRecoveryLink.setAttribute('maxlength','500');
+  if (params.group != null && params.group.recoveryLink != null) {
+    inputRecoveryLink.value = params.group.recoveryLink;
   }
-  formGroupLink.appendChild(inputBackupLink);
+  formGroupLink.appendChild(inputRecoveryLink);
+  //Seed phrase
+  const formGroupPhrase = document.createElement('div');
+  formGroupPhrase.className = "form-group";
+  form.appendChild(formGroupPhrase);
+
+  const labelSeedPhrase = document.createElement('label');
+  labelSeedPhrase.for = "inputSeedPhrase";
+  labelSeedPhrase.innerHTML = "Seed phrase";
+  formGroupPhrase.appendChild(labelSeedPhrase);
+  const inputSeedPhrase = document.createElement('input');
+  inputSeedPhrase.type = "text";
+  inputSeedPhrase.className = "form-control";
+  inputSeedPhrase.id = "inputSeedPhrase";
+  inputSeedPhrase.setAttribute('maxlength','500');
+  if (params.group != null && params.group.seedPhrase != null) {
+    inputSeedPhrase.value = params.group.seedPhrase;
+  }
+  formGroupPhrase.appendChild(inputSeedPhrase);
+
   // notes
   const formGroupNotes = document.createElement('div');
   formGroupNotes.className = "form-group";
@@ -173,7 +193,8 @@ const createEditGroup = (params) => {
   saveBtn.id = "saveBtn";
   saveBtn.className = "btn btn-default bottom-space pull-right";
   saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  saveBtn.addEventListener('click', _ => {
+  saveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (params.saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -183,8 +204,9 @@ const createEditGroup = (params) => {
         if (params.group != null) {
           params.group.name = name.value;
           params.group.password = inputPassword.value;
-          params.group.backupphrase = inputBackupPhrase.value;
-          params.group.backuplink = inputBackupLink.value;
+          params.group.pin = inputPin.value;
+          params.group.recoveryLink = inputRecoveryLink.value;
+          params.group.seedPhrase = inputSeedPhrase.value;
           params.group.notes = inputNotes.value;
           params.group.modified = Date();
           params.vaultData.groups[params.vaultData.groupSelected] = params.group;
@@ -197,8 +219,9 @@ const createEditGroup = (params) => {
           let myGroup = {};
           myGroup.name = name.value;
           myGroup.password = inputPassword.value;
-          myGroup.backupphrase = inputBackupPhrase.value;
-          myGroup.backuplink = inputBackupLink.value;
+          myGroup.pin = inputPin.value;
+          myGroup.recoveryLink = inputRecoveryLink.value;
+          myGroup.seedPhrase = inputSeedPhrase.value;
           myGroup.notes = inputNotes.value;
           myGroup.created = Date();
           params.vaultData.groups.push(myGroup);
@@ -224,51 +247,61 @@ const renderGroupDetail = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = "";
   const header = document.createElement('h1');
-  header.innerHTML = "Wallet: "+params.group.name;
+  header.innerHTML = params.group.name;
   area.appendChild(header);
   const divider = document.createElement('hr');
   area.appendChild(divider);
   // password
-  const password= document.createElement('p');
+  const password = document.createElement('p');
   if (params.group.password != null) {
-    password.innerHTML = "<b>Password:</b> "+params.group.password;
+    password.innerHTML = "<b>Password:</b> <div class='outData'>"+params.group.password+"</div>";
   } else {
     password.innerHTML = "<b>Password:</b> ";
   }
   area.appendChild(password);
-  // backupPhrase
-  const backupPhrase = document.createElement('p');
-  if (params.group.backupphrase != null) {
-    backupPhrase.innerHTML = "<b>Backup Phrase:</b> "+params.group.backupphrase;
+  // SeedPhrase
+  const pin = document.createElement('p');
+  if (params.group.pin != null) {
+    pin.innerHTML = "<b>Pin code:</b> <div class='outData'>"+params.group.pin+"</div>";
   } else {
-    backupPhrase.innerHTML = "<b>Backup Phrase:</b> ";
+    pin.innerHTML = "<b>Pin code:</b> ";
   }
-  area.appendChild(backupPhrase);
-  // backupLink
-  const backupLink = document.createElement('p');
-  if (params.group.backuplink != null) {
-    backupLink.innerHTML = "<b>Backup Link:</b> "+params.group.backuplink;
+  area.appendChild(pin);
+  // RecoveryLink
+  const recoveryLink = document.createElement('p');
+  if (params.group.recoveryLink != null) {
+    recoveryLink.innerHTML = "<b>Recovery link:</b> <div class='outData'>"+params.group.recoveryLink+"</div>";
   } else {
-    backupLink.innerHTML = "<b>Backup Link:</b> ";
+    recoveryLink.innerHTML = "<b>Recovery link:</b> ";
   }
-  area.appendChild(backupLink);
+  area.appendChild(recoveryLink);
+  // seedPhrase
+  const seedPhrase = document.createElement('p');
+  if (params.group.seedPhrase != null) {
+    seedPhrase.innerHTML = "<b>Seed phrase:</b> <div class='outData'>"+params.group.seedPhrase+"</div>";
+  } else {
+    seedPhrase.innerHTML = "<b>Seed phrase:</b> ";
+  }
+  area.appendChild(seedPhrase);
   // notes
   const notes = document.createElement('p');
-  notes.innerHTML = "<b>Notes:</b>";
+  notes.innerHTML = "<b>Notes:</b> ";
   area.appendChild(notes);
   const notesDetail = document.createElement('p');
   if (params.group.notes != null) {
     const r = params.group.notes.replace(/(?:\r\n|\r|\n)/g, '<br />');
-    notesDetail.innerHTML = r;
+    notesDetail.innerHTML = "<div class='outData'>"+r+"</div>";
   } else {
     notesDetail.innerHTML = "";
   }
   area.appendChild(notesDetail);
   // created
   const created = document.createElement('p');
+  created.className = "dates";
   created.innerHTML = "<b>Created:</b> "+params.group.created;
   area.appendChild(created);
   const modified = document.createElement('p');
+  modified.className = "dates";
   if (params.group.modified != null) {
     modified.innerHTML = "<b>Modified:</b> "+params.group.modified;
   }
@@ -279,7 +312,8 @@ const renderGroupDetail = (params) => {
   deleteBtn.id = "deleteBtn";
   deleteBtn.className = "btn btn-default bottom-space pull-right";
   deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Delete";
-  deleteBtn.addEventListener('click', _ => {
+  deleteBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (params.saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -292,7 +326,8 @@ const renderGroupDetail = (params) => {
   editBtn.id = "editBtn";
   editBtn.className = "btn btn-default bottom-space pull-right";
   editBtn.innerHTML = "<span class='glyphicon glyphicon-edit' aria-hidden='true'></span> Edit";
-  editBtn.addEventListener('click', _ => {
+  editBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     if (params.saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
@@ -316,7 +351,8 @@ const confirmDelete = (params) => {
   deleteBtn.id = "deleteBtn";
   deleteBtn.className = "btn btn-default bottom-space pull-right";
   deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Confirm";
-  deleteBtn.addEventListener('click', _ => {
+  deleteBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     deleteBtn.disabled = true;
     params.vaultData.groups.splice(params.vaultData.groupSelected,1);
     params.vaultData.groupSelected = null;

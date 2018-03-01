@@ -86,3 +86,9 @@ a {
   margin-top: 20px;
   min-height: 40px;
 }
+.dates {
+  font-size: 11px;
+}
+.outData {
+  padding-left: 10px;
+}
