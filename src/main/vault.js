@@ -51,7 +51,7 @@ exports.readVaultList = (vaultListFile, myCryptKey) => {
   return new Promise((resolve,reject) => {
     fs.readFile(vaultListFile, 'utf-8', (err, data) => {
       if(err){
-        reject({status:"ERROR",statusMsg:"Could not read profile file"});
+        reject({status:"ERROR",statusMsg:"Could not read list file",type:"password-failed"});
       } else {
         // decrypt here
         try {
@@ -59,7 +59,7 @@ exports.readVaultList = (vaultListFile, myCryptKey) => {
           let x = JSON.parse(result);
           resolve(x);
         } catch (err) {
-          reject({status:"ERROR",statusMsg:"Invalid Password"});
+          reject({status:"ERROR",statusMsg:"Invalid Password",type:"password-failed"});
         }
       }
     });
@@ -91,10 +91,10 @@ exports.makeDir = (vaultPath) => {
         reject("Directory or Permission issue");
       } else if (err || !stats.isDirectory()) {
         fs.mkdir(vaultPath, logError);
-        resolve("CREATED");
+        resolve("CREATE");
       } else {
         if (!fs.existsSync(path.join(vaultPath, 'vaultlist.json'))) {
-          resolve("CREATED");
+          resolve("CREATE");
         }
         resolve("EXISTS");
       }

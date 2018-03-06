@@ -21,13 +21,16 @@ const installCodeManager = require('./installManager/installManager/installCodeM
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 let appDir;
+let base;
 let vaultDir = path.join(app.getAppPath(), '/vaults/');
 let installCodeDir;
 let currentVault = 'zvault-0.json';
+let failAttempts = 0;
+let lockLogin = false;
 
 function createWindow () {
 
-  const base = app.getAppPath();
+  base = app.getAppPath();
   if (base.includes("SafeLedger-darwin-x64")) {
     // console.log("running mac build");
     appDir = base.split("SafeLedger-darwin-x64");
@@ -54,7 +57,7 @@ function createWindow () {
   }));
 
   // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
+   mainWindow.webContents.openDevTools()
  // Emitted when the window is closed.
   mainWindow.on('closed', function () {
     // Dereference the window object, usually you would store windows
@@ -133,10 +136,14 @@ ipc.on('read', (evt, params) => {
 });
 
 ipc.on('read-vaultlist-init', (evt, params) => {
+  if (lockLogin == true) {
+    mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Login locked'});
+    return;
+  }
   // Initalize the vault
   vault.makeDir(vaultDir)
     .then((val) => {
-      if (val === "CREATED") {
+      if (val === "CREATE") {
         // Create the initial Vault list
         vault.initVaultList(vaultDir,params.cryptoKey)
           .then((val) => {
@@ -146,9 +153,19 @@ ipc.on('read-vaultlist-init', (evt, params) => {
                 // load the vault list
                 vault.readVaultList(path.join(vaultDir,"vaultlist.json"),params.cryptoKey)
                   .then((val) => {
-                    mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:val});
+                    mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:val,cryptoKey:params.cryptoKey});
                   })
-                  .catch((val) => mainWindow.webContents.send('result',val));
+                  .catch((val) => {
+                    // check invalid Password
+                    failAttempts++;
+                    if (failAttempts >= 3) {
+                      lockLogin = true;
+                      let myHistory = {};
+                      myHistory.time = new Date().getTime();
+                      installCodeManager.saveFailure(base,myHistory);
+                    }
+                    mainWindow.webContents.send('result',val)
+                  });
               })
               .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to init vault data'}));
           })
@@ -157,9 +174,19 @@ ipc.on('read-vaultlist-init', (evt, params) => {
         // load the vault list
         vault.readVaultList(path.join(vaultDir,"vaultlist.json"),params.cryptoKey)
           .then((val) => {
-            mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:val});
+            mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:val,cryptoKey:params.cryptoKey});
           })
-          .catch((val) => mainWindow.webContents.send('result',val));
+          .catch((val) => {
+            // check invalid password
+            failAttempts++;
+            if (failAttempts >= 3) {
+              lockLogin = true;
+              let myHistory = {};
+              myHistory.time = new Date().getTime();
+              installCodeManager.saveFailure(base,myHistory);
+            }
+            mainWindow.webContents.send('result',val)
+          });
       }
     })
     .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to access vault list'}));

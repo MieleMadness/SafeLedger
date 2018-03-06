@@ -194,6 +194,12 @@ ipc.on('result',(evt, params) => {
   if (params.status != null && params.status != ""){
     status.showStatus({status:params.status,statusMsg:params.statusMsg});
   }
+  if (params.cryptoKey != null) {
+    masterCrypto = params.cryptoKey;
+  }
+  if (params.type === "password-failed") {
+
+  }
   if (params.type === "vault-delete") {
     vaultList.vaultSelected = null;
     const groupArea = document.getElementById('groupArea');
@@ -568,9 +574,10 @@ const showLogin = () => {
         status.showStatus({status:'ERROR',statusMsg});
       } else {
         saving.state = true;
+        saveBtn.disabled = false;
         status.loadStatus();
-        masterCrypto = crypto.createHmac('sha256',masterCryptoInput.value.split("").reverse().join("")).update(masterCryptoInput.value).digest();
-        ipc.send('read-vaultlist-init',{cryptoKey:masterCrypto});
+        let tempMasterCrypto = crypto.createHmac('sha256',masterCryptoInput.value.split("").reverse().join("")).update(masterCryptoInput.value).digest();
+        ipc.send('read-vaultlist-init',{cryptoKey:tempMasterCrypto});
         masterCryptoInput.value = "********************";
       }
     }
