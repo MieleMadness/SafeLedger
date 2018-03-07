@@ -22,6 +22,7 @@ let vaultList;
 let masterCrypto;
 let installCode;
 let saving = {state:false};
+let settings;
 
 window.addEventListener('DOMContentLoaded', _ => {
   const addVault = document.getElementById('addVault');
@@ -33,7 +34,7 @@ window.addEventListener('DOMContentLoaded', _ => {
   //const loginBtn = document.getElementById('loginBtn');
   const detailArea = document.getElementById('detailArea');
 
-  checkInstallCode();
+  initSystem();
 
   addVault.addEventListener('click', (e) => {
     e.preventDefault();
@@ -267,14 +268,18 @@ ipc.on('result',(evt, params) => {
   }
 });
 
-const checkInstallCode = () => {
-  ipc.send('check-install-code',"test");
+const initSystem = () => {
+  ipc.send('init-system',"test");
 };
 
-ipc.on('result-check-install-code',(evt, params) => {
+ipc.on('result-init-system',(evt, params) => {
   saving.state = false;
   if (params.status != null && params.status != ""){
     status.showStatus({status:params.status,statusMsg:params.statusMsg});
+  }
+  if (params.settings != null) {
+    con.log("settings " + JSON.stringify(params.settings));
+    settings = params.settings;
   }
   if(params.keyStatus === "SUCCESS") {
     installCode = "good";
@@ -675,3 +680,128 @@ ipc.on('result-save-install-code',(evt, params) => {
     showInstallCode({keyCode:params.keyCode,fileCode:params.fileCode});
   }
 });
+
+ipc.on('show-settings',(evt, params) => {
+  if (masterCrypto != null) {
+      showSettings();
+  }
+});
+
+ipc.on('result-save-settings',(evt, params) => {
+  saving.state = false;
+  if (params.status != null && params.status != ""){
+    status.showStatus({status:params.status,statusMsg:params.statusMsg});
+  }
+  settings = params.settings;
+  showSettings();
+});
+
+const showSettings = (params) => {
+  const area = document.getElementById('detailArea');
+  area.innerHTML = "";
+  const header = document.createElement('h1');
+  header.innerHTML = "Settings";
+  area.appendChild(header);
+  const divider = document.createElement('hr');
+  area.appendChild(divider);
+  const form = document.createElement('form');
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+  });
+  area.appendChild(form);
+  const formgroup = document.createElement('div');
+  formgroup.className = "form-group";
+  form.appendChild(formgroup);
+  //console.log("file Code " + params.fileCode);
+  const labelFailAttempts = document.createElement('label');
+  labelFailAttempts.for = "inputFailAttempts";
+  labelFailAttempts.innerHTML = "Consecutive login failure attempts per lockout";
+  formgroup.appendChild(labelFailAttempts);
+  const inputFailAttempts = document.createElement('input');
+  inputFailAttempts.type = "number";
+  inputFailAttempts.className = "form-control";
+  inputFailAttempts.id = "inputFailAttempts";
+  inputFailAttempts.value = settings.numFailAttempts;
+  formgroup.appendChild(inputFailAttempts);
+
+  const labelLockoutRetry = document.createElement('label');
+  labelLockoutRetry.for = "inputLockoutRetry";
+  labelLockoutRetry.innerHTML = "Consecutive lockout attempts";
+  formgroup.appendChild(labelLockoutRetry);
+  const inputLockoutRetry = document.createElement('input');
+  inputLockoutRetry.type = "number";
+  inputLockoutRetry.className = "form-control";
+  inputLockoutRetry.id = "inputLockoutRetry";
+  inputLockoutRetry.value = settings.numLockoutRetries;
+  formgroup.appendChild(inputLockoutRetry);
+
+  const labelBetweenLockout = document.createElement('label');
+  labelBetweenLockout.for = "inputBetweenLockout";
+  labelBetweenLockout.innerHTML = "Minutes to wait between lockouts";
+  formgroup.appendChild(labelBetweenLockout);
+  const inputBetweenLockout = document.createElement('input');
+  inputBetweenLockout.type = "number";
+  inputBetweenLockout.className = "form-control";
+  inputBetweenLockout.id = "inputBetweenLockout";
+  inputBetweenLockout.value = settings.minutesToWaitBetweenLockout;
+  formgroup.appendChild(inputBetweenLockout);
+
+  const inputScrubContent = document.createElement('input');
+  inputScrubContent.type = "checkbox";
+  inputScrubContent.className = "checkBox";
+  inputScrubContent.id = "inputScrubContent";
+  inputScrubContent.checked = settings.scrubContentAfterRetries;
+  formgroup.appendChild(inputScrubContent);
+  const labelScrubContent = document.createElement('label');
+  labelScrubContent.for = "inputScrubContent";
+  labelScrubContent.innerHTML = " Destroy your data after all lockouts have been exhausted";
+  formgroup.appendChild(labelScrubContent);
+
+  const saveBtn = document.createElement('button');
+  saveBtn.type = "submit";
+  saveBtn.id = "saveBtn";
+  saveBtn.className = "btn btn-default bottom-space pull-right";
+  saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
+  saveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (saving.state == true) {
+      alert("Please wait for processing to complete");
+    } else {
+      saveBtn.disabled = true;
+
+      let statusCode = true;
+      let statusMsg = "";
+      rx = new RegExp(/^[1-9]?[3-9]$/);
+      if (!(rx.test(inputFailAttempts.value))) { statusCode = false; statusMsg='Login failures must be a number greater than 3 less than 99' };
+      if (!(rx.test(inputLockoutRetry.value))) { statusCode = false; statusMsg='Lockout retires must be a number greater than 3 less than 99' };
+      rx = new RegExp(/^[1-9]?\d{1,4}$/);
+      if (!(rx.test(inputBetweenLockout.value))) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 10080' };
+      if (!(inputBetweenLockout.value >= 15 && inputBetweenLockout.value <= 10080)) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 10080' };
+      if (statusCode == false){
+        saveBtn.disabled = false;
+        status.showStatus({status:'ERROR',statusMsg});
+      } else {
+        saving.state = true;
+        saveBtn.disabled = false;
+        status.loadStatus();
+        let mySettings = {};
+        mySettings.numFailAttempts = parseInt(inputFailAttempts.value);
+        mySettings.modified = Date();
+        mySettings.numLockoutRetries = parseInt(inputLockoutRetry.value);
+        mySettings.minutesToWaitBetweenLockout = parseInt(inputBetweenLockout.value);
+        mySettings.scrubContentAfterRetries = inputScrubContent.checked;
+        mySettings.scrubInstallAfterRetries = settings.scrubInstallAfterRetries;
+        saving.state = true;
+        status.loadStatus();
+        ipc.send('save-settings', {newSettings:mySettings});
+      }
+    }
+  });
+  form.appendChild(saveBtn);
+  const modified = document.createElement('p');
+  modified.className = "dates";
+  if (settings.modified != null) {
+    modified.innerHTML = "<b>Modified:</b> "+settings.modified;
+  }
+  area.appendChild(modified);
+};

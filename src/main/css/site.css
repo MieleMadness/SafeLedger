@@ -92,3 +92,6 @@ a {
 .outData {
   padding-left: 10px;
 }
+.checkBox {
+  padding: 10px 10px 10px 10px !important;
+}

@@ -16,10 +16,11 @@ const vault = require('./vault');
 const fs = require('fs');
 const utils = require('./utils');
 const installCodeManager = require('./installManager/installManager/installCodeManager');
+const settingsManager = require('./installManager/installManager/settingsManager');
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
-let mainWindow
+let mainWindow;
 let appDir;
 let base;
 let vaultDir = path.join(app.getAppPath(), '/vaults/');
@@ -45,9 +46,8 @@ function createWindow () {
   vaultDir = path.join(appDir[0],'safeledgerdata/');
   installCodeDir = path.join(appDir[0],'safeledgersettings/');
 
-
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1200, height: 770, icon: "pen.ico"});
+  mainWindow = new BrowserWindow({width: 1200, height: 770, icon: "sl.ico"});
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
@@ -71,6 +71,7 @@ function createWindow () {
       label: "SafeLedger",
       submenu: [
           { label: "Version 1.8"},
+          { label: "Settings", click: function() { showSettings(); }},
           { type: "separator" },
           { label: "Quit", accelerator: "Command+Q", click: function() { app.quit(); }}
       ]}, {
@@ -89,6 +90,9 @@ function createWindow () {
 
 };
 
+const showSettings = () => {
+  mainWindow.webContents.send('show-settings');
+};
 // /Volumes/KINGSTON/ZVault-darwin-x64/ZVault.app
 
 // This method will be called when Electron has finished
@@ -303,17 +307,23 @@ ipc.on('process-rotate-crypto', (evt, params) => {
 
 });
 
-ipc.on('check-install-code', (evt, params) => {
+ipc.on('init-system', (evt, params) => {
   // console.log(" check install code ");
   installCodeManager.checkInstallCode(installCodeDir)
   .then((val) => {
     if (val.status === "SUCCESS") {
-      mainWindow.webContents.send('result-check-install-code',{keyStatus:val.status});
+      settingsManager.loadSettings(base)
+      .then((valSettings) => {
+        mainWindow.webContents.send('result-init-system',{keyStatus:val.status,settings:valSettings.settings});
+      })
+      .catch((valSettings) => {
+        mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Not able to load settings file'});
+      })
     } else {
-      mainWindow.webContents.send('result-check-install-code',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,fileCode:val.fileCode});
+      mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,fileCode:val.fileCode});
     }
   })
-  .catch((val) => mainWindow.webContents.send('result-check-install-code',{status:'ERROR',statusMsg:'Activation code check error'}));
+  .catch((val) => mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code check error'}));
 });
 
 ipc.on('save-install-code', (evt, params) => {
@@ -327,4 +337,17 @@ ipc.on('save-install-code', (evt, params) => {
     }
   })
   .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Activation code save failed'}));
+});
+
+ipc.on('save-settings', (evt, params) => {
+   console.log("save settings  " + JSON.stringify(params.newSettings) );
+  settingsManager.saveSettings(base,params.newSettings)
+  .then((val) => {
+    if (val.status === "SUCCESS") {
+      mainWindow.webContents.send('result-save-settings',{status:val.status,statusMsg:'Settings saved',settings:params.newSettings});
+    } else {
+      mainWindow.webContents.send('result-save-settings',{status:val.status,statusMsg:val.statusMsg});
+    }
+  })
+  .catch((val) => mainWindow.webContents.send('result',{status:val.status,statusMsg:val.statusMsg}));
 });
