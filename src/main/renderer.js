@@ -198,8 +198,16 @@ ipc.on('result',(evt, params) => {
   if (params.cryptoKey != null) {
     masterCrypto = params.cryptoKey;
   }
-  if (params.type === "password-failed") {
-
+  if (params.settings != null) {
+    settings = params.settings;
+    if (params.settings.lockLogin) {
+      const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+      const y = new Date().getTime();
+      if (x > y) {
+        showLockScreen();
+        return;
+      }
+    }
   }
   if (params.type === "vault-delete") {
     vaultList.vaultSelected = null;
@@ -213,6 +221,7 @@ ipc.on('result',(evt, params) => {
       params.vaultList.vaultSelected = null;
     }
     vaultList = params.vaultList;
+    //con.log("vaultList " + JSON.stringify(vaultList));
     const vaults = vaultList.vaults;
     listVaults(vaults);
     if (params.type === "vault-create"){
@@ -280,6 +289,14 @@ ipc.on('result-init-system',(evt, params) => {
   if (params.settings != null) {
     con.log("settings " + JSON.stringify(params.settings));
     settings = params.settings;
+  }
+  if (params.settings.lockLogin) {
+    const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+    const y = new Date().getTime();
+    if (x > y) {
+      showLockScreen();
+      return;
+    }
   }
   if(params.keyStatus === "SUCCESS") {
     installCode = "good";
@@ -582,7 +599,7 @@ const showLogin = () => {
         saveBtn.disabled = false;
         status.loadStatus();
         let tempMasterCrypto = crypto.createHmac('sha256',masterCryptoInput.value.split("").reverse().join("")).update(masterCryptoInput.value).digest();
-        ipc.send('read-vaultlist-init',{cryptoKey:tempMasterCrypto});
+        ipc.send('read-vaultlist-init',{cryptoKey:tempMasterCrypto,settings});
         masterCryptoInput.value = "********************";
       }
     }
@@ -683,6 +700,18 @@ ipc.on('result-save-install-code',(evt, params) => {
 
 ipc.on('show-settings',(evt, params) => {
   if (masterCrypto != null) {
+    if (vaultList != null) {
+      vaultList.vaultSelected = null;
+      listVaults(vaultList.vaults);
+    }
+    if (vaultData != null) {
+      vaultData.groupSelected = null;
+      vaultData.recordSelected = null;
+      const groupArea = document.getElementById('groupArea');
+      groupArea.innerHTML = "";
+      const recordArea = document.getElementById('recordArea');
+      recordArea.innerHTML = "";
+    }
       showSettings();
   }
 });
@@ -746,16 +775,34 @@ const showSettings = (params) => {
   inputBetweenLockout.value = settings.minutesToWaitBetweenLockout;
   formgroup.appendChild(inputBetweenLockout);
 
+  const formGroupScrubContent = document.createElement('div');
+  formGroupScrubContent.className = "form-group";
+  form.appendChild(formGroupScrubContent);
   const inputScrubContent = document.createElement('input');
   inputScrubContent.type = "checkbox";
   inputScrubContent.className = "checkBox";
   inputScrubContent.id = "inputScrubContent";
   inputScrubContent.checked = settings.scrubContentAfterRetries;
-  formgroup.appendChild(inputScrubContent);
+  formGroupScrubContent.appendChild(inputScrubContent);
   const labelScrubContent = document.createElement('label');
   labelScrubContent.for = "inputScrubContent";
   labelScrubContent.innerHTML = " Destroy your data after all lockouts have been exhausted";
-  formgroup.appendChild(labelScrubContent);
+  formGroupScrubContent.appendChild(labelScrubContent);
+
+/*  const formGroupScrubInstall = document.createElement('div');
+  formGroupScrubInstall.className = "form-group";
+  form.appendChild(formGroupScrubInstall);
+  const inputScrubInstall = document.createElement('input');
+  inputScrubInstall.type = "checkbox";
+  inputScrubInstall.className = "checkBox";
+  inputScrubInstall.id = "inputScrubInstall";
+  inputScrubInstall.checked = settings.scrubInstallAfterRetries;
+  inputScrubInstall.disabled = true;
+  formGroupScrubInstall.appendChild(inputScrubInstall);
+  const labelScrubInstall = document.createElement('label');
+  labelScrubInstall.for = "inputScrubInstall";
+  labelScrubInstall.innerHTML = " Destroy activation code after all lockouts have been exhausted";
+  formGroupScrubInstall.appendChild(labelScrubInstall);*/
 
   const saveBtn = document.createElement('button');
   saveBtn.type = "submit";
@@ -776,7 +823,7 @@ const showSettings = (params) => {
       if (!(rx.test(inputLockoutRetry.value))) { statusCode = false; statusMsg='Lockout retires must be a number greater than 3 less than 99' };
       rx = new RegExp(/^[1-9]?\d{1,4}$/);
       if (!(rx.test(inputBetweenLockout.value))) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 10080' };
-      if (!(inputBetweenLockout.value >= 15 && inputBetweenLockout.value <= 10080)) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 10080' };
+      if (!(inputBetweenLockout.value >= 1 && inputBetweenLockout.value <= 10080)) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 10080' };
       if (statusCode == false){
         saveBtn.disabled = false;
         status.showStatus({status:'ERROR',statusMsg});
@@ -784,7 +831,7 @@ const showSettings = (params) => {
         saving.state = true;
         saveBtn.disabled = false;
         status.loadStatus();
-        let mySettings = {};
+        let mySettings = Object.assign({},settings);
         mySettings.numFailAttempts = parseInt(inputFailAttempts.value);
         mySettings.modified = Date();
         mySettings.numLockoutRetries = parseInt(inputLockoutRetry.value);
@@ -804,4 +851,19 @@ const showSettings = (params) => {
     modified.innerHTML = "<b>Modified:</b> "+settings.modified;
   }
   area.appendChild(modified);
+};
+
+const showLockScreen = () => {
+  const area = document.getElementById('detailArea');
+  area.innerHTML = "";
+  const header = document.createElement('h1');
+  header.innerHTML = "Your account is locked";
+  area.appendChild(header);
+  const divider = document.createElement('hr');
+  area.appendChild(divider);
+  const created = document.createElement('p');
+  let x = new Date();
+  x.setTime(settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000));
+  created.innerHTML = "Try again after " + x;
+  area.appendChild(created);
 };

@@ -380,4 +380,22 @@ exports.cryptoTest = () => {
                    .update('I love cupcakes')
                    .digest('hex');
   // console.log(hash);
-}
+};
+
+exports.scrubContent = (vaultPath) => {
+  return new Promise((resolve,reject) => {
+    fs.readdir(vaultPath, (err, files) => {
+      let scrubPromises = [];
+      for (let o of files) {
+        scrubPromises.push(scrubOldFile(path.join(vaultPath, o),10000));
+      }
+      Promise.all(scrubPromises)
+        .then((scrubValues) => {
+          resolve({status:"SUCCESS",statusMsg:"Data has been destroyed"});
+        })
+        .catch((val) => {
+          reject({status:"ERROR",statusMsg:"File clean failed"});
+        });
+    });
+  });
+};

@@ -27,7 +27,6 @@ let vaultDir = path.join(app.getAppPath(), '/vaults/');
 let installCodeDir;
 let currentVault = 'zvault-0.json';
 let failAttempts = 0;
-let lockLogin = false;
 
 function createWindow () {
 
@@ -140,8 +139,20 @@ ipc.on('read', (evt, params) => {
 });
 
 ipc.on('read-vaultlist-init', (evt, params) => {
-  if (lockLogin == true) {
-    mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Login locked'});
+  if (params.settings.lockOutCount >= params.settings.numLockoutRetries) {
+    console.log("Lock out retries exhausted");
+    vault.scrubContent(vaultDir)
+    .then((val) => {
+      params.settings.failAttemptCount = 0;
+      params.settings.lockOutCount = 0;
+      params.settings.lockLogin = false;
+      settingsManager.saveSettings(base,params.settings)
+      .then((val) => {
+        mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Lock out retries exhausted your data has been destroyed',settings:params.settings});
+      })
+      .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
+    })
+    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to access vault list'}));
     return;
   }
   // Initalize the vault
@@ -156,19 +167,32 @@ ipc.on('read-vaultlist-init', (evt, params) => {
               .then((val) => {
                 // load the vault list
                 vault.readVaultList(path.join(vaultDir,"vaultlist.json"),params.cryptoKey)
-                  .then((val) => {
-                    mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:val,cryptoKey:params.cryptoKey});
+                  .then((valList) => {
+                    params.settings.failAttemptCount = 0;
+                    params.settings.lockOutCount = 0;
+                    params.settings.lockLogin = false;
+                    settingsManager.saveSettings(base,params.settings)
+                    .then((val) => {
+                      mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:valList,cryptoKey:params.cryptoKey,settings:params.settings});
+                    })
+                    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
                   })
-                  .catch((val) => {
+                  .catch((valList) => {
                     // check invalid Password
-                    failAttempts++;
-                    if (failAttempts >= 3) {
-                      lockLogin = true;
-                      let myHistory = {};
-                      myHistory.time = new Date().getTime();
-                      installCodeManager.saveFailure(base,myHistory);
+                    params.settings.failAttemptCount++;
+                    if (params.settings.failAttemptCount >= params.settings.numFailAttempts) {
+                      params.settings.failAttemptCount = 0;
+                      params.settings.lockOutCount++;
+                      params.settings.lockLogin = true;
+                      params.settings.lockLoginTime = new Date().getTime();
                     }
-                    mainWindow.webContents.send('result',val)
+                    settingsManager.saveSettings(base,params.settings)
+                    .then((val) => {
+                      val.settings = params.settings;
+                      mainWindow.webContents.send('result',valList);
+                    })
+                    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
+
                   });
               })
               .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to init vault data'}));
@@ -177,19 +201,31 @@ ipc.on('read-vaultlist-init', (evt, params) => {
       } else {
         // load the vault list
         vault.readVaultList(path.join(vaultDir,"vaultlist.json"),params.cryptoKey)
-          .then((val) => {
-            mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:val,cryptoKey:params.cryptoKey});
+          .then((valList) => {
+            params.settings.failAttemptCount = 0;
+            params.settings.lockOutCount = 0;
+            params.settings.lockLogin = false;
+            settingsManager.saveSettings(base,params.settings)
+            .then((val) => {
+              mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:valList,cryptoKey:params.cryptoKey,settings:params.settings});
+            })
+            .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
           })
-          .catch((val) => {
+          .catch((valList) => {
             // check invalid password
-            failAttempts++;
-            if (failAttempts >= 3) {
-              lockLogin = true;
-              let myHistory = {};
-              myHistory.time = new Date().getTime();
-              installCodeManager.saveFailure(base,myHistory);
+            params.settings.failAttemptCount++;
+            if (params.settings.failAttemptCount >= params.settings.numFailAttempts) {
+              params.settings.failAttemptCount = 0;
+              params.settings.lockOutCount++;
+              params.settings.lockLogin = true;
+              params.settings.lockLoginTime = new Date().getTime();
             }
-            mainWindow.webContents.send('result',val)
+            settingsManager.saveSettings(base,params.settings)
+            .then((val) => {
+              val.settings = params.settings;
+              mainWindow.webContents.send('result',valList);
+            })
+            .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
           });
       }
     })
