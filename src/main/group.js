@@ -21,7 +21,7 @@ const renderGroups = (params) => {
   groupArea.innerHTML = "";
   const ul = document.createElement("UL");
   ul.className = "nav";
-  if (params.vaultData.groups != null) {
+  if (params.vaultData != null && params.vaultData.groups != null) {
     const groupsArray = params.vaultData.groups;
     for (let i = 0; i < groupsArray.length; i++) {
       const groupName = groupsArray[i].name.toLowerCase();

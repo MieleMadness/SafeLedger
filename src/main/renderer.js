@@ -41,14 +41,14 @@ window.addEventListener('DOMContentLoaded', _ => {
     if (saving.state == true) {
       alert("Please wait for processing to complete");
     } else {
-      if (installCode != null) {
-        if (vaultList != null && masterCrypto != null) {
+      if (masterCrypto != null) {
+        if (vaultList != null) {
           createEditVault();
         } else {
-          status.showStatus({status:'ERROR',statusMsg:'Please login'});
+          status.showStatus({status:'ERROR',statusMsg:'Vault list is empty'});
         }
       } else {
-        status.showStatus({status:'ERROR',statusMsg:'Please enter activation code'});
+        status.showStatus({status:'ERROR',statusMsg:'Please login'});
       }
     }
   });
@@ -289,15 +289,16 @@ ipc.on('result-init-system',(evt, params) => {
   if (params.settings != null) {
     con.log("settings " + JSON.stringify(params.settings));
     settings = params.settings;
-  }
-  if (params.settings.lockLogin) {
-    const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
-    const y = new Date().getTime();
-    if (x > y) {
-      showLockScreen();
-      return;
+    if (params.settings.lockLogin) {
+      const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+      const y = new Date().getTime();
+      if (x > y) {
+        showLockScreen();
+        return;
+      }
     }
   }
+
   if(params.keyStatus === "SUCCESS") {
     installCode = "good";
     showLogin();
@@ -744,7 +745,7 @@ const showSettings = (params) => {
   //console.log("file Code " + params.fileCode);
   const labelFailAttempts = document.createElement('label');
   labelFailAttempts.for = "inputFailAttempts";
-  labelFailAttempts.innerHTML = "Consecutive login failure attempts per lockout";
+  labelFailAttempts.innerHTML = "Consecutive login failure attempts per lockout (Limited 3 to 10)";
   formgroup.appendChild(labelFailAttempts);
   const inputFailAttempts = document.createElement('input');
   inputFailAttempts.type = "number";
@@ -755,7 +756,7 @@ const showSettings = (params) => {
 
   const labelLockoutRetry = document.createElement('label');
   labelLockoutRetry.for = "inputLockoutRetry";
-  labelLockoutRetry.innerHTML = "Consecutive lockout attempts";
+  labelLockoutRetry.innerHTML = "Consecutive lockout attempts (Limited 3 to 10)";
   formgroup.appendChild(labelLockoutRetry);
   const inputLockoutRetry = document.createElement('input');
   inputLockoutRetry.type = "number";
@@ -766,7 +767,7 @@ const showSettings = (params) => {
 
   const labelBetweenLockout = document.createElement('label');
   labelBetweenLockout.for = "inputBetweenLockout";
-  labelBetweenLockout.innerHTML = "Minutes to wait between lockouts";
+  labelBetweenLockout.innerHTML = "Minutes to wait between lockouts (Limited 15 to 1440(24hr))";
   formgroup.appendChild(labelBetweenLockout);
   const inputBetweenLockout = document.createElement('input');
   inputBetweenLockout.type = "number";
@@ -778,15 +779,16 @@ const showSettings = (params) => {
   const formGroupScrubContent = document.createElement('div');
   formGroupScrubContent.className = "form-group";
   form.appendChild(formGroupScrubContent);
-  const inputScrubContent = document.createElement('input');
+  /*const inputScrubContent = document.createElement('input');
   inputScrubContent.type = "checkbox";
   inputScrubContent.className = "checkBox";
   inputScrubContent.id = "inputScrubContent";
   inputScrubContent.checked = settings.scrubContentAfterRetries;
-  formGroupScrubContent.appendChild(inputScrubContent);
+  inputScrubContent.disabled = true;
+  formGroupScrubContent.appendChild(inputScrubContent); */
   const labelScrubContent = document.createElement('label');
   labelScrubContent.for = "inputScrubContent";
-  labelScrubContent.innerHTML = " Destroy your data after all lockouts have been exhausted";
+  labelScrubContent.innerHTML = "*** Brute force attack prevention enabled - Destroy data after all lockouts have been exhausted ***";
   formGroupScrubContent.appendChild(labelScrubContent);
 
 /*  const formGroupScrubInstall = document.createElement('div');
@@ -818,12 +820,12 @@ const showSettings = (params) => {
 
       let statusCode = true;
       let statusMsg = "";
-      rx = new RegExp(/^[1-9]?[3-9]$/);
-      if (!(rx.test(inputFailAttempts.value))) { statusCode = false; statusMsg='Login failures must be a number greater than 3 less than 99' };
-      if (!(rx.test(inputLockoutRetry.value))) { statusCode = false; statusMsg='Lockout retires must be a number greater than 3 less than 99' };
-      rx = new RegExp(/^[1-9]?\d{1,4}$/);
-      if (!(rx.test(inputBetweenLockout.value))) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 10080' };
-      if (!(inputBetweenLockout.value >= 1 && inputBetweenLockout.value <= 10080)) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 10080' };
+      rx = new RegExp(/^[1-9]?\d$/);
+      if (!(rx.test(inputFailAttempts.value)) || inputFailAttempts.value < 3 || inputFailAttempts.value > 10) { statusCode = false; statusMsg='Login failures must be a number greater than 3 less than 10' };
+      if (!(rx.test(inputLockoutRetry.value)) || inputLockoutRetry.value < 3 || inputLockoutRetry.value > 10) { statusCode = false; statusMsg='Lockout retires must be a number greater than 3 less than 10' };
+      rx = new RegExp(/^[1-9]?\d{1,3}$/);
+      if (!(rx.test(inputBetweenLockout.value))) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 1440' };
+      if (!(inputBetweenLockout.value >= 1 && inputBetweenLockout.value <= 1440)) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 1440' };
       if (statusCode == false){
         saveBtn.disabled = false;
         status.showStatus({status:'ERROR',statusMsg});
@@ -836,8 +838,6 @@ const showSettings = (params) => {
         mySettings.modified = Date();
         mySettings.numLockoutRetries = parseInt(inputLockoutRetry.value);
         mySettings.minutesToWaitBetweenLockout = parseInt(inputBetweenLockout.value);
-        mySettings.scrubContentAfterRetries = inputScrubContent.checked;
-        mySettings.scrubInstallAfterRetries = settings.scrubInstallAfterRetries;
         saving.state = true;
         status.loadStatus();
         ipc.send('save-settings', {newSettings:mySettings});
@@ -866,4 +866,64 @@ const showLockScreen = () => {
   x.setTime(settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000));
   created.innerHTML = "Try again after " + x;
   area.appendChild(created);
+  const saveBtn = document.createElement('button');
+  saveBtn.type = "submit";
+  saveBtn.id = "saveBtn";
+  saveBtn.className = "btn btn-default bottom-space pull-right";
+  saveBtn.innerHTML = "<span class='fa fa-unlock' aria-hidden='true'></span> Retry Login";
+  saveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (saving.state == true) {
+      alert("Please wait for processing to complete");
+    } else {
+      if (settings.lockLogin) {
+        const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+        const y = new Date().getTime();
+        if (x > y) {
+          alert("Lock timeout is still active");
+        } else {
+          showLogin();
+        }
+      }
+    }
+  });
+  area.appendChild(saveBtn);
+};
+
+ipc.on('result-lockout-destroy',(evt, params) => {
+  saving.state = false;
+  if (params.status != null && params.status != ""){
+    status.showStatus({status:params.status,statusMsg:params.statusMsg});
+  }
+  settings = params.settings;
+  showLockoutDestroy();
+});
+
+const showLockoutDestroy = () => {
+  const area = document.getElementById('detailArea');
+  area.innerHTML = "";
+  const header = document.createElement('h1');
+  header.innerHTML = "System lockout";
+  area.appendChild(header);
+  const divider = document.createElement('hr');
+  area.appendChild(divider);
+  const created = document.createElement('p');
+  let x = "<b>You have exceeded your password attempts and the system brute force attack prevention has been executed. ";
+  x = x + "The data on this system has been destroyed. The next login will accept a new password and will create a new initial system setup.</b>";
+  created.innerHTML = x;
+  area.appendChild(created);
+  const saveBtn = document.createElement('button');
+  saveBtn.type = "submit";
+  saveBtn.id = "saveBtn";
+  saveBtn.className = "btn btn-default bottom-space pull-right";
+  saveBtn.innerHTML = "<span class='fa fa-unlock' aria-hidden='true'></span> Go to Login";
+  saveBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (saving.state == true) {
+      alert("Please wait for processing to complete");
+    } else {
+      showLogin();
+    }
+  });
+  area.appendChild(saveBtn);
 };

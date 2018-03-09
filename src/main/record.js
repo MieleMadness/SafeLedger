@@ -19,7 +19,7 @@ const renderRecords = (params) => {
   recordArea.innerHTML = "";
   const ul = document.createElement("UL");
   ul.className = "nav";
-  if (params.vaultData.groupSelected != null && params.vaultData.groups[params.vaultData.groupSelected].records != null
+  if (params.vaultData != null && params.vaultData.groupSelected != null && params.vaultData.groups[params.vaultData.groupSelected].records != null
     && params.vaultData.groups[params.vaultData.groupSelected].records.length > 0 ) {
     const records = params.vaultData.groups[params.vaultData.groupSelected].records;
     for (let i = 0; i < records.length; i++) {

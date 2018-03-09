@@ -140,7 +140,7 @@ ipc.on('read', (evt, params) => {
 
 ipc.on('read-vaultlist-init', (evt, params) => {
   if (params.settings.lockOutCount >= params.settings.numLockoutRetries) {
-    console.log("Lock out retries exhausted");
+    //console.log("Lock out retries exhausted");
     vault.scrubContent(vaultDir)
     .then((val) => {
       params.settings.failAttemptCount = 0;
@@ -148,7 +148,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
       params.settings.lockLogin = false;
       settingsManager.saveSettings(base,params.settings)
       .then((val) => {
-        mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Lock out retries exhausted your data has been destroyed',settings:params.settings});
+        mainWindow.webContents.send('result-lockout-destroy',{status:'ERROR',statusMsg:'Lock out retries exhausted your data has been destroyed',settings:params.settings});
       })
       .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
     })
@@ -188,7 +188,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
                     }
                     settingsManager.saveSettings(base,params.settings)
                     .then((val) => {
-                      val.settings = params.settings;
+                      valList.settings = params.settings;
                       mainWindow.webContents.send('result',valList);
                     })
                     .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
@@ -222,7 +222,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
             }
             settingsManager.saveSettings(base,params.settings)
             .then((val) => {
-              val.settings = params.settings;
+              valList.settings = params.settings;
               mainWindow.webContents.send('result',valList);
             })
             .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
@@ -345,21 +345,21 @@ ipc.on('process-rotate-crypto', (evt, params) => {
 
 ipc.on('init-system', (evt, params) => {
   // console.log(" check install code ");
-  installCodeManager.checkInstallCode(installCodeDir)
-  .then((val) => {
-    if (val.status === "SUCCESS") {
-      settingsManager.loadSettings(base)
-      .then((valSettings) => {
-        mainWindow.webContents.send('result-init-system',{keyStatus:val.status,settings:valSettings.settings});
-      })
-      .catch((valSettings) => {
-        mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Not able to load settings file'});
-      })
-    } else {
-      mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,fileCode:val.fileCode});
-    }
+  settingsManager.loadSettings(base)
+  .then((valSettings) => {
+    installCodeManager.checkInstallCode(installCodeDir)
+    .then((val) => {
+      if (val.status === "SUCCESS") {
+          mainWindow.webContents.send('result-init-system',{keyStatus:val.status,settings:valSettings.settings});
+      } else {
+        mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,fileCode:val.fileCode,settings:valSettings.settings});
+      }
+    })
+    .catch((val) => mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code check error',settings:valSettings.settings}));
   })
-  .catch((val) => mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code check error'}));
+  .catch((valSettings) => {
+    mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Not able to load settings file'});
+  })
 });
 
 ipc.on('save-install-code', (evt, params) => {
