@@ -146,7 +146,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
       params.settings.failAttemptCount = 0;
       params.settings.lockOutCount = 0;
       params.settings.lockLogin = false;
-      settingsManager.saveSettings(base,params.settings)
+      settingsManager.saveSettings(installCodeDir,params.settings)
       .then((val) => {
         mainWindow.webContents.send('result-lockout-destroy',{status:'ERROR',statusMsg:'Lock out retries exhausted your data has been destroyed',settings:params.settings});
       })
@@ -171,7 +171,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
                     params.settings.failAttemptCount = 0;
                     params.settings.lockOutCount = 0;
                     params.settings.lockLogin = false;
-                    settingsManager.saveSettings(base,params.settings)
+                    settingsManager.saveSettings(installCodeDir,params.settings)
                     .then((val) => {
                       mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:valList,cryptoKey:params.cryptoKey,settings:params.settings});
                     })
@@ -186,7 +186,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
                       params.settings.lockLogin = true;
                       params.settings.lockLoginTime = new Date().getTime();
                     }
-                    settingsManager.saveSettings(base,params.settings)
+                    settingsManager.saveSettings(installCodeDir,params.settings)
                     .then((val) => {
                       valList.settings = params.settings;
                       mainWindow.webContents.send('result',valList);
@@ -205,7 +205,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
             params.settings.failAttemptCount = 0;
             params.settings.lockOutCount = 0;
             params.settings.lockLogin = false;
-            settingsManager.saveSettings(base,params.settings)
+            settingsManager.saveSettings(installCodeDir,params.settings)
             .then((val) => {
               mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:valList,cryptoKey:params.cryptoKey,settings:params.settings});
             })
@@ -220,7 +220,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
               params.settings.lockLogin = true;
               params.settings.lockLoginTime = new Date().getTime();
             }
-            settingsManager.saveSettings(base,params.settings)
+            settingsManager.saveSettings(installCodeDir,params.settings)
             .then((val) => {
               valList.settings = params.settings;
               mainWindow.webContents.send('result',valList);
@@ -345,7 +345,7 @@ ipc.on('process-rotate-crypto', (evt, params) => {
 
 ipc.on('init-system', (evt, params) => {
   // console.log(" check install code ");
-  settingsManager.loadSettings(base)
+  settingsManager.loadSettings(installCodeDir)
   .then((valSettings) => {
     installCodeManager.checkInstallCode(installCodeDir)
     .then((val) => {
@@ -377,7 +377,7 @@ ipc.on('save-install-code', (evt, params) => {
 
 ipc.on('save-settings', (evt, params) => {
    console.log("save settings  " + JSON.stringify(params.newSettings) );
-  settingsManager.saveSettings(base,params.newSettings)
+  settingsManager.saveSettings(installCodeDir,params.newSettings)
   .then((val) => {
     if (val.status === "SUCCESS") {
       mainWindow.webContents.send('result-save-settings',{status:val.status,statusMsg:'Settings saved',settings:params.newSettings});

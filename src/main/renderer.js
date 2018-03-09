@@ -857,7 +857,13 @@ const showLockScreen = () => {
   const area = document.getElementById('detailArea');
   area.innerHTML = "";
   const header = document.createElement('h1');
-  header.innerHTML = "Your account is locked";
+  let t = settings.minutesToWaitBetweenLockout + " minutes.";
+  if (settings.minutesToWaitBetweenLockout > 59) {
+    const hours = settings.minutesToWaitBetweenLockout % 60;
+    const min = (hours * 60) - settings.minutesToWaitBetweenLockout;
+    t = hours + " hours " + min + " minutes.";
+  }
+  header.innerHTML = "Account is locked for " + t;
   area.appendChild(header);
   const divider = document.createElement('hr');
   area.appendChild(divider);
