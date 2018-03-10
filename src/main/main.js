@@ -15,6 +15,7 @@ const url = require('url');
 const vault = require('./vault');
 const fs = require('fs');
 const utils = require('./utils');
+const logger = require('./logger');
 const installCodeManager = require('./installManager/installManager/installCodeManager');
 const settingsManager = require('./installManager/installManager/settingsManager');
 
@@ -27,6 +28,7 @@ let vaultDir = path.join(app.getAppPath(), '/vaults/');
 let installCodeDir;
 let currentVault = 'zvault-0.json';
 let failAttempts = 0;
+let debug = true;
 
 function createWindow () {
 
@@ -44,7 +46,7 @@ function createWindow () {
   }
   vaultDir = path.join(appDir[0],'safeledgerdata/');
   installCodeDir = path.join(appDir[0],'safeledgersettings/');
-
+  logger.initLogger(installCodeDir,debug);
   // Create the browser window.
   mainWindow = new BrowserWindow({width: 1200, height: 770, icon: "sl.ico"});
 
