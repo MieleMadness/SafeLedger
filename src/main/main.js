@@ -28,7 +28,7 @@ let vaultDir = path.join(app.getAppPath(), '/vaults/');
 let installCodeDir;
 let currentVault = 'zvault-0.json';
 let failAttempts = 0;
-let debug = true;
+let debug = false;
 
 function createWindow () {
 
@@ -58,7 +58,7 @@ function createWindow () {
   }));
 
   // Open the DevTools.
-   mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
  // Emitted when the window is closed.
   mainWindow.on('closed', function () {
     // Dereference the window object, usually you would store windows
@@ -71,7 +71,7 @@ function createWindow () {
   const template = [{
       label: "SafeLedger",
       submenu: [
-          { label: "Version 1.8"},
+          { label: "Version 1.9"},
           { label: "Settings", click: function() { showSettings(); }},
           { type: "separator" },
           { label: "Quit", accelerator: "Command+Q", click: function() { app.quit(); }}
@@ -378,7 +378,6 @@ ipc.on('save-install-code', (evt, params) => {
 });
 
 ipc.on('save-settings', (evt, params) => {
-   console.log("save settings  " + JSON.stringify(params.newSettings) );
   settingsManager.saveSettings(installCodeDir,params.newSettings)
   .then((val) => {
     if (val.status === "SUCCESS") {
