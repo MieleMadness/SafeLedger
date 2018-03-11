@@ -32,6 +32,9 @@ let debug = false;
 
 function createWindow () {
 
+  // Create the browser window.
+  mainWindow = new BrowserWindow({width: 1200, height: 770, icon: "sl.ico"});
+  // determine path
   base = app.getAppPath();
   if (base.includes("SafeLedger-darwin-x64")) {
     // console.log("running mac build");
@@ -39,16 +42,20 @@ function createWindow () {
   } else if (base.includes("SafeLedger-win32-x64")){
     // console.log("running win build");
     appDir = base.split("SafeLedger-win32-x64");
+  } else if (base.includes("SafeLedgerPlus-mac")){
+    appDir = base.split("SafeLedgerPlus-mac");
+  } else if (base.includes("SafeLedgerPlus-win")){
+    appDir = base.split("SafeLedgerPlus-win");
   } else if (base.includes("SafeLedgerPlus")){
     appDir = base.split("SafeLedgerPlus");
   } else {
     appDir = base.split("safe-ledger");
+    // Open the DevTools.
+    mainWindow.webContents.openDevTools()
   }
   vaultDir = path.join(appDir[0],'safeledgerdata/');
   installCodeDir = path.join(appDir[0],'safeledgersettings/');
   logger.initLogger(installCodeDir,debug);
-  // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1200, height: 770, icon: "sl.ico"});
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
@@ -57,8 +64,6 @@ function createWindow () {
     slashes: true
   }));
 
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools()
  // Emitted when the window is closed.
   mainWindow.on('closed', function () {
     // Dereference the window object, usually you would store windows
