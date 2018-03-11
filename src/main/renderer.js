@@ -835,7 +835,7 @@ const showSettings = (params) => {
       if (!(rx.test(inputLockoutRetry.value)) || inputLockoutRetry.value < 2 || inputLockoutRetry.value > 5) { statusCode = false; statusMsg='Lockout retires must be a number greater than 2 less than 5' };
       rx = new RegExp(/^[1-9]?\d{1,3}$/);
       if (!(rx.test(inputBetweenLockout.value))) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 1440' };
-      if (!(inputBetweenLockout.value >= 1 && inputBetweenLockout.value <= 1440)) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 1440' };
+      if (!(inputBetweenLockout.value >= 15 && inputBetweenLockout.value <= 1440)) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 1440' };
       if (statusCode == false){
         saveBtn.disabled = false;
         status.showStatus({status:'ERROR',statusMsg});
