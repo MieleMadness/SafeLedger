@@ -668,7 +668,7 @@ const showInstallCode = (params) => {
           const k = JSON.parse(params.initialCode);
           let mySettings = Object.assign({},settings);
           mySettings.modified = Date();
-          mySettings.ctime = k.ctime;
+          mySettings.atime = k.atime;
           mySettings.upper = k.upper;
           mySettings.lower = k.lower;
           mySettings.activationCode = s;
