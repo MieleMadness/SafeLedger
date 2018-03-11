@@ -287,7 +287,7 @@ ipc.on('result-init-system',(evt, params) => {
     status.showStatus({status:params.status,statusMsg:params.statusMsg});
   }
   if (params.settings != null) {
-    con.log("settings " + JSON.stringify(params.settings));
+    //con.log("settings " + JSON.stringify(params.settings));
     settings = params.settings;
     if (params.settings.lockLogin) {
       const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
@@ -304,7 +304,7 @@ ipc.on('result-init-system',(evt, params) => {
     showLogin();
   } else {
     installCode = null;
-    showInstallCode({keyCode:params.keyCode,fileCode:params.fileCode});
+    showInstallCode({keyCode:params.keyCode,initialCode:params.initialCode});
   }
 });
 
@@ -661,17 +661,20 @@ const showInstallCode = (params) => {
       saveBtn.disabled = true;
       const installCodeField = document.getElementById('inputInstallCode');
       if (installCodeField != null && installCodeField.value != "") {
-      //  console.log("file code " + params.fileCode);
-        const s = installCodeManager.getInstallCode(params.fileCode);
+        //console.log("file code " + params.initialCode);
+        const s = installCodeManager.getInstallCode(params.initialCode);
         //console.log("hash " + s);
         if (s == installCodeField.value) {
-          let myInstallCode = {};
-          myInstallCode.key = installCodeField.value;
-          myInstallCode.created = Date();
-          myInstallCode.fileCode = params.fileCode;
+          const k = JSON.parse(params.initialCode);
+          let mySettings = Object.assign({},settings);
+          mySettings.modified = Date();
+          mySettings.ctime = k.ctime;
+          mySettings.upper = k.upper;
+          mySettings.lower = k.lower;
+          mySettings.activationCode = s;
           saving.state = true;
           status.loadStatus();
-          ipc.send('save-install-code', {installCode:myInstallCode,keyCode:params.keyCode});
+          ipc.send('save-install-code', {newSettings:mySettings,keyCode:params.keyCode,initialCode:params.initialCode});
         } else {
           alert("Invalid Activation code");
           saveBtn.disabled = false;
@@ -689,13 +692,16 @@ ipc.on('result-save-install-code',(evt, params) => {
   if (params.status != null && params.status != ""){
     status.showStatus({status:params.status,statusMsg:params.statusMsg});
   }
+  if (params.settings != null) {
+    settings = params.settings;
+  }
   if(params.status === "SUCCESS") {
     installCode = params.keyCode;
     //console.log("key code " + params.keyCode);
     showLogin();
   } else {
     installCode = null;
-    showInstallCode({keyCode:params.keyCode,fileCode:params.fileCode});
+    showInstallCode({keyCode:params.keyCode,initialCode:params.initialCode});
   }
 });
 
@@ -734,6 +740,10 @@ const showSettings = (params) => {
   area.appendChild(header);
   const divider = document.createElement('hr');
   area.appendChild(divider);
+  const activation = document.createElement('p');
+  activation.className = "dates";
+  activation.innerHTML = "<b>Activation Code:</b> "+settings.activationCode;
+  area.appendChild(activation);
   const form = document.createElement('form');
   form.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -788,7 +798,7 @@ const showSettings = (params) => {
   formGroupScrubContent.appendChild(inputScrubContent); */
   const labelScrubContent = document.createElement('label');
   labelScrubContent.for = "inputScrubContent";
-  labelScrubContent.innerHTML = "*** Brute force attack prevention enabled - Destroy data after all lockouts have been exhausted ***";
+  labelScrubContent.innerHTML = "*** Brute force attack interception enabled - Destroy data after all lockouts have been exhausted ***";
   formGroupScrubContent.appendChild(labelScrubContent);
 
 /*  const formGroupScrubInstall = document.createElement('div');
@@ -914,7 +924,7 @@ const showLockoutDestroy = () => {
   const divider = document.createElement('hr');
   area.appendChild(divider);
   const created = document.createElement('p');
-  let x = "<b>You have exceeded your password attempts and the system brute force attack prevention has been executed. ";
+  let x = "<b>You have exceeded your password attempts and the system brute force attack interception has been executed. ";
   x = x + "The data on this system has been destroyed. The next login will accept a new password and will create a new initial system setup.</b>";
   created.innerHTML = x;
   area.appendChild(created);

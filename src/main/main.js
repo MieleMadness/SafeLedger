@@ -354,7 +354,7 @@ ipc.on('init-system', (evt, params) => {
       if (val.status === "SUCCESS") {
           mainWindow.webContents.send('result-init-system',{keyStatus:val.status,settings:valSettings.settings});
       } else {
-        mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,fileCode:val.fileCode,settings:valSettings.settings});
+        mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,initialCode:val.initialCode,settings:valSettings.settings});
       }
     })
     .catch((val) => mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code check error',settings:valSettings.settings}));
@@ -366,12 +366,12 @@ ipc.on('init-system', (evt, params) => {
 
 ipc.on('save-install-code', (evt, params) => {
   // console.log(" main save installCode " + params.installCode.key + " " + params.installCode.fileCode);
-  installCodeManager.saveInstallCode(path.join(installCodeDir,'installcode.json'),JSON.stringify(params.installCode))
+  settingsManager.saveSettings(installCodeDir,params.newSettings)
   .then((val) => {
     if (val.status === "SUCCESS") {
-      mainWindow.webContents.send('result-save-install-code',{status:val.status,statusMsg:'Activation code saved',keyCode:params.installCode.key});
+      mainWindow.webContents.send('result-save-install-code',{status:val.status,statusMsg:'Activation code saved',keyCode:params.keyCode,settings:params.newSettings});
     } else {
-      mainWindow.webContents.send('result-save-install-code',{status:'ERROR',statusMsg:'Activation code save failed',fileCode:params.installCode.fileCode,keyCode:params.installCode.key});
+      mainWindow.webContents.send('result-save-install-code',{status:'ERROR',statusMsg:'Activation code save failed',initialCode:params.initialCode,keyCode:params.keyCode});
     }
   })
   .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Activation code save failed'}));
