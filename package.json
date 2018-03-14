@@ -7,6 +7,7 @@
   "scripts": {
     "buildmac": "electron-packager . --platform=darwin --arch=x64 --overwrite --out=release-builds --prune=true --asar --icon=sl && cp LICENSE release-builds/SafeLedger-darwin-x64/LICENSE",
     "buildwin": "electron-packager . --platform=win32 --arch=x64 --overwrite --out=release-builds --prune=true --asar --icon=sl",
+    "buildlinux": "electron-packager . --platform=linux --archx64 --overwrite --out=release-builds --prune=true --asar --icon=sl.png && cp LICENSE release-builds/SafeLedger-linux-x64/LICENSE",
     "start": "electron ."
   },
   "repository": "https://github.com/seufster71/safe-ledger",
