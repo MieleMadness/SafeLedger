@@ -33,7 +33,7 @@ let debug = false;
 function createWindow () {
 
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1200, height: 770, icon: "sl.ico"});
+  mainWindow = new BrowserWindow({width: 1200, height: 770, icon: "sl.png"});
   // determine path
   base = app.getAppPath();
   if (base.includes("SafeLedger-darwin-x64")) {
@@ -42,10 +42,14 @@ function createWindow () {
   } else if (base.includes("SafeLedger-win32-x64")){
     // console.log("running win build");
     appDir = base.split("SafeLedger-win32-x64");
+  } else if (base.includes("SafeLedger-linux-x64")) {
+    appDir = base.split("SafeLedger-linux-x64");
   } else if (base.includes("SafeLedgerPlus-mac")){
     appDir = base.split("SafeLedgerPlus-mac");
   } else if (base.includes("SafeLedgerPlus-win")){
     appDir = base.split("SafeLedgerPlus-win");
+  } else if (base.includes("SafeLedgerPlus-linux")){
+    appDir = base.split("SafeLedgerPlus-linux");
   } else if (base.includes("SafeLedgerPlus")){
     appDir = base.split("SafeLedgerPlus");
   } else {
