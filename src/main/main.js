@@ -356,34 +356,36 @@ ipc.on('process-rotate-crypto', (evt, params) => {
 
 ipc.on('init-system', (evt, params) => {
   // console.log(" check install code ");
-  settingsManager.loadSettings(installCodeDir)
-  .then((valSettings) => {
-    installCodeManager.checkInstallCode(installCodeDir)
-    .then((val) => {
-      if (val.status === "SUCCESS") {
-          mainWindow.webContents.send('result-init-system',{keyStatus:val.status,settings:valSettings.settings});
-      } else {
-        mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,initialCode:val.initialCode,settings:valSettings.settings});
-      }
-    })
-    .catch((val) => mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code check error',settings:valSettings.settings}));
-  })
-  .catch((valSettings) => {
-    mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Not able to load settings file'});
-  })
+  // settingsManager.loadSettings(installCodeDir)
+  // .then((valSettings) => {
+  //   installCodeManager.checkInstallCode(installCodeDir)
+  //   .then((val) => {
+  //     if (val.status === "SUCCESS") {
+  //         mainWindow.webContents.send('result-init-system',{keyStatus:val.status,settings:valSettings.settings});
+  //     } else {
+  //       mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,initialCode:val.initialCode,settings:valSettings.settings});
+  //     }
+  //   })
+  //   .catch((val) => mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code check error',settings:valSettings.settings}));
+  // })
+  // .catch((valSettings) => {
+  //   mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Not able to load settings file'});
+  // })
+  mainWindow.webContents.send('result-init-system',{keyStatus:"SUCCESS"});
 });
 
 ipc.on('save-install-code', (evt, params) => {
   // console.log(" main save installCode " + params.installCode.key + " " + params.installCode.fileCode);
-  settingsManager.saveSettings(installCodeDir,params.newSettings)
-  .then((val) => {
-    if (val.status === "SUCCESS") {
-      mainWindow.webContents.send('result-save-install-code',{status:val.status,statusMsg:'Activation code saved',keyCode:params.keyCode,settings:params.newSettings});
-    } else {
-      mainWindow.webContents.send('result-save-install-code',{status:'ERROR',statusMsg:'Activation code save failed',initialCode:params.initialCode,keyCode:params.keyCode});
-    }
-  })
-  .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Activation code save failed'}));
+  // settingsManager.saveSettings(installCodeDir,params.newSettings)
+  // .then((val) => {
+  //   if (val.status === "SUCCESS") {
+  //     mainWindow.webContents.send('result-save-install-code',{status:val.status,statusMsg:'Activation code saved',keyCode:params.keyCode,settings:params.newSettings});
+  //   } else {
+  //     mainWindow.webContents.send('result-save-install-code',{status:'ERROR',statusMsg:'Activation code save failed',initialCode:params.initialCode,keyCode:params.keyCode});
+  //   }
+  // })
+  // .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Activation code save failed'}));
+  mainWindow.webContents.send('result-init-system',{keyStatus:"SUCCESS"});
 });
 
 ipc.on('save-settings', (evt, params) => {
