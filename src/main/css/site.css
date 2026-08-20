@@ -36,6 +36,7 @@ a .highlight { color: yellow; }
 .wallet-list-name { display: block; }
 .wallet-list-category { display: block; margin-top: 2px; font-size: 10px; opacity: .72; font-weight: 400; }
 .wallet-list-icon { vertical-align: middle; }
+.wallet-detail-category { margin: -2px 0 8px; color: #666; font-size: 12px; font-weight: 500; }
 
 .bottom-space { margin-top: 8px; margin-bottom: 8px; min-height: 38px; }
 .bottom-align-text { position: absolute; bottom: 0; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); }
@@ -56,10 +57,10 @@ a { color: white; }
 .search-clear:focus { background: rgba(0,0,0,.08); color: #111; outline: none; }
 
 .detail-column { padding-top: 0; }
-#detailArea { padding-top: 0; }
+#detailArea { padding-top: 2px; }
 #detailArea h1,
-#detailArea .page-header { margin-top: 8px; margin-bottom: 8px; padding-top: 0; padding-bottom: 4px; }
-#detailArea hr { margin-top: 8px; margin-bottom: 12px; }
+#detailArea .page-header { margin-top: 0; margin-bottom: 6px; padding-top: 0; padding-bottom: 2px; line-height: 1.05; }
+#detailArea hr { margin-top: 6px; margin-bottom: 10px; }
 
 .sensitive-field { margin: 10px 0; border: 1px solid #d8d8d8; background: #fff; border-radius: 6px; overflow: hidden; }
 .sensitive-field summary { cursor: pointer; padding: 10px 12px; font-weight: 600; user-select: none; }
@@ -84,7 +85,13 @@ a { color: white; }
 .password-strength-bar { height: 100%; width: 0; background: currentColor; opacity: .22; transition: width .15s ease; }
 .password-strength-label { position: absolute; left: 8px; top: 3px; font-size: 12px; font-weight: 600; }
 
-.emergency-lock-cell { min-height: 54px; display: flex; align-items: center; justify-content: flex-end; padding-right: 16px; }
+.emergency-lock-cell {
+  min-height: 62px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 0 16px 16px 15px;
+}
 .panic-lock-inline { width: 46px; height: 46px; border-radius: 50%; border: 2px solid #0D47A1; background: #fff; padding: 4px; box-shadow: 0 2px 7px rgba(0,0,0,.24); cursor: pointer; }
 .panic-lock-inline:hover,
 .panic-lock-inline:focus { transform: scale(1.04); outline: 2px solid #1976D2; }
