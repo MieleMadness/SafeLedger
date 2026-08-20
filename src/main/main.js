@@ -18,18 +18,12 @@ let currentSettings;
 let activeVaultData = null;
 let activeCryptoKey = null;
 let walletCatalog = null;
-let walletCatalogUpdate = null;
 const currentVault = 'zvault-0.json';
 const debug = false;
 
 function getWalletCatalog() {
   if (!walletCatalog) walletCatalog = require('./wallet-catalog');
   return walletCatalog;
-}
-
-function getWalletCatalogUpdate() {
-  if (!walletCatalogUpdate) walletCatalogUpdate = require('./wallet-catalog-update');
-  return walletCatalogUpdate;
 }
 
 function getPortableRoot() {
@@ -52,7 +46,6 @@ function buildMenu() {
     submenu: [
       { label: `Version ${app.getVersion()}`, enabled: false },
       { label: 'Settings', click: () => showSettings() },
-      { label: 'Update Wallet Catalog', click: () => updateCurrentWalletCatalog() },
       {
         label: 'Self-Destruct Protection',
         type: 'checkbox',
@@ -70,63 +63,6 @@ function buildMenu() {
     ]
   }];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-}
-
-async function updateCurrentWalletCatalog() {
-  if (!activeVaultData || !activeCryptoKey || !activeVaultData.file) {
-    await dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      buttons: ['OK'],
-      title: 'Update Wallet Catalog',
-      message: 'Open a profile first',
-      detail: 'Select and open a SafeLedger profile, then choose Update Wallet Catalog again.'
-    });
-    return;
-  }
-
-  const confirmation = await dialog.showMessageBox(mainWindow, {
-    type: 'question',
-    buttons: ['Update Catalog', 'Cancel'],
-    defaultId: 0,
-    cancelId: 1,
-    noLink: true,
-    title: 'Update Wallet Catalog',
-    message: 'Add newly supported wallets and assets to this profile?',
-    detail: 'SafeLedger will only add missing catalog wallets, networks and token families. Existing private keys, seed phrases, addresses, passwords, notes, custom wallets and custom records will not be overwritten or deleted.'
-  });
-  if (confirmation.response !== 0) return;
-
-  try {
-    const updatedVault = JSON.parse(JSON.stringify(activeVaultData));
-    const result = getWalletCatalogUpdate().mergeCatalog(updatedVault);
-    await vault.saveVault(path.join(vaultDir, updatedVault.file), JSON.stringify(updatedVault), activeCryptoKey);
-    activeVaultData = updatedVault;
-
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('result', {
-        status: 'SUCCESS',
-        statusMsg: `Wallet catalog updated: ${result.addedWallets} wallet(s) and ${result.addedRecords} asset/network record(s) added. Existing data was preserved.`,
-        type: 'catalog-update',
-        vaultData: updatedVault
-      });
-    }
-
-    await dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      buttons: ['OK'],
-      title: 'Wallet Catalog Updated',
-      message: 'Catalog update complete',
-      detail: `${result.addedWallets} new wallet(s) and ${result.addedRecords} new asset/network record(s) were added. Existing SafeLedger data was not overwritten.`
-    });
-  } catch (err) {
-    await dialog.showMessageBox(mainWindow, {
-      type: 'error',
-      buttons: ['OK'],
-      title: 'Update Wallet Catalog Failed',
-      message: 'SafeLedger could not update this profile.',
-      detail: err && err.message ? err.message : 'The existing profile was left unchanged.'
-    });
-  }
 }
 
 async function setSelfDestructProtection(enabled) {
