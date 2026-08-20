@@ -170,18 +170,18 @@ const renderGroupDetail = (params) => {
   const created=document.createElement('p'); created.className='dates'; created.innerHTML=`<b>Created:</b> ${params.group.created||''}`; area.appendChild(created);
   if(params.group.modified){const modified=document.createElement('p'); modified.className='dates'; modified.innerHTML=`<b>Modified:</b> ${params.group.modified}`; area.appendChild(modified);}
 
-  const printBtn=document.createElement('button'); printBtn.type='button'; printBtn.className='btn btn-default bottom-space'; printBtn.innerHTML="<i class='fa fa-print'></i> Print recovery sheet";
+  const printBtn=document.createElement('button'); printBtn.type='button'; printBtn.className='btn btn-default bottom-space coin-print-button'; printBtn.innerHTML="<i class='fa fa-print'></i> Print recovery sheet";
   printBtn.addEventListener('click',()=>securityUi.printRecoverySheet(`${displayWalletName(params.group.name)||'Wallet'} Recovery Sheet`,[
     {label:'Wallet',value:displayWalletName(params.group.name)},{label:'Category',value:category},{label:'Tags',value:params.group.tags},{label:'Password',value:params.group.password},{label:'PIN',value:params.group.pin},{label:'Recovery link',value:params.group.recoveryLink},{label:'Seed phrase',value:params.group.seedPhrase},{label:'Notes',value:getUserWalletNotes(params.group)}
   ],true)); area.appendChild(printBtn);
 
-  const deleteBtn=document.createElement('button'); deleteBtn.type='button'; deleteBtn.className='btn btn-default bottom-space pull-right'; deleteBtn.innerHTML="<span class='glyphicon glyphicon-trash'></span> Delete"; deleteBtn.onclick=()=>confirmDelete(params); area.appendChild(deleteBtn);
+  const deleteBtn=document.createElement('button'); deleteBtn.type='button'; deleteBtn.className='btn btn-default bottom-space pull-right coin-delete-button'; deleteBtn.innerHTML="<span class='glyphicon glyphicon-trash'></span> Delete"; deleteBtn.onclick=()=>confirmDelete(params); area.appendChild(deleteBtn);
   const editBtn=document.createElement('button'); editBtn.type='button'; editBtn.className='btn btn-default bottom-space pull-right'; editBtn.innerHTML="<span class='glyphicon glyphicon-edit'></span> Edit"; editBtn.onclick=()=>createEditGroup(params); area.appendChild(editBtn);
 };
 
 const confirmDelete = (params) => {
   const area=document.getElementById('detailArea'); area.innerHTML='';
   const header=document.createElement('h1'); header.textContent=`Confirm Delete of wallet: ${displayWalletName(params.group.name)}`; area.appendChild(header); area.appendChild(document.createElement('hr'));
-  const btn=document.createElement('button'); btn.type='button'; btn.className='btn btn-default bottom-space pull-right'; btn.textContent='Confirm';
+  const btn=document.createElement('button'); btn.type='button'; btn.className='btn btn-default bottom-space pull-right coin-delete-button'; btn.textContent='Confirm Delete';
   btn.onclick=()=>{params.vaultData.groups.splice(params.vaultData.groupSelected,1); params.vaultData.groupSelected=null; params.vaultData.recordSelected=null; params.saving.state=true; statusMgr.loadStatus(); ipc.send('process-group',{cryptoKey:params.cryptoKey,type:'group-delete',vaultData:params.vaultData}); area.innerHTML='';}; area.appendChild(btn);
 };
