@@ -1,252 +1,154 @@
-/*
-  Author: Edward Seufert - Cborgtech, LLC
-*/
+'use strict';
 
-const electron = require('electron')
-// Module to control application life.
-const app = electron.app
-// Module to create native browser window.
-const BrowserWindow = electron.BrowserWindow
-const Menu = electron.Menu
-const {ipcMain: ipc } = electron
-
+const { app, BrowserWindow, Menu, ipcMain: ipc } = require('electron');
+const remoteMain = require('@electron/remote/main');
 const path = require('path');
-const url = require('url');
 const vault = require('./vault');
-const fs = require('fs');
 const utils = require('./utils');
 const logger = require('./logger');
 const installCodeManager = require('./installManager/installManager/installCodeManager');
 const settingsManager = require('./installManager/installManager/settingsManager');
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
+remoteMain.initialize();
+
 let mainWindow;
-let appDir;
-let base;
-let vaultDir = path.join(app.getAppPath(), '/vaults/');
-let installCodeDir;
-let currentVault = 'zvault-0.json';
-let failAttempts = 0;
-let debug = false;
+let vaultDir;
+let settingsDir;
+const currentVault = 'zvault-0.json';
+const debug = false;
 
-function createWindow () {
+function getPortableRoot() {
+  // electron-builder sets this when running the single-file portable EXE.
+  if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
+  // A normal unpacked/local build keeps its data beside SafeLedger.exe.
+  if (app.isPackaged) return path.dirname(process.execPath);
+  // Development mode keeps test data in the project directory.
+  return app.getAppPath();
+}
 
-  // Create the browser window.
-  mainWindow = new BrowserWindow({width: 1200, height: 770, icon: "sl.png"});
-  // determine path
-  base = app.getAppPath();
-  if (base.includes("SafeLedger-darwin-x64")) {
-    // console.log("running mac build");
-    appDir = base.split("SafeLedger-darwin-x64");
-  } else if (base.includes("SafeLedger-win32-x64")){
-    // console.log("running win build");
-    appDir = base.split("SafeLedger-win32-x64");
-  } else if (base.includes("SafeLedger-linux-x64")) {
-    appDir = base.split("SafeLedger-linux-x64");
-  } else if (base.includes("SafeLedgerPlus-mac")){
-    appDir = base.split("SafeLedgerPlus-mac");
-  } else if (base.includes("SafeLedgerPlus-win")){
-    appDir = base.split("SafeLedgerPlus-win");
-  } else if (base.includes("SafeLedgerPlus-linux")){
-    appDir = base.split("SafeLedgerPlus-linux");
-  } else if (base.includes("SafeLedgerPlus")){
-    appDir = base.split("SafeLedgerPlus");
-  } else {
-    appDir = base.split("safe-ledger");
-    // Open the DevTools.
-    mainWindow.webContents.openDevTools()
-  }
-  vaultDir = path.join(appDir[0],'safeledgerdata/');
-  installCodeDir = path.join(appDir[0],'safeledgersettings/');
-  logger.initLogger(installCodeDir,debug);
+function configureStorage() {
+  const root = getPortableRoot();
+  vaultDir = path.join(root, 'SafeLedgerData', 'vaults');
+  settingsDir = path.join(root, 'SafeLedgerData', 'settings');
+  logger.initLogger(settingsDir, debug);
+}
 
-  // and load the index.html of the app.
-  mainWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'index.html'),
-    protocol: 'file:',
-    slashes: true
-  }));
+function createWindow() {
+  configureStorage();
 
- // Emitted when the window is closed.
-  mainWindow.on('closed', function () {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
-    mainWindow = null
+  mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 770,
+    minWidth: 900,
+    minHeight: 600,
+    icon: path.join(app.getAppPath(), 'sl.png'),
+    webPreferences: {
+      // Temporary compatibility bridge for the 1.x renderer. This lets the old
+      // UI run on current Electron while legacy Node access is migrated to a
+      // context-isolated preload API in the next security pass.
+      nodeIntegration: true,
+      contextIsolation: false,
+      preload: path.join(__dirname, 'preload-compat.js')
+    }
   });
-  // menu setup
-  const name = electron.app.getName()
+
+  remoteMain.enable(mainWindow.webContents);
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+  mainWindow.on('closed', () => { mainWindow = null; });
+
   const template = [{
-      label: "SafeLedger",
-      submenu: [
-          { label: "Version 1.9"},
-          { label: "Settings", click: function() { showSettings(); }},
-          { type: "separator" },
-          { label: "Quit", accelerator: "Command+Q", click: function() { app.quit(); }}
-      ]}, {
-      label: "Edit",
-      submenu: [
-          { label: "Undo", accelerator: "CmdOrCtrl+Z", selector: "undo:", role: "undo" },
-          { label: "Redo", accelerator: "Shift+CmdOrCtrl+Z", selector: "redo:", role: "redo" },
-          { type: "separator" },
-          { label: "Cut", accelerator: "CmdOrCtrl+X", selector: "cut:", role: "cut"},
-          { label: "Copy", accelerator: "CmdOrCtrl+C", selector: "copy:", role: "copy" },
-          { label: "Paste", accelerator: "CmdOrCtrl+V", selector: "paste:", role: "paste" }
-      ]}
-  ];
+    label: 'SafeLedger',
+    submenu: [
+      { label: `Version ${app.getVersion()}`, enabled: false },
+      { label: 'Settings', click: () => showSettings() },
+      { type: 'separator' },
+      { role: 'quit' }
+    ]
+  }, {
+    label: 'Edit',
+    submenu: [
+      { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
+      { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }
+    ]
+  }];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
 
+const showSettings = () => mainWindow && mainWindow.webContents.send('show-settings');
 
-};
-
-const showSettings = () => {
-  mainWindow.webContents.send('show-settings');
-};
-// /Volumes/KINGSTON/ZVault-darwin-x64/ZVault.app
-
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
-
-// Quit when all windows are closed.
-app.on('window-all-closed', function () {
-  // On OS X it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
-app.on('activate', function () {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (mainWindow === null) {
-    createWindow()
-  }
-})
+app.whenReady().then(createWindow);
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
 ipc.on('save', (evt, params) => {
-  vault.saveVault(path.join(vaultDir,currentVault), JSON.stringify(params.vaultData), params.cryptoKey)
-    .then((val) => {
-      if (val === "SUCCESS") {
-        mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Save successful'});
-      } else {
-        mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Save failed'});
-      }
-    })
-    .catch((val) => {
-      mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Save failed'})
-    });
+  vault.saveVault(path.join(vaultDir, currentVault), JSON.stringify(params.vaultData), params.cryptoKey)
+    .then((val) => mainWindow.webContents.send('result', val === 'SUCCESS'
+      ? { status: 'SUCCESS', statusMsg: 'Save successful' }
+      : { status: 'ERROR', statusMsg: 'Save failed' }))
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
 ipc.on('read', (evt, params) => {
-  vault.readVault(path.join(vaultDir,params.file),params.cryptoKey)
-    .then((val) => {
-      mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Load successful.',type:params.type,vaultData:val});
-    })
-    .catch((val) => mainWindow.webContents.send('result',val));
+  vault.readVault(path.join(vaultDir, params.file), params.cryptoKey)
+    .then((val) => mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Load successful.', type: params.type, vaultData: val }))
+    .catch((val) => mainWindow.webContents.send('result', val));
 });
 
 ipc.on('read-vaultlist-init', (evt, params) => {
+  // SafeLedger 2 no longer destroys vaults after failed logins. Existing
+  // lockout settings are honored as throttling only.
   if (params.settings.lockOutCount >= params.settings.numLockoutRetries) {
-    //console.log("Lock out retries exhausted");
-    vault.scrubContent(vaultDir)
-    .then((val) => {
-      params.settings.failAttemptCount = 0;
-      params.settings.lockOutCount = 0;
-      params.settings.lockLogin = false;
-      settingsManager.saveSettings(installCodeDir,params.settings)
-      .then((val) => {
-        mainWindow.webContents.send('result-lockout-destroy',{status:'ERROR',statusMsg:'Lock out retries exhausted your data has been destroyed',settings:params.settings});
-      })
-      .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
-    })
-    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to access vault list'}));
+    params.settings.lockOutCount = Math.max(0, params.settings.numLockoutRetries - 1);
+    params.settings.lockLogin = true;
+    params.settings.lockLoginTime = Date.now();
+    settingsManager.saveSettings(settingsDir, params.settings)
+      .finally(() => mainWindow.webContents.send('result', {
+        status: 'ERROR', statusMsg: 'Login temporarily locked. Your vault data has not been deleted.',
+        type: 'password-failed', settings: params.settings
+      }));
     return;
   }
-  // Initalize the vault
-  vault.makeDir(vaultDir)
-    .then((val) => {
-      if (val === "CREATE") {
-        // Create the initial Vault list
-        vault.initVaultList(vaultDir,params.cryptoKey)
-          .then((val) => {
-            // Create the initial vault 0 data
-            vault.initVaultData(vaultDir,currentVault,params.cryptoKey)
-              .then((val) => {
-                // load the vault list
-                vault.readVaultList(path.join(vaultDir,"vaultlist.json"),params.cryptoKey)
-                  .then((valList) => {
-                    params.settings.failAttemptCount = 0;
-                    params.settings.lockOutCount = 0;
-                    params.settings.lockLogin = false;
-                    settingsManager.saveSettings(installCodeDir,params.settings)
-                    .then((val) => {
-                      mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:valList,cryptoKey:params.cryptoKey,settings:params.settings});
-                    })
-                    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
-                  })
-                  .catch((valList) => {
-                    // check invalid Password
-                    params.settings.failAttemptCount++;
-                    if (params.settings.failAttemptCount >= params.settings.numFailAttempts) {
-                      params.settings.failAttemptCount = 0;
-                      params.settings.lockOutCount++;
-                      params.settings.lockLogin = true;
-                      params.settings.lockLoginTime = new Date().getTime();
-                    }
-                    settingsManager.saveSettings(installCodeDir,params.settings)
-                    .then((val) => {
-                      valList.settings = params.settings;
-                      mainWindow.webContents.send('result',valList);
-                    })
-                    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
 
-                  });
-              })
-              .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to init vault data'}));
-          })
-          .catch((val) =>  mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to init vault list'}));
-      } else {
-        // load the vault list
-        vault.readVaultList(path.join(vaultDir,"vaultlist.json"),params.cryptoKey)
-          .then((valList) => {
-            params.settings.failAttemptCount = 0;
-            params.settings.lockOutCount = 0;
-            params.settings.lockLogin = false;
-            settingsManager.saveSettings(installCodeDir,params.settings)
-            .then((val) => {
-              mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Loaded Successfully',type:'vaultlist-init',vaultList:valList,cryptoKey:params.cryptoKey,settings:params.settings});
-            })
-            .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
-          })
-          .catch((valList) => {
-            // check invalid password
-            params.settings.failAttemptCount++;
-            if (params.settings.failAttemptCount >= params.settings.numFailAttempts) {
-              params.settings.failAttemptCount = 0;
-              params.settings.lockOutCount++;
-              params.settings.lockLogin = true;
-              params.settings.lockLoginTime = new Date().getTime();
-            }
-            settingsManager.saveSettings(installCodeDir,params.settings)
-            .then((val) => {
-              valList.settings = params.settings;
-              mainWindow.webContents.send('result',valList);
-            })
-            .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to save settings'}));
+  vault.makeDir(vaultDir).then((state) => {
+    const loadList = () => vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), params.cryptoKey)
+      .then((valList) => {
+        params.settings.failAttemptCount = 0;
+        params.settings.lockOutCount = 0;
+        params.settings.lockLogin = false;
+        return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
+          mainWindow.webContents.send('result', {
+            status: 'SUCCESS', statusMsg: 'Loaded Successfully', type: 'vaultlist-init',
+            vaultList: valList, cryptoKey: params.cryptoKey, settings: params.settings
           });
-      }
-    })
-    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to access vault list'}));
+        });
+      })
+      .catch((valList) => {
+        params.settings.failAttemptCount++;
+        if (params.settings.failAttemptCount >= params.settings.numFailAttempts) {
+          params.settings.failAttemptCount = 0;
+          params.settings.lockOutCount++;
+          params.settings.lockLogin = true;
+          params.settings.lockLoginTime = Date.now();
+        }
+        return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
+          valList.settings = params.settings;
+          mainWindow.webContents.send('result', valList);
+        });
+      });
+
+    if (state === 'CREATE') {
+      return vault.initVaultList(vaultDir, params.cryptoKey)
+        .then(() => vault.initVaultData(vaultDir, currentVault, params.cryptoKey))
+        .then(loadList);
+    }
+    return loadList();
+  }).catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Unable to access vault list' }));
 });
 
 ipc.on('process-vault-list', (evt, params) => {
   let idInfo = null;
-  if (params.action === "create") {
-    // get vault id
+  if (params.action === 'create') {
     idInfo = vault.nextVaultFileName(params.vaultList);
     params.vault.id = idInfo.id;
     params.vault.file = idInfo.fileName;
@@ -254,146 +156,80 @@ ipc.on('process-vault-list', (evt, params) => {
     params.vaultList.vaults.push(params.vault);
     params.vaultList.vaults.sort(utils.compareIgnoreCase);
     params.vaultList.vaultSelected = params.vaultList.vaults.indexOf(params.vault);
-  } else if (params.action === "modify") {
-  //  console.log("vault " + JSON.stringify(params.vault));
-  //  console.log("in modify " +JSON.stringify(params.vaultList));
+  } else if (params.action === 'modify') {
     const vaults = params.vaultList.vaults;
-    for (i = 0; i < vaults.length; i++) {
-      if (vaults[i].id == params.vault.id) {
-        params.vaultList.vaults[i] = params.vault;
-        break;
-      }
+    for (let i = 0; i < vaults.length; i++) {
+      if (vaults[i].id == params.vault.id) { params.vaultList.vaults[i] = params.vault; break; }
     }
     params.vaultList.vaults.sort(utils.compareIgnoreCase);
     params.vaultList.vaultSelected = params.vaultList.vaults.indexOf(params.vault);
   }
-//  console.log("modified " + JSON.stringify(params.vaultList));
-  // save vault list
-  vault.saveVault(path.join(vaultDir,"vaultlist.json"), JSON.stringify(params.vaultList),params.cryptoKey)
+
+  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey)
     .then((val) => {
-    //  console.log("val " + val);
-      if (params.action === "create") {
-        if (val === "SUCCESS") {
-      //    console.log("erere " + idInfo.fileName);
-          vault.initVaultData(vaultDir,idInfo.fileName,params.cryptoKey)
-            .then((val) => {
-        //      console.log("val init " + val);
-              mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Save successful',type:"vault-create",vaultList:params.vaultList,vaultData:val});
-            })
-            .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Unable to init vault data'}));
-        } else {
-          mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Save failed'});
-        }
-      } else {
-        mainWindow.webContents.send('result',{type:"vault-modify",vaultList:params.vaultList,status:'SUCCESS',statusMsg:'Save successful'});
+      if (params.action === 'create' && val === 'SUCCESS') {
+        return vault.initVaultData(vaultDir, idInfo.fileName, params.cryptoKey)
+          .then((data) => mainWindow.webContents.send('result', {
+            status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: params.vaultList, vaultData: data
+          }));
       }
+      mainWindow.webContents.send('result', { type: 'vault-modify', vaultList: params.vaultList, status: 'SUCCESS', statusMsg: 'Save successful' });
     })
-    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Save failed'}));
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
 ipc.on('vault-list-delete', (evt, params) => {
-  //console.log("vault-list-delete");
-  // save vaultList
-  vault.saveVault(path.join(vaultDir,"vaultlist.json"), JSON.stringify(params.vaultList),params.cryptoKey)
-    .then((val) => {
-      //console.log("save vault list " + val);
-      // delete vault file
-      vault.deleteVault(path.join(vaultDir,params.fileName))
-        .then((val) => {
-        //console.log("delete vault " + val);
-          if (val === "SUCCESS") {
-            mainWindow.webContents.send('result',{type:'vault-delete',status:'SUCCESS',statusMsg:'Delete successful'});
-          } else {
-            mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Delete failed'});
-          }
-        })
-        .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Delete failed'}));
-    })
-    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Delete failed'}));
+  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey)
+    .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
+    .then(() => mainWindow.webContents.send('result', { type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' }))
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Delete failed' }));
 });
 
 ipc.on('process-group', (evt, params) => {
-  //console.log("process-group " + JSON.stringify(params.vaultData));
-  vault.saveVault(path.join(vaultDir,params.vaultData.file), JSON.stringify(params.vaultData),params.cryptoKey)
-    .then((val) => {
-      if (val === "SUCCESS") {
-        mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Save successful',type:params.type,vaultData:params.vaultData});
-      } else {
-        mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Save failed'});
-      }
-    })
-    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Save failed'}));
+  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
+    .then(() => mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: params.vaultData }))
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
 ipc.on('process-record', (evt, params) => {
-  //console.log("process-record");
-  vault.saveVault(path.join(vaultDir,params.vaultData.file), JSON.stringify(params.vaultData),params.cryptoKey)
-    .then((val) => {
-      if (val === "SUCCESS") {
-        mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Save successful',type:"record",vaultData:params.vaultData});
-      } else {
-        mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Save failed'});
-      }
-    })
-    .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Save failed'}));
+  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
+    .then(() => mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: params.vaultData }))
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
 ipc.on('process-rotate-crypto', (evt, params) => {
-  //console.log("old key " + params.oldCryptoKey);
-  //console.log("new key " + params.newCryptoKey);
-
-  vault.rotateCrypto(vaultDir,params.oldCryptoKey,params.newCryptoKey,params.vaultList)
-    .then((val) => {
-      if (val.status === "SUCCESS") {
-        mainWindow.webContents.send('result-rotate-crypto',val);
-      } else {
-        mainWindow.webContents.send('result-rotate-crypto',val);
-      }
-    })
-    .catch((val) => mainWindow.webContents.send('result-rotate-crypto',val));
-
+  vault.rotateCrypto(vaultDir, params.oldCryptoKey, params.newCryptoKey, params.vaultList)
+    .then((val) => mainWindow.webContents.send('result-rotate-crypto', val))
+    .catch((val) => mainWindow.webContents.send('result-rotate-crypto', val));
 });
 
-ipc.on('init-system', (evt, params) => {
-  // console.log(" check install code ");
-  settingsManager.loadSettings(installCodeDir)
-  .then((valSettings) => {
-    installCodeManager.checkInstallCode(installCodeDir)
-    .then((val) => {
-      if (val.status === "SUCCESS") {
-          mainWindow.webContents.send('result-init-system',{keyStatus:val.status,settings:valSettings.settings});
-      } else {
-        mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code missing',keyCode:val.keyCode,initialCode:val.initialCode,settings:valSettings.settings});
-      }
-    })
-    .catch((val) => mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Activation code check error',settings:valSettings.settings}));
-  })
-  .catch((valSettings) => {
-    mainWindow.webContents.send('result-init-system',{status:'ERROR',statusMsg:'Not able to load settings file'});
-  })
+ipc.on('init-system', () => {
+  settingsManager.loadSettings(settingsDir)
+    .then((valSettings) => installCodeManager.checkInstallCode(settingsDir)
+      .then(() => mainWindow.webContents.send('result-init-system', {
+        keyStatus: 'SUCCESS', settings: valSettings.settings, portableRoot: getPortableRoot()
+      })))
+    .catch(() => mainWindow.webContents.send('result-init-system', {
+      status: 'ERROR', statusMsg: 'Not able to load settings file'
+    }));
 });
 
+// Retained only so old renderer code cannot fail if it sends this event.
 ipc.on('save-install-code', (evt, params) => {
-  // console.log(" main save installCode " + params.installCode.key + " " + params.installCode.fileCode);
-  settingsManager.saveSettings(installCodeDir,params.newSettings)
-  .then((val) => {
-    if (val.status === "SUCCESS") {
-      mainWindow.webContents.send('result-save-install-code',{status:val.status,statusMsg:'Activation code saved',keyCode:params.keyCode,settings:params.newSettings});
-    } else {
-      mainWindow.webContents.send('result-save-install-code',{status:'ERROR',statusMsg:'Activation code save failed',initialCode:params.initialCode,keyCode:params.keyCode});
-    }
-  })
-  .catch((val) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:'Activation code save failed'}));
+  const settings = Object.assign({}, params.newSettings || {}, { activationCode: 'FREE' });
+  settingsManager.saveSettings(settingsDir, settings)
+    .then((val) => mainWindow.webContents.send('result-save-install-code', {
+      status: 'SUCCESS', statusMsg: 'SafeLedger is free; no activation is required.', settings: val.settings
+    }))
+    .catch(() => mainWindow.webContents.send('result-save-install-code', { status: 'ERROR', statusMsg: 'Unable to save settings' }));
 });
 
 ipc.on('save-settings', (evt, params) => {
-  settingsManager.saveSettings(installCodeDir,params.newSettings)
-  .then((val) => {
-    if (val.status === "SUCCESS") {
-      mainWindow.webContents.send('result-save-settings',{status:val.status,statusMsg:'Settings saved',settings:params.newSettings});
-    } else {
-      mainWindow.webContents.send('result-save-settings',{status:val.status,statusMsg:val.statusMsg});
-    }
-  })
-  .catch((val) => mainWindow.webContents.send('result',{status:val.status,statusMsg:val.statusMsg}));
+  settingsManager.saveSettings(settingsDir, params.newSettings)
+    .then((val) => mainWindow.webContents.send('result-save-settings', {
+      status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings
+    }))
+    .catch((err) => mainWindow.webContents.send('result-save-settings', {
+      status: 'ERROR', statusMsg: err.message || 'Unable to save settings'
+    }));
 });
