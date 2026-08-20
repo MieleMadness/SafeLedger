@@ -6,8 +6,18 @@ const { pathToFileURL } = require('url');
 
 // Branded crypto artwork is bundled through @web3icons/core. SafeLedger never
 // downloads token artwork at runtime, preserving fully offline/portable use.
-const coreRoot = path.dirname(require.resolve('@web3icons/core/package.json'));
-const svgRoot = path.join(coreRoot, 'dist', 'svgs');
+function findCoreRoot() {
+  let current = path.dirname(require.resolve('@web3icons/core'));
+  const root = path.parse(current).root;
+  while (current && current !== root) {
+    if (fs.existsSync(path.join(current, 'dist', 'svgs'))) return current;
+    current = path.dirname(current);
+  }
+  return null;
+}
+
+const coreRoot = findCoreRoot();
+const svgRoot = coreRoot ? path.join(coreRoot, 'dist', 'svgs') : '';
 
 const cleanSymbol = (value) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
 const slug = (value) => String(value || '')
@@ -47,7 +57,7 @@ const standardNetworkAliases = {
 };
 
 function existingFile(type, variant, fileName) {
-  if (!fileName) return null;
+  if (!svgRoot || !fileName) return null;
   const candidate = path.join(svgRoot, type, variant, `${fileName}.svg`);
   return fs.existsSync(candidate) ? pathToFileURL(candidate).href : null;
 }
@@ -67,9 +77,8 @@ function networkIcon(name) {
 
 exports.getIconUrl = (record) => {
   const item = record || {};
-  // Token ticker lookup covers the vast majority of native assets and tokens.
-  // Network lookup covers standards/families and chain records without a token
-  // artwork entry. Both are local files inside the portable application.
+  // Token ticker lookup covers native assets and named tokens. Network lookup
+  // handles standards/families and chain records without a token-art entry.
   return tokenIcon(item.symbol) || networkIcon(item.name) || null;
 };
 
