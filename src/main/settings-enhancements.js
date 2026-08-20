@@ -75,15 +75,22 @@ function makeSection(title) {
   return section;
 }
 
+function makeField(labelText, input) {
+  const field = document.createElement('div');
+  field.className = 'settings-field';
+  const label = document.createElement('div');
+  label.className = 'settings-field-label';
+  label.textContent = labelText;
+  field.appendChild(label);
+  field.appendChild(input);
+  return field;
+}
+
 function enhanceSettingsScreen() {
   const area = document.getElementById('detailArea');
   if (!area) return;
   const header = area.querySelector('h1');
   if (!header || header.textContent.trim() !== 'Settings') return;
-
-  // detailArea is reused by every view. A data attribute survives innerHTML
-  // replacement, which caused the legacy Settings screen to return after
-  // visiting a wallet. Detect the actual section markup instead.
   if (area.querySelector('.settings-section')) return;
 
   const form = area.querySelector('form');
@@ -93,28 +100,34 @@ function enhanceSettingsScreen() {
     if (/activation\s*code/i.test(p.textContent || '')) p.remove();
   });
 
-  const failLabel = form.querySelector('label[for="inputFailAttempts"]');
-  if (failLabel) { failLabel.className = 'settings-field-label'; failLabel.textContent = 'Failed login attempts before lockout (3–10)'; }
-  const retryLabel = form.querySelector('label[for="inputLockoutRetry"]');
-  if (retryLabel) { retryLabel.className = 'settings-field-label'; retryLabel.textContent = 'Lockouts allowed before self-destruct (2–5)'; }
-  const waitLabel = form.querySelector('label[for="inputBetweenLockout"]');
-  if (waitLabel) { waitLabel.className = 'settings-field-label'; waitLabel.textContent = 'Lockout duration in minutes (15–1440)'; }
-  const protectionLabel = form.querySelector('label[for="inputScrubContent"]');
-  if (protectionLabel) {
-    protectionLabel.className = 'settings-protection-note';
-    protectionLabel.textContent = 'Self-destruct protection is enabled. If all configured lockouts are exhausted, SafeLedger permanently destroys the encrypted vault data.';
-  }
-
+  const inputFailAttempts = form.querySelector('#inputFailAttempts');
+  const inputLockoutRetry = form.querySelector('#inputLockoutRetry');
+  const inputBetweenLockout = form.querySelector('#inputBetweenLockout');
   const save = form.querySelector('#saveBtn');
-  if (save) {
-    save.classList.remove('pull-right');
-    save.classList.add('settings-section-save');
-    save.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save Brute Force Settings';
-  }
+  if (!inputFailAttempts || !inputLockoutRetry || !inputBetweenLockout || !save) return;
+
+  // Rebuild the form rather than restyling legacy labels. This guarantees the
+  // old wording cannot reappear when Settings is opened after another view.
+  form.innerHTML = '';
+  form.className = 'settings-brute-form';
+
+  const protectionIntro = document.createElement('p');
+  protectionIntro.className = 'settings-section-note settings-section-intro settings-protection-intro';
+  protectionIntro.textContent = 'Configure how SafeLedger responds to repeated failed login attempts. Self-destruct protection can permanently destroy encrypted vault data after all configured lockouts are exhausted.';
+
+  form.appendChild(makeField('Failed login attempts before lockout', inputFailAttempts));
+  form.appendChild(makeField('Lockouts allowed before self-destruct', inputLockoutRetry));
+  form.appendChild(makeField('Lockout duration in minutes', inputBetweenLockout));
+
+  save.classList.remove('pull-right');
+  save.classList.add('settings-section-save');
+  save.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save Brute Force Settings';
+  form.appendChild(save);
 
   const bruteSection = makeSection('Brute Force Protection');
-  area.insertBefore(bruteSection, form);
+  bruteSection.appendChild(protectionIntro);
   bruteSection.appendChild(form);
+  area.insertBefore(bruteSection, area.querySelector('form'));
 
   const modified = Array.from(area.querySelectorAll('p.dates')).find((p) => /modified/i.test(p.textContent || ''));
   if (modified) bruteSection.appendChild(modified);
