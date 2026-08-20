@@ -154,7 +154,8 @@ exports.appendSensitiveField = (parent, label, value) => {
   const stateIcon = document.createElement('i');
   stateIcon.className = 'fa fa-plus-circle';
   const labelText = document.createElement('span');
-  labelText.textContent = ` ${label}`;
+  labelText.className = 'secure-field-summary-text';
+  labelText.textContent = label;
   summaryLabel.appendChild(stateIcon);
   summaryLabel.appendChild(labelText);
   summary.appendChild(summaryLabel);
