@@ -10,6 +10,7 @@
     "start": "electron .",
     "predist:win": "npm run generate:icons",
     "dist:win": "electron-builder --win portable",
+    "predist:dir": "npm run generate:icons",
     "dist:dir": "electron-builder --dir"
   },
   "repository": "https://github.com/MieleMadness/SafeLedger",
@@ -43,6 +44,7 @@
       "src/**/*",
       "build/icon.svg",
       "build/icon.png",
+      "sl.png",
       "LICENSE",
       "package.json"
     ],
