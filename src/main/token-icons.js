@@ -1,14 +1,17 @@
 'use strict';
 
-const fs = require('fs');
+// Use Web3Icons' supported in-memory SVG export API instead of resolving files
+// inside node_modules/app.asar. The returned values are already browser-safe
+// image sources and remain completely local/offline in the portable build.
+let svgs = null;
+try {
+  const web3icons = require('@web3icons/core');
+  svgs = web3icons.svgs || (web3icons.default && web3icons.default.svgs) || null;
+} catch (_) {
+  svgs = null;
+}
 
-// SafeLedger resolves Web3Icons through the package's exported SVG paths rather
-// than guessing where npm/electron-builder placed the package. This works from
-// development, node_modules and the packaged app.asar. SVG contents are read by
-// Node and converted to data URLs, so Chromium never has to open an ASAR file URL.
-const svgCache = new Map();
-
-const cleanSymbol = (value) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+const cleanSymbol = (value) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 const slug = (value) => String(value || '')
   .trim()
   .toLowerCase()
@@ -20,6 +23,7 @@ const standardNetworkAliases = {
   'bnb': 'binance-smart-chain',
   'bnb-chain': 'binance-smart-chain',
   'bnb-smart-chain': 'binance-smart-chain',
+  'bnb-beacon-chain': 'binance-smart-chain',
   'avalanche-c-chain': 'avalanche',
   'arbitrum-one': 'arbitrum',
   'arbitrum-nova': 'arbitrum',
@@ -45,53 +49,31 @@ const standardNetworkAliases = {
   'custom-tokens': 'ethereum'
 };
 
-function toDataUrl(svg) {
-  return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
+function pascalCase(value) {
+  return String(value || '').split('-').filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join('');
 }
 
-function readExportedSvg(type, variant, iconName) {
-  if (!iconName) return null;
-  const cacheKey = `${type}/${variant}/${iconName}`;
-  if (svgCache.has(cacheKey)) return svgCache.get(cacheKey);
-
-  const requests = [
-    `@web3icons/core/svgs/${type}/${variant}/${iconName}.svg`,
-    `@web3icons/core/svgs/${type}/${variant}/${iconName}.svg.js`
-  ];
-
-  for (const request of requests) {
-    try {
-      const resolved = require.resolve(request);
-      const candidates = [resolved];
-      if (resolved.endsWith('.svg.js')) candidates.unshift(resolved.slice(0, -3));
-      for (const candidate of candidates) {
-        try {
-          const contents = fs.readFileSync(candidate, 'utf8');
-          if (/<svg[\s>]/i.test(contents)) {
-            const url = toDataUrl(contents);
-            svgCache.set(cacheKey, url);
-            return url;
-          }
-        } catch (_) {}
-      }
-    } catch (_) {}
-  }
-
-  svgCache.set(cacheKey, null);
+function usableSource(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') return value.src || value.default || null;
   return null;
 }
 
 function tokenIcon(symbol) {
+  if (!svgs || !svgs.tokens) return null;
   const safe = cleanSymbol(symbol);
   if (!safe) return null;
-  return readExportedSvg('tokens', 'branded', safe) || readExportedSvg('tokens', 'background', safe);
+  return usableSource(svgs.tokens[`branded${safe}`]) || usableSource(svgs.tokens[`background${safe}`]) || null;
 }
 
 function networkIcon(name) {
+  if (!svgs || !svgs.networks) return null;
   const normalized = slug(name);
   if (!normalized) return null;
   const mapped = standardNetworkAliases[normalized] || normalized;
-  return readExportedSvg('networks', 'branded', mapped) || readExportedSvg('networks', 'background', mapped);
+  const key = pascalCase(mapped);
+  return usableSource(svgs.networks[`branded${key}`]) || usableSource(svgs.networks[`background${key}`]) || null;
 }
 
 exports.getIconUrl = (record) => {
@@ -100,12 +82,15 @@ exports.getIconUrl = (record) => {
 };
 
 exports.createIconElement = (record, className = 'token-brand-image') => {
-  const url = exports.getIconUrl(record);
-  if (!url) return null;
+  const src = exports.getIconUrl(record);
+  if (!src) return null;
   const img = document.createElement('img');
   img.className = className;
-  img.src = url;
+  img.src = src;
   img.alt = `${record && (record.name || record.symbol) ? (record.name || record.symbol) : 'Token'} icon`;
   img.draggable = false;
+  img.addEventListener('error', () => {
+    img.style.display = 'none';
+  }, { once: true });
   return img;
 };
