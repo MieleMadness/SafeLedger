@@ -5,7 +5,6 @@
 const electron = require('electron');
 const {ipcRenderer : ipc } = electron;
 const statusMgr = require('./status');
-
 const utils = require('./utils');
 
 exports.listRecords = (params) => {
@@ -14,7 +13,6 @@ exports.listRecords = (params) => {
 
 const renderRecords = (params) => {
   const recordSearch = document.getElementById('recordSearch');
-  // list of records
   const recordArea = document.getElementById('recordArea');
   recordArea.innerHTML = "";
   const ul = document.createElement("UL");
@@ -23,38 +21,36 @@ const renderRecords = (params) => {
     && params.vaultData.groups[params.vaultData.groupSelected].records.length > 0 ) {
     const records = params.vaultData.groups[params.vaultData.groupSelected].records;
     for (let i = 0; i < records.length; i++) {
-      const recordName = records[i].name.toLowerCase();
-      const recordSymbol = records[i].symbol.toLowerCase();
+      const recordName = (records[i].name || '').toLowerCase();
+      const recordSymbol = (records[i].symbol || '').toLowerCase();
       if (recordSearch != null && recordSearch.value.length > 0 &&
         !((recordName.startsWith(recordSearch.value.toLowerCase())) || (recordSymbol.startsWith(recordSearch.value.toLowerCase()))) ){
         continue;
       }
-        const li = document.createElement("LI");
-  				li.setAttribute("data-toggle","collapse");
-  				li.setAttribute("data-target","#"+records[i].name);
-  				ul.appendChild(li);
-  				const href = document.createElement("A");
-          href.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (params.saving.state == true) {
-              alert("Please wait for processing to complete");
-            } else {
-              params.vaultData.recordSelected = i;
-              renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:records[i],saving:params.saving});
-              renderRecords(params);
-            }
-          });
-          let nameString = "";
-          if (params.vaultData.recordSelected != null && params.vaultData.recordSelected == i) {
-            href.className = "item-selected";
-          }
-          let symbol = "";
-          if (records[i].symbol != null && records[i].symbol != "") {
-            symbol = "("+records[i].symbol+")";
-          }
-          nameString = nameString + "<i class='fa fa-cubes'></i> "+records[i].name+" "+symbol;
-  				href.innerHTML = nameString;
-          li.appendChild(href);
+      const li = document.createElement("LI");
+      li.setAttribute("data-toggle","collapse");
+      li.setAttribute("data-target","#"+(records[i].name || 'record-'+i));
+      ul.appendChild(li);
+      const href = document.createElement("A");
+      href.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (params.saving.state == true) {
+          alert("Please wait for processing to complete");
+        } else {
+          params.vaultData.recordSelected = i;
+          renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:records[i],saving:params.saving});
+          renderRecords(params);
+        }
+      });
+      if (params.vaultData.recordSelected != null && params.vaultData.recordSelected == i) {
+        href.className = "item-selected";
+      }
+      let symbol = "";
+      if (records[i].symbol != null && records[i].symbol != "") {
+        symbol = "("+records[i].symbol+")";
+      }
+      href.innerHTML = "<i class='fa fa-cubes'></i> "+(records[i].name || 'Unnamed')+" "+symbol;
+      li.appendChild(href);
     }
     recordArea.appendChild(ul);
   } else {
@@ -66,25 +62,36 @@ exports.createRecord = (params) => {
   createEditRecord(params);
 };
 
+const addRevealButton = (input, parent, showLabel, hideLabel) => {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn btn-default';
+  btn.style.marginTop = '6px';
+  btn.innerHTML = "<i class='fa fa-eye'></i> " + showLabel;
+  btn.addEventListener('click', () => {
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.innerHTML = showing
+      ? "<i class='fa fa-eye'></i> " + showLabel
+      : "<i class='fa fa-eye-slash'></i> " + hideLabel;
+  });
+  parent.appendChild(btn);
+};
+
 const createEditRecord = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = "";
   const header = document.createElement('h1');
-  if (params.record != null) {
-    header.innerHTML = "Modify Coin";
-  } else {
-    header.innerHTML = "Add Coin";
-  }
+  header.innerHTML = params.record != null ? "Modify Coin" : "Add Coin";
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
+  area.appendChild(document.createElement('hr'));
   const form = document.createElement('form');
   area.appendChild(form);
 
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
-  // name
+
   const labelName = document.createElement('label');
   labelName.for = "inputName";
   labelName.innerHTML = "Coin";
@@ -94,12 +101,9 @@ const createEditRecord = (params) => {
   inputName.className = "form-control";
   inputName.id = "inputName";
   inputName.setAttribute('maxlength','25');
-  if (params.record != null) {
-    inputName.value = params.record.name;
-  }
+  if (params.record != null) inputName.value = params.record.name || '';
   formgroup.appendChild(inputName);
 
-  // symbol
   const labelSymbol = document.createElement('label');
   labelSymbol.for = "inputSymbol";
   labelSymbol.innerHTML = "Symbol";
@@ -109,12 +113,9 @@ const createEditRecord = (params) => {
   inputSymbol.className = "form-control";
   inputSymbol.id = "inputSymbol";
   inputSymbol.setAttribute('maxlength','500');
-  if (params.record != null && params.record.symbol != null) {
-    inputSymbol.value = params.record.symbol;
-  }
+  if (params.record != null && params.record.symbol != null) inputSymbol.value = params.record.symbol;
   formgroup.appendChild(inputSymbol);
 
-  //Public Address
   const labelPublicAddress = document.createElement('label');
   labelPublicAddress.for = "inputPublicAddress";
   labelPublicAddress.innerHTML = "Public address";
@@ -124,27 +125,23 @@ const createEditRecord = (params) => {
   inputPublicAddress.className = "form-control";
   inputPublicAddress.id = "inputPublicAddress";
   inputPublicAddress.setAttribute('maxlength','500');
-  if (params.record != null && params.record.publicAddress != null) {
-    inputPublicAddress.value = params.record.publicAddress;
-  }
+  if (params.record != null && params.record.publicAddress != null) inputPublicAddress.value = params.record.publicAddress;
   formgroup.appendChild(inputPublicAddress);
 
-  //Private address
   const labelPrivateAddress = document.createElement('label');
   labelPrivateAddress.for = "inputPrivateAddress";
-  labelPrivateAddress.innerHTML = "Private address";
+  labelPrivateAddress.innerHTML = "Private key";
   formgroup.appendChild(labelPrivateAddress);
   const inputPrivateAddress = document.createElement('input');
-  inputPrivateAddress.type = "text";
+  inputPrivateAddress.type = "password";
   inputPrivateAddress.className = "form-control";
   inputPrivateAddress.id = "inputPrivateAddress";
   inputPrivateAddress.setAttribute('maxlength','500');
-  if (params.record != null && params.record.privateAddress != null) {
-    inputPrivateAddress.value = params.record.privateAddress;
-  }
+  inputPrivateAddress.setAttribute('autocomplete','off');
+  if (params.record != null && params.record.privateAddress != null) inputPrivateAddress.value = params.record.privateAddress;
   formgroup.appendChild(inputPrivateAddress);
+  addRevealButton(inputPrivateAddress, formgroup, 'Show private key', 'Hide private key');
 
-  // notes
   const labelNotes = document.createElement('label');
   labelNotes.for = "inputNotes";
   labelNotes.innerHTML = "Notes";
@@ -154,9 +151,7 @@ const createEditRecord = (params) => {
   inputNotes.className = "form-control";
   inputNotes.id = "inputNotes";
   inputNotes.setAttribute('maxlength','500');
-  if (params.record != null && params.record.notes != null) {
-    inputNotes.value = params.record.notes;
-  }
+  if (params.record != null && params.record.notes != null) inputNotes.value = params.record.notes;
   formgroup.appendChild(inputNotes);
 
   const saveBtn = document.createElement('button');
@@ -168,47 +163,43 @@ const createEditRecord = (params) => {
     e.preventDefault();
     if (params.saving.state == true) {
       alert("Please wait for processing to complete");
+      return;
+    }
+    saveBtn.disabled = true;
+    const name = document.getElementById('inputName');
+    if (name == null || name.value == "") {
+      saveBtn.disabled = false;
+      return;
+    }
+    params.saving.state = true;
+    statusMgr.loadStatus();
+    if (params.record != null) {
+      params.record.name = name.value;
+      params.record.symbol = inputSymbol.value;
+      params.record.publicAddress = inputPublicAddress.value;
+      params.record.privateAddress = inputPrivateAddress.value;
+      params.record.notes = inputNotes.value;
+      params.record.modified = Date();
+      params.vaultData.groups[params.vaultData.groupSelected].records[params.vaultData.recordSelected] = params.record;
+      params.vaultData.groups[params.vaultData.groupSelected].records.sort(utils.compareIgnoreCase);
+      params.vaultData.recordSelected = params.vaultData.groups[params.vaultData.groupSelected].records.indexOf(params.record);
+      ipc.send('process-record', {cryptoKey:params.cryptoKey,action:"modify",vaultData:params.vaultData});
     } else {
-      saveBtn.disabled = true;
-      const name = document.getElementById('inputName');
-      const symbol = inputSymbol.value;
-      if (name != null && name.value != "") {
-        if (params.record != null) {
-          // Modify
-          params.saving.state = true;
-          statusMgr.loadStatus();
-          params.record.name = name.value;
-          params.record.symbol = inputSymbol.value;
-          params.record.publicAddress = inputPublicAddress.value;
-          params.record.privateAddress = inputPrivateAddress.value;
-          params.record.notes = inputNotes.value;
-          params.record.modified = Date();
-          params.vaultData.groups[params.vaultData.groupSelected].records[params.vaultData.recordSelected] = params.record;
-          params.vaultData.groups[params.vaultData.groupSelected].records.sort(utils.compareIgnoreCase);
-          params.vaultData.recordSelected = params.vaultData.groups[params.vaultData.groupSelected].records.indexOf(params.record);
-          ipc.send('process-record', {cryptoKey:params.cryptoKey,action:"modify",vaultData:params.vaultData});
-        } else {
-          // Create
-          params.saving.state = true;
-          statusMgr.loadStatus();
-          let myRecord = {};
-          myRecord.name = name.value;
-          myRecord.symbol = inputSymbol.value;
-          myRecord.publicAddress = inputPublicAddress.value;
-          myRecord.privateAddress = inputPrivateAddress.value;
-          myRecord.notes = inputNotes.value;
-          myRecord.created = Date();
-          if (params.vaultData.groups[params.vaultData.groupSelected].records == null) {
-            params.vaultData.groups[params.vaultData.groupSelected].records = new Array();
-          }
-          params.vaultData.groups[params.vaultData.groupSelected].records.push(myRecord);
-          params.vaultData.groups[params.vaultData.groupSelected].records.sort(utils.compareIgnoreCase);
-          params.vaultData.recordSelected = params.vaultData.groups[params.vaultData.groupSelected].records.indexOf(myRecord);
-          ipc.send('process-record', {cryptoKey:params.cryptoKey,action:"create",vaultData:params.vaultData});
-        }
-      } else {
-        saveBtn.disabled = false;
+      const myRecord = {
+        name: name.value,
+        symbol: inputSymbol.value,
+        publicAddress: inputPublicAddress.value,
+        privateAddress: inputPrivateAddress.value,
+        notes: inputNotes.value,
+        created: Date()
+      };
+      if (params.vaultData.groups[params.vaultData.groupSelected].records == null) {
+        params.vaultData.groups[params.vaultData.groupSelected].records = [];
       }
+      params.vaultData.groups[params.vaultData.groupSelected].records.push(myRecord);
+      params.vaultData.groups[params.vaultData.groupSelected].records.sort(utils.compareIgnoreCase);
+      params.vaultData.recordSelected = params.vaultData.groups[params.vaultData.groupSelected].records.indexOf(myRecord);
+      ipc.send('process-record', {cryptoKey:params.cryptoKey,action:"create",vaultData:params.vaultData});
     }
   });
   form.appendChild(saveBtn);
@@ -222,34 +213,34 @@ const renderRecordDetail = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = "";
   const header = document.createElement('h1');
-  header.innerHTML = params.record.name;
+  header.textContent = params.record.name || 'Coin';
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
+  area.appendChild(document.createElement('hr'));
 
   const symbol = document.createElement('p');
-  if (params.record.symbol != null) {
-    symbol.innerHTML = "<b>Symbol:</b> <div class='outData'>"+params.record.symbol+"</div>";
-  } else {
-    symbol.innerHTML = "<b>Symbol:</b> ";
-  }
+  symbol.innerHTML = "<b>Symbol:</b> <div class='outData'>"+(params.record.symbol || '')+"</div>";
   area.appendChild(symbol);
 
   const publicAddress = document.createElement('p');
-  if (params.record.publicAddress != null) {
-    publicAddress.innerHTML = "<b>Public Address:</b> <div class='outData'>"+params.record.publicAddress+"</div>";
-  } else {
-    publicAddress.innerHTML = "<b>Public Address:</b> ";
-  }
-  area.appendChild(publicAddress)
+  publicAddress.innerHTML = "<b>Public Address:</b> <div class='outData'>"+(params.record.publicAddress || '')+"</div>";
+  area.appendChild(publicAddress);
 
-  const privateAddress = document.createElement('p');
-  if (params.record.privateAddress != null) {
-    privateAddress.innerHTML = "<b>Private address:</b> <div class='outData'>"+params.record.privateAddress+"</div>";
-  } else {
-    privateAddress.innerHTML = "<b>Private address:</b> ";
+  const privateWrap = document.createElement('div');
+  const privateLabel = document.createElement('p');
+  privateLabel.innerHTML = '<b>Private Key:</b>';
+  privateWrap.appendChild(privateLabel);
+  if (params.record.privateAddress) {
+    const details = document.createElement('details');
+    const summary = document.createElement('summary');
+    summary.textContent = 'Show private key';
+    details.appendChild(summary);
+    const value = document.createElement('div');
+    value.className = 'outData';
+    value.textContent = params.record.privateAddress;
+    details.appendChild(value);
+    privateWrap.appendChild(details);
   }
-  area.appendChild(privateAddress);
+  area.appendChild(privateWrap);
 
   const notes = document.createElement('p');
   notes.innerHTML = "<b>Notes:</b>";
@@ -258,20 +249,16 @@ const renderRecordDetail = (params) => {
   if (params.record.notes != null) {
     const r = params.record.notes.replace(/(?:\r\n|\r|\n)/g, '<br />');
     notesDetail.innerHTML = "<div class='outData'>"+r+"</div>";
-  } else {
-    notesDetail.innerHTML = "";
   }
   area.appendChild(notesDetail);
 
   const created = document.createElement('p');
   created.className = "dates";
-  created.innerHTML = "<b>Created:</b> "+params.record.created;
+  created.innerHTML = "<b>Created:</b> "+(params.record.created || '');
   area.appendChild(created);
   const modified = document.createElement('p');
   modified.className = "dates";
-  if (params.record.modified != null) {
-    modified.innerHTML = "<b>Modified:</b> "+params.record.modified;
-  }
+  if (params.record.modified != null) modified.innerHTML = "<b>Modified:</b> "+params.record.modified;
   area.appendChild(modified);
 
   const deleteBtn = document.createElement('button');
@@ -281,13 +268,11 @@ const renderRecordDetail = (params) => {
   deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Delete";
   deleteBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    if (params.saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      confirmDelete(params);
-    }
+    if (params.saving.state == true) alert("Please wait for processing to complete");
+    else confirmDelete(params);
   });
   area.appendChild(deleteBtn);
+
   const editBtn = document.createElement('button');
   editBtn.type = "button";
   editBtn.id = "editBtn";
@@ -295,14 +280,10 @@ const renderRecordDetail = (params) => {
   editBtn.innerHTML = "<span class='glyphicon glyphicon-edit' aria-hidden='true'></span> Edit";
   editBtn.addEventListener('click', (e) => {
     e.preventDefault();
-    if (params.saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      createEditRecord(params);
-    }
+    if (params.saving.state == true) alert("Please wait for processing to complete");
+    else createEditRecord(params);
   });
   area.appendChild(editBtn);
-
 };
 
 const confirmDelete = (params) => {
@@ -311,8 +292,7 @@ const confirmDelete = (params) => {
   const header = document.createElement('h1');
   header.innerHTML = "Confirm Delete of coin: "+params.record.name;
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
+  area.appendChild(document.createElement('hr'));
 
   const deleteBtn = document.createElement('button');
   deleteBtn.type = "button";
