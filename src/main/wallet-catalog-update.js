@@ -4,12 +4,16 @@ const walletCatalog = require('./wallet-catalog');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
+function catalogCategory(wallet) {
+  return wallet && wallet.type ? `${wallet.type} Wallet` : '';
+}
+
 function cloneRecord(record, today) {
   return {
     name: record.name,
     symbol: record.symbol || '',
     created: today,
-    notes: record.notes || ''
+    notes: ''
   };
 }
 
@@ -20,13 +24,30 @@ function recordMatches(existing, catalogRecord) {
   return normalize(existing.name) === normalize(catalogRecord.name);
 }
 
+function clearCatalogGeneratedNotes(wallet, catalogWallet) {
+  const generatedWalletNote = `${catalogWallet.type} wallet. Support catalog reviewed 2026-08-19. Source: ${catalogWallet.source}`;
+  if (wallet.notes === generatedWalletNote) wallet.notes = '';
+
+  const catalogNotes = new Set(
+    catalogWallet.records
+      .map((entry) => entry[2])
+      .filter(Boolean)
+  );
+
+  if (Array.isArray(wallet.records)) {
+    for (const record of wallet.records) {
+      if (catalogNotes.has(record.notes)) record.notes = '';
+    }
+  }
+}
+
 exports.mergeCatalog = (vaultData) => {
   const today = Date();
   const result = {
     addedWallets: 0,
     addedRecords: 0,
     untouchedWallets: 0,
-    catalogVersion: '2026-08-19'
+    catalogVersion: '2026-08-20'
   };
 
   if (!vaultData || typeof vaultData !== 'object') throw new Error('No vault is currently loaded.');
@@ -38,9 +59,10 @@ exports.mergeCatalog = (vaultData) => {
     if (!existingWallet) {
       existingWallet = {
         name: catalogWallet.name,
+        category: catalogCategory(catalogWallet),
         created: today,
-        notes: `${catalogWallet.type} wallet. Support catalog reviewed 2026-08-19. Source: ${catalogWallet.source}`,
-        records: catalogWallet.records.map(([name, symbol, notes]) => cloneRecord({ name, symbol, notes }, today))
+        notes: '',
+        records: catalogWallet.records.map(([name, symbol]) => cloneRecord({ name, symbol }, today))
       };
       vaultData.groups.push(existingWallet);
       result.addedWallets++;
@@ -48,11 +70,14 @@ exports.mergeCatalog = (vaultData) => {
       continue;
     }
 
+    existingWallet.category = existingWallet.category || catalogCategory(catalogWallet);
+    clearCatalogGeneratedNotes(existingWallet, catalogWallet);
+
     if (!Array.isArray(existingWallet.records)) existingWallet.records = [];
     let addedToWallet = 0;
 
-    for (const [name, symbol, notes] of catalogWallet.records) {
-      const catalogRecord = { name, symbol, notes };
+    for (const [name, symbol] of catalogWallet.records) {
+      const catalogRecord = { name, symbol };
       const exists = existingWallet.records.some((record) => recordMatches(record, catalogRecord));
       if (!exists) {
         existingWallet.records.push(cloneRecord(catalogRecord, today));
