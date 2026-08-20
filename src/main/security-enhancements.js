@@ -2,12 +2,14 @@
 
 const electron = require('electron');
 const remote = electron.remote;
+const { ipcRenderer: ipc } = electron;
 const fs = require('fs');
 const path = require('path');
 
 const AUTO_LOCK_MINUTES = 5;
 let idleTimer = null;
 let panicRunning = false;
+let badgeTimer = null;
 
 const getPortableRoot = () => {
   if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
@@ -37,23 +39,24 @@ function ensureSecurityBadge() {
 }
 
 function updateSecurityBadge() {
+  if (!document.body) return;
   const badge = ensureSecurityBadge();
   const loginVisible = !!document.getElementById('masterCryptoInput');
   const hasProfiles = !!(document.getElementById('vaultArea') && document.getElementById('vaultArea').textContent.trim());
-  if (loginVisible || !hasProfiles) {
-    badge.textContent = 'OFFLINE • LOCKED';
-    badge.dataset.state = 'locked';
-  } else {
-    badge.textContent = 'OFFLINE • UNLOCKED';
-    badge.dataset.state = 'unlocked';
-  }
+  const nextState = (loginVisible || !hasProfiles) ? 'locked' : 'unlocked';
+  const nextText = nextState === 'locked' ? 'OFFLINE • LOCKED' : 'OFFLINE • UNLOCKED';
+
+  // Only mutate the DOM when the state actually changes. This prevents the
+  // security badge from recursively triggering DOM observers.
+  if (badge.dataset.state !== nextState) badge.dataset.state = nextState;
+  if (badge.textContent !== nextText) badge.textContent = nextText;
 }
 
 function clearVisibleSensitiveFields() {
   document.querySelectorAll('input[type="text"], input[type="password"], textarea').forEach((el) => {
     if (/password|private|seed|pin|recovery/i.test(`${el.id} ${el.name} ${el.getAttribute('aria-label') || ''}`)) el.value = '';
   });
-  document.querySelectorAll('.sensitive-value, .sensitive-field-content').forEach((el) => { el.textContent = ''; });
+  document.querySelectorAll('.sensitive-value').forEach((el) => { el.textContent = ''; });
   document.querySelectorAll('details[open]').forEach((details) => details.removeAttribute('open'));
 }
 
@@ -61,15 +64,25 @@ function panicLock(reason = 'panic-lock') {
   if (panicRunning) return;
   panicRunning = true;
   audit(reason);
+
   try { clearVisibleSensitiveFields(); } catch (_) {}
+
+  // Clear unlocked state in the main process as well as the renderer. The
+  // encrypted files on disk are not changed by an emergency/inactivity lock.
+  try { ipc.send('panic-lock', { reason }); } catch (_) {}
+
   try { remote.getCurrentWindow().minimize(); } catch (_) {}
-  setTimeout(() => window.location.reload(), 50);
+
+  // Reloading destroys the renderer's master key, decrypted vault objects and
+  // any revealed fields, then returns SafeLedger to the normal login flow.
+  setTimeout(() => window.location.reload(), 100);
 }
 
 function resetIdleTimer() {
   clearTimeout(idleTimer);
   const hasVaultUi = document.getElementById('vaultArea') && document.getElementById('vaultArea').textContent.trim().length > 0;
-  if (!hasVaultUi) return;
+  const loginVisible = !!document.getElementById('masterCryptoInput');
+  if (!hasVaultUi || loginVisible) return;
   idleTimer = setTimeout(() => panicLock('inactivity-auto-lock'), AUTO_LOCK_MINUTES * 60 * 1000);
 }
 
@@ -117,7 +130,8 @@ function enhanceLoginPassword() {
   bar.className = 'password-strength-bar';
   const label = document.createElement('span');
   label.className = 'password-strength-label';
-  meter.appendChild(bar); meter.appendChild(label);
+  meter.appendChild(bar);
+  meter.appendChild(label);
   controls.parentNode.insertBefore(meter, controls.nextSibling);
 
   const labels = ['Weak','Weak','Fair','Good','Strong','Excellent'];
@@ -129,14 +143,13 @@ function enhanceLoginPassword() {
   };
   input.addEventListener('input', update);
   update();
-  updateSecurityBadge();
 }
 
-const observer = new MutationObserver(() => {
-  enhanceLoginPassword();
-  updateSecurityBadge();
-  resetIdleTimer();
-});
+// The legacy renderer creates the login field dynamically. Observe only to
+// attach the login controls. Do not update badges/timers from this observer:
+// those operations mutate the DOM and previously caused a recursive loop that
+// could leave Electron displaying a white window.
+const observer = new MutationObserver(() => enhanceLoginPassword());
 observer.observe(document.documentElement, { childList: true, subtree: true });
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -145,12 +158,22 @@ window.addEventListener('DOMContentLoaded', () => {
   updateSecurityBadge();
   resetIdleTimer();
 
+  // Polling the tiny status indicator is intentionally isolated from the DOM
+  // observer. updateSecurityBadge is idempotent and only changes DOM on state
+  // transitions.
+  badgeTimer = setInterval(updateSecurityBadge, 1000);
+
   const panic = document.getElementById('panicLockButton');
   if (panic) panic.addEventListener('click', () => panicLock('emergency-lock'));
   const backup = document.getElementById('backupButton');
   if (backup) backup.addEventListener('click', exportEncryptedBackup);
   const restore = document.getElementById('restoreButton');
   if (restore) restore.addEventListener('click', restoreEncryptedBackup);
+});
+
+window.addEventListener('beforeunload', () => {
+  clearTimeout(idleTimer);
+  if (badgeTimer) clearInterval(badgeTimer);
 });
 
 async function exportEncryptedBackup() {
@@ -194,7 +217,8 @@ async function restoreEncryptedBackup() {
     await fs.promises.mkdir(safetyDir, { recursive: true });
     await fs.promises.mkdir(vaultDir, { recursive: true });
     for (const name of await fs.promises.readdir(vaultDir)) {
-      const src = path.join(vaultDir, name); const stat = await fs.promises.stat(src);
+      const src = path.join(vaultDir, name);
+      const stat = await fs.promises.stat(src);
       if (stat.isFile()) await fs.promises.copyFile(src, path.join(safetyDir, name));
     }
     for (const [name, encoded] of Object.entries(payload.files)) {
