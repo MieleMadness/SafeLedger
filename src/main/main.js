@@ -18,11 +18,8 @@ const currentVault = 'zvault-0.json';
 const debug = false;
 
 function getPortableRoot() {
-  // electron-builder sets this when running the single-file portable EXE.
   if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
-  // A normal unpacked/local build keeps its data beside SafeLedger.exe.
   if (app.isPackaged) return path.dirname(process.execPath);
-  // Development mode keeps test data in the project directory.
   return app.getAppPath();
 }
 
@@ -43,9 +40,6 @@ function createWindow() {
     minHeight: 600,
     icon: path.join(app.getAppPath(), 'sl.png'),
     webPreferences: {
-      // Temporary compatibility bridge for the 1.x renderer. This lets the old
-      // UI run on current Electron while legacy Node access is migrated to a
-      // context-isolated preload API in the next security pass.
       nodeIntegration: true,
       contextIsolation: false,
       preload: path.join(__dirname, 'preload-compat.js')
@@ -54,7 +48,6 @@ function createWindow() {
 
   remoteMain.enable(mainWindow.webContents);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
-
   mainWindow.on('closed', () => { mainWindow = null; });
 
   const template = [{
@@ -96,15 +89,32 @@ ipc.on('read', (evt, params) => {
 });
 
 ipc.on('read-vaultlist-init', (evt, params) => {
-  // SafeLedger 2 no longer destroys vaults after failed logins. Existing
-  // lockout settings are honored as throttling only.
   if (params.settings.lockOutCount >= params.settings.numLockoutRetries) {
+    if (params.settings.scrubContentAfterRetries !== false) {
+      vault.scrubContent(vaultDir)
+        .then(() => {
+          params.settings.failAttemptCount = 0;
+          params.settings.lockOutCount = 0;
+          params.settings.lockLogin = false;
+          return settingsManager.saveSettings(settingsDir, params.settings);
+        })
+        .then(() => mainWindow.webContents.send('result-lockout-destroy', {
+          status: 'ERROR',
+          statusMsg: 'Self-destruct protection triggered. Encrypted vault data has been destroyed after repeated failed password attempts.',
+          settings: params.settings
+        }))
+        .catch(() => mainWindow.webContents.send('result', {
+          status: 'ERROR', statusMsg: 'Self-destruct protection triggered, but SafeLedger could not complete vault cleanup.'
+        }));
+      return;
+    }
+
     params.settings.lockOutCount = Math.max(0, params.settings.numLockoutRetries - 1);
     params.settings.lockLogin = true;
     params.settings.lockLoginTime = Date.now();
     settingsManager.saveSettings(settingsDir, params.settings)
       .finally(() => mainWindow.webContents.send('result', {
-        status: 'ERROR', statusMsg: 'Login temporarily locked. Your vault data has not been deleted.',
+        status: 'ERROR', statusMsg: 'Login temporarily locked. Self-destruct protection is disabled.',
         type: 'password-failed', settings: params.settings
       }));
     return;
@@ -214,7 +224,6 @@ ipc.on('init-system', () => {
     }));
 });
 
-// Retained only so old renderer code cannot fail if it sends this event.
 ipc.on('save-install-code', (evt, params) => {
   const settings = Object.assign({}, params.newSettings || {}, { activationCode: 'FREE' });
   settingsManager.saveSettings(settingsDir, settings)
