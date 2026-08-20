@@ -1,16 +1,12 @@
 {
   "name": "safe-ledger",
   "productName": "SafeLedger",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "Free, offline and portable encrypted information vault",
   "main": "src/main/main.js",
   "scripts": {
-    "generate:icons": "node scripts/generate-icons.js",
-    "prestart": "npm run generate:icons",
     "start": "electron .",
-    "predist:win": "npm run generate:icons",
     "dist:win": "electron-builder --win portable",
-    "predist:dir": "npm run generate:icons",
     "dist:dir": "electron-builder --dir"
   },
   "repository": "https://github.com/MieleMadness/SafeLedger",
@@ -25,9 +21,7 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "electron": "43.4.0",
-    "electron-builder": "26.15.7",
-    "png-to-ico": "3.0.1",
-    "sharp": "0.34.3"
+    "electron-builder": "26.15.7"
   },
   "dependencies": {
     "@electron/remote": "2.1.3",
@@ -43,13 +37,12 @@
     "files": [
       "src/**/*",
       "build/icon-source.png",
-      "build/icon.png",
       "sl.png",
       "LICENSE",
       "package.json"
     ],
     "win": {
-      "icon": "build/icon.ico",
+      "icon": "build/icon-source.png",
       "target": [
         {
           "target": "portable",
