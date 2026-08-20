@@ -9,6 +9,7 @@ const statusMgr = require('./status');
 const con = remote.getGlobal('console');
 const record = require('./record');
 const utils = require('./utils');
+const securityUi = require('./security-ui');
 
 exports.listGroups = (params) => {
   renderGroups(params);
@@ -29,8 +30,6 @@ const renderGroups = (params) => {
         continue;
       }
       const li = document.createElement("LI");
-      li.setAttribute("data-toggle","collapse");
-      li.setAttribute("data-target","#"+(groupsArray[i].name || 'wallet-'+i));
       ul.appendChild(li);
       const href = document.createElement("A");
       href.addEventListener('click', (e) => {
@@ -59,27 +58,32 @@ exports.createGroup = (params) => {
   createEditGroup(params);
 };
 
-const addRevealButton = (input, parent, showLabel, hideLabel) => {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn btn-default';
-  btn.style.marginTop = '6px';
-  btn.innerHTML = "<i class='fa fa-eye'></i> " + showLabel;
-  btn.addEventListener('click', () => {
-    const showing = input.type === 'text';
-    input.type = showing ? 'password' : 'text';
-    btn.innerHTML = showing
-      ? "<i class='fa fa-eye'></i> " + showLabel
-      : "<i class='fa fa-eye-slash'></i> " + hideLabel;
-  });
-  parent.appendChild(btn);
+const createSensitiveInput = (form, id, labelText, value) => {
+  const formGroup = document.createElement('div');
+  formGroup.className = 'form-group';
+  form.appendChild(formGroup);
+
+  const label = document.createElement('label');
+  label.for = id;
+  label.textContent = labelText;
+  formGroup.appendChild(label);
+
+  const input = document.createElement('input');
+  input.type = 'password';
+  input.className = 'form-control';
+  input.id = id;
+  input.setAttribute('maxlength', '500');
+  input.value = value || '';
+  formGroup.appendChild(input);
+  securityUi.addSensitiveInputControls(input, formGroup, labelText.toLowerCase());
+  return input;
 };
 
 const createEditGroup = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = "";
   const header = document.createElement('h1');
-  header.innerHTML = params.group != null ? "Modify Wallet" : "Add Wallet";
+  header.textContent = params.group != null ? "Modify Wallet" : "Add Wallet";
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
   const form = document.createElement('form');
@@ -90,7 +94,7 @@ const createEditGroup = (params) => {
   form.appendChild(formGroupName);
   const label = document.createElement('label');
   label.for = "inputName";
-  label.innerHTML = "Name";
+  label.textContent = "Name";
   formGroupName.appendChild(label);
   const inputName = document.createElement('input');
   inputName.type = "text";
@@ -100,74 +104,17 @@ const createEditGroup = (params) => {
   if (params.group != null) inputName.value = params.group.name || '';
   formGroupName.appendChild(inputName);
 
-  const formGroupPassword = document.createElement('div');
-  formGroupPassword.className = "form-group";
-  form.appendChild(formGroupPassword);
-  const labelPassword = document.createElement('label');
-  labelPassword.for = "inputPassword";
-  labelPassword.innerHTML = "Password";
-  formGroupPassword.appendChild(labelPassword);
-  const inputPassword = document.createElement('input');
-  inputPassword.type = "text";
-  inputPassword.className = "form-control";
-  inputPassword.id = "inputPassword";
-  inputPassword.setAttribute('maxlength','500');
-  if (params.group != null && params.group.password != null) inputPassword.value = params.group.password;
-  formGroupPassword.appendChild(inputPassword);
-
-  const formGroupPin = document.createElement('div');
-  formGroupPin.className = "form-group";
-  form.appendChild(formGroupPin);
-  const labelPin = document.createElement('label');
-  labelPin.for = "inputPin";
-  labelPin.innerHTML = "Pin code";
-  formGroupPin.appendChild(labelPin);
-  const inputPin = document.createElement('input');
-  inputPin.type = "text";
-  inputPin.className = "form-control";
-  inputPin.id = "inputPin";
-  inputPin.setAttribute('maxlength','500');
-  if (params.group != null && params.group.pin != null) inputPin.value = params.group.pin;
-  formGroupPin.appendChild(inputPin);
-
-  const formGroupLink = document.createElement('div');
-  formGroupLink.className = "form-group";
-  form.appendChild(formGroupLink);
-  const labelRecoveryLink = document.createElement('label');
-  labelRecoveryLink.for = "inputRecoveryLink";
-  labelRecoveryLink.innerHTML = "Recovery link";
-  formGroupLink.appendChild(labelRecoveryLink);
-  const inputRecoveryLink = document.createElement('input');
-  inputRecoveryLink.type = "text";
-  inputRecoveryLink.className = "form-control";
-  inputRecoveryLink.id = "inputRecoveryLink";
-  inputRecoveryLink.setAttribute('maxlength','500');
-  if (params.group != null && params.group.recoveryLink != null) inputRecoveryLink.value = params.group.recoveryLink;
-  formGroupLink.appendChild(inputRecoveryLink);
-
-  const formGroupPhrase = document.createElement('div');
-  formGroupPhrase.className = "form-group";
-  form.appendChild(formGroupPhrase);
-  const labelSeedPhrase = document.createElement('label');
-  labelSeedPhrase.for = "inputSeedPhrase";
-  labelSeedPhrase.innerHTML = "Seed phrase";
-  formGroupPhrase.appendChild(labelSeedPhrase);
-  const inputSeedPhrase = document.createElement('input');
-  inputSeedPhrase.type = "password";
-  inputSeedPhrase.className = "form-control";
-  inputSeedPhrase.id = "inputSeedPhrase";
-  inputSeedPhrase.setAttribute('maxlength','500');
-  inputSeedPhrase.setAttribute('autocomplete','off');
-  if (params.group != null && params.group.seedPhrase != null) inputSeedPhrase.value = params.group.seedPhrase;
-  formGroupPhrase.appendChild(inputSeedPhrase);
-  addRevealButton(inputSeedPhrase, formGroupPhrase, 'Show seed phrase', 'Hide seed phrase');
+  const inputPassword = createSensitiveInput(form, 'inputPassword', 'Password', params.group && params.group.password);
+  const inputPin = createSensitiveInput(form, 'inputPin', 'PIN code', params.group && params.group.pin);
+  const inputRecoveryLink = createSensitiveInput(form, 'inputRecoveryLink', 'Recovery link', params.group && params.group.recoveryLink);
+  const inputSeedPhrase = createSensitiveInput(form, 'inputSeedPhrase', 'Seed phrase', params.group && params.group.seedPhrase);
 
   const formGroupNotes = document.createElement('div');
   formGroupNotes.className = "form-group";
   form.appendChild(formGroupNotes);
   const labelNotes = document.createElement('label');
   labelNotes.for = "inputNotes";
-  labelNotes.innerHTML = "Notes";
+  labelNotes.textContent = "Notes";
   formGroupNotes.appendChild(labelNotes);
   const inputNotes = document.createElement('textarea');
   inputNotes.rows = "5";
@@ -189,13 +136,13 @@ const createEditGroup = (params) => {
       return;
     }
     saveBtn.disabled = true;
-    const name = document.getElementById('inputName');
-    if (name == null || name.value == "") {
+    if (!inputName.value) {
       saveBtn.disabled = false;
       return;
     }
+
     if (params.group != null) {
-      params.group.name = name.value;
+      params.group.name = inputName.value;
       params.group.password = inputPassword.value;
       params.group.pin = inputPin.value;
       params.group.recoveryLink = inputRecoveryLink.value;
@@ -210,7 +157,7 @@ const createEditGroup = (params) => {
       ipc.send('process-group', {cryptoKey:params.cryptoKey,type:"group-modify",vaultData:params.vaultData});
     } else {
       const myGroup = {
-        name: name.value,
+        name: inputName.value,
         password: inputPassword.value,
         pin: inputPin.value,
         recoveryLink: inputRecoveryLink.value,
@@ -241,34 +188,11 @@ const renderGroupDetail = (params) => {
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
 
-  const password = document.createElement('p');
-  password.innerHTML = "<b>Password:</b> <div class='outData'>"+(params.group.password || '')+"</div>";
-  area.appendChild(password);
-
-  const pin = document.createElement('p');
-  pin.innerHTML = "<b>Pin code:</b> <div class='outData'>"+(params.group.pin || '')+"</div>";
-  area.appendChild(pin);
-
-  const recoveryLink = document.createElement('p');
-  recoveryLink.innerHTML = "<b>Recovery link:</b> <div class='outData'>"+(params.group.recoveryLink || '')+"</div>";
-  area.appendChild(recoveryLink);
-
-  const seedWrap = document.createElement('div');
-  const seedLabel = document.createElement('p');
-  seedLabel.innerHTML = '<b>Seed Phrase:</b>';
-  seedWrap.appendChild(seedLabel);
-  if (params.group.seedPhrase) {
-    const details = document.createElement('details');
-    const summary = document.createElement('summary');
-    summary.textContent = 'Show seed phrase';
-    details.appendChild(summary);
-    const value = document.createElement('div');
-    value.className = 'outData';
-    value.textContent = params.group.seedPhrase;
-    details.appendChild(value);
-    seedWrap.appendChild(details);
-  }
-  area.appendChild(seedWrap);
+  // Every sensitive field is independently collapsed by default.
+  securityUi.appendSensitiveField(area, 'Password', params.group.password || '');
+  securityUi.appendSensitiveField(area, 'PIN code', params.group.pin || '');
+  securityUi.appendSensitiveField(area, 'Recovery link', params.group.recoveryLink || '');
+  securityUi.appendSensitiveField(area, 'Seed phrase', params.group.seedPhrase || '');
 
   const notes = document.createElement('p');
   notes.innerHTML = "<b>Notes:</b> ";
