@@ -20,10 +20,15 @@ let activeCryptoKey = null;
 let walletCatalog = null;
 const currentVault = 'zvault-0.json';
 const debug = false;
+const excludedDefaultWallets = new Set(['bitbox02 multi', 'coldcard', 'keystone', 'rabby wallet']);
 
 function getWalletCatalog() {
   if (!walletCatalog) walletCatalog = require('./wallet-catalog');
   return walletCatalog;
+}
+
+function isExcludedDefaultWallet(group) {
+  return excludedDefaultWallets.has(String(group && group.name || '').trim().toLowerCase());
 }
 
 function getPortableRoot() {
@@ -103,10 +108,11 @@ async function setSelfDestructProtection(enabled) {
 
 async function initializeModernVault(vaultName, cryptoKey) {
   const today = Date();
+  const groups = getWalletCatalog().buildDefaultGroups(today).filter((group) => !isExcludedDefaultWallet(group));
   const data = {
     file: vaultName,
-    catalogVersion: '2026-08-19',
-    groups: getWalletCatalog().buildDefaultGroups(today)
+    catalogVersion: '2026-08-20.3',
+    groups
   };
   await vault.saveVault(path.join(vaultDir, vaultName), JSON.stringify(data), cryptoKey);
   return data;
@@ -115,9 +121,6 @@ async function initializeModernVault(vaultName, cryptoKey) {
 function createWindow() {
   configureStorage();
 
-  // Create and load the window immediately. Settings are initialized by the
-  // renderer's init-system request after the first paint so disk I/O no longer
-  // delays visible startup.
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 770,
