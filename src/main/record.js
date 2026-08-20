@@ -6,308 +6,115 @@ const electron = require('electron');
 const {ipcRenderer : ipc } = electron;
 const statusMgr = require('./status');
 const utils = require('./utils');
+const securityUi = require('./security-ui');
 
-exports.listRecords = (params) => {
-  renderRecords(params);
-};
+exports.listRecords = (params) => renderRecords(params);
 
 const renderRecords = (params) => {
   const recordSearch = document.getElementById('recordSearch');
   const recordArea = document.getElementById('recordArea');
-  recordArea.innerHTML = "";
-  const ul = document.createElement("UL");
-  ul.className = "nav";
-  if (params.vaultData != null && params.vaultData.groupSelected != null && params.vaultData.groups[params.vaultData.groupSelected].records != null
-    && params.vaultData.groups[params.vaultData.groupSelected].records.length > 0 ) {
+  recordArea.innerHTML = '';
+  const ul = document.createElement('UL');
+  ul.className = 'nav';
+  if (params.vaultData && params.vaultData.groupSelected != null &&
+      params.vaultData.groups[params.vaultData.groupSelected].records &&
+      params.vaultData.groups[params.vaultData.groupSelected].records.length > 0) {
     const records = params.vaultData.groups[params.vaultData.groupSelected].records;
     for (let i = 0; i < records.length; i++) {
       const recordName = (records[i].name || '').toLowerCase();
       const recordSymbol = (records[i].symbol || '').toLowerCase();
-      if (recordSearch != null && recordSearch.value.length > 0 &&
-        !((recordName.startsWith(recordSearch.value.toLowerCase())) || (recordSymbol.startsWith(recordSearch.value.toLowerCase()))) ){
-        continue;
-      }
-      const li = document.createElement("LI");
-      li.setAttribute("data-toggle","collapse");
-      li.setAttribute("data-target","#"+(records[i].name || 'record-'+i));
-      ul.appendChild(li);
-      const href = document.createElement("A");
+      if (recordSearch && recordSearch.value &&
+          !(recordName.startsWith(recordSearch.value.toLowerCase()) || recordSymbol.startsWith(recordSearch.value.toLowerCase()))) continue;
+      const li = document.createElement('LI');
+      const href = document.createElement('A');
       href.addEventListener('click', (e) => {
         e.preventDefault();
-        if (params.saving.state == true) {
-          alert("Please wait for processing to complete");
-        } else {
-          params.vaultData.recordSelected = i;
-          renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:records[i],saving:params.saving});
-          renderRecords(params);
-        }
+        if (params.saving.state) return alert('Please wait for processing to complete');
+        params.vaultData.recordSelected = i;
+        renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:records[i],saving:params.saving});
+        renderRecords(params);
       });
-      if (params.vaultData.recordSelected != null && params.vaultData.recordSelected == i) {
-        href.className = "item-selected";
-      }
-      let symbol = "";
-      if (records[i].symbol != null && records[i].symbol != "") {
-        symbol = "("+records[i].symbol+")";
-      }
-      href.innerHTML = "<i class='fa fa-cubes'></i> "+(records[i].name || 'Unnamed')+" "+symbol;
+      if (params.vaultData.recordSelected == i) href.className = 'item-selected';
+      const symbol = records[i].symbol ? `(${records[i].symbol})` : '';
+      href.innerHTML = `<i class='fa fa-cubes'></i> ${records[i].name || 'Unnamed'} ${symbol}`;
       li.appendChild(href);
+      ul.appendChild(li);
     }
     recordArea.appendChild(ul);
-  } else {
-    recordArea.innerHTML = "No items";
-  }
+  } else recordArea.innerHTML = 'No items';
 };
 
-exports.createRecord = (params) => {
-  createEditRecord(params);
-};
-
-const addRevealButton = (input, parent, showLabel, hideLabel) => {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'btn btn-default';
-  btn.style.marginTop = '6px';
-  btn.innerHTML = "<i class='fa fa-eye'></i> " + showLabel;
-  btn.addEventListener('click', () => {
-    const showing = input.type === 'text';
-    input.type = showing ? 'password' : 'text';
-    btn.innerHTML = showing
-      ? "<i class='fa fa-eye'></i> " + showLabel
-      : "<i class='fa fa-eye-slash'></i> " + hideLabel;
-  });
-  parent.appendChild(btn);
-};
+exports.createRecord = (params) => createEditRecord(params);
 
 const createEditRecord = (params) => {
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  header.innerHTML = params.record != null ? "Modify Coin" : "Add Coin";
+  header.textContent = params.record ? 'Modify Coin' : 'Add Coin';
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
   const form = document.createElement('form');
   area.appendChild(form);
+  const group = document.createElement('div');
+  group.className = 'form-group';
+  form.appendChild(group);
 
-  const formgroup = document.createElement('div');
-  formgroup.className = "form-group";
-  form.appendChild(formgroup);
+  const textInput = (id, labelText, value, max=500) => {
+    const label = document.createElement('label'); label.for=id; label.textContent=labelText; group.appendChild(label);
+    const input = document.createElement('input'); input.type='text'; input.className='form-control'; input.id=id; input.maxLength=max; input.value=value||''; group.appendChild(input); return input;
+  };
+  const inputName = textInput('inputName','Coin',params.record && params.record.name,25);
+  const inputSymbol = textInput('inputSymbol','Symbol',params.record && params.record.symbol);
+  const inputPublicAddress = textInput('inputPublicAddress','Public address',params.record && params.record.publicAddress);
 
-  const labelName = document.createElement('label');
-  labelName.for = "inputName";
-  labelName.innerHTML = "Coin";
-  formgroup.appendChild(labelName);
-  const inputName = document.createElement('input');
-  inputName.type = "text";
-  inputName.className = "form-control";
-  inputName.id = "inputName";
-  inputName.setAttribute('maxlength','25');
-  if (params.record != null) inputName.value = params.record.name || '';
-  formgroup.appendChild(inputName);
-
-  const labelSymbol = document.createElement('label');
-  labelSymbol.for = "inputSymbol";
-  labelSymbol.innerHTML = "Symbol";
-  formgroup.appendChild(labelSymbol);
-  const inputSymbol = document.createElement('input');
-  inputSymbol.type = "text";
-  inputSymbol.className = "form-control";
-  inputSymbol.id = "inputSymbol";
-  inputSymbol.setAttribute('maxlength','500');
-  if (params.record != null && params.record.symbol != null) inputSymbol.value = params.record.symbol;
-  formgroup.appendChild(inputSymbol);
-
-  const labelPublicAddress = document.createElement('label');
-  labelPublicAddress.for = "inputPublicAddress";
-  labelPublicAddress.innerHTML = "Public address";
-  formgroup.appendChild(labelPublicAddress);
-  const inputPublicAddress = document.createElement('input');
-  inputPublicAddress.type = "text";
-  inputPublicAddress.className = "form-control";
-  inputPublicAddress.id = "inputPublicAddress";
-  inputPublicAddress.setAttribute('maxlength','500');
-  if (params.record != null && params.record.publicAddress != null) inputPublicAddress.value = params.record.publicAddress;
-  formgroup.appendChild(inputPublicAddress);
-
-  const labelPrivateAddress = document.createElement('label');
-  labelPrivateAddress.for = "inputPrivateAddress";
-  labelPrivateAddress.innerHTML = "Private key";
-  formgroup.appendChild(labelPrivateAddress);
+  const privateLabel = document.createElement('label'); privateLabel.for='inputPrivateAddress'; privateLabel.textContent='Private key'; group.appendChild(privateLabel);
   const inputPrivateAddress = document.createElement('input');
-  inputPrivateAddress.type = "password";
-  inputPrivateAddress.className = "form-control";
-  inputPrivateAddress.id = "inputPrivateAddress";
-  inputPrivateAddress.setAttribute('maxlength','500');
-  inputPrivateAddress.setAttribute('autocomplete','off');
-  if (params.record != null && params.record.privateAddress != null) inputPrivateAddress.value = params.record.privateAddress;
-  formgroup.appendChild(inputPrivateAddress);
-  addRevealButton(inputPrivateAddress, formgroup, 'Show private key', 'Hide private key');
+  inputPrivateAddress.type='password'; inputPrivateAddress.className='form-control'; inputPrivateAddress.id='inputPrivateAddress'; inputPrivateAddress.maxLength=500; inputPrivateAddress.value=(params.record && params.record.privateAddress)||'';
+  group.appendChild(inputPrivateAddress);
+  securityUi.addSensitiveInputControls(inputPrivateAddress, group, 'private key');
 
-  const labelNotes = document.createElement('label');
-  labelNotes.for = "inputNotes";
-  labelNotes.innerHTML = "Notes";
-  formgroup.appendChild(labelNotes);
-  const inputNotes = document.createElement('textarea');
-  inputNotes.rows = "5";
-  inputNotes.className = "form-control";
-  inputNotes.id = "inputNotes";
-  inputNotes.setAttribute('maxlength','500');
-  if (params.record != null && params.record.notes != null) inputNotes.value = params.record.notes;
-  formgroup.appendChild(inputNotes);
+  const notesLabel = document.createElement('label'); notesLabel.for='inputNotes'; notesLabel.textContent='Notes'; group.appendChild(notesLabel);
+  const inputNotes = document.createElement('textarea'); inputNotes.rows=5; inputNotes.className='form-control'; inputNotes.id='inputNotes'; inputNotes.maxLength=500; inputNotes.value=(params.record && params.record.notes)||''; group.appendChild(inputNotes);
 
   const saveBtn = document.createElement('button');
-  saveBtn.type = "submit";
-  saveBtn.id = "saveBtn";
-  saveBtn.className = "btn btn-default bottom-space pull-right";
-  saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  saveBtn.addEventListener('click', (e) => {
+  saveBtn.type='submit'; saveBtn.id='saveBtn'; saveBtn.className='btn btn-default bottom-space pull-right'; saveBtn.innerHTML="<span class='glyphicon glyphicon-save'></span> Save";
+  saveBtn.addEventListener('click',(e)=>{
     e.preventDefault();
-    if (params.saving.state == true) {
-      alert("Please wait for processing to complete");
-      return;
-    }
-    saveBtn.disabled = true;
-    const name = document.getElementById('inputName');
-    if (name == null || name.value == "") {
-      saveBtn.disabled = false;
-      return;
-    }
-    params.saving.state = true;
-    statusMgr.loadStatus();
-    if (params.record != null) {
-      params.record.name = name.value;
-      params.record.symbol = inputSymbol.value;
-      params.record.publicAddress = inputPublicAddress.value;
-      params.record.privateAddress = inputPrivateAddress.value;
-      params.record.notes = inputNotes.value;
-      params.record.modified = Date();
-      params.vaultData.groups[params.vaultData.groupSelected].records[params.vaultData.recordSelected] = params.record;
-      params.vaultData.groups[params.vaultData.groupSelected].records.sort(utils.compareIgnoreCase);
-      params.vaultData.recordSelected = params.vaultData.groups[params.vaultData.groupSelected].records.indexOf(params.record);
-      ipc.send('process-record', {cryptoKey:params.cryptoKey,action:"modify",vaultData:params.vaultData});
-    } else {
-      const myRecord = {
-        name: name.value,
-        symbol: inputSymbol.value,
-        publicAddress: inputPublicAddress.value,
-        privateAddress: inputPrivateAddress.value,
-        notes: inputNotes.value,
-        created: Date()
-      };
-      if (params.vaultData.groups[params.vaultData.groupSelected].records == null) {
-        params.vaultData.groups[params.vaultData.groupSelected].records = [];
-      }
-      params.vaultData.groups[params.vaultData.groupSelected].records.push(myRecord);
-      params.vaultData.groups[params.vaultData.groupSelected].records.sort(utils.compareIgnoreCase);
-      params.vaultData.recordSelected = params.vaultData.groups[params.vaultData.groupSelected].records.indexOf(myRecord);
-      ipc.send('process-record', {cryptoKey:params.cryptoKey,action:"create",vaultData:params.vaultData});
-    }
+    if (params.saving.state) return alert('Please wait for processing to complete');
+    if (!inputName.value) return;
+    params.saving.state=true; statusMgr.loadStatus();
+    const rec = params.record || {created:Date()};
+    rec.name=inputName.value; rec.symbol=inputSymbol.value; rec.publicAddress=inputPublicAddress.value; rec.privateAddress=inputPrivateAddress.value; rec.notes=inputNotes.value;
+    if (params.record) rec.modified=Date();
+    const records = params.vaultData.groups[params.vaultData.groupSelected].records || (params.vaultData.groups[params.vaultData.groupSelected].records=[]);
+    if (params.record) records[params.vaultData.recordSelected]=rec; else records.push(rec);
+    records.sort(utils.compareIgnoreCase); params.vaultData.recordSelected=records.indexOf(rec);
+    ipc.send('process-record',{cryptoKey:params.cryptoKey,action:params.record?'modify':'create',vaultData:params.vaultData});
   });
   form.appendChild(saveBtn);
 };
 
-exports.showRecordDetail = (params) => {
-  renderRecordDetail(params);
-};
+exports.showRecordDetail = (params) => renderRecordDetail(params);
 
 const renderRecordDetail = (params) => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = "";
-  const header = document.createElement('h1');
-  header.textContent = params.record.name || 'Coin';
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-
-  const symbol = document.createElement('p');
-  symbol.innerHTML = "<b>Symbol:</b> <div class='outData'>"+(params.record.symbol || '')+"</div>";
-  area.appendChild(symbol);
-
-  const publicAddress = document.createElement('p');
-  publicAddress.innerHTML = "<b>Public Address:</b> <div class='outData'>"+(params.record.publicAddress || '')+"</div>";
-  area.appendChild(publicAddress);
-
-  const privateWrap = document.createElement('div');
-  const privateLabel = document.createElement('p');
-  privateLabel.innerHTML = '<b>Private Key:</b>';
-  privateWrap.appendChild(privateLabel);
-  if (params.record.privateAddress) {
-    const details = document.createElement('details');
-    const summary = document.createElement('summary');
-    summary.textContent = 'Show private key';
-    details.appendChild(summary);
-    const value = document.createElement('div');
-    value.className = 'outData';
-    value.textContent = params.record.privateAddress;
-    details.appendChild(value);
-    privateWrap.appendChild(details);
-  }
-  area.appendChild(privateWrap);
-
-  const notes = document.createElement('p');
-  notes.innerHTML = "<b>Notes:</b>";
-  area.appendChild(notes);
-  const notesDetail = document.createElement('p');
-  if (params.record.notes != null) {
-    const r = params.record.notes.replace(/(?:\r\n|\r|\n)/g, '<br />');
-    notesDetail.innerHTML = "<div class='outData'>"+r+"</div>";
-  }
-  area.appendChild(notesDetail);
-
-  const created = document.createElement('p');
-  created.className = "dates";
-  created.innerHTML = "<b>Created:</b> "+(params.record.created || '');
-  area.appendChild(created);
-  const modified = document.createElement('p');
-  modified.className = "dates";
-  if (params.record.modified != null) modified.innerHTML = "<b>Modified:</b> "+params.record.modified;
-  area.appendChild(modified);
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.type = "button";
-  deleteBtn.id = "deleteBtn";
-  deleteBtn.className = "btn btn-default bottom-space pull-right";
-  deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Delete";
-  deleteBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (params.saving.state == true) alert("Please wait for processing to complete");
-    else confirmDelete(params);
-  });
-  area.appendChild(deleteBtn);
-
-  const editBtn = document.createElement('button');
-  editBtn.type = "button";
-  editBtn.id = "editBtn";
-  editBtn.className = "btn btn-default bottom-space pull-right";
-  editBtn.innerHTML = "<span class='glyphicon glyphicon-edit' aria-hidden='true'></span> Edit";
-  editBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (params.saving.state == true) alert("Please wait for processing to complete");
-    else createEditRecord(params);
-  });
-  area.appendChild(editBtn);
+  const area=document.getElementById('detailArea'); area.innerHTML='';
+  const header=document.createElement('h1'); header.textContent=params.record.name||'Coin'; area.appendChild(header); area.appendChild(document.createElement('hr'));
+  const symbol=document.createElement('p'); symbol.innerHTML=`<b>Symbol:</b> <div class='outData'>${params.record.symbol||''}</div>`; area.appendChild(symbol);
+  const publicAddress=document.createElement('div'); publicAddress.innerHTML=`<b>Public Address:</b> <div class='outData'></div>`; publicAddress.querySelector('.outData').textContent=params.record.publicAddress||''; area.appendChild(publicAddress);
+  securityUi.appendPublicAddressTools(area, params.record.publicAddress||'', params.record.symbol||'');
+  securityUi.appendSensitiveField(area,'Private key',params.record.privateAddress||'');
+  const notes=document.createElement('p'); notes.innerHTML='<b>Notes:</b>'; area.appendChild(notes);
+  const notesDetail=document.createElement('p'); notesDetail.textContent=params.record.notes||''; notesDetail.className='outData'; area.appendChild(notesDetail);
+  const created=document.createElement('p'); created.className='dates'; created.innerHTML=`<b>Created:</b> ${params.record.created||''}`; area.appendChild(created);
+  if (params.record.modified) { const modified=document.createElement('p'); modified.className='dates'; modified.innerHTML=`<b>Modified:</b> ${params.record.modified}`; area.appendChild(modified); }
+  const deleteBtn=document.createElement('button'); deleteBtn.type='button'; deleteBtn.className='btn btn-default bottom-space pull-right'; deleteBtn.innerHTML="<span class='glyphicon glyphicon-trash'></span> Delete"; deleteBtn.onclick=()=>confirmDelete(params); area.appendChild(deleteBtn);
+  const editBtn=document.createElement('button'); editBtn.type='button'; editBtn.className='btn btn-default bottom-space pull-right'; editBtn.innerHTML="<span class='glyphicon glyphicon-edit'></span> Edit"; editBtn.onclick=()=>createEditRecord(params); area.appendChild(editBtn);
 };
 
 const confirmDelete = (params) => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = "";
-  const header = document.createElement('h1');
-  header.innerHTML = "Confirm Delete of coin: "+params.record.name;
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.type = "button";
-  deleteBtn.id = "deleteBtn";
-  deleteBtn.className = "btn btn-default bottom-space pull-right";
-  deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Confirm";
-  deleteBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    deleteBtn.disabled = true;
-    params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected,1);
-    params.vaultData.recordSelected = null;
-    params.saving.state = true;
-    statusMgr.loadStatus();
-    ipc.send('process-record', {cryptoKey:params.cryptoKey,action:"delete",vaultData:params.vaultData});
-    area.innerHTML = "";
-  });
-  area.appendChild(deleteBtn);
+  const area=document.getElementById('detailArea'); area.innerHTML='';
+  const header=document.createElement('h1'); header.textContent=`Confirm Delete of coin: ${params.record.name}`; area.appendChild(header); area.appendChild(document.createElement('hr'));
+  const btn=document.createElement('button'); btn.type='button'; btn.className='btn btn-default bottom-space pull-right'; btn.textContent='Confirm';
+  btn.onclick=()=>{ params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected,1); params.vaultData.recordSelected=null; params.saving.state=true; statusMgr.loadStatus(); ipc.send('process-record',{cryptoKey:params.cryptoKey,action:'delete',vaultData:params.vaultData}); area.innerHTML=''; };
+  area.appendChild(btn);
 };
