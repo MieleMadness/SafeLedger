@@ -192,7 +192,8 @@ a { color: white; }
 .field-inline-action { width: 32px; min-width: 32px; height: 30px; padding: 0 !important; display: inline-flex; align-items: center; justify-content: center; }
 .field-inline-action.active { background: #edf3fb; border-color: #9fb8d8; }
 .secure-field-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.secure-field-summary-label { display: inline-flex; align-items: center; min-width: 0; }
+.secure-field-summary-label { display: inline-flex; align-items: center; min-width: 0; gap: 6px; }
+.secure-field-summary-text { display: inline-block; }
 .secure-field-summary .field-inline-actions { position: static; transform: none; margin-left: auto; flex: 0 0 auto; }
 .compact-qr-area { margin: 6px 0 10px; }
 .sensitive-field-content .compact-qr-area { margin-bottom: 0; }
