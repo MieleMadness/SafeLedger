@@ -18,15 +18,20 @@ const renderRecords = (params) => {
   if(params.vaultData&&params.vaultData.groupSelected!=null){
     const wallet=params.vaultData.groups[params.vaultData.groupSelected];
     const records=wallet&&Array.isArray(wallet.records)?wallet.records:[];
+    const sortedRecords=records
+      .map((record,originalIndex)=>({record,originalIndex}))
+      .sort((a,b)=>String(a.record.name||'').localeCompare(String(b.record.name||''),undefined,{sensitivity:'base'}));
     const query=recordSearch&&recordSearch.value?recordSearch.value.toLowerCase():'';
-    for(let i=0;i<records.length;i++){
-      const searchable=[records[i].name,records[i].symbol,records[i].publicAddress,records[i].notes,records[i].tags,records[i].manualBalance]
+    for(const entry of sortedRecords){
+      const coin=entry.record;
+      const i=entry.originalIndex;
+      const searchable=[coin.name,coin.symbol,coin.publicAddress,coin.notes,coin.tags,coin.manualBalance]
         .map(v=>String(v||'').toLowerCase()).join(' ');
       if(query&&!searchable.includes(query))continue;
       const li=document.createElement('LI'); const href=document.createElement('A');
-      href.addEventListener('click',(e)=>{e.preventDefault(); if(params.saving.state)return alert('Please wait for processing to complete'); params.vaultData.recordSelected=i; renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:records[i],saving:params.saving}); renderRecords(params);});
+      href.addEventListener('click',(e)=>{e.preventDefault(); if(params.saving.state)return alert('Please wait for processing to complete'); params.vaultData.recordSelected=i; renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:coin,saving:params.saving}); renderRecords(params);});
       if(params.vaultData.recordSelected==i)href.className='item-selected';
-      const symbol=records[i].symbol?`(${records[i].symbol})`:''; href.innerHTML=`<i class='fa fa-cubes'></i> ${records[i].name||'Unnamed'} ${symbol}`; li.appendChild(href); ul.appendChild(li);
+      const symbol=coin.symbol?`(${coin.symbol})`:''; href.innerHTML=`<i class='fa fa-cubes'></i> ${coin.name||'Unnamed'} ${symbol}`; li.appendChild(href); ul.appendChild(li);
     }
     recordArea.appendChild(ul);
     if(records.length===0)recordArea.innerHTML='No items';
