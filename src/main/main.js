@@ -4,6 +4,7 @@ const { app, BrowserWindow, Menu, ipcMain: ipc, dialog } = require('electron');
 const remoteMain = require('@electron/remote/main');
 const path = require('path');
 const vault = require('./vault');
+const walletCatalog = require('./wallet-catalog');
 const utils = require('./utils');
 const logger = require('./logger');
 const installCodeManager = require('./installManager/installManager/installCodeManager');
@@ -91,6 +92,17 @@ async function setSelfDestructProtection(enabled) {
       settings: currentSettings
     });
   }
+}
+
+async function initializeModernVault(vaultName, cryptoKey) {
+  const today = Date();
+  const data = {
+    file: vaultName,
+    catalogVersion: '2026-08-19',
+    groups: walletCatalog.buildDefaultGroups(today)
+  };
+  await vault.saveVault(path.join(vaultDir, vaultName), JSON.stringify(data), cryptoKey);
+  return data;
 }
 
 async function createWindow() {
@@ -205,7 +217,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
 
     if (state === 'CREATE') {
       return vault.initVaultList(vaultDir, params.cryptoKey)
-        .then(() => vault.initVaultData(vaultDir, currentVault, params.cryptoKey))
+        .then(() => initializeModernVault(currentVault, params.cryptoKey))
         .then(loadList);
     }
     return loadList();
@@ -234,7 +246,7 @@ ipc.on('process-vault-list', (evt, params) => {
   vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey)
     .then((val) => {
       if (params.action === 'create' && val === 'SUCCESS') {
-        return vault.initVaultData(vaultDir, idInfo.fileName, params.cryptoKey)
+        return initializeModernVault(idInfo.fileName, params.cryptoKey)
           .then((data) => mainWindow.webContents.send('result', {
             status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: params.vaultList, vaultData: data
           }));
