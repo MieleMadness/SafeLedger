@@ -23,10 +23,8 @@ exports.copySensitive = (value) => {
 exports.addSensitiveInputControls = (input, parent, label) => {
   input.type = 'password';
   input.setAttribute('autocomplete', 'off');
-
   const controls = document.createElement('div');
   controls.className = 'sensitive-controls';
-
   const reveal = document.createElement('button');
   reveal.type = 'button';
   reveal.className = 'btn btn-default btn-sm';
@@ -39,7 +37,6 @@ exports.addSensitiveInputControls = (input, parent, label) => {
       : `<i class="fa fa-eye"></i> Show ${label}`;
   });
   controls.appendChild(reveal);
-
   const copy = document.createElement('button');
   copy.type = 'button';
   copy.className = 'btn btn-default btn-sm';
@@ -52,19 +49,16 @@ exports.addSensitiveInputControls = (input, parent, label) => {
 exports.appendSensitiveField = (parent, label, value) => {
   const wrapper = document.createElement('div');
   wrapper.className = 'sensitive-field';
-
   const details = document.createElement('details');
   const summary = document.createElement('summary');
   summary.innerHTML = `<i class="fa fa-plus-circle"></i> ${label}`;
   details.appendChild(summary);
-
   const content = document.createElement('div');
   content.className = 'sensitive-field-content';
   const out = document.createElement('div');
   out.className = 'outData sensitive-value';
   out.textContent = value || '';
   content.appendChild(out);
-
   if (value) {
     const copy = document.createElement('button');
     copy.type = 'button';
@@ -73,13 +67,11 @@ exports.appendSensitiveField = (parent, label, value) => {
     copy.addEventListener('click', () => exports.copySensitive(value));
     content.appendChild(copy);
   }
-
   details.addEventListener('toggle', () => {
     summary.innerHTML = details.open
       ? `<i class="fa fa-minus-circle"></i> Hide ${label}`
       : `<i class="fa fa-plus-circle"></i> ${label}`;
   });
-
   details.appendChild(content);
   wrapper.appendChild(details);
   parent.appendChild(wrapper);
@@ -90,27 +82,21 @@ exports.appendPublicAddressTools = (parent, address, symbol) => {
   if (!address) return;
   const controls = document.createElement('div');
   controls.className = 'public-address-controls';
-
   const copy = document.createElement('button');
   copy.type = 'button';
   copy.className = 'btn btn-default btn-sm';
   copy.innerHTML = '<i class="fa fa-copy"></i> Copy address';
-  copy.addEventListener('click', () => {
-    clipboard.writeText(String(address));
-  });
+  copy.addEventListener('click', () => clipboard.writeText(String(address)));
   controls.appendChild(copy);
-
   const qrButton = document.createElement('button');
   qrButton.type = 'button';
   qrButton.className = 'btn btn-default btn-sm';
   qrButton.innerHTML = '<i class="fa fa-qrcode"></i> Show QR';
   controls.appendChild(qrButton);
-
   const qrArea = document.createElement('div');
   qrArea.className = 'qr-area';
   qrArea.style.display = 'none';
   controls.appendChild(qrArea);
-
   qrButton.addEventListener('click', async () => {
     if (qrArea.style.display !== 'none') {
       qrArea.style.display = 'none';
@@ -119,11 +105,7 @@ exports.appendPublicAddressTools = (parent, address, symbol) => {
     }
     qrArea.innerHTML = '';
     try {
-      const dataUrl = await QRCode.toDataURL(String(address), {
-        errorCorrectionLevel: 'M',
-        margin: 2,
-        width: 240
-      });
+      const dataUrl = await QRCode.toDataURL(String(address), { errorCorrectionLevel: 'M', margin: 2, width: 240 });
       const img = document.createElement('img');
       img.src = dataUrl;
       img.alt = `${symbol || ''} public address QR code`.trim();
@@ -140,6 +122,27 @@ exports.appendPublicAddressTools = (parent, address, symbol) => {
       qrArea.style.display = 'block';
     }
   });
-
   parent.appendChild(controls);
+};
+
+const escapeHtml = (value) => String(value || '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
+exports.printRecoverySheet = (title, fields, includesSensitive) => {
+  if (includesSensitive) {
+    const approved = confirm('This printout contains sensitive recovery information. Anyone who sees it may gain access to your crypto. Print only to a trusted local printer and store the paper securely. Continue?');
+    if (!approved) return;
+  }
+  const rows = fields
+    .filter((field) => field && field.value)
+    .map((field) => `<tr><th>${escapeHtml(field.label)}</th><td>${escapeHtml(field.value)}</td></tr>`)
+    .join('');
+  const popup = window.open('', '_blank', 'width=760,height=800');
+  if (!popup) return alert('Unable to open print window.');
+  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#111}h1{font-size:24px}p.warn{border:2px solid #000;padding:10px;font-weight:bold}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #999;padding:10px;text-align:left;vertical-align:top;word-break:break-all}th{width:180px;background:#eee}@media print{button{display:none}}</style></head><body><h1>${escapeHtml(title)}</h1>${includesSensitive ? '<p class="warn">CONFIDENTIAL RECOVERY INFORMATION — KEEP SECURE</p>' : ''}<table>${rows}</table><p>Generated offline by SafeLedger on ${escapeHtml(new Date().toString())}</p><button onclick="window.print()">Print</button></body></html>`);
+  popup.document.close();
 };
