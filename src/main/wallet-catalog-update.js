@@ -4,6 +4,16 @@ const walletCatalog = require('./wallet-catalog');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 const originalBuildDefaultGroups = walletCatalog.buildDefaultGroups;
+const removedWalletNames = new Set([
+  'bitbox02 multi',
+  'coldcard',
+  'keystone',
+  'rabby wallet'
+]);
+
+function isRemovedWallet(name) {
+  return removedWalletNames.has(normalize(name));
+}
 
 function preferredWalletName(name) {
   return normalize(name) === 'base app (coinbase wallet)' ? 'Coinbase Wallet' : name;
@@ -22,24 +32,26 @@ function catalogCategory(wallet) {
 }
 
 function findCatalogWallet(name) {
-  return walletCatalog.catalog.find((wallet) => namesMatch(name, wallet.name));
+  return walletCatalog.catalog.find((wallet) => !isRemovedWallet(wallet.name) && namesMatch(name, wallet.name));
 }
 
 function cleanBuiltGroups(groups) {
-  return (groups || []).map((group) => {
-    const catalogWallet = findCatalogWallet(group.name);
-    return Object.assign({}, group, {
-      name: preferredWalletName(group.name),
-      category: group.category || catalogCategory(catalogWallet),
-      notes: '',
-      records: (group.records || []).map((record) => Object.assign({}, record, { notes: '' }))
+  return (groups || [])
+    .filter((group) => !isRemovedWallet(group.name))
+    .map((group) => {
+      const catalogWallet = findCatalogWallet(group.name);
+      return Object.assign({}, group, {
+        name: preferredWalletName(group.name),
+        category: group.category || catalogCategory(catalogWallet),
+        notes: '',
+        records: (group.records || []).map((record) => Object.assign({}, record, { notes: '' }))
+      });
     });
-  });
 }
 
 // main.js imports this module before creating new vaults. Wrapping the catalog
-// builder here keeps catalog/support metadata out of user-owned Notes fields
-// without changing the legacy vault format.
+// builder keeps catalog/support metadata out of user-owned Notes fields and
+// removes wallets no longer included in SafeLedger's default catalog.
 walletCatalog.buildDefaultGroups = (today) => cleanBuiltGroups(originalBuildDefaultGroups(today));
 
 function cloneRecord(record, today) {
@@ -76,13 +88,15 @@ exports.mergeCatalog = (vaultData) => {
     addedWallets: 0,
     addedRecords: 0,
     untouchedWallets: 0,
-    catalogVersion: '2026-08-20'
+    catalogVersion: '2026-08-20.2'
   };
 
   if (!vaultData || typeof vaultData !== 'object') throw new Error('No vault is currently loaded.');
   if (!Array.isArray(vaultData.groups)) vaultData.groups = [];
 
   for (const catalogWallet of walletCatalog.catalog) {
+    if (isRemovedWallet(catalogWallet.name)) continue;
+
     let existingWallet = vaultData.groups.find((group) => namesMatch(group.name, catalogWallet.name));
 
     if (!existingWallet) {
