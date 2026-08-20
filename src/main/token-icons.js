@@ -1,14 +1,14 @@
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-
-// Token/network artwork is copied into SafeLedger's own source tree by
-// scripts/prepare-token-assets.js before development/build. At runtime we read
-// only those bundled files, so Electron never has to resolve an ESM package or
-// a node_modules URL. This remains completely local/offline inside app.asar.
-const iconCache = new Map();
-const assetRoot = path.join(__dirname, 'assets', 'token-icons');
+// Generated at build time by scripts/prepare-token-assets.js. The manifest
+// contains browser-ready data URLs, so runtime icon rendering has no dependency
+// on node_modules, ESM imports, external URLs, or filesystem paths.
+let manifest = { tokens: {}, networks: {} };
+try {
+  manifest = require('./assets/token-icons/manifest.json');
+} catch (_) {
+  manifest = { tokens: {}, networks: {} };
+}
 
 const cleanSymbol = (value) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
 const slug = (value) => String(value || '')
@@ -48,30 +48,16 @@ const standardNetworkAliases = {
   'custom-tokens': 'ethereum'
 };
 
-function readSvg(relativePath) {
-  if (iconCache.has(relativePath)) return iconCache.get(relativePath);
-  try {
-    const svg = fs.readFileSync(path.join(assetRoot, relativePath), 'utf8');
-    if (!/<svg[\s>]/i.test(svg)) throw new Error('Not an SVG');
-    const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
-    iconCache.set(relativePath, dataUrl);
-    return dataUrl;
-  } catch (_) {
-    iconCache.set(relativePath, null);
-    return null;
-  }
-}
-
 function tokenIcon(symbol) {
   const safe = cleanSymbol(symbol);
-  return safe ? readSvg(path.join('tokens', `${safe}.svg`)) : null;
+  return safe && manifest.tokens ? manifest.tokens[safe] || null : null;
 }
 
 function networkIcon(name) {
   const normalized = slug(name);
-  if (!normalized) return null;
+  if (!normalized || !manifest.networks) return null;
   const mapped = standardNetworkAliases[normalized] || normalized;
-  return readSvg(path.join('networks', `${mapped}.svg`));
+  return manifest.networks[mapped] || null;
 }
 
 exports.getIconUrl = (record) => {
