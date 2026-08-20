@@ -8,6 +8,7 @@ const statusMgr = require('./status');
 const utils = require('./utils');
 const securityUi = require('./security-ui');
 const walletCatalog = require('./wallet-catalog');
+const tokenIcons = require('./token-icons');
 
 const normalize=(v)=>String(v||'').trim().toLowerCase();
 const getUserCoinNotes=(vaultData,rec)=>{
@@ -16,19 +17,6 @@ const getUserCoinNotes=(vaultData,rec)=>{
   if(!catalogWallet)return rec&&rec.notes||'';
   const catalogRecord=catalogWallet.records.find(([name,symbol])=>(normalize(symbol)&&normalize(symbol)===normalize(rec&&rec.symbol))||normalize(name)===normalize(rec&&rec.name));
   return catalogRecord&&catalogRecord[2]===rec.notes?'':(rec&&rec.notes||'');
-};
-
-const topCoinBrand = {
-  BTC: { mark: '₿', className: 'btc' },
-  ETH: { mark: 'Ξ', className: 'eth' },
-  USDT: { mark: '₮', className: 'usdt' },
-  XRP: { mark: 'X', className: 'xrp' },
-  BNB: { mark: '◆', className: 'bnb' },
-  SOL: { mark: '≋', className: 'sol' },
-  USDC: { mark: '$', className: 'usdc' },
-  TRX: { mark: '△', className: 'trx' },
-  DOGE: { mark: 'Ð', className: 'doge' },
-  ADA: { mark: 'A', className: 'ada' }
 };
 
 const formatEasternDate=(value)=>{
@@ -48,11 +36,15 @@ const appendCoinHeader=(area,record)=>{
   const header=document.createElement('div');
   header.className='coin-detail-header';
   const symbol=String(record.symbol||'').toUpperCase();
-  const brand=topCoinBrand[symbol];
-  const icon=document.createElement('div');
-  icon.className=`coin-brand-icon ${brand?`coin-brand-${brand.className}`:'coin-brand-generic'}`;
-  icon.textContent=brand?brand.mark:(symbol?symbol.slice(0,2):'•');
-  header.appendChild(icon);
+  const brandedIcon=tokenIcons.createIconElement(record,'coin-brand-image');
+  if(brandedIcon){
+    header.appendChild(brandedIcon);
+  }else{
+    const fallback=document.createElement('div');
+    fallback.className='coin-brand-icon coin-brand-generic';
+    fallback.textContent=symbol?symbol.slice(0,3):'•';
+    header.appendChild(fallback);
+  }
   const titleWrap=document.createElement('div');
   titleWrap.className='coin-detail-title-wrap';
   const title=document.createElement('h1');
@@ -67,7 +59,7 @@ exports.listRecords=(params)=>renderRecords(params);
 const renderRecords=(params)=>{
   const recordSearch=document.getElementById('recordSearch');const recordArea=document.getElementById('recordArea');recordArea.innerHTML='';const ul=document.createElement('UL');ul.className='nav';
   if(params.vaultData&&params.vaultData.groupSelected!=null){const wallet=params.vaultData.groups[params.vaultData.groupSelected];const records=wallet&&Array.isArray(wallet.records)?wallet.records:[];const sorted=records.map((record,originalIndex)=>({record,originalIndex})).sort((a,b)=>String(a.record.name||'').localeCompare(String(b.record.name||''),undefined,{sensitivity:'base'}));const query=recordSearch&&recordSearch.value?recordSearch.value.toLowerCase():'';
-    for(const entry of sorted){const coin=entry.record,i=entry.originalIndex;const searchable=[coin.name,coin.symbol,coin.publicAddress,getUserCoinNotes(params.vaultData,coin),coin.tags,coin.manualBalance].map(v=>String(v||'').toLowerCase()).join(' ');if(query&&!searchable.includes(query))continue;const li=document.createElement('LI'),href=document.createElement('A');href.addEventListener('click',(e)=>{e.preventDefault();if(params.saving.state)return alert('Please wait for processing to complete');params.vaultData.recordSelected=i;renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:coin,saving:params.saving});renderRecords(params);});if(params.vaultData.recordSelected==i)href.className='item-selected';const symbol=coin.symbol?`(${coin.symbol})`:'';href.innerHTML=`<i class='fa fa-cubes'></i> ${coin.name||'Unnamed'} ${symbol}`;li.appendChild(href);ul.appendChild(li);}recordArea.appendChild(ul);if(records.length===0)recordArea.innerHTML='No items';
+    for(const entry of sorted){const coin=entry.record,i=entry.originalIndex;const searchable=[coin.name,coin.symbol,coin.publicAddress,getUserCoinNotes(params.vaultData,coin),coin.tags,coin.manualBalance].map(v=>String(v||'').toLowerCase()).join(' ');if(query&&!searchable.includes(query))continue;const li=document.createElement('LI'),href=document.createElement('A');href.addEventListener('click',(e)=>{e.preventDefault();if(params.saving.state)return alert('Please wait for processing to complete');params.vaultData.recordSelected=i;renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:coin,saving:params.saving});renderRecords(params);});if(params.vaultData.recordSelected==i)href.className='item-selected';const row=document.createElement('span');row.className='coin-list-row';const brandedIcon=tokenIcons.createIconElement(coin,'coin-list-brand-image');if(brandedIcon)row.appendChild(brandedIcon);else{const generic=document.createElement('span');generic.className='coin-list-generic-icon';generic.textContent=(String(coin.symbol||'').toUpperCase().slice(0,2)||'•');row.appendChild(generic);}const text=document.createElement('span');text.className='coin-list-label';text.textContent=`${coin.name||'Unnamed'}${coin.symbol?` (${coin.symbol})`:''}`;row.appendChild(text);href.appendChild(row);li.appendChild(href);ul.appendChild(li);}recordArea.appendChild(ul);if(records.length===0)recordArea.innerHTML='No items';
   }else recordArea.innerHTML='No items';
 };
 
