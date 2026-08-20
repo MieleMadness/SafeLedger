@@ -14,7 +14,10 @@ const defaults = () => ({
   numLockoutRetries: 5,
   lockLogin: false,
   lockLoginTime: 0,
-  minutesToWaitBetweenLockout: 15
+  minutesToWaitBetweenLockout: 15,
+  // Preserve SafeLedger's historical brute-force protection by default.
+  // Users can explicitly disable this in Security Settings.
+  scrubContentAfterRetries: true
 });
 
 const settingsPath = (dir) => path.join(dir, 'settings.json');
