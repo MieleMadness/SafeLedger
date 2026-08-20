@@ -65,43 +65,91 @@ function clickLegacyAction(id) {
   if (button) button.click();
 }
 
+function makeSection(title) {
+  const section = document.createElement('section');
+  section.className = 'settings-section';
+  const heading = document.createElement('h3');
+  heading.className = 'settings-section-title';
+  heading.textContent = title;
+  section.appendChild(heading);
+  return section;
+}
+
 function enhanceSettingsScreen() {
   const area = document.getElementById('detailArea');
   if (!area) return;
   const header = area.querySelector('h1');
   if (!header || header.textContent.trim() !== 'Settings') return;
-  if (area.querySelector('.settings-security-actions')) return;
+  if (area.dataset.settingsEnhanced === '1') return;
 
-  const actions = document.createElement('div');
-  actions.className = 'settings-security-actions';
+  const form = area.querySelector('form');
+  if (!form) return;
+  area.dataset.settingsEnhanced = '1';
 
-  const changePassword = document.createElement('button');
-  changePassword.type = 'button';
-  changePassword.className = 'btn btn-default';
-  changePassword.innerHTML = '<i class="fa fa-lock"></i> Change Password';
-  changePassword.addEventListener('click', () => clickLegacyAction('encryptionSettings'));
-  actions.appendChild(changePassword);
+  // Activation is no longer part of the product, so remove the legacy status line.
+  Array.from(area.querySelectorAll('p')).forEach((p) => {
+    if (/activation\s*code/i.test(p.textContent || '')) p.remove();
+  });
+
+  const failLabel = form.querySelector('label[for="inputFailAttempts"]');
+  if (failLabel) failLabel.textContent = 'Failed login attempts before lockout (3–10)';
+  const retryLabel = form.querySelector('label[for="inputLockoutRetry"]');
+  if (retryLabel) retryLabel.textContent = 'Lockouts allowed before self-destruct (2–5)';
+  const waitLabel = form.querySelector('label[for="inputBetweenLockout"]');
+  if (waitLabel) waitLabel.textContent = 'Lockout duration in minutes (15–1440)';
+  const protectionLabel = form.querySelector('label[for="inputScrubContent"]');
+  if (protectionLabel) {
+    protectionLabel.className = 'settings-protection-note';
+    protectionLabel.textContent = 'Self-destruct protection is enabled. If all configured lockouts are exhausted, SafeLedger permanently destroys the encrypted vault data.';
+  }
+
+  const save = form.querySelector('#saveBtn');
+  if (save) {
+    save.classList.remove('pull-right');
+    save.classList.add('settings-section-save');
+    save.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save Brute Force Settings';
+  }
+
+  const bruteSection = makeSection('Brute Force Protection');
+  area.insertBefore(bruteSection, form);
+  bruteSection.appendChild(form);
+
+  const modified = Array.from(area.querySelectorAll('p.dates')).find((p) => /modified/i.test(p.textContent || ''));
+  if (modified) bruteSection.appendChild(modified);
+
+  const backupSection = makeSection('Backup & Recovery');
+  const backupActions = document.createElement('div');
+  backupActions.className = 'settings-section-actions';
 
   const backup = document.createElement('button');
   backup.type = 'button';
   backup.className = 'btn btn-default';
   backup.innerHTML = '<i class="fa fa-download"></i> Backup';
   backup.addEventListener('click', () => clickLegacyAction('backupButton'));
-  actions.appendChild(backup);
+  backupActions.appendChild(backup);
 
   const restore = document.createElement('button');
   restore.type = 'button';
   restore.className = 'btn btn-default';
   restore.innerHTML = '<i class="fa fa-upload"></i> Restore';
   restore.addEventListener('click', () => clickLegacyAction('restoreButton'));
-  actions.appendChild(restore);
+  backupActions.appendChild(restore);
 
-  const note = document.createElement('p');
-  note.className = 'settings-backup-note';
-  note.textContent = 'Backup and restore include the complete SafeLedgerData folder, including every profile/vault and local settings. Vault files remain encrypted.';
-  actions.appendChild(note);
+  const backupNote = document.createElement('p');
+  backupNote.className = 'settings-section-note';
+  backupNote.textContent = 'Backup and restore include the complete SafeLedgerData folder, including every profile and local setting. Vault files remain encrypted.';
+  backupSection.appendChild(backupActions);
+  backupSection.appendChild(backupNote);
+  area.appendChild(backupSection);
 
-  area.appendChild(actions);
+  const passwordSection = makeSection('Password');
+  const changePassword = document.createElement('button');
+  changePassword.type = 'button';
+  changePassword.className = 'btn btn-default';
+  changePassword.innerHTML = '<i class="fa fa-lock"></i> Change Password';
+  changePassword.addEventListener('click', () => clickLegacyAction('encryptionSettings'));
+  passwordSection.appendChild(changePassword);
+  area.appendChild(passwordSection);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
