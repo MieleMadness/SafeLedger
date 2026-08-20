@@ -43,3 +43,49 @@
   transform: none;
   box-shadow: none;
 }
+
+/* SafeLedger 2.0.13 settings layout */
+.settings-section {
+  margin: 0 0 14px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+}
+.settings-section-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #222;
+}
+.settings-section .form-group { margin-bottom: 12px; }
+.settings-section .form-control { margin-bottom: 10px; }
+.settings-protection-note {
+  display: block;
+  margin: 2px 0 10px;
+  padding: 9px 10px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  color: #4f5967;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.settings-section-save {
+  float: none !important;
+  margin: 2px 0 4px !important;
+}
+.settings-section-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.settings-section-note {
+  margin: 9px 0 0;
+  color: #5b6470;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.settings-section .dates {
+  margin: 8px 0 0;
+  color: #6b7280;
+}
