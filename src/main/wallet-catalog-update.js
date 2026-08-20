@@ -3,10 +3,27 @@
 const walletCatalog = require('./wallet-catalog');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
+const originalBuildDefaultGroups = walletCatalog.buildDefaultGroups;
 
 function catalogCategory(wallet) {
   return wallet && wallet.type ? `${wallet.type} Wallet` : '';
 }
+
+function cleanBuiltGroups(groups) {
+  return (groups || []).map((group) => {
+    const catalogWallet = walletCatalog.catalog.find((wallet) => normalize(wallet.name) === normalize(group.name));
+    return Object.assign({}, group, {
+      category: group.category || catalogCategory(catalogWallet),
+      notes: '',
+      records: (group.records || []).map((record) => Object.assign({}, record, { notes: '' }))
+    });
+  });
+}
+
+// main.js imports this module before creating new vaults. Wrapping the catalog
+// builder here keeps catalog/support metadata out of user-owned Notes fields
+// without changing the legacy vault format.
+walletCatalog.buildDefaultGroups = (today) => cleanBuiltGroups(originalBuildDefaultGroups(today));
 
 function cloneRecord(record, today) {
   return {
@@ -28,12 +45,7 @@ function clearCatalogGeneratedNotes(wallet, catalogWallet) {
   const generatedWalletNote = `${catalogWallet.type} wallet. Support catalog reviewed 2026-08-19. Source: ${catalogWallet.source}`;
   if (wallet.notes === generatedWalletNote) wallet.notes = '';
 
-  const catalogNotes = new Set(
-    catalogWallet.records
-      .map((entry) => entry[2])
-      .filter(Boolean)
-  );
-
+  const catalogNotes = new Set(catalogWallet.records.map((entry) => entry[2]).filter(Boolean));
   if (Array.isArray(wallet.records)) {
     for (const record of wallet.records) {
       if (catalogNotes.has(record.notes)) record.notes = '';
