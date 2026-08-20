@@ -3,8 +3,9 @@ body {
   width: 100%;
   height: 100%;
   margin: 0;
+  padding: 0;
   overflow: hidden;
-  background-color: #E0E0E0;
+  background-color: #F5F5F5;
 }
 
 * { box-sizing: border-box; }
@@ -14,11 +15,53 @@ body {
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.28); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.42); border: 2px solid transparent; background-clip: padding-box; }
 
-.app-shell { height: 100vh; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+.app-shell {
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
 .app-search-row,
-.app-button-row { flex: 0 0 auto; }
-.app-main-row { flex: 1 1 auto; min-height: 0; display: flex; }
-.app-main-row > [class*="col-"] { float: none; min-height: 0; }
+.app-button-row {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+.app-button-row {
+  min-height: 62px;
+}
+
+.app-main-row {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.app-main-row > [class*="col-"] {
+  float: none;
+  min-height: 0;
+}
+
+/* Keep the three navigation columns equal width and let the detail pane use
+   the remaining half of the window. These overrides intentionally replace the
+   legacy Bootstrap 2/2/3/5 proportions. */
+.app-search-row > div:nth-child(-n+3),
+.app-main-row > div:nth-child(-n+3),
+.app-button-row > div:nth-child(-n+3) {
+  width: 16.6666667%;
+  flex: 0 0 16.6666667%;
+}
+
+.app-search-row > div:nth-child(4),
+.app-main-row > div:nth-child(4),
+.app-button-row > div:nth-child(4) {
+  width: 50%;
+  flex: 0 0 50%;
+}
 
 #statusArea { min-height: 58px; max-height: 58px; }
 #statusArea .alert { margin-bottom: 0; }
@@ -71,8 +114,24 @@ a { color: white; }
 .secure-input-row { display: flex; align-items: stretch; gap: 6px; margin: 6px 0 10px; }
 .secure-input-row .form-control { flex: 1 1 auto; min-width: 0; }
 .copy-icon-button { flex: 0 0 36px; width: 36px; min-width: 36px; padding-left: 0; padding-right: 0; display: inline-flex; align-items: center; justify-content: center; }
-.sensitive-controls,
-.login-security-controls { display: flex; gap: 6px; margin: 0 0 12px 42px; flex-wrap: wrap; }
+
+.sensitive-controls {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 12px 42px;
+  flex-wrap: wrap;
+}
+
+/* Login reveal control belongs directly under the password field, aligned to
+   the left edge of that field. */
+.login-security-controls {
+  display: flex;
+  justify-content: flex-start;
+  gap: 6px;
+  margin: 0 0 12px 0;
+  flex-wrap: wrap;
+}
+
 .public-address-field { margin: 8px 0 12px; }
 .qr-toggle-button { margin: 0 0 8px 42px; }
 .qr-area { width: 100%; margin-top: 10px; padding: 12px; background: #fff; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
