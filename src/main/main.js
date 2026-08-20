@@ -65,36 +65,54 @@ function buildMenu() {
 async function updateCurrentWalletCatalog() {
   if (!activeVaultData || !activeCryptoKey || !activeVaultData.file) {
     await dialog.showMessageBox(mainWindow, {
-      type: 'info', buttons: ['OK'], title: 'Update Wallet Catalog', message: 'Open a profile first',
+      type: 'info',
+      buttons: ['OK'],
+      title: 'Update Wallet Catalog',
+      message: 'Open a profile first',
       detail: 'Select and open a SafeLedger profile, then choose Update Wallet Catalog again.'
     });
     return;
   }
+
   const confirmation = await dialog.showMessageBox(mainWindow, {
-    type: 'question', buttons: ['Update Catalog', 'Cancel'], defaultId: 0, cancelId: 1, noLink: true,
-    title: 'Update Wallet Catalog', message: 'Add newly supported wallets and assets to this profile?',
+    type: 'question',
+    buttons: ['Update Catalog', 'Cancel'],
+    defaultId: 0,
+    cancelId: 1,
+    noLink: true,
+    title: 'Update Wallet Catalog',
+    message: 'Add newly supported wallets and assets to this profile?',
     detail: 'SafeLedger will only add missing catalog wallets, networks and token families. Existing private keys, seed phrases, addresses, passwords, notes, custom wallets and custom records will not be overwritten or deleted.'
   });
   if (confirmation.response !== 0) return;
+
   try {
     const updatedVault = JSON.parse(JSON.stringify(activeVaultData));
     const result = walletCatalogUpdate.mergeCatalog(updatedVault);
     await vault.saveVault(path.join(vaultDir, updatedVault.file), JSON.stringify(updatedVault), activeCryptoKey);
     activeVaultData = updatedVault;
+
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('result', {
         status: 'SUCCESS',
         statusMsg: `Wallet catalog updated: ${result.addedWallets} wallet(s) and ${result.addedRecords} asset/network record(s) added. Existing data was preserved.`,
-        type: 'catalog-update', vaultData: updatedVault
+        type: 'catalog-update',
+        vaultData: updatedVault
       });
     }
+
     await dialog.showMessageBox(mainWindow, {
-      type: 'info', buttons: ['OK'], title: 'Wallet Catalog Updated', message: 'Catalog update complete',
+      type: 'info',
+      buttons: ['OK'],
+      title: 'Wallet Catalog Updated',
+      message: 'Catalog update complete',
       detail: `${result.addedWallets} new wallet(s) and ${result.addedRecords} new asset/network record(s) were added. Existing SafeLedger data was not overwritten.`
     });
   } catch (err) {
     await dialog.showMessageBox(mainWindow, {
-      type: 'error', buttons: ['OK'], title: 'Wallet Catalog Update Failed',
+      type: 'error',
+      buttons: ['OK'],
+      title: 'Wallet Catalog Update Failed',
       message: 'SafeLedger could not update this profile.',
       detail: err && err.message ? err.message : 'The existing profile was left unchanged.'
     });
@@ -103,18 +121,29 @@ async function updateCurrentWalletCatalog() {
 
 async function setSelfDestructProtection(enabled) {
   const existing = currentSettings || (await settingsManager.loadSettings(settingsDir)).settings;
+
   if (enabled) {
     const response = await dialog.showMessageBox(mainWindow, {
-      type: 'warning', buttons: ['Enable Self-Destruct', 'Cancel'], defaultId: 1, cancelId: 1, noLink: true,
-      title: 'Enable Self-Destruct Protection', message: 'Enable Self-Destruct Protection?',
+      type: 'warning',
+      buttons: ['Enable Self-Destruct', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+      title: 'Enable Self-Destruct Protection',
+      message: 'Enable Self-Destruct Protection?',
       detail: 'After the configured failed-login and lockout limits are exhausted, SafeLedger will permanently destroy the encrypted vault files. This action cannot be undone.'
     });
-    if (response.response !== 0) { buildMenu(); return; }
+    if (response.response !== 0) {
+      buildMenu();
+      return;
+    }
   }
+
   currentSettings = Object.assign({}, existing, { scrubContentAfterRetries: enabled });
   const saved = await settingsManager.saveSettings(settingsDir, currentSettings);
   currentSettings = saved.settings;
   buildMenu();
+
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('result-save-settings', {
       status: 'SUCCESS',
@@ -128,22 +157,29 @@ async function setSelfDestructProtection(enabled) {
 
 async function initializeModernVault(vaultName, cryptoKey) {
   const today = Date();
-  const data = { file: vaultName, catalogVersion: '2026-08-19', groups: walletCatalog.buildDefaultGroups(today) };
+  const data = {
+    file: vaultName,
+    catalogVersion: '2026-08-19',
+    groups: walletCatalog.buildDefaultGroups(today)
+  };
   await vault.saveVault(path.join(vaultDir, vaultName), JSON.stringify(data), cryptoKey);
   return data;
 }
 
 async function createWindow() {
   configureStorage();
-  try { currentSettings = (await settingsManager.loadSettings(settingsDir)).settings; }
-  catch (err) { currentSettings = null; }
+  try {
+    currentSettings = (await settingsManager.loadSettings(settingsDir)).settings;
+  } catch (err) {
+    currentSettings = null;
+  }
 
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 770,
     minWidth: 900,
     minHeight: 600,
-    icon: path.join(app.getAppPath(), 'build', 'icon.png'),
+    icon: path.join(app.getAppPath(), 'sl.png'),
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -188,6 +224,7 @@ ipc.on('read', (evt, params) => {
 ipc.on('read-vaultlist-init', (evt, params) => {
   activeVaultData = null;
   activeCryptoKey = params.cryptoKey;
+
   if (params.settings.lockOutCount >= params.settings.numLockoutRetries) {
     if (params.settings.scrubContentAfterRetries !== false) {
       vault.scrubContent(vaultDir)
@@ -210,54 +247,171 @@ ipc.on('read-vaultlist-init', (evt, params) => {
         }));
       return;
     }
+
+    params.settings.lockOutCount = Math.max(0, params.settings.numLockoutRetries - 1);
+    params.settings.lockLogin = true;
+    params.settings.lockLoginTime = Date.now();
+    currentSettings = params.settings;
+    settingsManager.saveSettings(settingsDir, params.settings)
+      .finally(() => mainWindow.webContents.send('result', {
+        status: 'ERROR', statusMsg: 'Login temporarily locked. Self-destruct protection is disabled.',
+        type: 'password-failed', settings: params.settings
+      }));
+    return;
   }
 
-  vault.readVault(path.join(vaultDir, 'vaultlist.json'), params.cryptoKey)
-    .then((val) => mainWindow.webContents.send('result-read-vaultlist-init', { status:'SUCCESS', vaultList:val, cryptoKey:params.cryptoKey, settings:params.settings }))
-    .catch((val) => mainWindow.webContents.send('result-read-vaultlist-init', val));
+  vault.makeDir(vaultDir).then((state) => {
+    const loadList = () => vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), params.cryptoKey)
+      .then((valList) => {
+        params.settings.failAttemptCount = 0;
+        params.settings.lockOutCount = 0;
+        params.settings.lockLogin = false;
+        currentSettings = params.settings;
+        return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
+          mainWindow.webContents.send('result', {
+            status: 'SUCCESS', statusMsg: 'Loaded Successfully', type: 'vaultlist-init',
+            vaultList: valList, cryptoKey: params.cryptoKey, settings: params.settings
+          });
+        });
+      })
+      .catch((valList) => {
+        activeCryptoKey = null;
+        params.settings.failAttemptCount++;
+        if (params.settings.failAttemptCount >= params.settings.numFailAttempts) {
+          params.settings.failAttemptCount = 0;
+          params.settings.lockOutCount++;
+          params.settings.lockLogin = true;
+          params.settings.lockLoginTime = Date.now();
+        }
+        currentSettings = params.settings;
+        return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
+          valList.settings = params.settings;
+          mainWindow.webContents.send('result', valList);
+        });
+      });
+
+    if (state === 'CREATE') {
+      return vault.initVaultList(vaultDir, params.cryptoKey)
+        .then(() => initializeModernVault(currentVault, params.cryptoKey))
+        .then(loadList);
+    }
+    return loadList();
+  }).catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Unable to access vault list' }));
 });
 
-ipc.on('panic-lock', () => {
-  activeVaultData = null;
-  activeCryptoKey = null;
-});
-
-ipc.on('save-settings', async (evt, params) => {
-  const saved = await settingsManager.saveSettings(settingsDir, params.newSettings);
-  currentSettings = saved.settings;
-  mainWindow.webContents.send('result-save-settings', saved);
-  buildMenu();
-});
-
-ipc.on('init-system', async () => {
-  try {
-    const saved = await settingsManager.loadSettings(settingsDir);
-    currentSettings = saved.settings;
-    const install = await installCodeManager.checkInstallCode();
-    mainWindow.webContents.send('result-init-system', {
-      status: saved.status || 'SUCCESS', statusMsg: saved.statusMsg || '', settings: currentSettings,
-      keyStatus: install.status || 'SUCCESS', keyCode: install.keyCode, initialCode: install.initialCode
-    });
-    buildMenu();
-  } catch (err) {
-    mainWindow.webContents.send('result-init-system', { status:'ERROR', statusMsg: err.message, keyStatus:'SUCCESS', settings: currentSettings || {} });
+ipc.on('process-vault-list', (evt, params) => {
+  let idInfo = null;
+  if (params.action === 'create') {
+    idInfo = vault.nextVaultFileName(params.vaultList);
+    params.vault.id = idInfo.id;
+    params.vault.file = idInfo.fileName;
+    params.vault.path = vaultDir;
+    params.vaultList.vaults.push(params.vault);
+    params.vaultList.vaults.sort(utils.compareIgnoreCase);
+    params.vaultList.vaultSelected = params.vaultList.vaults.indexOf(params.vault);
+  } else if (params.action === 'modify') {
+    const vaults = params.vaultList.vaults;
+    for (let i = 0; i < vaults.length; i++) {
+      if (vaults[i].id == params.vault.id) { params.vaultList.vaults[i] = params.vault; break; }
+    }
+    params.vaultList.vaults.sort(utils.compareIgnoreCase);
+    params.vaultList.vaultSelected = params.vaultList.vaults.indexOf(params.vault);
   }
+
+  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey)
+    .then((val) => {
+      if (params.action === 'create' && val === 'SUCCESS') {
+        return initializeModernVault(idInfo.fileName, params.cryptoKey)
+          .then((data) => {
+            activeVaultData = data;
+            activeCryptoKey = params.cryptoKey;
+            mainWindow.webContents.send('result', {
+              status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: params.vaultList, vaultData: data
+            });
+          });
+      }
+      mainWindow.webContents.send('result', { type: 'vault-modify', vaultList: params.vaultList, status: 'SUCCESS', statusMsg: 'Save successful' });
+    })
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
-// Legacy IPC handlers below are retained for database compatibility.
-ipc.on('save-install-code', (evt) => evt.sender.send('result-save-install-code', { status:'SUCCESS', statusMsg:'SafeLedger is free; no activation is required.', settings:currentSettings, keyCode:null }));
-ipc.on('vault-list-delete', (evt, params) => vault.deleteVault(path.join(vaultDir, params.fileName), params.vaultList, params.cryptoKey)
-  .then((val) => mainWindow.webContents.send('result', val)).catch((err) => mainWindow.webContents.send('result', {status:'ERROR',statusMsg:err.message})));
-ipc.on('vault-list-create', async (evt, params) => {
-  try {
-    await initializeModernVault(params.vault.file, params.cryptoKey);
-    await vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey);
-    mainWindow.webContents.send('result', { status:'SUCCESS', statusMsg:'Profile created', type:'vault-list-create', vaultList:params.vaultList });
-  } catch (err) { mainWindow.webContents.send('result', {status:'ERROR',statusMsg:err.message}); }
+ipc.on('vault-list-delete', (evt, params) => {
+  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey)
+    .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
+    .then(() => {
+      if (activeVaultData && activeVaultData.file === params.fileName) activeVaultData = null;
+      mainWindow.webContents.send('result', { type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' });
+    })
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Delete failed' }));
 });
-ipc.on('process-group', (evt, params) => vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
-  .then(() => { activeVaultData=params.vaultData; activeCryptoKey=params.cryptoKey; mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Save successful',type:params.type,vaultData:params.vaultData}); })
-  .catch((err) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:err.message})));
-ipc.on('process-record', (evt, params) => vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
-  .then(() => { activeVaultData=params.vaultData; activeCryptoKey=params.cryptoKey; mainWindow.webContents.send('result',{status:'SUCCESS',statusMsg:'Save successful',type:'record',vaultData:params.vaultData}); })
-  .catch((err) => mainWindow.webContents.send('result',{status:'ERROR',statusMsg:err.message})));
+
+ipc.on('process-group', (evt, params) => {
+  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
+    .then(() => {
+      activeVaultData = params.vaultData;
+      activeCryptoKey = params.cryptoKey;
+      mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: params.vaultData });
+    })
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
+});
+
+ipc.on('process-record', (evt, params) => {
+  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
+    .then(() => {
+      activeVaultData = params.vaultData;
+      activeCryptoKey = params.cryptoKey;
+      mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: params.vaultData });
+    })
+    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
+});
+
+ipc.on('process-rotate-crypto', (evt, params) => {
+  vault.rotateCrypto(vaultDir, params.oldCryptoKey, params.newCryptoKey, params.vaultList)
+    .then((val) => {
+      if (val && val.status === 'SUCCESS') activeCryptoKey = params.newCryptoKey;
+      mainWindow.webContents.send('result-rotate-crypto', val);
+    })
+    .catch((val) => mainWindow.webContents.send('result-rotate-crypto', val));
+});
+
+ipc.on('init-system', () => {
+  settingsManager.loadSettings(settingsDir)
+    .then((valSettings) => {
+      currentSettings = valSettings.settings;
+      buildMenu();
+      return installCodeManager.checkInstallCode(settingsDir)
+        .then(() => mainWindow.webContents.send('result-init-system', {
+          keyStatus: 'SUCCESS', settings: valSettings.settings, portableRoot: getPortableRoot()
+        }));
+    })
+    .catch(() => mainWindow.webContents.send('result-init-system', {
+      status: 'ERROR', statusMsg: 'Not able to load settings file'
+    }));
+});
+
+ipc.on('save-install-code', (evt, params) => {
+  const settings = Object.assign({}, params.newSettings || {}, { activationCode: 'FREE' });
+  settingsManager.saveSettings(settingsDir, settings)
+    .then((val) => {
+      currentSettings = val.settings;
+      buildMenu();
+      mainWindow.webContents.send('result-save-install-code', {
+        status: 'SUCCESS', statusMsg: 'SafeLedger is free; no activation is required.', settings: val.settings
+      });
+    })
+    .catch(() => mainWindow.webContents.send('result-save-install-code', { status: 'ERROR', statusMsg: 'Unable to save settings' }));
+});
+
+ipc.on('save-settings', (evt, params) => {
+  settingsManager.saveSettings(settingsDir, params.newSettings)
+    .then((val) => {
+      currentSettings = val.settings;
+      buildMenu();
+      mainWindow.webContents.send('result-save-settings', {
+        status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings
+      });
+    })
+    .catch((err) => mainWindow.webContents.send('result-save-settings', {
+      status: 'ERROR', statusMsg: err.message || 'Unable to save settings'
+    }));
+});
