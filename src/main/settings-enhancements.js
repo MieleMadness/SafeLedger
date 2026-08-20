@@ -25,14 +25,14 @@ function enhanceSettingsScreen() {
   const backup = document.createElement('button');
   backup.type = 'button';
   backup.className = 'btn btn-default';
-  backup.innerHTML = '<i class="fa fa-download"></i> Backup All SafeLedger Data';
+  backup.innerHTML = '<i class="fa fa-download"></i> Backup';
   backup.addEventListener('click', () => clickLegacyAction('backupButton'));
   actions.appendChild(backup);
 
   const restore = document.createElement('button');
   restore.type = 'button';
   restore.className = 'btn btn-default';
-  restore.innerHTML = '<i class="fa fa-upload"></i> Restore All SafeLedger Data';
+  restore.innerHTML = '<i class="fa fa-upload"></i> Restore';
   restore.addEventListener('click', () => clickLegacyAction('restoreButton'));
   actions.appendChild(restore);
 
