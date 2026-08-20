@@ -21,9 +21,15 @@ const renderGroups = (params) => {
   ul.className = 'nav';
   if (params.vaultData && params.vaultData.groups) {
     const groupsArray = params.vaultData.groups;
+    const sortedGroups = groupsArray
+      .map((group, originalIndex) => ({ group, originalIndex }))
+      .sort((a, b) => String(a.group.name || '').localeCompare(String(b.group.name || ''), undefined, { sensitivity: 'base' }));
     const query = groupSearch && groupSearch.value ? groupSearch.value.toLowerCase() : '';
-    for (let i = 0; i < groupsArray.length; i++) {
-      const searchable = [groupsArray[i].name, groupsArray[i].tags, groupsArray[i].notes]
+
+    for (const entry of sortedGroups) {
+      const wallet = entry.group;
+      const i = entry.originalIndex;
+      const searchable = [wallet.name, wallet.tags, wallet.notes]
         .map((v) => String(v || '').toLowerCase()).join(' ');
       if (query && !searchable.includes(query)) continue;
       const li = document.createElement('LI');
@@ -33,13 +39,14 @@ const renderGroups = (params) => {
         if (params.saving.state) return alert('Please wait for processing to complete');
         params.vaultData.groupSelected = i;
         params.vaultData.recordSelected = null;
-        renderGroupDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,group:groupsArray[i],saving:params.saving});
+        renderGroupDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,group:wallet,saving:params.saving});
         renderGroups({cryptoKey:params.cryptoKey,vaultData:params.vaultData,groups:params.vaultData.groups,saving:params.saving});
-        record.listRecords({cryptoKey:params.cryptoKey,vaultData:params.vaultData,records:groupsArray[i].records,saving:params.saving});
+        record.listRecords({cryptoKey:params.cryptoKey,vaultData:params.vaultData,records:wallet.records,saving:params.saving});
       });
       if (params.vaultData.groupSelected == i) href.className = 'item-selected';
-      href.innerHTML = `<span class='glyphicon glyphicon-piggy-bank'></span> ${groupsArray[i].name || 'Unnamed Wallet'}`;
-      li.appendChild(href); ul.appendChild(li);
+      href.innerHTML = `<span class='glyphicon glyphicon-piggy-bank'></span> ${wallet.name || 'Unnamed Wallet'}`;
+      li.appendChild(href);
+      ul.appendChild(li);
     }
     groupArea.appendChild(ul);
   } else groupArea.innerHTML = 'No items';
