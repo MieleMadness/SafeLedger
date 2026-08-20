@@ -80,23 +80,25 @@ function enhanceSettingsScreen() {
   if (!area) return;
   const header = area.querySelector('h1');
   if (!header || header.textContent.trim() !== 'Settings') return;
-  if (area.dataset.settingsEnhanced === '1') return;
+
+  // detailArea is reused by every view. A data attribute survives innerHTML
+  // replacement, which caused the legacy Settings screen to return after
+  // visiting a wallet. Detect the actual section markup instead.
+  if (area.querySelector('.settings-section')) return;
 
   const form = area.querySelector('form');
   if (!form) return;
-  area.dataset.settingsEnhanced = '1';
 
-  // Activation is no longer part of the product, so remove the legacy status line.
   Array.from(area.querySelectorAll('p')).forEach((p) => {
     if (/activation\s*code/i.test(p.textContent || '')) p.remove();
   });
 
   const failLabel = form.querySelector('label[for="inputFailAttempts"]');
-  if (failLabel) failLabel.textContent = 'Failed login attempts before lockout (3–10)';
+  if (failLabel) { failLabel.className = 'settings-field-label'; failLabel.textContent = 'Failed login attempts before lockout (3–10)'; }
   const retryLabel = form.querySelector('label[for="inputLockoutRetry"]');
-  if (retryLabel) retryLabel.textContent = 'Lockouts allowed before self-destruct (2–5)';
+  if (retryLabel) { retryLabel.className = 'settings-field-label'; retryLabel.textContent = 'Lockouts allowed before self-destruct (2–5)'; }
   const waitLabel = form.querySelector('label[for="inputBetweenLockout"]');
-  if (waitLabel) waitLabel.textContent = 'Lockout duration in minutes (15–1440)';
+  if (waitLabel) { waitLabel.className = 'settings-field-label'; waitLabel.textContent = 'Lockout duration in minutes (15–1440)'; }
   const protectionLabel = form.querySelector('label[for="inputScrubContent"]');
   if (protectionLabel) {
     protectionLabel.className = 'settings-protection-note';
@@ -118,9 +120,13 @@ function enhanceSettingsScreen() {
   if (modified) bruteSection.appendChild(modified);
 
   const backupSection = makeSection('Backup & Recovery');
+  const backupNote = document.createElement('p');
+  backupNote.className = 'settings-section-note settings-section-intro';
+  backupNote.textContent = 'Create a complete backup of SafeLedgerData or restore a previous backup. Backups include every profile and local setting, while encrypted vault files remain encrypted.';
+  backupSection.appendChild(backupNote);
+
   const backupActions = document.createElement('div');
   backupActions.className = 'settings-section-actions';
-
   const backup = document.createElement('button');
   backup.type = 'button';
   backup.className = 'btn btn-default';
@@ -134,15 +140,15 @@ function enhanceSettingsScreen() {
   restore.innerHTML = '<i class="fa fa-upload"></i> Restore';
   restore.addEventListener('click', () => clickLegacyAction('restoreButton'));
   backupActions.appendChild(restore);
-
-  const backupNote = document.createElement('p');
-  backupNote.className = 'settings-section-note';
-  backupNote.textContent = 'Backup and restore include the complete SafeLedgerData folder, including every profile and local setting. Vault files remain encrypted.';
   backupSection.appendChild(backupActions);
-  backupSection.appendChild(backupNote);
   area.appendChild(backupSection);
 
   const passwordSection = makeSection('Password');
+  const passwordNote = document.createElement('p');
+  passwordNote.className = 'settings-section-note settings-section-intro';
+  passwordNote.textContent = 'Change the master password used to unlock and encrypt your SafeLedger vaults. You will need your current password to complete the change.';
+  passwordSection.appendChild(passwordNote);
+
   const changePassword = document.createElement('button');
   changePassword.type = 'button';
   changePassword.className = 'btn btn-default';
