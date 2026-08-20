@@ -1,7 +1,7 @@
 {
   "name": "safe-ledger",
   "productName": "SafeLedger",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Free, offline and portable encrypted information vault",
   "main": "src/main/main.js",
   "scripts": {
@@ -36,13 +36,12 @@
     "asar": true,
     "files": [
       "src/**/*",
-      "sl.ico",
-      "sl.png",
+      "build/icon.svg",
       "LICENSE",
       "package.json"
     ],
     "win": {
-      "icon": "sl.ico",
+      "icon": "build/icon.svg",
       "target": [
         {
           "target": "portable",

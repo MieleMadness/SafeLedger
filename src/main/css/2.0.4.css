@@ -1,0 +1,39 @@
+/* SafeLedger 2.0.4 visual refinements */
+
+/* Center the profile initial optically and remove the legacy margin offsets. */
+.badge-circle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+.badge-circle > div {
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-align: center;
+}
+
+/* Consistent rounded wallet/coin navigation states. */
+.content-middle .nav > li > a {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+}
+.content-middle .nav > li > a:hover,
+.content-middle .nav > li > a:focus {
+  background-color: #fff;
+  color: #1565C0;
+  text-decoration: none;
+  outline: none;
+}
+.content-middle .nav > li > a.item-selected,
+.content-middle .nav > li > a.item-selected:hover,
+.content-middle .nav > li > a.item-selected:focus {
+  background-color: #000;
+  color: #fff;
+  border-color: #fff;
+  border-radius: 6px;
+}
