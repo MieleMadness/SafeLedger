@@ -7,12 +7,12 @@ const sharp = require('sharp');
 (async () => {
   const { default: pngToIco } = await import('png-to-ico');
   const root = path.join(__dirname, '..');
-  const svgPath = path.join(root, 'build', 'icon.svg');
+  const sourcePngPath = path.join(root, 'build', 'icon-source.png');
   const buildPngPath = path.join(root, 'build', 'icon.png');
   const runtimePngPath = path.join(root, 'sl.png');
   const icoPath = path.join(root, 'build', 'icon.ico');
 
-  const pngBuffer = await sharp(svgPath, { density: 320 })
+  const pngBuffer = await sharp(sourcePngPath)
     .resize(512, 512, {
       fit: 'contain',
       background: { r: 0, g: 0, b: 0, alpha: 0 }
@@ -26,7 +26,7 @@ const sharp = require('sharp');
   const ico = await pngToIco(buildPngPath);
   fs.writeFileSync(icoPath, ico);
 
-  console.log('Generated SafeLedger runtime PNG and Windows ICO icons.');
+  console.log('Generated SafeLedger runtime PNG and Windows ICO icons from icon-source.png.');
 })().catch((error) => {
   console.error(error);
   process.exit(1);
