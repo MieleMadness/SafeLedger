@@ -1,27 +1,12 @@
 'use strict';
 
 const fs = require('fs');
-const path = require('path');
 
-// Branded crypto artwork is bundled through @web3icons/core. SafeLedger never
-// downloads token artwork at runtime, preserving fully offline/portable use.
-//
-// Electron's Node side can read files from inside app.asar, while Chromium's
-// direct file:// loading of those same nested paths can be unreliable. Read the
-// SVG through Node and expose it to the renderer as an in-memory data URI.
-function findCoreRoot() {
-  let current = path.dirname(require.resolve('@web3icons/core'));
-  const root = path.parse(current).root;
-  while (current && current !== root) {
-    if (fs.existsSync(path.join(current, 'dist', 'svgs'))) return current;
-    current = path.dirname(current);
-  }
-  return null;
-}
-
-const coreRoot = findCoreRoot();
-const svgRoot = coreRoot ? path.join(coreRoot, 'dist', 'svgs') : '';
-const iconCache = new Map();
+// SafeLedger resolves Web3Icons through the package's exported SVG paths rather
+// than guessing where npm/electron-builder placed the package. This works from
+// development, node_modules and the packaged app.asar. SVG contents are read by
+// Node and converted to data URLs, so Chromium never has to open an ASAR file URL.
+const svgCache = new Map();
 
 const cleanSymbol = (value) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
 const slug = (value) => String(value || '')
@@ -35,7 +20,6 @@ const standardNetworkAliases = {
   'bnb': 'binance-smart-chain',
   'bnb-chain': 'binance-smart-chain',
   'bnb-smart-chain': 'binance-smart-chain',
-  'bnb-beacon-chain': 'binance-smart-chain',
   'avalanche-c-chain': 'avalanche',
   'arbitrum-one': 'arbitrum',
   'arbitrum-nova': 'arbitrum',
@@ -61,47 +45,57 @@ const standardNetworkAliases = {
   'custom-tokens': 'ethereum'
 };
 
-function svgDataUri(filePath) {
-  if (!filePath) return null;
-  if (iconCache.has(filePath)) return iconCache.get(filePath);
-  try {
-    const svg = fs.readFileSync(filePath, 'utf8');
-    const uri = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
-    iconCache.set(filePath, uri);
-    return uri;
-  } catch (_) {
-    iconCache.set(filePath, null);
-    return null;
-  }
+function toDataUrl(svg) {
+  return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
 }
 
-function existingFile(type, variant, fileName) {
-  if (!svgRoot || !fileName) return null;
-  const candidate = path.join(svgRoot, type, variant, `${fileName}.svg`);
-  return fs.existsSync(candidate) ? svgDataUri(candidate) : null;
+function readExportedSvg(type, variant, iconName) {
+  if (!iconName) return null;
+  const cacheKey = `${type}/${variant}/${iconName}`;
+  if (svgCache.has(cacheKey)) return svgCache.get(cacheKey);
+
+  const requests = [
+    `@web3icons/core/svgs/${type}/${variant}/${iconName}.svg`,
+    `@web3icons/core/svgs/${type}/${variant}/${iconName}.svg.js`
+  ];
+
+  for (const request of requests) {
+    try {
+      const resolved = require.resolve(request);
+      const candidates = [resolved];
+      if (resolved.endsWith('.svg.js')) candidates.unshift(resolved.slice(0, -3));
+      for (const candidate of candidates) {
+        try {
+          const contents = fs.readFileSync(candidate, 'utf8');
+          if (/<svg[\s>]/i.test(contents)) {
+            const url = toDataUrl(contents);
+            svgCache.set(cacheKey, url);
+            return url;
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  svgCache.set(cacheKey, null);
+  return null;
 }
 
 function tokenIcon(symbol) {
   const safe = cleanSymbol(symbol);
   if (!safe) return null;
-  return existingFile('tokens', 'branded', safe)
-    || existingFile('tokens', 'background', safe)
-    || existingFile('tokens', 'mono', safe);
+  return readExportedSvg('tokens', 'branded', safe) || readExportedSvg('tokens', 'background', safe);
 }
 
 function networkIcon(name) {
   const normalized = slug(name);
   if (!normalized) return null;
   const mapped = standardNetworkAliases[normalized] || normalized;
-  return existingFile('networks', 'branded', mapped)
-    || existingFile('networks', 'background', mapped)
-    || existingFile('networks', 'mono', mapped);
+  return readExportedSvg('networks', 'branded', mapped) || readExportedSvg('networks', 'background', mapped);
 }
 
 exports.getIconUrl = (record) => {
   const item = record || {};
-  // Token ticker lookup covers native assets and named tokens. Network lookup
-  // handles standards/families and chain records without a token-art entry.
   return tokenIcon(item.symbol) || networkIcon(item.name) || null;
 };
 
@@ -112,7 +106,6 @@ exports.createIconElement = (record, className = 'token-brand-image') => {
   img.className = className;
   img.src = url;
   img.alt = `${record && (record.name || record.symbol) ? (record.name || record.symbol) : 'Token'} icon`;
-  img.loading = 'lazy';
   img.draggable = false;
   return img;
 };
