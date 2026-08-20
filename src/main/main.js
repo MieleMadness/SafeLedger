@@ -4,8 +4,6 @@ const { app, BrowserWindow, Menu, ipcMain: ipc, dialog } = require('electron');
 const remoteMain = require('@electron/remote/main');
 const path = require('path');
 const vault = require('./vault');
-const walletCatalog = require('./wallet-catalog');
-const walletCatalogUpdate = require('./wallet-catalog-update');
 const utils = require('./utils');
 const logger = require('./logger');
 const installCodeManager = require('./installManager/installManager/installCodeManager');
@@ -19,8 +17,20 @@ let settingsDir;
 let currentSettings;
 let activeVaultData = null;
 let activeCryptoKey = null;
+let walletCatalog = null;
+let walletCatalogUpdate = null;
 const currentVault = 'zvault-0.json';
 const debug = false;
+
+function getWalletCatalog() {
+  if (!walletCatalog) walletCatalog = require('./wallet-catalog');
+  return walletCatalog;
+}
+
+function getWalletCatalogUpdate() {
+  if (!walletCatalogUpdate) walletCatalogUpdate = require('./wallet-catalog-update');
+  return walletCatalogUpdate;
+}
 
 function getPortableRoot() {
   if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
@@ -88,7 +98,7 @@ async function updateCurrentWalletCatalog() {
 
   try {
     const updatedVault = JSON.parse(JSON.stringify(activeVaultData));
-    const result = walletCatalogUpdate.mergeCatalog(updatedVault);
+    const result = getWalletCatalogUpdate().mergeCatalog(updatedVault);
     await vault.saveVault(path.join(vaultDir, updatedVault.file), JSON.stringify(updatedVault), activeCryptoKey);
     activeVaultData = updatedVault;
 
@@ -112,7 +122,7 @@ async function updateCurrentWalletCatalog() {
     await dialog.showMessageBox(mainWindow, {
       type: 'error',
       buttons: ['OK'],
-      title: 'Wallet Catalog Update Failed',
+      title: 'Update Wallet Catalog Failed',
       message: 'SafeLedger could not update this profile.',
       detail: err && err.message ? err.message : 'The existing profile was left unchanged.'
     });
@@ -160,25 +170,24 @@ async function initializeModernVault(vaultName, cryptoKey) {
   const data = {
     file: vaultName,
     catalogVersion: '2026-08-19',
-    groups: walletCatalog.buildDefaultGroups(today)
+    groups: getWalletCatalog().buildDefaultGroups(today)
   };
   await vault.saveVault(path.join(vaultDir, vaultName), JSON.stringify(data), cryptoKey);
   return data;
 }
 
-async function createWindow() {
+function createWindow() {
   configureStorage();
-  try {
-    currentSettings = (await settingsManager.loadSettings(settingsDir)).settings;
-  } catch (err) {
-    currentSettings = null;
-  }
 
+  // Create and load the window immediately. Settings are initialized by the
+  // renderer's init-system request after the first paint so disk I/O no longer
+  // delays visible startup.
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 770,
     minWidth: 900,
     minHeight: 600,
+    backgroundColor: '#0D47A1',
     icon: path.join(app.getAppPath(), 'sl.png'),
     webPreferences: {
       nodeIntegration: true,
