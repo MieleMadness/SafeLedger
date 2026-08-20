@@ -1,4 +1,4 @@
-/* SafeLedger 2.0.4 visual refinements */
+/* SafeLedger 2.0 navigation refinements */
 
 /* Center the profile initial optically and remove the legacy margin offsets. */
 .badge-circle {
@@ -16,18 +16,22 @@
   text-align: center;
 }
 
-/* Consistent rounded wallet/coin navigation states. */
+/* Keep normal navigation items visually unchanged. Selected items stay black
+   with a rounded white border. Hover/focus gets only a subtle translucent lift
+   so users can track the pointer without turning the row white. */
 .content-middle .nav > li > a {
   border: 2px solid transparent;
   border-radius: 6px;
-  transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+  transition: background-color .12s ease, transform .12s ease, box-shadow .12s ease, border-color .12s ease;
 }
 .content-middle .nav > li > a:hover,
 .content-middle .nav > li > a:focus {
-  background-color: #fff;
-  color: #1565C0;
+  background-color: rgba(255, 255, 255, .10);
+  color: inherit;
   text-decoration: none;
   outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .12);
 }
 .content-middle .nav > li > a.item-selected,
 .content-middle .nav > li > a.item-selected:hover,
@@ -36,4 +40,6 @@
   color: #fff;
   border-color: #fff;
   border-radius: 6px;
+  transform: none;
+  box-shadow: none;
 }
