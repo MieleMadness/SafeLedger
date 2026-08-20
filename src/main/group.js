@@ -11,256 +11,109 @@ const record = require('./record');
 const utils = require('./utils');
 const securityUi = require('./security-ui');
 
-exports.listGroups = (params) => {
-  renderGroups(params);
-};
+exports.listGroups = (params) => renderGroups(params);
 
 const renderGroups = (params) => {
   const groupSearch = document.getElementById('groupSearch');
   const groupArea = document.getElementById('groupArea');
-  groupArea.innerHTML = "";
-  const ul = document.createElement("UL");
-  ul.className = "nav";
-  if (params.vaultData != null && params.vaultData.groups != null) {
+  groupArea.innerHTML = '';
+  const ul = document.createElement('UL');
+  ul.className = 'nav';
+  if (params.vaultData && params.vaultData.groups) {
     const groupsArray = params.vaultData.groups;
+    const query = groupSearch && groupSearch.value ? groupSearch.value.toLowerCase() : '';
     for (let i = 0; i < groupsArray.length; i++) {
-      const groupName = (groupsArray[i].name || '').toLowerCase();
-      if (groupSearch != null && groupSearch.value.length > 0 &&
-        !(groupName.startsWith(groupSearch.value.toLowerCase())) ){
-        continue;
-      }
-      const li = document.createElement("LI");
-      ul.appendChild(li);
-      const href = document.createElement("A");
+      const searchable = [groupsArray[i].name, groupsArray[i].tags, groupsArray[i].notes]
+        .map((v) => String(v || '').toLowerCase()).join(' ');
+      if (query && !searchable.includes(query)) continue;
+      const li = document.createElement('LI');
+      const href = document.createElement('A');
       href.addEventListener('click', (e) => {
         e.preventDefault();
-        if (params.saving.state == true) {
-          alert("Please wait for processing to complete");
-        } else {
-          params.vaultData.groupSelected = i;
-          params.vaultData.recordSelected = null;
-          renderGroupDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,group:groupsArray[i],saving:params.saving});
-          renderGroups({cryptoKey:params.cryptoKey,vaultData:params.vaultData,groups:params.vaultData.groups,saving:params.saving});
-          record.listRecords({cryptoKey:params.cryptoKey,vaultData:params.vaultData,records:groupsArray[i].records,saving:params.saving});
-        }
+        if (params.saving.state) return alert('Please wait for processing to complete');
+        params.vaultData.groupSelected = i;
+        params.vaultData.recordSelected = null;
+        renderGroupDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,group:groupsArray[i],saving:params.saving});
+        renderGroups({cryptoKey:params.cryptoKey,vaultData:params.vaultData,groups:params.vaultData.groups,saving:params.saving});
+        record.listRecords({cryptoKey:params.cryptoKey,vaultData:params.vaultData,records:groupsArray[i].records,saving:params.saving});
       });
-      if (params.vaultData.groupSelected != null && params.vaultData.groupSelected == i) href.className = "item-selected";
-      href.innerHTML = "<span class='glyphicon glyphicon-piggy-bank' aria-hidden='true'></span> "+(groupsArray[i].name || 'Unnamed Wallet');
-      li.appendChild(href);
+      if (params.vaultData.groupSelected == i) href.className = 'item-selected';
+      href.innerHTML = `<span class='glyphicon glyphicon-piggy-bank'></span> ${groupsArray[i].name || 'Unnamed Wallet'}`;
+      li.appendChild(href); ul.appendChild(li);
     }
     groupArea.appendChild(ul);
-  } else {
-    groupArea.innerHTML = "No items";
-  }
+  } else groupArea.innerHTML = 'No items';
 };
 
-exports.createGroup = (params) => {
-  createEditGroup(params);
-};
+exports.createGroup = (params) => createEditGroup(params);
 
 const createSensitiveInput = (form, id, labelText, value) => {
-  const formGroup = document.createElement('div');
-  formGroup.className = 'form-group';
-  form.appendChild(formGroup);
-
-  const label = document.createElement('label');
-  label.for = id;
-  label.textContent = labelText;
-  formGroup.appendChild(label);
-
-  const input = document.createElement('input');
-  input.type = 'password';
-  input.className = 'form-control';
-  input.id = id;
-  input.setAttribute('maxlength', '500');
-  input.value = value || '';
-  formGroup.appendChild(input);
+  const formGroup = document.createElement('div'); formGroup.className='form-group'; form.appendChild(formGroup);
+  const label = document.createElement('label'); label.for=id; label.textContent=labelText; formGroup.appendChild(label);
+  const input = document.createElement('input'); input.type='password'; input.className='form-control'; input.id=id; input.maxLength=500; input.value=value||''; formGroup.appendChild(input);
   securityUi.addSensitiveInputControls(input, formGroup, labelText.toLowerCase());
   return input;
 };
 
 const createEditGroup = (params) => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = "";
-  const header = document.createElement('h1');
-  header.textContent = params.group != null ? "Modify Wallet" : "Add Wallet";
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-  const form = document.createElement('form');
-  area.appendChild(form);
+  const area=document.getElementById('detailArea'); area.innerHTML='';
+  const header=document.createElement('h1'); header.textContent=params.group?'Modify Wallet':'Add Wallet'; area.appendChild(header); area.appendChild(document.createElement('hr'));
+  const form=document.createElement('form'); area.appendChild(form);
+  const general=document.createElement('div'); general.className='form-group'; form.appendChild(general);
 
-  const formGroupName = document.createElement('div');
-  formGroupName.className = "form-group";
-  form.appendChild(formGroupName);
-  const label = document.createElement('label');
-  label.for = "inputName";
-  label.textContent = "Name";
-  formGroupName.appendChild(label);
-  const inputName = document.createElement('input');
-  inputName.type = "text";
-  inputName.className = "form-control";
-  inputName.id = "inputName";
-  inputName.setAttribute('maxlength','25');
-  if (params.group != null) inputName.value = params.group.name || '';
-  formGroupName.appendChild(inputName);
+  const labelName=document.createElement('label'); labelName.for='inputName'; labelName.textContent='Name'; general.appendChild(labelName);
+  const inputName=document.createElement('input'); inputName.type='text'; inputName.className='form-control'; inputName.id='inputName'; inputName.maxLength=25; inputName.value=(params.group&&params.group.name)||''; general.appendChild(inputName);
+  const labelTags=document.createElement('label'); labelTags.for='inputTags'; labelTags.textContent='Tags (comma separated)'; general.appendChild(labelTags);
+  const inputTags=document.createElement('input'); inputTags.type='text'; inputTags.className='form-control'; inputTags.id='inputTags'; inputTags.maxLength=250; inputTags.value=(params.group&&params.group.tags)||''; general.appendChild(inputTags);
 
-  const inputPassword = createSensitiveInput(form, 'inputPassword', 'Password', params.group && params.group.password);
-  const inputPin = createSensitiveInput(form, 'inputPin', 'PIN code', params.group && params.group.pin);
-  const inputRecoveryLink = createSensitiveInput(form, 'inputRecoveryLink', 'Recovery link', params.group && params.group.recoveryLink);
-  const inputSeedPhrase = createSensitiveInput(form, 'inputSeedPhrase', 'Seed phrase', params.group && params.group.seedPhrase);
+  const inputPassword=createSensitiveInput(form,'inputPassword','Password',params.group&&params.group.password);
+  const inputPin=createSensitiveInput(form,'inputPin','PIN code',params.group&&params.group.pin);
+  const inputRecoveryLink=createSensitiveInput(form,'inputRecoveryLink','Recovery link',params.group&&params.group.recoveryLink);
+  const inputSeedPhrase=createSensitiveInput(form,'inputSeedPhrase','Seed phrase',params.group&&params.group.seedPhrase);
 
-  const formGroupNotes = document.createElement('div');
-  formGroupNotes.className = "form-group";
-  form.appendChild(formGroupNotes);
-  const labelNotes = document.createElement('label');
-  labelNotes.for = "inputNotes";
-  labelNotes.textContent = "Notes";
-  formGroupNotes.appendChild(labelNotes);
-  const inputNotes = document.createElement('textarea');
-  inputNotes.rows = "5";
-  inputNotes.className = "form-control";
-  inputNotes.id = "inputNotes";
-  inputNotes.setAttribute('maxlength','500');
-  if (params.group != null && params.group.notes != null) inputNotes.value = params.group.notes;
-  formGroupNotes.appendChild(inputNotes);
+  const notesGroup=document.createElement('div'); notesGroup.className='form-group'; form.appendChild(notesGroup);
+  const labelNotes=document.createElement('label'); labelNotes.for='inputNotes'; labelNotes.textContent='Notes'; notesGroup.appendChild(labelNotes);
+  const inputNotes=document.createElement('textarea'); inputNotes.rows=5; inputNotes.className='form-control'; inputNotes.id='inputNotes'; inputNotes.maxLength=500; inputNotes.value=(params.group&&params.group.notes)||''; notesGroup.appendChild(inputNotes);
 
-  const saveBtn = document.createElement('button');
-  saveBtn.type = "submit";
-  saveBtn.id = "saveBtn";
-  saveBtn.className = "btn btn-default bottom-space pull-right";
-  saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  saveBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (params.saving.state == true) {
-      alert("Please wait for processing to complete");
-      return;
-    }
-    saveBtn.disabled = true;
-    if (!inputName.value) {
-      saveBtn.disabled = false;
-      return;
-    }
-
-    if (params.group != null) {
-      params.group.name = inputName.value;
-      params.group.password = inputPassword.value;
-      params.group.pin = inputPin.value;
-      params.group.recoveryLink = inputRecoveryLink.value;
-      params.group.seedPhrase = inputSeedPhrase.value;
-      params.group.notes = inputNotes.value;
-      params.group.modified = Date();
-      params.vaultData.groups[params.vaultData.groupSelected] = params.group;
-      params.vaultData.groups.sort(utils.compareIgnoreCase);
-      params.vaultData.groupSelected = params.vaultData.groups.indexOf(params.group);
-      params.saving.state = true;
-      statusMgr.loadStatus();
-      ipc.send('process-group', {cryptoKey:params.cryptoKey,type:"group-modify",vaultData:params.vaultData});
-    } else {
-      const myGroup = {
-        name: inputName.value,
-        password: inputPassword.value,
-        pin: inputPin.value,
-        recoveryLink: inputRecoveryLink.value,
-        seedPhrase: inputSeedPhrase.value,
-        notes: inputNotes.value,
-        created: Date()
-      };
-      params.vaultData.groups.push(myGroup);
-      params.vaultData.groups.sort(utils.compareIgnoreCase);
-      params.vaultData.groupSelected = params.vaultData.groups.indexOf(myGroup);
-      params.saving.state = true;
-      statusMgr.loadStatus();
-      ipc.send('process-group', {cryptoKey:params.cryptoKey,type:"group-create",vaultData:params.vaultData});
-    }
+  const saveBtn=document.createElement('button'); saveBtn.type='submit'; saveBtn.className='btn btn-default bottom-space pull-right'; saveBtn.innerHTML="<span class='glyphicon glyphicon-save'></span> Save";
+  saveBtn.addEventListener('click',(e)=>{
+    e.preventDefault(); if(params.saving.state)return alert('Please wait for processing to complete'); if(!inputName.value)return;
+    const g=params.group||{created:Date()};
+    g.name=inputName.value; g.tags=inputTags.value; g.password=inputPassword.value; g.pin=inputPin.value; g.recoveryLink=inputRecoveryLink.value; g.seedPhrase=inputSeedPhrase.value; g.notes=inputNotes.value; if(params.group)g.modified=Date();
+    if(params.group)params.vaultData.groups[params.vaultData.groupSelected]=g; else params.vaultData.groups.push(g);
+    params.vaultData.groups.sort(utils.compareIgnoreCase); params.vaultData.groupSelected=params.vaultData.groups.indexOf(g); params.saving.state=true; statusMgr.loadStatus();
+    ipc.send('process-group',{cryptoKey:params.cryptoKey,type:params.group?'group-modify':'group-create',vaultData:params.vaultData});
   });
   form.appendChild(saveBtn);
 };
 
-exports.showGroupDetail = (params) => {
-  renderGroupDetail(params);
-};
+exports.showGroupDetail = (params) => renderGroupDetail(params);
 
 const renderGroupDetail = (params) => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = "";
-  const header = document.createElement('h1');
-  header.textContent = params.group.name || 'Wallet';
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
+  const area=document.getElementById('detailArea'); area.innerHTML='';
+  const header=document.createElement('h1'); header.textContent=params.group.name||'Wallet'; area.appendChild(header); area.appendChild(document.createElement('hr'));
+  if(params.group.tags){const tags=document.createElement('p'); tags.innerHTML='<b>Tags:</b> '; const span=document.createElement('span'); span.textContent=params.group.tags; tags.appendChild(span); area.appendChild(tags);}
+  securityUi.appendSensitiveField(area,'Password',params.group.password||'');
+  securityUi.appendSensitiveField(area,'PIN code',params.group.pin||'');
+  securityUi.appendSensitiveField(area,'Recovery link',params.group.recoveryLink||'');
+  securityUi.appendSensitiveField(area,'Seed phrase',params.group.seedPhrase||'');
+  const notes=document.createElement('p'); notes.innerHTML='<b>Notes:</b>'; area.appendChild(notes);
+  const notesDetail=document.createElement('div'); notesDetail.className='outData'; notesDetail.textContent=params.group.notes||''; area.appendChild(notesDetail);
+  const created=document.createElement('p'); created.className='dates'; created.innerHTML=`<b>Created:</b> ${params.group.created||''}`; area.appendChild(created);
+  if(params.group.modified){const modified=document.createElement('p'); modified.className='dates'; modified.innerHTML=`<b>Modified:</b> ${params.group.modified}`; area.appendChild(modified);}
 
-  // Every sensitive field is independently collapsed by default.
-  securityUi.appendSensitiveField(area, 'Password', params.group.password || '');
-  securityUi.appendSensitiveField(area, 'PIN code', params.group.pin || '');
-  securityUi.appendSensitiveField(area, 'Recovery link', params.group.recoveryLink || '');
-  securityUi.appendSensitiveField(area, 'Seed phrase', params.group.seedPhrase || '');
+  const printBtn=document.createElement('button'); printBtn.type='button'; printBtn.className='btn btn-default bottom-space'; printBtn.innerHTML="<i class='fa fa-print'></i> Print recovery sheet";
+  printBtn.addEventListener('click',()=>securityUi.printRecoverySheet(`${params.group.name||'Wallet'} Recovery Sheet`,[
+    {label:'Wallet',value:params.group.name},{label:'Tags',value:params.group.tags},{label:'Password',value:params.group.password},{label:'PIN',value:params.group.pin},{label:'Recovery link',value:params.group.recoveryLink},{label:'Seed phrase',value:params.group.seedPhrase},{label:'Notes',value:params.group.notes}
+  ],true)); area.appendChild(printBtn);
 
-  const notes = document.createElement('p');
-  notes.innerHTML = "<b>Notes:</b> ";
-  area.appendChild(notes);
-  const notesDetail = document.createElement('p');
-  if (params.group.notes != null) {
-    const r = params.group.notes.replace(/(?:\r\n|\r|\n)/g, '<br />');
-    notesDetail.innerHTML = "<div class='outData'>"+r+"</div>";
-  }
-  area.appendChild(notesDetail);
-
-  const created = document.createElement('p');
-  created.className = "dates";
-  created.innerHTML = "<b>Created:</b> "+(params.group.created || '');
-  area.appendChild(created);
-  const modified = document.createElement('p');
-  modified.className = "dates";
-  if (params.group.modified != null) modified.innerHTML = "<b>Modified:</b> "+params.group.modified;
-  area.appendChild(modified);
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.type = "button";
-  deleteBtn.id = "deleteBtn";
-  deleteBtn.className = "btn btn-default bottom-space pull-right";
-  deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Delete";
-  deleteBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (params.saving.state == true) alert("Please wait for processing to complete");
-    else confirmDelete(params);
-  });
-  area.appendChild(deleteBtn);
-
-  const editBtn = document.createElement('button');
-  editBtn.type = "button";
-  editBtn.id = "editBtn";
-  editBtn.className = "btn btn-default bottom-space pull-right";
-  editBtn.innerHTML = "<span class='glyphicon glyphicon-edit' aria-hidden='true'></span> Edit";
-  editBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (params.saving.state == true) alert("Please wait for processing to complete");
-    else createEditGroup(params);
-  });
-  area.appendChild(editBtn);
+  const deleteBtn=document.createElement('button'); deleteBtn.type='button'; deleteBtn.className='btn btn-default bottom-space pull-right'; deleteBtn.innerHTML="<span class='glyphicon glyphicon-trash'></span> Delete"; deleteBtn.onclick=()=>confirmDelete(params); area.appendChild(deleteBtn);
+  const editBtn=document.createElement('button'); editBtn.type='button'; editBtn.className='btn btn-default bottom-space pull-right'; editBtn.innerHTML="<span class='glyphicon glyphicon-edit'></span> Edit"; editBtn.onclick=()=>createEditGroup(params); area.appendChild(editBtn);
 };
 
 const confirmDelete = (params) => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = "";
-  const header = document.createElement('h1');
-  header.innerHTML = "Confirm Delete of wallet: "+params.group.name;
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.type = "button";
-  deleteBtn.id = "deleteBtn";
-  deleteBtn.className = "btn btn-default bottom-space pull-right";
-  deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Confirm";
-  deleteBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    deleteBtn.disabled = true;
-    params.vaultData.groups.splice(params.vaultData.groupSelected,1);
-    params.vaultData.groupSelected = null;
-    params.vaultData.recordSelected = null;
-    params.saving.state = true;
-    statusMgr.loadStatus();
-    ipc.send('process-group', {cryptoKey:params.cryptoKey,type:"group-delete",vaultData:params.vaultData});
-    area.innerHTML = "";
-  });
-  area.appendChild(deleteBtn);
+  const area=document.getElementById('detailArea'); area.innerHTML='';
+  const header=document.createElement('h1'); header.textContent=`Confirm Delete of wallet: ${params.group.name}`; area.appendChild(header); area.appendChild(document.createElement('hr'));
+  const btn=document.createElement('button'); btn.type='button'; btn.className='btn btn-default bottom-space pull-right'; btn.textContent='Confirm';
+  btn.onclick=()=>{params.vaultData.groups.splice(params.vaultData.groupSelected,1); params.vaultData.groupSelected=null; params.vaultData.recordSelected=null; params.saving.state=true; statusMgr.loadStatus(); ipc.send('process-group',{cryptoKey:params.cryptoKey,type:'group-delete',vaultData:params.vaultData}); area.innerHTML='';}; area.appendChild(btn);
 };
