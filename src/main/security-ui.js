@@ -20,27 +20,110 @@ exports.copySensitive = (value) => {
   autoClearClipboard(text);
 };
 
-function makeCopyIcon(onClick, title='Copy') {
-  const copy = document.createElement('button');
-  copy.type = 'button';
-  copy.className = 'btn btn-default btn-sm copy-icon-button';
-  copy.title = title;
-  copy.setAttribute('aria-label', title);
-  copy.innerHTML = '<i class="fa fa-copy"></i>';
-  copy.addEventListener('click', onClick);
-  return copy;
+function makeIconButton(icon, onClick, title, extraClass='') {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `btn btn-default btn-sm field-inline-action ${extraClass}`.trim();
+  button.title = title;
+  button.setAttribute('aria-label', title);
+  button.innerHTML = `<i class="fa ${icon}"></i>`;
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClick(event, button);
+  });
+  return button;
 }
+
+async function renderQr(area, value, captionText) {
+  area.innerHTML = '';
+  const text = String(value || '');
+  if (!text) {
+    area.style.display = 'none';
+    return false;
+  }
+  try {
+    const dataUrl = await QRCode.toDataURL(text, { errorCorrectionLevel: 'M', margin: 2, width: 240 });
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.alt = 'SafeLedger QR code';
+    img.className = 'address-qr';
+    area.appendChild(img);
+    const caption = document.createElement('div');
+    caption.className = 'qr-caption';
+    caption.textContent = captionText;
+    area.appendChild(caption);
+    area.style.display = 'block';
+    return true;
+  } catch (_) {
+    area.textContent = 'Unable to generate QR code.';
+    area.style.display = 'block';
+    return false;
+  }
+}
+
+function makeQrButton(valueGetter, qrArea, captionText, onOpen) {
+  return makeIconButton('fa-qrcode', async (_event, button) => {
+    if (qrArea.style.display !== 'none') {
+      qrArea.style.display = 'none';
+      button.classList.remove('active');
+      return;
+    }
+    if (onOpen) onOpen();
+    const shown = await renderQr(qrArea, valueGetter(), captionText);
+    button.classList.toggle('active', shown);
+  }, 'Show QR code', 'qr-inline-button');
+}
+
+function makeInlineActions(copyHandler, qrValueGetter, qrArea, qrCaption, onQrOpen) {
+  const actions = document.createElement('div');
+  actions.className = 'field-inline-actions';
+  actions.appendChild(makeIconButton('fa-copy', copyHandler, 'Copy'));
+  actions.appendChild(makeQrButton(qrValueGetter, qrArea, qrCaption, onQrOpen));
+  return actions;
+}
+
+exports.addPublicInputControls = (input, parent, symbolGetter) => {
+  const shell = document.createElement('div');
+  shell.className = 'secure-input-shell';
+  parent.insertBefore(shell, input);
+  shell.appendChild(input);
+
+  const qrArea = document.createElement('div');
+  qrArea.className = 'qr-area compact-qr-area';
+  qrArea.style.display = 'none';
+
+  const actions = makeInlineActions(
+    () => clipboard.writeText(String(input.value || '')),
+    () => input.value,
+    qrArea,
+    `Generated locally from the ${(typeof symbolGetter === 'function' ? symbolGetter() : symbolGetter) || 'coin'} public address. No network connection is used.`
+  );
+  shell.appendChild(actions);
+  parent.insertBefore(qrArea, shell.nextSibling);
+};
 
 exports.addSensitiveInputControls = (input, parent, label) => {
   input.type = 'password';
   input.setAttribute('autocomplete', 'off');
 
-  const row = document.createElement('div');
-  row.className = 'secure-input-row';
-  parent.insertBefore(row, input);
-  const copy = makeCopyIcon(() => exports.copySensitive(input.value), `Copy ${label}`);
-  row.appendChild(copy);
-  row.appendChild(input);
+  const shell = document.createElement('div');
+  shell.className = 'secure-input-shell';
+  parent.insertBefore(shell, input);
+  shell.appendChild(input);
+
+  const qrArea = document.createElement('div');
+  qrArea.className = 'qr-area compact-qr-area';
+  qrArea.style.display = 'none';
+
+  const actions = makeInlineActions(
+    () => exports.copySensitive(input.value),
+    () => input.value,
+    qrArea,
+    `Generated locally from the ${label}. Treat this QR code as sensitive recovery information.`
+  );
+  shell.appendChild(actions);
+  parent.insertBefore(qrArea, shell.nextSibling);
 
   const controls = document.createElement('div');
   controls.className = 'sensitive-controls';
@@ -64,24 +147,42 @@ exports.appendSensitiveField = (parent, label, value) => {
   wrapper.className = 'sensitive-field';
   const details = document.createElement('details');
   const summary = document.createElement('summary');
-  summary.innerHTML = `<i class="fa fa-plus-circle"></i> ${label}`;
+  summary.className = 'secure-field-summary';
+
+  const summaryLabel = document.createElement('span');
+  summaryLabel.className = 'secure-field-summary-label';
+  const stateIcon = document.createElement('i');
+  stateIcon.className = 'fa fa-plus-circle';
+  const labelText = document.createElement('span');
+  labelText.textContent = ` ${label}`;
+  summaryLabel.appendChild(stateIcon);
+  summaryLabel.appendChild(labelText);
+  summary.appendChild(summaryLabel);
+
+  const qrArea = document.createElement('div');
+  qrArea.className = 'qr-area compact-qr-area';
+  qrArea.style.display = 'none';
+
+  const actions = makeInlineActions(
+    () => exports.copySensitive(value),
+    () => value,
+    qrArea,
+    `Generated locally from the ${label}. Treat this QR code as sensitive recovery information.`,
+    () => { details.open = true; }
+  );
+  summary.appendChild(actions);
   details.appendChild(summary);
 
   const content = document.createElement('div');
   content.className = 'sensitive-field-content';
-  const row = document.createElement('div');
-  row.className = 'field-value-row';
-  if (value) row.appendChild(makeCopyIcon(() => exports.copySensitive(value), `Copy ${label}`));
   const out = document.createElement('div');
   out.className = 'outData sensitive-value';
   out.textContent = value || '';
-  row.appendChild(out);
-  content.appendChild(row);
+  content.appendChild(out);
+  content.appendChild(qrArea);
 
   details.addEventListener('toggle', () => {
-    summary.innerHTML = details.open
-      ? `<i class="fa fa-minus-circle"></i> Hide ${label}`
-      : `<i class="fa fa-plus-circle"></i> ${label}`;
+    stateIcon.className = details.open ? 'fa fa-minus-circle' : 'fa fa-plus-circle';
   });
   details.appendChild(content);
   wrapper.appendChild(details);
@@ -96,51 +197,27 @@ exports.appendPublicAddressField = (parent, address, symbol) => {
   label.textContent = 'Public Address:';
   wrapper.appendChild(label);
 
-  const row = document.createElement('div');
-  row.className = 'field-value-row';
-  if (address) row.appendChild(makeCopyIcon(() => clipboard.writeText(String(address)), 'Copy public address'));
+  const shell = document.createElement('div');
+  shell.className = 'field-display-shell';
   const out = document.createElement('div');
   out.className = 'outData public-address-value';
   out.textContent = address || '';
-  row.appendChild(out);
-  wrapper.appendChild(row);
+  shell.appendChild(out);
+
+  const qrArea = document.createElement('div');
+  qrArea.className = 'qr-area compact-qr-area';
+  qrArea.style.display = 'none';
 
   if (address) {
-    const qrButton = document.createElement('button');
-    qrButton.type = 'button';
-    qrButton.className = 'btn btn-default btn-sm qr-toggle-button';
-    qrButton.innerHTML = '<i class="fa fa-qrcode"></i> Show QR';
-    wrapper.appendChild(qrButton);
-    const qrArea = document.createElement('div');
-    qrArea.className = 'qr-area';
-    qrArea.style.display = 'none';
-    wrapper.appendChild(qrArea);
-    qrButton.addEventListener('click', async () => {
-      if (qrArea.style.display !== 'none') {
-        qrArea.style.display = 'none';
-        qrButton.innerHTML = '<i class="fa fa-qrcode"></i> Show QR';
-        return;
-      }
-      qrArea.innerHTML = '';
-      try {
-        const dataUrl = await QRCode.toDataURL(String(address), { errorCorrectionLevel: 'M', margin: 2, width: 240 });
-        const img = document.createElement('img');
-        img.src = dataUrl;
-        img.alt = `${symbol || ''} public address QR code`.trim();
-        img.className = 'address-qr';
-        qrArea.appendChild(img);
-        const caption = document.createElement('div');
-        caption.className = 'qr-caption';
-        caption.textContent = 'Generated locally from the public address. No network connection is used.';
-        qrArea.appendChild(caption);
-        qrArea.style.display = 'block';
-        qrButton.innerHTML = '<i class="fa fa-eye-slash"></i> Hide QR';
-      } catch (_) {
-        qrArea.textContent = 'Unable to generate QR code.';
-        qrArea.style.display = 'block';
-      }
-    });
+    shell.appendChild(makeInlineActions(
+      () => clipboard.writeText(String(address)),
+      () => address,
+      qrArea,
+      `Generated locally from the ${symbol || 'coin'} public address. No network connection is used.`
+    ));
   }
+  wrapper.appendChild(shell);
+  wrapper.appendChild(qrArea);
   parent.appendChild(wrapper);
 };
 
