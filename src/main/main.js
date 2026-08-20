@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Menu, ipcMain: ipc } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain: ipc, dialog } = require('electron');
 const remoteMain = require('@electron/remote/main');
 const path = require('path');
 const vault = require('./vault');
@@ -14,6 +14,7 @@ remoteMain.initialize();
 let mainWindow;
 let vaultDir;
 let settingsDir;
+let currentSettings;
 const currentVault = 'zvault-0.json';
 const debug = false;
 
@@ -30,8 +31,75 @@ function configureStorage() {
   logger.initLogger(settingsDir, debug);
 }
 
-function createWindow() {
+function buildMenu() {
+  const selfDestructEnabled = !currentSettings || currentSettings.scrubContentAfterRetries !== false;
+  const template = [{
+    label: 'SafeLedger',
+    submenu: [
+      { label: `Version ${app.getVersion()}`, enabled: false },
+      { label: 'Settings', click: () => showSettings() },
+      {
+        label: 'Self-Destruct Protection',
+        type: 'checkbox',
+        checked: selfDestructEnabled,
+        click: (item) => setSelfDestructProtection(item.checked)
+      },
+      { type: 'separator' },
+      { role: 'quit' }
+    ]
+  }, {
+    label: 'Edit',
+    submenu: [
+      { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
+      { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }
+    ]
+  }];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+async function setSelfDestructProtection(enabled) {
+  const existing = currentSettings || (await settingsManager.loadSettings(settingsDir)).settings;
+
+  if (enabled) {
+    const response = await dialog.showMessageBox(mainWindow, {
+      type: 'warning',
+      buttons: ['Enable Self-Destruct', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+      noLink: true,
+      title: 'Enable Self-Destruct Protection',
+      message: 'Enable Self-Destruct Protection?',
+      detail: 'After the configured failed-login and lockout limits are exhausted, SafeLedger will permanently destroy the encrypted vault files. This action cannot be undone.'
+    });
+    if (response.response !== 0) {
+      buildMenu();
+      return;
+    }
+  }
+
+  currentSettings = Object.assign({}, existing, { scrubContentAfterRetries: enabled });
+  const saved = await settingsManager.saveSettings(settingsDir, currentSettings);
+  currentSettings = saved.settings;
+  buildMenu();
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('result-save-settings', {
+      status: 'SUCCESS',
+      statusMsg: enabled
+        ? 'Self-Destruct Protection enabled. Vaults will be destroyed after all configured lockouts are exhausted.'
+        : 'Self-Destruct Protection disabled. Failed logins will result in lockouts only.',
+      settings: currentSettings
+    });
+  }
+}
+
+async function createWindow() {
   configureStorage();
+  try {
+    currentSettings = (await settingsManager.loadSettings(settingsDir)).settings;
+  } catch (err) {
+    currentSettings = null;
+  }
 
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -49,23 +117,7 @@ function createWindow() {
   remoteMain.enable(mainWindow.webContents);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.on('closed', () => { mainWindow = null; });
-
-  const template = [{
-    label: 'SafeLedger',
-    submenu: [
-      { label: `Version ${app.getVersion()}`, enabled: false },
-      { label: 'Settings', click: () => showSettings() },
-      { type: 'separator' },
-      { role: 'quit' }
-    ]
-  }, {
-    label: 'Edit',
-    submenu: [
-      { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
-      { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }
-    ]
-  }];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  buildMenu();
 }
 
 const showSettings = () => mainWindow && mainWindow.webContents.send('show-settings');
@@ -96,6 +148,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
           params.settings.failAttemptCount = 0;
           params.settings.lockOutCount = 0;
           params.settings.lockLogin = false;
+          currentSettings = params.settings;
           return settingsManager.saveSettings(settingsDir, params.settings);
         })
         .then(() => mainWindow.webContents.send('result-lockout-destroy', {
@@ -112,6 +165,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
     params.settings.lockOutCount = Math.max(0, params.settings.numLockoutRetries - 1);
     params.settings.lockLogin = true;
     params.settings.lockLoginTime = Date.now();
+    currentSettings = params.settings;
     settingsManager.saveSettings(settingsDir, params.settings)
       .finally(() => mainWindow.webContents.send('result', {
         status: 'ERROR', statusMsg: 'Login temporarily locked. Self-destruct protection is disabled.',
@@ -126,6 +180,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
         params.settings.failAttemptCount = 0;
         params.settings.lockOutCount = 0;
         params.settings.lockLogin = false;
+        currentSettings = params.settings;
         return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
           mainWindow.webContents.send('result', {
             status: 'SUCCESS', statusMsg: 'Loaded Successfully', type: 'vaultlist-init',
@@ -141,6 +196,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
           params.settings.lockLogin = true;
           params.settings.lockLoginTime = Date.now();
         }
+        currentSettings = params.settings;
         return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
           valList.settings = params.settings;
           mainWindow.webContents.send('result', valList);
@@ -215,10 +271,14 @@ ipc.on('process-rotate-crypto', (evt, params) => {
 
 ipc.on('init-system', () => {
   settingsManager.loadSettings(settingsDir)
-    .then((valSettings) => installCodeManager.checkInstallCode(settingsDir)
-      .then(() => mainWindow.webContents.send('result-init-system', {
-        keyStatus: 'SUCCESS', settings: valSettings.settings, portableRoot: getPortableRoot()
-      })))
+    .then((valSettings) => {
+      currentSettings = valSettings.settings;
+      buildMenu();
+      return installCodeManager.checkInstallCode(settingsDir)
+        .then(() => mainWindow.webContents.send('result-init-system', {
+          keyStatus: 'SUCCESS', settings: valSettings.settings, portableRoot: getPortableRoot()
+        }));
+    })
     .catch(() => mainWindow.webContents.send('result-init-system', {
       status: 'ERROR', statusMsg: 'Not able to load settings file'
     }));
@@ -227,17 +287,25 @@ ipc.on('init-system', () => {
 ipc.on('save-install-code', (evt, params) => {
   const settings = Object.assign({}, params.newSettings || {}, { activationCode: 'FREE' });
   settingsManager.saveSettings(settingsDir, settings)
-    .then((val) => mainWindow.webContents.send('result-save-install-code', {
-      status: 'SUCCESS', statusMsg: 'SafeLedger is free; no activation is required.', settings: val.settings
-    }))
+    .then((val) => {
+      currentSettings = val.settings;
+      buildMenu();
+      mainWindow.webContents.send('result-save-install-code', {
+        status: 'SUCCESS', statusMsg: 'SafeLedger is free; no activation is required.', settings: val.settings
+      });
+    })
     .catch(() => mainWindow.webContents.send('result-save-install-code', { status: 'ERROR', statusMsg: 'Unable to save settings' }));
 });
 
 ipc.on('save-settings', (evt, params) => {
   settingsManager.saveSettings(settingsDir, params.newSettings)
-    .then((val) => mainWindow.webContents.send('result-save-settings', {
-      status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings
-    }))
+    .then((val) => {
+      currentSettings = val.settings;
+      buildMenu();
+      mainWindow.webContents.send('result-save-settings', {
+        status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings
+      });
+    })
     .catch((err) => mainWindow.webContents.send('result-save-settings', {
       status: 'ERROR', statusMsg: err.message || 'Unable to save settings'
     }));
