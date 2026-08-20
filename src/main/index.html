@@ -13,10 +13,16 @@
       <div id="searchArea" class="row app-search-row">
         <div class="col-xs-2 dark1bg content-search"><span>&nbsp;</span></div>
         <div class="col-xs-2 dark2bg content-search">
-          <div class="input-group"><div class="input-group-btn"><input id="groupSearch" class="form-control" placeholder="Search wallets..."></div></div>
+          <div class="search-field-wrap">
+            <input id="groupSearch" class="form-control" placeholder="Search wallets...">
+            <button type="button" id="groupSearchClear" class="search-clear" title="Clear wallet search" aria-label="Clear wallet search"><i class="fa fa-times"></i></button>
+          </div>
         </div>
         <div class="col-xs-3 dark3bg content-search">
-          <div class="input-group"><div class="input-group-btn"><input id="recordSearch" class="form-control" placeholder="Search coins..."></div></div>
+          <div class="search-field-wrap">
+            <input id="recordSearch" class="form-control" placeholder="Search coins...">
+            <button type="button" id="recordSearchClear" class="search-clear" title="Clear coin search" aria-label="Clear coin search"><i class="fa fa-times"></i></button>
+          </div>
         </div>
         <div class="col-xs-5 dark4bg"><div id="statusArea">&nbsp;</div></div>
       </div>
@@ -52,7 +58,6 @@
       </div>
     </div>
 
-    <!-- Kept in the DOM for the legacy renderer; Settings presents these actions visibly. -->
     <div class="legacy-hidden-actions" aria-hidden="true">
       <button type="button" id="encryptionSettings">Change Password</button>
       <button type="button" id="backupButton">Backup</button>
@@ -61,6 +66,6 @@
 
     <script>window.$ = window.jQuery = require('./../../node_modules/jquery/dist/jquery.min');</script>
     <script src="./../../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script>require('./renderer.js'); require('./security-enhancements.js'); require('./settings-enhancements.js');</script>
+    <script>require('./renderer.js'); require('./security-enhancements.js'); require('./settings-enhancements.js'); require('./search-enhancements.js');</script>
   </body>
 </html>
