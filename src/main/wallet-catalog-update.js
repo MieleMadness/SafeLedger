@@ -5,14 +5,31 @@ const walletCatalog = require('./wallet-catalog');
 const normalize = (value) => String(value || '').trim().toLowerCase();
 const originalBuildDefaultGroups = walletCatalog.buildDefaultGroups;
 
+function preferredWalletName(name) {
+  return normalize(name) === 'base app (coinbase wallet)' ? 'Coinbase Wallet' : name;
+}
+
+function namesMatch(existingName, catalogName) {
+  const existing = normalize(existingName);
+  const catalog = normalize(catalogName);
+  if (existing === catalog) return true;
+  return (existing === 'coinbase wallet' && catalog === 'base app (coinbase wallet)') ||
+    (catalog === 'coinbase wallet' && existing === 'base app (coinbase wallet)');
+}
+
 function catalogCategory(wallet) {
   return wallet && wallet.type ? `${wallet.type} Wallet` : '';
 }
 
+function findCatalogWallet(name) {
+  return walletCatalog.catalog.find((wallet) => namesMatch(name, wallet.name));
+}
+
 function cleanBuiltGroups(groups) {
   return (groups || []).map((group) => {
-    const catalogWallet = walletCatalog.catalog.find((wallet) => normalize(wallet.name) === normalize(group.name));
+    const catalogWallet = findCatalogWallet(group.name);
     return Object.assign({}, group, {
+      name: preferredWalletName(group.name),
       category: group.category || catalogCategory(catalogWallet),
       notes: '',
       records: (group.records || []).map((record) => Object.assign({}, record, { notes: '' }))
@@ -66,11 +83,11 @@ exports.mergeCatalog = (vaultData) => {
   if (!Array.isArray(vaultData.groups)) vaultData.groups = [];
 
   for (const catalogWallet of walletCatalog.catalog) {
-    let existingWallet = vaultData.groups.find((group) => normalize(group.name) === normalize(catalogWallet.name));
+    let existingWallet = vaultData.groups.find((group) => namesMatch(group.name, catalogWallet.name));
 
     if (!existingWallet) {
       existingWallet = {
-        name: catalogWallet.name,
+        name: preferredWalletName(catalogWallet.name),
         category: catalogCategory(catalogWallet),
         created: today,
         notes: '',
@@ -82,6 +99,7 @@ exports.mergeCatalog = (vaultData) => {
       continue;
     }
 
+    existingWallet.name = preferredWalletName(existingWallet.name);
     existingWallet.category = existingWallet.category || catalogCategory(catalogWallet);
     clearCatalogGeneratedNotes(existingWallet, catalogWallet);
 
@@ -102,7 +120,7 @@ exports.mergeCatalog = (vaultData) => {
     existingWallet.records.sort((a, b) => normalize(a.name).localeCompare(normalize(b.name)));
   }
 
-  vaultData.groups.sort((a, b) => normalize(a.name).localeCompare(normalize(b.name)));
+  vaultData.groups.sort((a, b) => normalize(preferredWalletName(a.name)).localeCompare(normalize(preferredWalletName(b.name))));
   vaultData.catalogVersion = result.catalogVersion;
   vaultData.catalogUpdated = new Date().toISOString();
   return result;
