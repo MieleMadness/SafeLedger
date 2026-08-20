@@ -47,15 +47,15 @@ body {
 .app-search-row > div:nth-child(-n+3),
 .app-main-row > div:nth-child(-n+3),
 .app-button-row > div:nth-child(-n+3) {
-  width: 16.6666667%;
-  flex: 0 0 16.6666667%;
+  width: 21.6666667%;
+  flex: 0 0 21.6666667%;
 }
 
 .app-search-row > div:nth-child(4),
 .app-main-row > div:nth-child(4),
 .app-button-row > div:nth-child(4) {
-  width: 50%;
-  flex: 0 0 50%;
+  width: 35%;
+  flex: 0 0 35%;
 }
 
 #statusArea { min-height: 58px; max-height: 58px; }
@@ -113,7 +113,7 @@ a { color: white; }
 .sensitive-controls {
   display: flex;
   gap: 6px;
-  margin: 0 0 12px 42px;
+  margin: 0 0 12px 0;
   flex-wrap: wrap;
 }
 
@@ -131,7 +131,7 @@ a { color: white; }
 .address-qr { width: 240px; height: 240px; max-width: 100%; image-rendering: pixelated; }
 .qr-caption { margin-top: 8px; font-size: 11px; color: #555; }
 .coin-notes-section { margin: 12px 0; }
-.coin-notes-value { min-height: 42px; margin-top: 5px; padding: 9px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; }
+.coin-notes-value { margin-top: 5px; padding: 9px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; }
 
 .password-strength { margin: 8px 0 12px; height: 24px; background: #ddd; position: relative; overflow: hidden; border-radius: 6px; }
 .password-strength-bar { height: 100%; width: 0; background: currentColor; opacity: .22; transition: width .15s ease; }
@@ -165,8 +165,51 @@ a { color: white; }
 .settings-security-actions .btn { margin: 0; }
 .settings-backup-note { width: 100%; margin-top: 8px; font-size: 12px; color: #555; }
 
+/* SafeLedger 2.0.11 coin detail refinements */
+.coin-detail-header { display: flex; align-items: center; gap: 14px; margin: 4px 0 10px; }
+.coin-detail-title-wrap { min-width: 0; }
+.coin-detail-title-wrap h1 { margin: 0 !important; font-size: 30px; font-weight: 700; line-height: 1.05; }
+.coin-detail-symbol { margin-top: 4px; font-size: 16px; font-weight: 600; color: #39445a; }
+.coin-brand-icon { width: 54px; height: 54px; flex: 0 0 54px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 27px; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
+.coin-brand-btc { background: #f7931a; }
+.coin-brand-eth { background: #627eea; }
+.coin-brand-usdt { background: #26a17b; }
+.coin-brand-xrp { background: #23292f; }
+.coin-brand-bnb { background: #f3ba2f; color: #111; }
+.coin-brand-sol { background: #6f46ff; }
+.coin-brand-usdc { background: #2775ca; }
+.coin-brand-trx { background: #ef0027; }
+.coin-brand-doge { background: #c2a633; }
+.coin-brand-ada { background: #246ddb; }
+.coin-brand-generic { background: #6b7280; font-size: 18px; }
+
+.field-display-shell,
+.secure-input-shell { position: relative; width: 100%; margin: 6px 0 10px; }
+.field-display-shell { min-height: 42px; }
+.secure-input-shell .form-control { width: 100%; padding-right: 82px; }
+.field-display-shell .public-address-value { min-height: 42px; padding-right: 82px; border: 1px solid #ddd; background: #fff; }
+.field-inline-actions { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; gap: 4px; z-index: 2; }
+.field-inline-action { width: 32px; min-width: 32px; height: 30px; padding: 0 !important; display: inline-flex; align-items: center; justify-content: center; }
+.field-inline-action.active { background: #edf3fb; border-color: #9fb8d8; }
+.secure-field-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.secure-field-summary-label { display: inline-flex; align-items: center; min-width: 0; }
+.secure-field-summary .field-inline-actions { position: static; transform: none; margin-left: auto; flex: 0 0 auto; }
+.compact-qr-area { margin: 6px 0 10px; }
+.sensitive-field-content .compact-qr-area { margin-bottom: 0; }
+
+.coin-notes-input { height: 86px !important; min-height: 86px !important; max-height: 86px !important; resize: none; line-height: 1.45; }
+.coin-notes-value { height: 86px; min-height: 86px; max-height: 86px; overflow-y: auto; white-space: pre-wrap; line-height: 1.45; }
+.coin-print-button { color: #1565C0 !important; }
+.coin-print-button:hover,
+.coin-print-button:focus { color: #0D47A1 !important; }
+.coin-delete-button { color: #d32f2f !important; }
+.coin-delete-button:hover,
+.coin-delete-button:focus { color: #b71c1c !important; }
+
 @media (max-width: 1000px) {
   .content-middle .nav > li > a { padding-left: 6px; padding-right: 6px; font-size: 12px; }
   .content-search { padding-left: 7px; padding-right: 7px; }
   .btn { font-size: 12px; padding-left: 8px; padding-right: 8px; }
+  .coin-detail-title-wrap h1 { font-size: 25px; }
+  .coin-brand-icon { width: 46px; height: 46px; flex-basis: 46px; font-size: 23px; }
 }
