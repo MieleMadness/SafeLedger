@@ -2,14 +2,15 @@
 <html>
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SafeLedger</title>
     <link rel="stylesheet" href="./../../node_modules/font-awesome/css/font-awesome.min.css">
     <link rel="stylesheet" href="./../../node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link id="styleSheet" href="./css/site.css" rel="stylesheet">
   </head>
   <body>
-    <div class="container-fluid">
-      <div id="searchArea" class="row">
+    <div class="container-fluid app-shell">
+      <div id="searchArea" class="row app-search-row">
         <div class="col-xs-2 dark1bg content-search"><span>&nbsp;</span></div>
         <div class="col-xs-2 dark2bg content-search">
           <div class="input-group"><div class="input-group-btn"><input id="groupSearch" class="form-control" placeholder="Search wallets..."></div></div>
@@ -20,11 +21,11 @@
         <div class="col-xs-5 dark4bg"><div id="statusArea">&nbsp;</div></div>
       </div>
 
-      <div id="mainArea" class="row">
+      <div id="mainArea" class="row app-main-row">
         <div class="col-xs-2 dark1bg content-middle"><div id="vaultArea"></div></div>
         <div class="col-xs-2 dark2bg content-middle"><div id="groupArea"></div></div>
         <div class="col-xs-3 dark3bg content-middle"><div id="recordArea"></div></div>
-        <div class="col-xs-5 dark4bg content-middle">
+        <div class="col-xs-5 dark4bg content-middle detail-column">
           <div id="detailArea">
             <h1 class="page-header">Welcome to SafeLedger!</h1>
             <hr>
@@ -33,7 +34,7 @@
         </div>
       </div>
 
-      <div id="buttonArea" class="row">
+      <div id="buttonArea" class="row app-button-row">
         <div class="col-xs-2 dark1bg text-center">
           <button type="button" id="addVault" class="btn btn-default bottom-space"><span class="glyphicon glyphicon-plus"></span> Add Profile</button>
         </div>
@@ -43,27 +44,23 @@
         <div class="col-xs-3 dark3bg text-center">
           <button type="button" id="addRecord" class="btn btn-default bottom-space"><span class="glyphicon glyphicon-plus"></span> Add Coin</button>
         </div>
-        <div class="col-xs-5 dark4bg">
-          <div class="row">
-            <div class="col-xs-8 security-action-row">
-              <button type="button" id="encryptionSettings" class="btn btn-default bottom-space"><i class="fa fa-lock"></i> Change Password</button>
-              <button type="button" id="backupButton" class="btn btn-default bottom-space" title="Export encrypted backup"><i class="fa fa-download"></i> Backup</button>
-              <button type="button" id="restoreButton" class="btn btn-default bottom-space" title="Restore encrypted backup"><i class="fa fa-upload"></i> Restore</button>
-            </div>
-            <div class="col-xs-4 copy-right"><span class="glyphicon glyphicon-copyright-mark"></span> SafeLedger</div>
-          </div>
+        <div class="col-xs-5 dark4bg emergency-lock-cell">
+          <button id="panicLockButton" class="panic-lock-inline" type="button" title="Emergency Lock & Minimize" aria-label="Emergency Lock and Minimize SafeLedger">
+            <img src="./../../sl.png" alt="SafeLedger emergency lock">
+          </button>
         </div>
       </div>
-
-      <div id="bottomArea" class="row"><div class="col-xs-12">&nbsp;</div></div>
     </div>
 
-    <button id="panicLockButton" class="panic-lock" type="button" title="Emergency Lock & Minimize" aria-label="Emergency Lock and Minimize SafeLedger">
-      <img src="./../../sl.png" alt="SafeLedger emergency lock">
-    </button>
+    <!-- Kept in the DOM for the legacy renderer; Settings presents these actions visibly. -->
+    <div class="legacy-hidden-actions" aria-hidden="true">
+      <button type="button" id="encryptionSettings">Change Password</button>
+      <button type="button" id="backupButton">Backup</button>
+      <button type="button" id="restoreButton">Restore</button>
+    </div>
 
     <script>window.$ = window.jQuery = require('./../../node_modules/jquery/dist/jquery.min');</script>
     <script src="./../../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script>require('./renderer.js'); require('./security-enhancements.js');</script>
+    <script>require('./renderer.js'); require('./security-enhancements.js'); require('./settings-enhancements.js');</script>
   </body>
 </html>
