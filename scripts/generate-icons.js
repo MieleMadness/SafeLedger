@@ -3,9 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
-const pngToIco = require('png-to-ico');
 
 (async () => {
+  const { default: pngToIco } = await import('png-to-ico');
   const root = path.join(__dirname, '..');
   const svgPath = path.join(root, 'build', 'icon.svg');
   const buildPngPath = path.join(root, 'build', 'icon.png');
