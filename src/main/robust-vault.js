@@ -6,12 +6,16 @@ const crypto = require('crypto');
 const encryption = require('./encryption');
 
 function encryptedPayloadLooksValid(value) {
-  if (typeof value !== 'string') return false;
-  const separator = value.indexOf(':');
-  if (separator !== 32 || value.indexOf(':', separator + 1) !== -1) return false;
-  const iv = value.slice(0, separator);
-  const payload = value.slice(separator + 1);
-  return /^[0-9a-fA-F]{32}$/.test(iv) && payload.length > 0 && payload.length % 32 === 0 && /^[0-9a-fA-F]+$/.test(payload);
+  return encryption.encryptedPayloadLooksValid(value);
+}
+
+function safeVaultFileName(value) {
+  return typeof value === 'string' && /^zvault-\d+\.json$/i.test(value);
+}
+
+function validVaultListStructure(parsed) {
+  if (!parsed || !Array.isArray(parsed.vaults)) return false;
+  return parsed.vaults.every((item) => item && safeVaultFileName(item.file));
 }
 
 async function atomicWriteFile(file, data, encoding = 'utf8') {
@@ -80,6 +84,58 @@ exports.deleteVault = async (vaultFile) => {
   }
 };
 
+async function migrateLegacyFile(file, cryptoKey, validateParsed) {
+  const encrypted = await fs.promises.readFile(file, 'utf8');
+  if (encryption.isAuthenticatedEncryptedPayload(encrypted)) return false;
+  if (!encryption.isLegacyEncryptedPayload(encrypted)) {
+    throw new Error(`${path.basename(file)} is not a recognized SafeLedger encrypted file`);
+  }
+  const clearText = encryption.decrypt(cryptoKey, encrypted);
+  const parsed = JSON.parse(clearText);
+  if (validateParsed && !validateParsed(parsed)) {
+    throw new Error(`${path.basename(file)} has an invalid decrypted structure`);
+  }
+  await exports.saveVault(file, clearText, cryptoKey);
+  return true;
+}
+
+exports.migrateLegacyEncryption = async (vaultPath, cryptoKey, vaultList) => {
+  const result = { migrated: 0, alreadyAuthenticated: 0, failed: [] };
+  const profileNames = (vaultList && Array.isArray(vaultList.vaults) ? vaultList.vaults : [])
+    .map((item) => item && item.file)
+    .filter((name) => safeVaultFileName(name));
+
+  const targets = [
+    ...Array.from(new Set(profileNames)).map((name) => ({
+      file: path.join(vaultPath, name),
+      validate: (parsed) => parsed && typeof parsed === 'object' && parsed.file === name && Array.isArray(parsed.groups)
+    })),
+    {
+      file: path.join(vaultPath, 'vaultlist.json'),
+      validate: validVaultListStructure
+    }
+  ];
+
+  for (const target of targets) {
+    try {
+      const encrypted = await fs.promises.readFile(target.file, 'utf8');
+      if (encryption.isAuthenticatedEncryptedPayload(encrypted)) {
+        result.alreadyAuthenticated++;
+        continue;
+      }
+      const migrated = await migrateLegacyFile(target.file, cryptoKey, target.validate);
+      if (migrated) result.migrated++;
+    } catch (err) {
+      result.failed.push({
+        file: path.basename(target.file),
+        message: err && err.message ? err.message : String(err)
+      });
+    }
+  }
+
+  return result;
+};
+
 exports.readVaultList = async (vaultListFile, myCryptKey) => {
   let data;
   try {
@@ -96,16 +152,32 @@ exports.readVaultList = async (vaultListFile, myCryptKey) => {
   try {
     clearText = encryption.decrypt(myCryptKey, data);
   } catch (_) {
-    throw { status: 'ERROR', statusMsg: 'Unable to unlock vault list.', type: 'password-or-corrupt' };
+    throw { status: 'ERROR', statusMsg: 'Unable to authenticate or unlock vault list.', type: 'password-or-corrupt' };
   }
 
+  let parsed;
   try {
-    const parsed = JSON.parse(clearText);
-    if (!parsed || !Array.isArray(parsed.vaults)) throw new Error('Invalid vault list structure');
-    return parsed;
+    parsed = JSON.parse(clearText);
+    if (!validVaultListStructure(parsed)) throw new Error('Invalid vault list structure');
   } catch (_) {
     throw { status: 'ERROR', statusMsg: 'Unable to unlock vault list.', type: 'password-or-corrupt' };
   }
+
+  // Existing SafeLedger CBC files remain readable for compatibility. Once a
+  // correct password has successfully opened the vault list, upgrade every
+  // known legacy file to authenticated AES-256-GCM using atomic writes.
+  // Mixed directories are safe if a migration is interrupted because both
+  // formats remain readable during the transition.
+  try {
+    const migration = await exports.migrateLegacyEncryption(path.dirname(vaultListFile), myCryptKey, parsed);
+    Object.defineProperty(parsed, '_encryptionMigration', {
+      value: migration,
+      enumerable: false,
+      configurable: true
+    });
+  } catch (_) {}
+
+  return parsed;
 };
 
 exports.readVault = async (vaultFile, myCryptKey) => {
@@ -122,7 +194,13 @@ exports.readVault = async (vaultFile, myCryptKey) => {
   try {
     clearText = encryption.decrypt(myCryptKey, data);
   } catch (_) {
-    throw { status: 'ERROR', statusMsg: 'Invalid Password', type: 'password-failed' };
+    throw {
+      status: 'ERROR',
+      statusMsg: encryption.isAuthenticatedEncryptedPayload(data)
+        ? 'Vault authentication failed. The encrypted file may have been modified or damaged.'
+        : 'Unable to decrypt this legacy vault file.',
+      type: 'vault-corrupt'
+    };
   }
   try {
     return JSON.parse(clearText);
@@ -180,6 +258,9 @@ exports.rotateCrypto = async (vaultPath, oldCryptoKey, newCryptoKey, vaultList) 
   try {
     for (let i = 0; i < originalVaults.length; i++) {
       const oldVault = originalVaults[i];
+      if (!oldVault || !safeVaultFileName(oldVault.file)) {
+        throw new Error('Vault list contains an invalid file name');
+      }
       const newId = first.id + i;
       const newFile = `zvault-${newId}.json`;
       const oldFilePath = path.join(vaultPath, oldVault.file);
@@ -190,7 +271,7 @@ exports.rotateCrypto = async (vaultPath, oldCryptoKey, newCryptoKey, vaultList) 
 
       let clearText;
       try { clearText = encryption.decrypt(oldCryptoKey, encrypted); }
-      catch (_) { throw new Error('Invalid old password'); }
+      catch (_) { throw new Error('Invalid old password or authenticated vault data is damaged'); }
 
       let data;
       try { data = JSON.parse(clearText); }
@@ -211,7 +292,7 @@ exports.rotateCrypto = async (vaultPath, oldCryptoKey, newCryptoKey, vaultList) 
   }
 
   const cleanup = await Promise.allSettled(oldFiles.map((file) => secureDeleteFile(file)));
-  const cleanupFailed = cleanup.some((result) => result.status === 'rejected');
+  const cleanupFailed = cleanup.some((item) => item.status === 'rejected');
   return {
     status: 'SUCCESS',
     statusMsg: cleanupFailed
@@ -236,4 +317,10 @@ exports.scrubContent = async (vaultPath) => {
 };
 
 exports.cryptoTest = () => true;
-exports._test = { encryptedPayloadLooksValid, atomicWriteFile };
+exports._test = {
+  encryptedPayloadLooksValid,
+  atomicWriteFile,
+  safeVaultFileName,
+  validVaultListStructure,
+  migrateLegacyFile
+};
