@@ -170,9 +170,16 @@ async function unlockEnvelope(password, envelope) {
 }
 
 async function rewrapEnvelope(oldPassword, newPassword, envelope) {
+  if (envelope && envelope.migration) {
+    return {
+      ok: false,
+      type: 'migration-pending',
+      message: 'SafeLedger is finishing its encryption upgrade. Please wait for the upgrade to complete before changing the password.'
+    };
+  }
   const unlocked = await unlockEnvelope(oldPassword, envelope);
   if (!unlocked.ok) return unlocked;
-  const created = await createEnvelope(newPassword, unlocked.dataKey, envelope.migration || null);
+  const created = await createEnvelope(newPassword, unlocked.dataKey);
   unlocked.dataKey.fill(0);
   created.envelope.created = envelope.created || created.envelope.created;
   return { ok: true, envelope: created.envelope, dataKey: created.dataKey };
