@@ -113,8 +113,18 @@ function createController(vaultDir) {
     if (!cleanup.complete) {
       return { envelope, pending: true, vaultListUsesDataKey: true, cleanup };
     }
-    const activeEnvelope = await markMigrationComplete(envelope);
-    return { envelope: activeEnvelope, pending: false, vaultListUsesDataKey: true, cleanup };
+    try {
+      const activeEnvelope = await markMigrationComplete(envelope);
+      return { envelope: activeEnvelope, pending: false, vaultListUsesDataKey: true, cleanup };
+    } catch (err) {
+      return {
+        envelope,
+        pending: true,
+        vaultListUsesDataKey: true,
+        cleanup,
+        markerError: err && err.message ? err.message : String(err)
+      };
+    }
   }
 
   async function migrateWithKnownKeys(password, legacyKey, legacyVaultList, existingEnvelope = null, existingDataKey = null) {
@@ -157,13 +167,18 @@ function createController(vaultDir) {
     await vault.saveVault(vaultListPath, JSON.stringify(nextVaultList), dataKey);
 
     const cleanup = await cleanupLegacyFiles(envelope);
-    if (cleanup.complete) envelope = await markMigrationComplete(envelope);
+    let markerError = null;
+    if (cleanup.complete) {
+      try { envelope = await markMigrationComplete(envelope); }
+      catch (err) { markerError = err && err.message ? err.message : String(err); }
+    }
 
     legacyKey.fill(0);
     return {
       ok: true,
       migrated: true,
-      pendingCleanup: !cleanup.complete,
+      pendingCleanup: !cleanup.complete || !!markerError,
+      markerError,
       cleanup,
       dataKeyHex: dataKey.toString('hex'),
       vaultList: nextVaultList,
