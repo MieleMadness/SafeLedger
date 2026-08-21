@@ -1,7 +1,7 @@
 {
   "name": "safe-ledger",
   "productName": "SafeLedger",
-  "version": "2.0.23",
+  "version": "2.0.24",
   "description": "Free, offline and portable encrypted information vault",
   "main": "src/main/main.js",
   "scripts": {
@@ -36,7 +36,6 @@
   "build": {
     "appId": "com.safeledger.app",
     "productName": "SafeLedger",
-    "desktopName": "SafeLedger",
     "asar": true,
     "files": [
       "src/**/*",
@@ -58,7 +57,6 @@
     "linux": {
       "icon": "build/icon-source.png",
       "category": "Utility",
-      "syncDesktopName": true,
       "target": [
         {
           "target": "AppImage",
