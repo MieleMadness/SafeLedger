@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const status = require('./status');
 const runtimeUtils = require('./runtime-utils');
 const keyEnvelope = require('./key-envelope');
+const masterKeyVerifier = require('./master-key-verifier');
 
 const MAX_MASTER_PASSWORD_LENGTH = runtimeUtils.MAX_MASTER_PASSWORD_LENGTH;
 // Load the main-process crypto session module once; it registers narrow IPC handlers.
@@ -48,9 +49,14 @@ async function handleLogin(button) {
       const unlocked = await ipc.invoke('crypto-v3-login', password);
       input.value = '';
       if (unlocked && unlocked.ok) {
+        const dataKey = Buffer.from(unlocked.dataKeyHex, 'hex');
+        const sessionSettings = Object.assign({}, latestSettings, {
+          masterKeyVerifier: masterKeyVerifier.createMasterKeyVerifier(dataKey)
+        });
+        latestSettings = sessionSettings;
         ipc.send('read-vaultlist-init', {
-          cryptoKey: Buffer.from(unlocked.dataKeyHex, 'hex'),
-          settings: latestSettings
+          cryptoKey: dataKey,
+          settings: sessionSettings
         });
         return;
       }
@@ -101,7 +107,12 @@ async function migrateAfterLegacyLogin(params) {
     }
 
     const migratedVaultList = migrated.vaultList || params.vaultList;
+    const dataKey = Buffer.from(migrated.dataKeyHex, 'hex');
+    const migratedSettings = Object.assign({}, params.settings || latestSettings, {
+      masterKeyVerifier: masterKeyVerifier.createMasterKeyVerifier(dataKey)
+    });
     latestVaultList = migratedVaultList;
+    latestSettings = migratedSettings;
     ipc.emit('result', {}, {
       status: 'SUCCESS',
       statusMsg: migrated.pendingCleanup
@@ -109,8 +120,8 @@ async function migrateAfterLegacyLogin(params) {
         : 'SafeLedger encryption upgraded to Argon2id and AES-256-GCM.',
       type: 'vaultlist-init',
       vaultList: migratedVaultList,
-      cryptoKey: Buffer.from(migrated.dataKeyHex, 'hex'),
-      settings: params.settings || latestSettings
+      cryptoKey: dataKey,
+      settings: migratedSettings
     });
   } catch (err) {
     status.showStatus({
