@@ -26,6 +26,9 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Run regression tests
+        run: npm run test:regression
+
       - name: Build AppImage
         run: npm run dist:linux
 

@@ -27,6 +27,10 @@ jobs:
         shell: pwsh
         run: npm install --no-audit --no-fund
 
+      - name: Run regression tests
+        shell: pwsh
+        run: npm run test:regression
+
       - name: Build portable EXE
         shell: pwsh
         run: npm run dist:win

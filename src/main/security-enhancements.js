@@ -5,15 +5,20 @@ const remote = electron.remote;
 const { ipcRenderer: ipc } = electron;
 const fs = require('fs');
 const path = require('path');
+const statusMgr = require('./status');
+const runtimeUtils = require('./runtime-utils');
 
 const AUTO_LOCK_MINUTES = 5;
+const MAX_MASTER_PASSWORD_LENGTH = runtimeUtils.MAX_MASTER_PASSWORD_LENGTH;
 let idleTimer = null;
 let panicRunning = false;
+let unlockedSession = false;
+let latestSettings = null;
 
-const getPortableRoot = () => {
-  if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
-  return path.dirname(process.execPath);
-};
+const getPortableRoot = () => runtimeUtils.getPortableRoot({
+  appPath: remote.app.getAppPath(),
+  isPackaged: remote.app.isPackaged
+});
 const getDataRoot = () => path.join(getPortableRoot(), 'SafeLedgerData');
 const getSettingsDir = () => path.join(getDataRoot(), 'settings');
 
@@ -37,6 +42,8 @@ function clearVisibleSensitiveFields() {
 function panicLock(reason = 'panic-lock') {
   if (panicRunning) return;
   panicRunning = true;
+  unlockedSession = false;
+  clearTimeout(idleTimer);
   audit(reason);
   try { clearVisibleSensitiveFields(); } catch (_) {}
   try { ipc.send('panic-lock', { reason }); } catch (_) {}
@@ -46,9 +53,8 @@ function panicLock(reason = 'panic-lock') {
 
 function resetIdleTimer() {
   clearTimeout(idleTimer);
-  const hasVaultUi = document.getElementById('vaultArea') && document.getElementById('vaultArea').textContent.trim().length > 0;
   const loginVisible = !!document.getElementById('masterCryptoInput');
-  if (!hasVaultUi || loginVisible) return;
+  if (!unlockedSession || loginVisible) return;
   idleTimer = setTimeout(() => panicLock('inactivity-auto-lock'), AUTO_LOCK_MINUTES * 60 * 1000);
 }
 
@@ -70,26 +76,35 @@ function scorePassword(value) {
   return Math.max(0, Math.min(5, score));
 }
 
-function enhanceLoginPassword() {
-  const input = document.getElementById('masterCryptoInput');
-  if (!input || input.dataset.safeledgerEnhanced === '1') return;
-  input.dataset.safeledgerEnhanced = '1';
-  input.setAttribute('autocomplete', 'off');
-
+function makePasswordVisibilityControl(input, showText = 'Show Text') {
+  if (!input || input.dataset.safeledgerVisibility === '1') return;
+  input.dataset.safeledgerVisibility = '1';
   const controls = document.createElement('div');
   controls.className = 'login-security-controls';
   const show = document.createElement('button');
   show.type = 'button';
   show.className = 'btn btn-default btn-sm';
-  show.innerHTML = '<i class="fa fa-eye"></i> Show Text';
+  show.innerHTML = `<i class="fa fa-eye"></i> ${showText}`;
   show.addEventListener('click', () => {
     const hidden = input.type === 'password';
     input.type = hidden ? 'text' : 'password';
-    show.innerHTML = hidden ? '<i class="fa fa-eye-slash"></i> Hide Text' : '<i class="fa fa-eye"></i> Show Text';
+    show.innerHTML = hidden
+      ? '<i class="fa fa-eye-slash"></i> Hide Text'
+      : `<i class="fa fa-eye"></i> ${showText}`;
   });
   controls.appendChild(show);
   input.parentNode.insertBefore(controls, input.nextSibling);
+}
 
+function enhanceLoginPassword() {
+  const input = document.getElementById('masterCryptoInput');
+  if (!input || input.dataset.safeledgerEnhanced === '1') return;
+  input.dataset.safeledgerEnhanced = '1';
+  input.maxLength = MAX_MASTER_PASSWORD_LENGTH;
+  input.setAttribute('autocomplete', 'off');
+  makePasswordVisibilityControl(input);
+
+  const controls = input.nextSibling;
   const meter = document.createElement('div');
   meter.className = 'password-strength';
   const bar = document.createElement('div');
@@ -111,12 +126,96 @@ function enhanceLoginPassword() {
   update();
 }
 
-const observer = new MutationObserver(() => enhanceLoginPassword());
+function enhancePasswordChange() {
+  const oldInput = document.getElementById('inputOldPassword');
+  const newInput = document.getElementById('inputNewPassword');
+  const save = document.getElementById('encryptionEditBtn');
+  if (!oldInput || !newInput || !save || newInput.dataset.safeledgerChangeEnhanced === '1') return;
+
+  newInput.dataset.safeledgerChangeEnhanced = '1';
+  oldInput.type = 'password';
+  newInput.type = 'password';
+  oldInput.maxLength = MAX_MASTER_PASSWORD_LENGTH;
+  newInput.maxLength = MAX_MASTER_PASSWORD_LENGTH;
+  oldInput.setAttribute('autocomplete', 'current-password');
+  newInput.setAttribute('autocomplete', 'new-password');
+  makePasswordVisibilityControl(oldInput);
+  makePasswordVisibilityControl(newInput);
+
+  const parent = newInput.parentNode;
+  const confirmLabel = document.createElement('label');
+  confirmLabel.htmlFor = 'inputConfirmNewPassword';
+  confirmLabel.textContent = 'Confirm New Password';
+  const confirmInput = document.createElement('input');
+  confirmInput.type = 'password';
+  confirmInput.className = 'form-control';
+  confirmInput.id = 'inputConfirmNewPassword';
+  confirmInput.maxLength = MAX_MASTER_PASSWORD_LENGTH;
+  confirmInput.setAttribute('autocomplete', 'new-password');
+  parent.insertBefore(confirmLabel, newInput.nextSibling && newInput.nextSibling.nextSibling ? newInput.nextSibling.nextSibling : null);
+  parent.insertBefore(confirmInput, confirmLabel.nextSibling);
+  makePasswordVisibilityControl(confirmInput);
+
+  save.addEventListener('click', (event) => {
+    if (newInput.value !== confirmInput.value) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      statusMgr.showStatus({ status: 'ERROR', statusMsg: 'New password and confirmation must match' });
+    }
+  }, true);
+}
+
+const formatLockDuration = runtimeUtils.formatLockDuration;
+
+function enhanceLockScreen() {
+  if (!latestSettings) return;
+  const header = document.querySelector('#detailArea h1');
+  if (!header || !/^Account is locked for\b/.test(header.textContent || '')) return;
+  header.textContent = `Account is locked for ${formatLockDuration(latestSettings.minutesToWaitBetweenLockout)}.`;
+}
+
+function enhanceDynamicSecurityUi() {
+  enhanceLoginPassword();
+  enhancePasswordChange();
+  enhanceLockScreen();
+}
+
+const observer = new MutationObserver(enhanceDynamicSecurityUi);
 observer.observe(document.documentElement, { childList: true, subtree: true });
+
+ipc.on('result-init-system', (_evt, params) => {
+  if (params && params.settings) latestSettings = params.settings;
+  setTimeout(enhanceDynamicSecurityUi, 0);
+});
+
+ipc.on('result', (_evt, params) => {
+  if (params && params.settings) latestSettings = params.settings;
+  if (params && params.status === 'SUCCESS' && params.type === 'vaultlist-init') {
+    unlockedSession = true;
+    setTimeout(resetIdleTimer, 0);
+  }
+  setTimeout(enhanceDynamicSecurityUi, 0);
+});
+
+ipc.on('result-save-settings', (_evt, params) => {
+  if (params && params.settings) latestSettings = params.settings;
+  setTimeout(enhanceLockScreen, 0);
+});
+
+ipc.on('result-rotate-crypto', () => {
+  const confirmInput = document.getElementById('inputConfirmNewPassword');
+  if (confirmInput) confirmInput.value = '';
+});
+
+ipc.on('result-lockout-destroy', (_evt, params) => {
+  unlockedSession = false;
+  clearTimeout(idleTimer);
+  if (params && params.settings) latestSettings = params.settings;
+});
 
 window.addEventListener('DOMContentLoaded', () => {
   audit('app-opened');
-  enhanceLoginPassword();
+  enhanceDynamicSecurityUi();
   resetIdleTimer();
   const panic = document.getElementById('panicLockButton');
   if (panic) panic.addEventListener('click', () => panicLock('emergency-lock'));

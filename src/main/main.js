@@ -3,7 +3,10 @@
 const { app, BrowserWindow, Menu, ipcMain: ipc, dialog } = require('electron');
 const remoteMain = require('@electron/remote/main');
 const path = require('path');
-const vault = require('./vault');
+const vault = require('./robust-vault');
+const masterKeyVerifier = require('./master-key-verifier');
+const loginFailurePolicy = require('./login-failure-policy');
+const runtimeUtils = require('./runtime-utils');
 const utils = require('./utils');
 const logger = require('./logger');
 const installCodeManager = require('./installManager/installManager/installCodeManager');
@@ -32,10 +35,10 @@ function isExcludedDefaultWallet(group) {
 }
 
 function getPortableRoot() {
-  if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
-  if (process.platform === 'linux' && process.env.APPIMAGE) return path.dirname(process.env.APPIMAGE);
-  if (app.isPackaged) return path.dirname(process.execPath);
-  return app.getAppPath();
+  return runtimeUtils.getPortableRoot({
+    appPath: app.getAppPath(),
+    isPackaged: app.isPackaged
+  });
 }
 
 function configureStorage() {
@@ -215,6 +218,7 @@ ipc.on('read-vaultlist-init', (evt, params) => {
         params.settings.failAttemptCount = 0;
         params.settings.lockOutCount = 0;
         params.settings.lockLogin = false;
+        params.settings.masterKeyVerifier = masterKeyVerifier.createMasterKeyVerifier(params.cryptoKey);
         currentSettings = params.settings;
         return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
           mainWindow.webContents.send('result', {
@@ -225,6 +229,17 @@ ipc.on('read-vaultlist-init', (evt, params) => {
       })
       .catch((valList) => {
         activeCryptoKey = null;
+        const classification = loginFailurePolicy.classifyVaultListFailure(valList, params.cryptoKey, params.settings);
+        const failure = classification.failure;
+
+        // Only a verified wrong-password failure may advance brute-force counters.
+        // Damaged or unreadable vault data must never move the user toward self-destruct.
+        if (!classification.countPasswordFailure) {
+          failure.settings = params.settings;
+          mainWindow.webContents.send('result', failure);
+          return;
+        }
+
         params.settings.failAttemptCount++;
         if (params.settings.failAttemptCount >= params.settings.numFailAttempts) {
           params.settings.failAttemptCount = 0;
@@ -234,8 +249,8 @@ ipc.on('read-vaultlist-init', (evt, params) => {
         }
         currentSettings = params.settings;
         return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
-          valList.settings = params.settings;
-          mainWindow.webContents.send('result', valList);
+          failure.settings = params.settings;
+          mainWindow.webContents.send('result', failure);
         });
       });
 
@@ -316,8 +331,19 @@ ipc.on('process-record', (evt, params) => {
 
 ipc.on('process-rotate-crypto', (evt, params) => {
   vault.rotateCrypto(vaultDir, params.oldCryptoKey, params.newCryptoKey, params.vaultList)
-    .then((val) => {
-      if (val && val.status === 'SUCCESS') activeCryptoKey = params.newCryptoKey;
+    .then(async (val) => {
+      if (val && val.status === 'SUCCESS') {
+        activeCryptoKey = params.newCryptoKey;
+        if (currentSettings) {
+          currentSettings = Object.assign({}, currentSettings, {
+            masterKeyVerifier: masterKeyVerifier.createMasterKeyVerifier(params.newCryptoKey)
+          });
+          try {
+            const saved = await settingsManager.saveSettings(settingsDir, currentSettings);
+            currentSettings = saved.settings;
+          } catch (_) {}
+        }
+      }
       mainWindow.webContents.send('result-rotate-crypto', val);
     })
     .catch((val) => mainWindow.webContents.send('result-rotate-crypto', val));
