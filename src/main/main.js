@@ -33,6 +33,7 @@ function isExcludedDefaultWallet(group) {
 
 function getPortableRoot() {
   if (process.env.PORTABLE_EXECUTABLE_DIR) return process.env.PORTABLE_EXECUTABLE_DIR;
+  if (process.platform === 'linux' && process.env.APPIMAGE) return path.dirname(process.env.APPIMAGE);
   if (app.isPackaged) return path.dirname(process.execPath);
   return app.getAppPath();
 }
