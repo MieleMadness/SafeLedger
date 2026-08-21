@@ -77,6 +77,17 @@ async function run() {
     assert.strictEqual(newTry.dataKey.toString('hex'), dataKey.toString('hex'));
   });
 
+  await check('password changes are blocked while a crypto migration is pending', async () => {
+    const created = await keyEnvelope.createEnvelope(password, dataKey, {
+      status: 'pending',
+      started: new Date().toISOString(),
+      files: []
+    });
+    const rewrapped = await keyEnvelope.rewrapEnvelope(password, newPassword, created.envelope);
+    assert.strictEqual(rewrapped.ok, false);
+    assert.strictEqual(rewrapped.type, 'migration-pending');
+  });
+
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'safeledger-v3-'));
   const vaultDir = path.join(root, 'vaults');
   const controller = cryptoSession.createController(vaultDir);
@@ -144,6 +155,7 @@ async function run() {
     assert(source.includes('MAX_MASTER_PASSWORD_LENGTH'));
     assert(source.includes("target.id === 'loginBtn'"));
     assert(source.includes("target.id === 'encryptionEditBtn'"));
+    assert(source.includes('masterKeyVerifier.createMasterKeyVerifier(dataKey)'));
     const indexSource = fs.readFileSync(path.join(__dirname, '../src/main/index.html'), 'utf8');
     assert(indexSource.includes("require('./crypto-ui-bridge.js')"));
   });
