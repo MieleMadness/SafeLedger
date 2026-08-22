@@ -34,6 +34,7 @@ check('shared bottom detail-action dock is present', () => {
   const index = read('src/main/index.html');
   assert(index.includes('id="detailActionArea"'));
   assert(index.includes('./css/2.0.30.css'));
+  assert(index.includes("require('./detail-action-enhancements.js')"));
   const css = read('src/main/css/2.0.30.css');
   assert(css.includes('.detail-action-area'));
   assert(css.includes('.emergency-lock-cell .panic-lock-inline'));
@@ -52,7 +53,28 @@ check('coin private-key display is omitted when no value exists', () => {
   assert(record.includes("if(String(params.record.privateAddress||'').trim())securityUi.appendSensitiveField"));
 });
 
-check('wallet and coin actions use bottom icon dock', () => {
+check('coin and wallet dock actions are normalized to Edit Print Delete', () => {
+  const enhancements = read('src/main/detail-action-enhancements.js');
+  assert(enhancements.includes("const ACTION_ORDER = ['edit', 'print', 'delete'];"));
+  assert(enhancements.includes("value.startsWith('edit ')"));
+  assert(enhancements.includes("value.startsWith('print ')"));
+  assert(enhancements.includes("value.includes('delete')"));
+});
+
+check('save action is green and profiles use the bottom icon dock', () => {
+  const enhancements = read('src/main/detail-action-enhancements.js');
+  const css = read('src/main/css/2.0.30.css');
+  assert(css.includes('.detail-action-save'));
+  assert(css.includes('#2e7d32'));
+  assert(enhancements.includes("title: 'Save profile'"));
+  assert(enhancements.includes("title: 'Edit profile'"));
+  assert(enhancements.includes("title: 'Print profile'"));
+  assert(enhancements.includes("title: 'Delete profile'"));
+  assert(enhancements.indexOf("title: 'Edit profile'") < enhancements.indexOf("title: 'Print profile'"));
+  assert(enhancements.indexOf("title: 'Print profile'") < enhancements.indexOf("title: 'Delete profile'"));
+});
+
+check('wallet and coin actions still use icon-only bottom dock', () => {
   const record = read('src/main/record.js');
   const group = read('src/main/group.js');
   assert(record.includes("icon:'fa-print'"));
@@ -68,10 +90,11 @@ check('wallet and coin actions use bottom icon dock', () => {
 
 check('updated UI JavaScript parses cleanly', () => {
   syntaxCheck('src/main/detail-actions.js');
+  syntaxCheck('src/main/detail-action-enhancements.js');
   syntaxCheck('src/main/record.js');
   syntaxCheck('src/main/group.js');
   syntaxCheck('src/main/main.js');
   syntaxCheck('src/main/robust-vault.js');
 });
 
-console.log('\n7 SafeLedger 2.0.30 UI regression checks passed.');
+console.log('\n9 SafeLedger 2.0.31 UI regression checks passed.');
