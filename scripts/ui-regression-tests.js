@@ -101,13 +101,38 @@ check('coin wallet and profile delete confirmations include a cancel action', ()
   assert(enhancements.includes('Cancel delete ${kind}'));
 });
 
-check('updated UI JavaScript parses cleanly', () => {
+check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
+  const pkg = JSON.parse(read('package.json'));
+  const provider = read('src/main/argon2-provider.js');
+  const envelope = read('src/main/key-envelope.js');
+  assert.strictEqual(pkg.version, '2.0.33');
+  assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
+  assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
+  assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
+  assert(provider.includes('wasmArgon2id'));
+  assert(envelope.includes('argon2Provider.CURRENT_IMPLEMENTATION'));
+});
+
+check('Windows and Linux workflows test crypto inside Electron before packaging', () => {
+  const windows = read('.github/workflows/windows-portable.yml');
+  const linux = read('.github/workflows/linux-appimage.yml');
+  assert(windows.includes('Run Electron crypto smoke test'));
+  assert(windows.includes('npm run test:electron-crypto'));
+  assert(linux.includes('Run Electron crypto smoke test'));
+  assert(linux.includes('npm run test:electron-crypto'));
+});
+
+check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('src/main/detail-actions.js');
   syntaxCheck('src/main/detail-action-enhancements.js');
   syntaxCheck('src/main/record.js');
   syntaxCheck('src/main/group.js');
   syntaxCheck('src/main/main.js');
   syntaxCheck('src/main/robust-vault.js');
+  syntaxCheck('src/main/argon2-provider.js');
+  syntaxCheck('src/main/key-envelope.js');
+  syntaxCheck('scripts/electron-crypto-smoke.js');
+  syntaxCheck('scripts/run-electron-crypto-smoke.js');
 });
 
-console.log('\n10 SafeLedger 2.0.32 UI regression checks passed.');
+console.log('\n12 SafeLedger 2.0.33 UI/runtime regression checks passed.');
