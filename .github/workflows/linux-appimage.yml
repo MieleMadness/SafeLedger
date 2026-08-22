@@ -29,6 +29,9 @@ jobs:
       - name: Run regression tests
         run: npm run test:regression
 
+      - name: Run Electron crypto smoke test
+        run: npm run test:electron-crypto
+
       - name: Build AppImage
         run: npm run dist:linux
 
