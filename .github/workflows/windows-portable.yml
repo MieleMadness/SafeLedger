@@ -31,6 +31,10 @@ jobs:
         shell: pwsh
         run: npm run test:regression
 
+      - name: Run Electron crypto smoke test
+        shell: pwsh
+        run: npm run test:electron-crypto
+
       - name: Build portable EXE
         shell: pwsh
         run: npm run dist:win
