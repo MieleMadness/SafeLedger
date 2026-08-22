@@ -105,7 +105,7 @@ check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.33');
+  assert.strictEqual(pkg.version, '2.0.34');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -122,9 +122,21 @@ check('Windows and Linux workflows test crypto inside Electron before packaging'
   assert(linux.includes('npm run test:electron-crypto'));
 });
 
+check('failed password restores Login button unless the account is locked', () => {
+  const index = read('src/main/index.html');
+  const guard = read('src/main/login-retry-guard.js');
+  assert(index.includes("require('./login-retry-guard.js')"));
+  assert(guard.includes("params.status === 'ERROR'"));
+  assert(guard.includes('params.settings && params.settings.lockLogin'));
+  assert(guard.includes("document.getElementById('loginBtn')"));
+  assert(guard.includes('button.disabled = false'));
+  assert(guard.includes("document.getElementById('masterCryptoInput')"));
+});
+
 check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('src/main/detail-actions.js');
   syntaxCheck('src/main/detail-action-enhancements.js');
+  syntaxCheck('src/main/login-retry-guard.js');
   syntaxCheck('src/main/record.js');
   syntaxCheck('src/main/group.js');
   syntaxCheck('src/main/main.js');
@@ -135,4 +147,4 @@ check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('scripts/run-electron-crypto-smoke.js');
 });
 
-console.log('\n12 SafeLedger 2.0.33 UI/runtime regression checks passed.');
+console.log('\n13 SafeLedger 2.0.34 UI/runtime regression checks passed.');
