@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const argon2Provider = require('./argon2-provider');
 
 const CRYPTO_VERSION = 3;
 const KDF_ALGORITHM = 'argon2id';
@@ -14,36 +15,14 @@ const WRAP_TAG_BYTES = 16;
 const WRAP_AAD = Buffer.from('SafeLedger DEK envelope v3', 'utf8');
 const VERIFIER_CONTEXT = 'SafeLedger Argon2 KEK verifier v3';
 
-function requireArgon2() {
-  if (typeof crypto.argon2 !== 'function') {
-    throw new Error('This SafeLedger build requires Node.js Argon2 support.');
-  }
-}
-
 function argon2id(password, kdf) {
-  requireArgon2();
-  return new Promise((resolve, reject) => {
-    const salt = Buffer.from(kdf.salt, 'hex');
-    const message = Buffer.from(String(password), 'utf8');
-    crypto.argon2(KDF_ALGORITHM, {
-      message,
-      nonce: salt,
-      parallelism: kdf.parallelism,
-      tagLength: KEY_BYTES,
-      memory: kdf.memory,
-      passes: kdf.passes,
-      associatedData: Buffer.from('SafeLedger master password KDF v3', 'utf8')
-    }, (err, derivedKey) => {
-      message.fill(0);
-      if (err) reject(err);
-      else resolve(Buffer.from(derivedKey));
-    });
-  });
+  return argon2Provider.derive(password, kdf);
 }
 
 function defaultKdf() {
   return {
     algorithm: KDF_ALGORITHM,
+    implementation: argon2Provider.CURRENT_IMPLEMENTATION,
     salt: crypto.randomBytes(SALT_BYTES).toString('hex'),
     memory: KDF_MEMORY_KIB,
     passes: KDF_PASSES,
@@ -55,6 +34,7 @@ function defaultKdf() {
 function validateKdf(kdf) {
   return !!kdf
     && kdf.algorithm === KDF_ALGORITHM
+    && (!kdf.implementation || kdf.implementation === argon2Provider.CURRENT_IMPLEMENTATION)
     && typeof kdf.salt === 'string'
     && /^[0-9a-f]{32}$/i.test(kdf.salt)
     && Number.isInteger(kdf.memory) && kdf.memory >= 8192 && kdf.memory <= 262144
@@ -192,6 +172,7 @@ function deriveLegacyKey(password) {
 
 exports.CRYPTO_VERSION = CRYPTO_VERSION;
 exports.KEY_BYTES = KEY_BYTES;
+exports.KDF_IMPLEMENTATION = argon2Provider.CURRENT_IMPLEMENTATION;
 exports.defaultKdf = defaultKdf;
 exports.validateEnvelope = validateEnvelope;
 exports.createEnvelope = createEnvelope;
