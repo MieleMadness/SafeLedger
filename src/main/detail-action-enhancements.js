@@ -7,6 +7,7 @@ const ACTION_ORDER = ['edit', 'print', 'delete'];
 
 function actionKind(title) {
   const value = String(title || '').trim().toLowerCase();
+  if (value.startsWith('cancel ')) return 'cancel';
   if (value.startsWith('edit ')) return 'edit';
   if (value.startsWith('print ')) return 'print';
   if (value.includes('delete')) return 'delete';
@@ -16,7 +17,7 @@ function actionKind(title) {
 
 function actionRank(title) {
   const kind = actionKind(title);
-  if (kind === 'save') return 0;
+  if (kind === 'cancel' || kind === 'save') return 0;
   const index = ACTION_ORDER.indexOf(kind);
   return index === -1 ? 99 : index + 1;
 }
@@ -35,6 +36,57 @@ function hideLegacyButton(button) {
   button.classList.add('profile-legacy-action-hidden');
   button.setAttribute('aria-hidden', 'true');
   button.tabIndex = -1;
+}
+
+function deleteConfirmationKind(title) {
+  const value = String(title || '').trim();
+  if (/^Confirm Delete of coin:/i.test(value)) return 'coin';
+  if (/^Confirm Delete of wallet:/i.test(value)) return 'wallet';
+  if (/^Confirm delete of profile:/i.test(value)) return 'profile';
+  return '';
+}
+
+function selectedNavigationLink(kind) {
+  if (kind === 'coin') return document.querySelector('#recordArea a.item-selected');
+  if (kind === 'wallet') return document.querySelector('#groupArea a.item-selected');
+  if (kind === 'profile') {
+    const selectedBadge = document.querySelector('#vaultArea .badge-selected');
+    return selectedBadge ? selectedBadge.closest('a') : null;
+  }
+  return null;
+}
+
+function removeDeleteCancelAction() {
+  const dock = document.getElementById('detailActionArea');
+  if (!dock) return;
+  const button = dock.querySelector('[data-delete-cancel-action="1"]');
+  if (button) button.remove();
+}
+
+function ensureDeleteCancelAction(kind) {
+  const dock = document.getElementById('detailActionArea');
+  if (!dock || !kind) return;
+
+  let button = dock.querySelector('[data-delete-cancel-action="1"]');
+  if (!button) {
+    button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-default detail-action-button detail-action-cancel';
+    button.dataset.deleteCancelAction = '1';
+    button.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const currentKind = button.dataset.deleteKind || '';
+      const link = selectedNavigationLink(currentKind);
+      if (link) link.click();
+    });
+  }
+
+  button.dataset.deleteKind = kind;
+  button.title = `Cancel delete ${kind}`;
+  button.setAttribute('aria-label', `Cancel delete ${kind}`);
+  if (dock.firstElementChild !== button) dock.insertBefore(button, dock.firstChild);
 }
 
 function getProfileField(area, label) {
@@ -62,11 +114,15 @@ function enhanceProfileActions() {
   if (!area) return;
   const header = area.querySelector('h1');
   if (!header) {
+    removeDeleteCancelAction();
     reorderDock();
     return;
   }
 
   const title = String(header.textContent || '').trim();
+  const confirmKind = deleteConfirmationKind(title);
+  if (!confirmKind) removeDeleteCancelAction();
+
   const saveButton = area.querySelector('form #saveBtn');
   const editButton = area.querySelector('#editBtn');
   const deleteButton = area.querySelector('#deleteBtn');
@@ -77,11 +133,13 @@ function enhanceProfileActions() {
   else if (editButton && deleteButton) mode = 'profile-view';
 
   if (!mode) {
+    if (confirmKind) ensureDeleteCancelAction(confirmKind);
     reorderDock();
     return;
   }
 
   if (area._safeLedgerProfileHeader === header && area._safeLedgerProfileMode === mode) {
+    if (confirmKind) ensureDeleteCancelAction(confirmKind);
     reorderDock();
     return;
   }
@@ -111,6 +169,8 @@ function enhanceProfileActions() {
         onClick: () => deleteButton.click()
       }
     ]);
+    ensureDeleteCancelAction('profile');
+    reorderDock();
     return;
   }
 
@@ -130,7 +190,7 @@ function install() {
   if (!detail || !dock) return;
   const update = () => queueMicrotask(enhanceProfileActions);
   const detailObserver = new MutationObserver(update);
-  const dockObserver = new MutationObserver(() => queueMicrotask(reorderDock));
+  const dockObserver = new MutationObserver(() => queueMicrotask(enhanceProfileActions));
   detailObserver.observe(detail, { childList: true, subtree: true });
   dockObserver.observe(dock, { childList: true });
   enhanceProfileActions();
@@ -142,4 +202,4 @@ if (document.readyState === 'loading') {
   install();
 }
 
-exports._test = { ACTION_ORDER, actionKind, actionRank };
+exports._test = { ACTION_ORDER, actionKind, actionRank, deleteConfirmationKind };
