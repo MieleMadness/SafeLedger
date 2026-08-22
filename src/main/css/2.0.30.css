@@ -50,7 +50,15 @@
 }
 
 .detail-action-save {
-  color: #1565C0 !important;
+  color: #2e7d32 !important;
+}
+.detail-action-save:hover,
+.detail-action-save:focus {
+  color: #1b5e20 !important;
+}
+
+.profile-legacy-action-hidden {
+  display: none !important;
 }
 
 .public-address-placeholder {
