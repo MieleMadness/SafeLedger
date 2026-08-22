@@ -10,13 +10,26 @@ const keyEnvelope = require('../src/main/key-envelope');
 const robustVault = require('../src/main/robust-vault');
 const cryptoSession = require('../src/main/crypto-session-main');
 
-async function run() {
-  if (typeof crypto.argon2 !== 'function') {
-    console.log('SKIP Argon2id v3 tests: current Node runtime does not expose crypto.argon2.');
-    console.log('GitHub CI and Electron 43 run Node 24.18.x and execute these tests fully.');
-    return;
-  }
+async function nativeArgon2id(password, kdf) {
+  if (typeof crypto.argon2 !== 'function') return null;
+  return new Promise((resolve, reject) => {
+    const message = Buffer.from(String(password), 'utf8');
+    crypto.argon2('argon2id', {
+      message,
+      nonce: Buffer.from(kdf.salt, 'hex'),
+      parallelism: kdf.parallelism,
+      tagLength: kdf.keyBytes,
+      memory: kdf.memory,
+      passes: kdf.passes
+    }, (err, derivedKey) => {
+      message.fill(0);
+      if (err) reject(err);
+      else resolve(Buffer.from(derivedKey));
+    });
+  });
+}
 
+async function run() {
   let passed = 0;
   const check = async (name, fn) => {
     await fn();
@@ -28,11 +41,26 @@ async function run() {
   const newPassword = 'NewCorrectHorse8Battery!';
   const dataKey = crypto.randomBytes(32);
 
+  await check('Electron-safe Argon2id provider matches the stock Node reference', async () => {
+    if (typeof crypto.argon2 !== 'function') {
+      console.log('  Native Node Argon2 reference unavailable in this runtime; Electron smoke test still verifies the bundled provider.');
+      return;
+    }
+    const kdf = keyEnvelope.defaultKdf();
+    kdf.salt = '00112233445566778899aabbccddeeff';
+    const bundled = await keyEnvelope._test.argon2id(password, kdf);
+    const reference = await nativeArgon2id(password, kdf);
+    assert.strictEqual(bundled.toString('hex'), reference.toString('hex'));
+    bundled.fill(0);
+    reference.fill(0);
+  });
+
   await check('Argon2id envelope creates a random-salt 256-bit wrapped data key', async () => {
     const first = await keyEnvelope.createEnvelope(password, dataKey);
     const second = await keyEnvelope.createEnvelope(password, dataKey);
     assert.strictEqual(first.envelope.version, 3);
     assert.strictEqual(first.envelope.kdf.algorithm, 'argon2id');
+    assert.strictEqual(first.envelope.kdf.implementation, 'hash-wasm-argon2id-v1');
     assert.strictEqual(first.envelope.kdf.memory, 65536);
     assert.strictEqual(first.envelope.kdf.passes, 3);
     assert.strictEqual(first.envelope.kdf.parallelism, 1);
@@ -110,6 +138,7 @@ async function run() {
 
       const envelope = JSON.parse(fs.readFileSync(path.join(vaultDir, 'key-envelope.json'), 'utf8'));
       assert.strictEqual(envelope.version, 3);
+      assert.strictEqual(envelope.kdf.implementation, 'hash-wasm-argon2id-v1');
       assert.strictEqual(envelope.migration, undefined);
 
       const dek = Buffer.from(migrated.dataKeyHex, 'hex');
