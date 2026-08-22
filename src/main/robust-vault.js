@@ -163,11 +163,6 @@ exports.readVaultList = async (vaultListFile, myCryptKey) => {
     throw { status: 'ERROR', statusMsg: 'Unable to unlock vault list.', type: 'password-or-corrupt' };
   }
 
-  // Existing SafeLedger CBC files remain readable for compatibility. Once a
-  // correct password has successfully opened the vault list, upgrade every
-  // known legacy file to authenticated AES-256-GCM using atomic writes.
-  // Mixed directories are safe if a migration is interrupted because both
-  // formats remain readable during the transition.
   try {
     const migration = await exports.migrateLegacyEncryption(path.dirname(vaultListFile), myCryptKey, parsed);
     Object.defineProperty(parsed, '_encryptionMigration', {
@@ -217,7 +212,7 @@ exports.makeDir = async (vaultPath) => {
 exports.initVaultList = async (vaultPath, myCryptKey) => {
   const vaultList = {
     vaults: [{
-      name: 'Initial Profile',
+      name: 'SafeLedger',
       path: vaultPath,
       created: Date(),
       id: 0,

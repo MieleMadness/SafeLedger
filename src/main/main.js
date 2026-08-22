@@ -127,7 +127,7 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: 1200,
-    height: 850,
+    height: 750,
     minWidth: 900,
     minHeight: 600,
     backgroundColor: '#0D47A1',
@@ -232,8 +232,6 @@ ipc.on('read-vaultlist-init', (evt, params) => {
         const classification = loginFailurePolicy.classifyVaultListFailure(valList, params.cryptoKey, params.settings);
         const failure = classification.failure;
 
-        // Only a verified wrong-password failure may advance brute-force counters.
-        // Damaged or unreadable vault data must never move the user toward self-destruct.
         if (!classification.countPasswordFailure) {
           failure.settings = params.settings;
           mainWindow.webContents.send('result', failure);
