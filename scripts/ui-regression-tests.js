@@ -88,6 +88,19 @@ check('wallet and coin actions still use icon-only bottom dock', () => {
   assert(!record.includes('Print coin sheet</'));
 });
 
+check('coin wallet and profile delete confirmations include a cancel action', () => {
+  const enhancements = read('src/main/detail-action-enhancements.js');
+  assert(enhancements.includes("if (/^Confirm Delete of coin:/i.test(value)) return 'coin';"));
+  assert(enhancements.includes("if (/^Confirm Delete of wallet:/i.test(value)) return 'wallet';"));
+  assert(enhancements.includes("if (/^Confirm delete of profile:/i.test(value)) return 'profile';"));
+  assert(enhancements.includes("value.startsWith('cancel ')"));
+  assert(enhancements.includes("#recordArea a.item-selected"));
+  assert(enhancements.includes("#groupArea a.item-selected"));
+  assert(enhancements.includes("#vaultArea .badge-selected"));
+  assert(enhancements.includes("button.innerHTML = '<i class=\"fa fa-times\" aria-hidden=\"true\"></i>';"));
+  assert(enhancements.includes('Cancel delete ${kind}'));
+});
+
 check('updated UI JavaScript parses cleanly', () => {
   syntaxCheck('src/main/detail-actions.js');
   syntaxCheck('src/main/detail-action-enhancements.js');
@@ -97,4 +110,4 @@ check('updated UI JavaScript parses cleanly', () => {
   syntaxCheck('src/main/robust-vault.js');
 });
 
-console.log('\n9 SafeLedger 2.0.31 UI regression checks passed.');
+console.log('\n10 SafeLedger 2.0.32 UI regression checks passed.');
