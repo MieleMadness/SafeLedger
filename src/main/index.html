@@ -10,12 +10,18 @@
     <link href="./css/2.0.4.css" rel="stylesheet">
     <link href="./css/2.0.30.css" rel="stylesheet">
     <link href="./css/2.0.35.css" rel="stylesheet">
+    <link href="./css/2.0.36.css" rel="stylesheet">
     <link href="./css/token-icons.css" rel="stylesheet">
   </head>
   <body>
     <div class="container-fluid app-shell">
       <div id="searchArea" class="row app-search-row">
-        <div class="col-xs-2 dark1bg content-search"><span>&nbsp;</span></div>
+        <div class="col-xs-2 dark1bg content-search">
+          <div class="search-field-wrap">
+            <input id="profileSearch" class="form-control" placeholder="Search profiles...">
+            <button type="button" id="profileSearchClear" class="search-clear" title="Clear profile search" aria-label="Clear profile search"><i class="fa fa-times"></i></button>
+          </div>
+        </div>
         <div class="col-xs-2 dark2bg content-search">
           <div class="search-field-wrap">
             <input id="groupSearch" class="form-control" placeholder="Search wallets...">
@@ -71,6 +77,6 @@
 
     <script>window.$ = window.jQuery = require('./../../node_modules/jquery/dist/jquery.min');</script>
     <script src="./../../node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script>require('./renderer.js'); require('./security-enhancements.js'); require('./crypto-ui-bridge.js'); require('./login-retry-guard.js'); require('./settings-enhancements.js'); require('./search-enhancements.js'); require('./detail-action-enhancements.js'); require('./form-spacing-enhancements.js');</script>
+    <script>require('./renderer.js'); require('./security-enhancements.js'); require('./crypto-ui-bridge.js'); require('./login-retry-guard.js'); require('./settings-enhancements.js'); require('./search-enhancements.js'); require('./detail-action-enhancements.js'); require('./form-spacing-enhancements.js'); require('./detail-spacing-enhancements.js');</script>
   </body>
 </html>

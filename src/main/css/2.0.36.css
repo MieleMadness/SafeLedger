@@ -1,0 +1,45 @@
+/* SafeLedger 2.0.36 profile search and detail spacing refinements */
+
+#detailArea.wallet-coin-detail {
+  padding-top: 12px !important;
+}
+
+#detailArea.wallet-coin-detail > h1,
+#detailArea.wallet-coin-detail > .coin-detail-header {
+  margin-top: 0 !important;
+}
+
+#detailArea.wallet-coin-view .field-inline-actions {
+  gap: 6px;
+}
+
+#detailArea.wallet-coin-view .field-inline-action {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#detailArea.wallet-coin-view .field-display-shell {
+  min-height: 52px;
+}
+
+#detailArea.wallet-coin-view .field-display-shell .field-inline-actions {
+  right: 10px;
+  top: 10px;
+  transform: none;
+}
+
+#detailArea.wallet-coin-view .field-display-shell .public-address-value {
+  min-height: 52px;
+  padding-right: 92px;
+}
+
+#detailArea.wallet-coin-view .secure-field-summary {
+  padding: 10px;
+}
+
+#detailArea.wallet-coin-view .secure-field-summary .field-inline-actions {
+  margin: 0;
+}

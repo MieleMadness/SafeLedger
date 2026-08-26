@@ -105,7 +105,7 @@ check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.35');
+  assert.strictEqual(pkg.version, '2.0.36');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -151,11 +151,42 @@ check('wallet and coin edit forms use consistent design spacing', () => {
   assert(css.includes('.safeledger-edit-form .sensitive-controls'));
 });
 
+check('profile search matches the wallet and coin search pattern', () => {
+  const index = read('src/main/index.html');
+  const search = read('src/main/search-enhancements.js');
+  assert(index.includes('id="profileSearch"'));
+  assert(index.includes('placeholder="Search profiles..."'));
+  assert(index.includes('id="profileSearchClear"'));
+  assert(search.includes("setupSearchClear('profileSearch', 'profileSearchClear')"));
+  assert(search.includes('function filterProfiles()'));
+  assert(search.includes("area.querySelectorAll('ul.nav > li')"));
+  assert(search.includes('text.includes(query)'));
+});
+
+check('wallet and coin view/edit headers and field actions use normalized spacing', () => {
+  const index = read('src/main/index.html');
+  const spacing = read('src/main/detail-spacing-enhancements.js');
+  const css = read('src/main/css/2.0.36.css');
+  assert(index.includes('./css/2.0.36.css'));
+  assert(index.includes("require('./detail-spacing-enhancements.js')"));
+  assert(spacing.includes("'Modify Wallet'"));
+  assert(spacing.includes("'Modify Coin'"));
+  assert(spacing.includes("dockHas('edit wallet')"));
+  assert(spacing.includes("dockHas('edit coin')"));
+  assert(css.includes('padding-top: 12px !important'));
+  assert(css.includes('#detailArea.wallet-coin-view .field-inline-actions'));
+  assert(css.includes('right: 10px'));
+  assert(css.includes('#detailArea.wallet-coin-view .secure-field-summary'));
+  assert(css.includes('padding: 10px'));
+});
+
 check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('src/main/detail-actions.js');
   syntaxCheck('src/main/detail-action-enhancements.js');
   syntaxCheck('src/main/login-retry-guard.js');
   syntaxCheck('src/main/form-spacing-enhancements.js');
+  syntaxCheck('src/main/search-enhancements.js');
+  syntaxCheck('src/main/detail-spacing-enhancements.js');
   syntaxCheck('src/main/record.js');
   syntaxCheck('src/main/group.js');
   syntaxCheck('src/main/main.js');
@@ -166,4 +197,4 @@ check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('scripts/run-electron-crypto-smoke.js');
 });
 
-console.log('\n14 SafeLedger 2.0.35 UI/runtime regression checks passed.');
+console.log('\n16 SafeLedger 2.0.36 UI/runtime regression checks passed.');
