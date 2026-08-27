@@ -105,7 +105,7 @@ check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.40');
+  assert.strictEqual(pkg.version, '2.0.41');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -163,6 +163,21 @@ check('profile search matches the wallet and coin search pattern', () => {
   assert(search.includes('text.includes(query)'));
 });
 
+check('selected profile borders the full row instead of the initial', () => {
+  const index = read('src/main/index.html');
+  const selection = read('src/main/profile-selection-enhancements.js');
+  const css = read('src/main/css/2.0.41.css');
+  assert(index.includes('./css/2.0.41.css'));
+  assert(index.includes("require('./profile-selection-enhancements.js')"));
+  assert(selection.includes("area.querySelector('.badge-selected')"));
+  assert(selection.includes("link.classList.add('profile-selected')"));
+  assert(css.includes('#vaultArea .badge-circle.badge-selected'));
+  assert(css.includes('border: 0 !important'));
+  assert(css.includes('a.profile-selected'));
+  assert(css.includes('border: 2px solid #fff !important'));
+  assert(css.includes('background-color: transparent !important'));
+});
+
 check('wallet and coin view/edit headers and field actions use normalized spacing', () => {
   const index = read('src/main/index.html');
   const spacing = read('src/main/detail-spacing-enhancements.js');
@@ -190,6 +205,7 @@ check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('src/main/coin-form-layout-enhancements.js');
   syntaxCheck('src/main/edit-form-grid-enhancements.js');
   syntaxCheck('src/main/edit-security-enhancements.js');
+  syntaxCheck('src/main/profile-selection-enhancements.js');
   syntaxCheck('src/main/record.js');
   syntaxCheck('src/main/group.js');
   syntaxCheck('src/main/main.js');
@@ -200,4 +216,4 @@ check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('scripts/run-electron-crypto-smoke.js');
 });
 
-console.log('\n16 SafeLedger 2.0.40 UI/runtime regression checks passed.');
+console.log('\n17 SafeLedger 2.0.41 UI/runtime regression checks passed.');
