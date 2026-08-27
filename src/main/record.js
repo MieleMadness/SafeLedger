@@ -256,6 +256,7 @@ const renderRecordDetail = (params) => {
 
   const printIncludesSensitive = !!String(params.record.privateAddress || '').trim() || !!String(params.record.manualBalance || '').trim();
   detailActions.set([
+    { icon: 'fa-pencil', title: 'Edit coin', onClick: () => createEditRecord(params) },
     {
       icon: 'fa-print', title: 'Print coin sheet', className: 'detail-action-print',
       onClick: () => securityUi.printRecoverySheet(`${params.record.name || 'Coin'} Recovery Sheet`, [
@@ -269,7 +270,6 @@ const renderRecordDetail = (params) => {
         { label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record) }
       ], printIncludesSensitive)
     },
-    { icon: 'fa-pencil', title: 'Edit coin', onClick: () => createEditRecord(params) },
     { icon: 'fa-trash', title: 'Delete coin', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
   ]);
 };
@@ -285,6 +285,7 @@ const confirmDelete = (params) => {
   note.textContent = 'Use the red trash icon below to permanently delete this coin from the wallet.';
   area.appendChild(note);
   detailActions.set([
+    { icon: 'fa-times', title: 'Cancel delete coin', className: 'detail-action-cancel', onClick: () => renderRecordDetail(params) },
     {
       icon: 'fa-trash', title: 'Confirm delete coin', className: 'detail-action-delete',
       onClick: () => {

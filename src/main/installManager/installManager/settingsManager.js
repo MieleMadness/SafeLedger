@@ -3,9 +3,9 @@
 const fs = require('fs');
 const path = require('path');
 const lockoutState = require('../../lockout-state');
+const settingsSchema = require('../../settings-schema');
 
-const BRUTE_FORCE_MIN = 1;
-const BRUTE_FORCE_MAX = 99;
+const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue } = settingsSchema;
 
 const defaults = () => ({
   formatVersion: 2,
@@ -22,12 +22,6 @@ const defaults = () => ({
   // Users can explicitly disable this in Security Settings.
   scrubContentAfterRetries: true
 });
-
-function clampBruteForceValue(value, fallback) {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(BRUTE_FORCE_MAX, Math.max(BRUTE_FORCE_MIN, parsed));
-}
 
 function normalizeCounter(value, fallback = 0) {
   const parsed = Number.parseInt(value, 10);
@@ -58,10 +52,6 @@ function normalizeSettings(settings, now = Date.now()) {
   const lockTime = Number(next.lockLoginTime);
   next.lockLoginTime = Number.isFinite(lockTime) && lockTime > 0 ? Math.floor(lockTime) : 0;
 
-  // A lockout is temporary. Keep failed-attempt and lockout counters intact,
-  // but never let an expired or malformed lockLogin flag strand the UI on
-  // restart. The next failed or successful login will persist the normalized
-  // state through the regular settings save path.
   if (!lockoutState.isLockoutActive(next, now)) {
     next.lockLogin = false;
     next.lockLoginTime = 0;

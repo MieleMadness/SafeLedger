@@ -7,6 +7,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsSchema = require('../src/main/settings-schema');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 async function run() {
@@ -51,21 +52,26 @@ async function run() {
       assert.strictEqual(Object.prototype.hasOwnProperty.call(loaded.settings, retired), false, `${retired} should be stripped`);
     }
 
-    const ui = read('src/main/settings-enhancements.js');
-    assert(ui.includes('const BRUTE_FORCE_MIN = 1;'));
-    assert(ui.includes('const BRUTE_FORCE_MAX = 99;'));
-    assert(ui.includes("input.min = String(BRUTE_FORCE_MIN)"));
-    assert(ui.includes("input.max = String(BRUTE_FORCE_MAX)"));
+    assert.strictEqual(settingsSchema.BRUTE_FORCE_MIN, 1);
+    assert.strictEqual(settingsSchema.BRUTE_FORCE_MAX, 99);
+    assert.strictEqual(settingsSchema.clampBruteForceValue(0, 5), 1);
+    assert.strictEqual(settingsSchema.clampBruteForceValue(120, 5), 99);
+
+    const ui = read('src/main/settings-ui.js');
+    assert(ui.includes("require('./settings-schema')"));
+    assert(ui.includes('input.min = String(BRUTE_FORCE_MIN)'));
+    assert(ui.includes('input.max = String(BRUTE_FORCE_MAX)'));
     assert(ui.includes("input.step = '1'"));
-    assert(!ui.includes('result-save-install-code'));
+    assert(!ui.includes('MutationObserver'));
+    assert(!ui.includes('cloneNode'));
     assert(!ui.includes('Activation Code'));
 
-    const passwordSection = ui.indexOf("const passwordSection = makeSection('Password');");
-    const backupSection = ui.indexOf("const backupSection = makeSection('Backup & Recovery');");
-    const bruteSection = ui.indexOf("const bruteSection = makeSection('Brute Force Protection');");
+    const passwordSection = ui.indexOf("makeSection('Password')");
+    const backupSection = ui.indexOf("makeSection('Backup & Recovery')");
+    const bruteSection = ui.indexOf("makeSection('Brute Force Protection')");
     assert(passwordSection >= 0 && backupSection > passwordSection && bruteSection > backupSection);
 
-    console.log('PASS SafeLedger brute-force limits, retired settings cleanup, and Settings section order.');
+    console.log('PASS shared brute-force schema, retired settings cleanup, and direct Settings section order.');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

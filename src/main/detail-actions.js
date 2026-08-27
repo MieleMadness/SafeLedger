@@ -26,28 +26,14 @@ function setDetailMode(mode = '') {
 function modeForActions(actions) {
   const titles = (Array.isArray(actions) ? actions : [])
     .map((action) => String(action && action.title || '').trim().toLowerCase());
-  if (titles.some((title) => title === 'save coin' || title === 'save wallet')) return 'edit';
-  if (titles.some((title) => title === 'edit coin' || title === 'edit wallet')) return 'view';
+  if (titles.some((title) => ['save coin', 'save wallet', 'save profile'].includes(title))) return 'edit';
+  if (titles.some((title) => ['edit coin', 'edit wallet', 'edit profile'].includes(title))) return 'view';
   return '';
 }
 
 function clear() {
   clearDockOnly();
   setDetailMode('');
-  const detail = getDetailArea();
-  if (detail) {
-    detail.querySelectorAll('.detail-action-context-marker').forEach((marker) => marker.remove());
-  }
-}
-
-function markContext() {
-  const detail = getDetailArea();
-  if (!detail) return;
-  detail.querySelectorAll('.detail-action-context-marker').forEach((marker) => marker.remove());
-  const marker = document.createElement('span');
-  marker.className = 'detail-action-context-marker';
-  marker.hidden = true;
-  detail.appendChild(marker);
 }
 
 function makeIconButton(action) {
@@ -70,31 +56,9 @@ function set(actions) {
   if (!dock) return;
   clearDockOnly();
   setDetailMode(modeForActions(actions));
-  markContext();
   (Array.isArray(actions) ? actions : []).forEach((action) => {
     if (action && action.icon && action.title) dock.appendChild(makeIconButton(action));
   });
-}
-
-function installDetailObserver() {
-  const detail = getDetailArea();
-  if (!detail || detail.dataset.detailActionObserver === '1') return;
-  detail.dataset.detailActionObserver = '1';
-  const observer = new MutationObserver(() => {
-    queueMicrotask(() => {
-      if (!detail.querySelector('.detail-action-context-marker')) {
-        clearDockOnly();
-        setDetailMode('');
-      }
-    });
-  });
-  observer.observe(detail, { childList: true });
-}
-
-if (document.readyState === 'loading') {
-  window.addEventListener('DOMContentLoaded', installDetailObserver, { once: true });
-} else {
-  installDetailObserver();
 }
 
 exports.set = set;

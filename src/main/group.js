@@ -234,6 +234,7 @@ const renderGroupDetail = (params) => {
   }
 
   detailActions.set([
+    { icon: 'fa-pencil', title: 'Edit wallet', onClick: () => createEditGroup(params) },
     {
       icon: 'fa-print', title: 'Print recovery sheet', className: 'detail-action-print',
       onClick: () => securityUi.printRecoverySheet(`${displayWalletName(params.group.name) || 'Wallet'} Recovery Sheet`, [
@@ -247,7 +248,6 @@ const renderGroupDetail = (params) => {
         { label: 'Notes', value: getUserWalletNotes(params.group) }
       ], true)
     },
-    { icon: 'fa-pencil', title: 'Edit wallet', onClick: () => createEditGroup(params) },
     { icon: 'fa-trash', title: 'Delete wallet', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
   ]);
 };
@@ -263,6 +263,7 @@ const confirmDelete = (params) => {
   note.textContent = 'Use the red trash icon below to permanently delete this wallet.';
   area.appendChild(note);
   detailActions.set([
+    { icon: 'fa-times', title: 'Cancel delete wallet', className: 'detail-action-cancel', onClick: () => renderGroupDetail(params) },
     {
       icon: 'fa-trash', title: 'Confirm delete wallet', className: 'detail-action-delete',
       onClick: () => {

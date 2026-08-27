@@ -4,10 +4,12 @@
 // isolated preload world; the HTML page itself does not receive Node.js APIs.
 
 const { ipcRenderer: ipc } = require('electron');
+const profile = require('./profile');
 const group = require('./group');
 const record = require('./record');
 const status = require('./status');
-const encryption = require('./encryption');
+const settingsUi = require('./settings-ui');
+const detailActions = require('./detail-actions');
 
 let vaultData;
 let vaultList;
@@ -24,13 +26,30 @@ function requireUnlocked(action) {
   return true;
 }
 
+function profileParams(extra = {}) {
+  return Object.assign({ vaultList, saving }, extra);
+}
+
+function clearUtilitySelections() {
+  if (vaultList) {
+    vaultList.vaultSelected = null;
+    profile.listProfiles(profileParams());
+  }
+  if (vaultData) {
+    vaultData.groupSelected = null;
+    vaultData.recordSelected = null;
+  }
+  document.getElementById('groupArea').innerHTML = '';
+  document.getElementById('recordArea').innerHTML = '';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   const addVault = document.getElementById('addVault');
   const addGroup = document.getElementById('addGroup');
   const addRecord = document.getElementById('addRecord');
+  const profileSearch = document.getElementById('profileSearch');
   const groupSearch = document.getElementById('groupSearch');
   const recordSearch = document.getElementById('recordSearch');
-  const encryptionSettings = document.getElementById('encryptionSettings');
 
   initSystem();
 
@@ -38,7 +57,7 @@ window.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     if (saving.state) return alert('Please wait for processing to complete');
     requireUnlocked(() => {
-      if (vaultList) createEditVault();
+      if (vaultList) profile.createProfile(profileParams());
       else status.showStatus({ status: 'ERROR', statusMsg: 'Vault list is empty' });
     });
   });
@@ -61,6 +80,11 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  profileSearch.addEventListener('keyup', (event) => {
+    event.preventDefault();
+    if (vaultList) profile.listProfiles(profileParams());
+  });
+
   groupSearch.addEventListener('keyup', (event) => {
     event.preventDefault();
     group.listGroups({ vaultData, saving });
@@ -69,24 +93,6 @@ window.addEventListener('DOMContentLoaded', () => {
   recordSearch.addEventListener('keyup', (event) => {
     event.preventDefault();
     record.listRecords({ vaultData, saving });
-  });
-
-  encryptionSettings.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    requireUnlocked(() => {
-      if (vaultList) {
-        vaultList.vaultSelected = null;
-        listVaults(vaultList.vaults);
-      }
-      if (vaultData) {
-        vaultData.groupSelected = null;
-        vaultData.recordSelected = null;
-        document.getElementById('groupArea').innerHTML = '';
-        document.getElementById('recordArea').innerHTML = '';
-      }
-      encryption.showEncrptionDetail({ vaultList, saving });
-    });
   });
 });
 
@@ -108,10 +114,13 @@ ipc.on('result', (_event, params) => {
     }
   }
 
-  if (params.type === 'vault-delete') {
+  if (params.type === 'vault-delete' && vaultList) {
     vaultList.vaultSelected = null;
+    vaultData = undefined;
     document.getElementById('groupArea').innerHTML = '';
-    listVaults(vaultList.vaults);
+    document.getElementById('recordArea').innerHTML = '';
+    profile.listProfiles(profileParams());
+    showAfterLogin();
   }
 
   const recordArea = document.getElementById('recordArea');
@@ -121,13 +130,17 @@ ipc.on('result', (_event, params) => {
       params.vaultList.vaultSelected = null;
     }
     vaultList = params.vaultList;
-    listVaults(vaultList.vaults);
+    profile.listProfiles(profileParams());
     if (params.type === 'vault-create') {
       document.getElementById('groupArea').innerHTML = '';
       recordArea.innerHTML = '';
     }
-    if (vaultList.vaultSelected != null) showVaultDetail(vaultList.vaults[vaultList.vaultSelected]);
-    else showAfterLogin();
+    if (vaultList.vaultSelected != null) {
+      const selected = vaultList.vaults[vaultList.vaultSelected];
+      if (selected) profile.showProfileDetail(profileParams({ profile: selected }));
+    } else {
+      showAfterLogin();
+    }
   }
 
   if (params.vaultData) {
@@ -178,64 +191,13 @@ ipc.on('result-init-system', (_event, params) => {
   showLogin();
 });
 
-const listVaults = (vaults) => {
-  const vaultArea = document.getElementById('vaultArea');
-  vaultArea.innerHTML = '';
-  const ul = document.createElement('ul');
-  ul.className = 'nav';
-
-  if (!vaults) {
-    vaultArea.textContent = 'No items';
-    return;
-  }
-
-  vaults.forEach((item, index) => {
-    const li = document.createElement('li');
-    const link = document.createElement('a');
-    link.addEventListener('click', (event) => {
-      event.preventDefault();
-      if (saving.state) return alert('Please wait for processing to complete');
-      if (!sessionUnlocked) return status.showStatus({ status: 'ERROR', statusMsg: 'Please login.' });
-      saving.state = true;
-      status.loadStatus();
-      vaultList.vaultSelected = index;
-      showVaultDetail(item);
-      listVaults(vaultList.vaults);
-      ipc.send('read', { type: 'vault-read', file: item.file });
-    });
-
-    const badge = document.createElement('div');
-    badge.className = vaultList.vaultSelected === index ? 'badge-circle badge-selected' : 'badge-circle';
-    badge.style.display = 'inline-block';
-    const initial = document.createElement('div');
-    initial.className = 'text-center';
-    initial.style.marginTop = vaultList.vaultSelected === index ? '2px' : '4px';
-    initial.style.fontSize = '25px';
-    initial.textContent = String(item.name || '').charAt(0).toUpperCase();
-    badge.appendChild(initial);
-    link.appendChild(badge);
-
-    const labelWrap = document.createElement('div');
-    labelWrap.style.display = 'inline-block';
-    const label = document.createElement('div');
-    label.style.marginTop = '10px';
-    label.style.marginLeft = '10px';
-    label.textContent = item.name || '';
-    labelWrap.appendChild(label);
-    link.appendChild(labelWrap);
-    li.appendChild(link);
-    ul.appendChild(li);
-  });
-  vaultArea.appendChild(ul);
-};
-
 ipc.on('result-rotate-crypto', (_event, params) => {
   saving.state = false;
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
   if (params.status === 'SUCCESS') {
     sessionUnlocked = params.sessionUnlocked === true;
     if (params.vaultList) vaultList = params.vaultList;
-    if (vaultList) listVaults(vaultList.vaults);
+    if (vaultList) profile.listProfiles(profileParams());
     showAfterLogin();
   } else {
     const editBtn = document.getElementById('encryptionEditBtn');
@@ -243,137 +205,8 @@ ipc.on('result-rotate-crypto', (_event, params) => {
   }
 });
 
-const createEditVault = (profile) => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = '';
-  const header = document.createElement('h1');
-  header.textContent = profile ? 'Modify Profile' : 'Add Profile';
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-
-  const form = document.createElement('form');
-  form.addEventListener('submit', (event) => event.preventDefault());
-  area.appendChild(form);
-  const formGroup = document.createElement('div');
-  formGroup.className = 'form-group';
-  form.appendChild(formGroup);
-  const label = document.createElement('label');
-  label.htmlFor = 'inputName';
-  label.textContent = 'Name';
-  formGroup.appendChild(label);
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'form-control';
-  input.id = 'inputName';
-  input.maxLength = 25;
-  input.value = profile ? profile.name || '' : '';
-  formGroup.appendChild(input);
-
-  const saveBtn = document.createElement('button');
-  saveBtn.type = 'submit';
-  saveBtn.id = 'saveBtn';
-  saveBtn.className = 'btn btn-default bottom-space pull-right';
-  saveBtn.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save';
-  saveBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    if (!input.value) return;
-    saveBtn.disabled = true;
-    let nextProfile = profile;
-    if (nextProfile) {
-      nextProfile.name = input.value;
-      nextProfile.modified = Date();
-    } else {
-      nextProfile = { name: input.value, created: Date() };
-    }
-    saving.state = true;
-    status.loadStatus();
-    ipc.send('process-vault-list', {
-      action: profile ? 'modify' : 'create',
-      vault: nextProfile,
-      vaultList
-    });
-  });
-  form.appendChild(saveBtn);
-};
-
-function appendDateLine(area, label, value) {
-  if (value == null || value === '') return;
-  const p = document.createElement('p');
-  p.className = 'dates';
-  const strong = document.createElement('b');
-  strong.textContent = `${label}: `;
-  p.appendChild(strong);
-  p.appendChild(document.createTextNode(String(value)));
-  area.appendChild(p);
-}
-
-const showVaultDetail = (profile) => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = '';
-  const header = document.createElement('h1');
-  header.textContent = profile.name || 'Profile';
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-  appendDateLine(area, 'Created', profile.created);
-  appendDateLine(area, 'Modified', profile.modified);
-  appendDateLine(area, 'Location', profile.path);
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.type = 'button';
-  deleteBtn.id = 'deleteBtn';
-  deleteBtn.className = 'btn btn-default bottom-space pull-right';
-  deleteBtn.innerHTML = '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Delete';
-  deleteBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    deleteBtn.disabled = true;
-    confirmDelete({ vault: profile });
-  });
-  area.appendChild(deleteBtn);
-
-  const editBtn = document.createElement('button');
-  editBtn.type = 'button';
-  editBtn.id = 'editBtn';
-  editBtn.className = 'btn btn-default bottom-space pull-right';
-  editBtn.innerHTML = '<span class="glyphicon glyphicon-edit" aria-hidden="true"></span> Edit';
-  editBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    editBtn.disabled = true;
-    createEditVault(profile);
-  });
-  area.appendChild(editBtn);
-};
-
-const confirmDelete = (params) => {
-  const vaultFilename = params.vault.file;
-  const area = document.getElementById('detailArea');
-  area.innerHTML = '';
-  const header = document.createElement('h1');
-  header.textContent = `Confirm delete of profile: ${params.vault.name}`;
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.type = 'button';
-  deleteBtn.id = 'deleteBtn';
-  deleteBtn.className = 'btn btn-default bottom-space pull-right';
-  deleteBtn.innerHTML = '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Confirm';
-  deleteBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    deleteBtn.disabled = true;
-    vaultList.vaults.splice(vaultList.vaultSelected, 1);
-    vaultList.vaultSelected = null;
-    saving.state = true;
-    status.loadStatus();
-    ipc.send('vault-list-delete', { action: 'delete', vaultList, fileName: vaultFilename });
-    area.innerHTML = '';
-  });
-  area.appendChild(deleteBtn);
-};
-
 const showAfterLogin = () => {
+  detailActions.clear();
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
@@ -387,6 +220,7 @@ const showAfterLogin = () => {
 
 const showLogin = () => {
   sessionUnlocked = false;
+  detailActions.clear();
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
@@ -431,98 +265,21 @@ const showLogin = () => {
 };
 
 ipc.on('show-settings', () => {
-  if (!sessionUnlocked) return;
-  if (vaultList) {
-    vaultList.vaultSelected = null;
-    listVaults(vaultList.vaults);
-  }
-  if (vaultData) {
-    vaultData.groupSelected = null;
-    vaultData.recordSelected = null;
-    document.getElementById('groupArea').innerHTML = '';
-    document.getElementById('recordArea').innerHTML = '';
-  }
-  showSettings();
+  if (!sessionUnlocked || !settings) return;
+  clearUtilitySelections();
+  settingsUi.show({ settings, saving });
 });
 
 ipc.on('result-save-settings', (_event, params) => {
   saving.state = false;
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
   if (params.settings) settings = params.settings;
-  showSettings();
+  if (settings && sessionUnlocked) settingsUi.show({ settings, saving });
 });
-
-const showSettings = () => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = '';
-  const header = document.createElement('h1');
-  header.textContent = 'Settings';
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-
-  const form = document.createElement('form');
-  form.addEventListener('submit', (event) => event.preventDefault());
-  area.appendChild(form);
-  const formGroup = document.createElement('div');
-  formGroup.className = 'form-group';
-  form.appendChild(formGroup);
-
-  const makeNumber = (id, labelText, value) => {
-    const label = document.createElement('label');
-    label.htmlFor = id;
-    label.textContent = labelText;
-    formGroup.appendChild(label);
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.className = 'form-control';
-    input.id = id;
-    input.value = value;
-    formGroup.appendChild(input);
-    return input;
-  };
-
-  const inputFailAttempts = makeNumber('inputFailAttempts', 'Consecutive login failure attempts per lockout', settings.numFailAttempts);
-  const inputLockoutRetry = makeNumber('inputLockoutRetry', 'Consecutive lockout attempts', settings.numLockoutRetries);
-  const inputBetweenLockout = makeNumber('inputBetweenLockout', 'Minutes to wait between lockouts', settings.minutesToWaitBetweenLockout);
-
-  const warningGroup = document.createElement('div');
-  warningGroup.className = 'form-group';
-  const warning = document.createElement('label');
-  warning.textContent = 'Brute force attack interception can destroy encrypted data after all configured lockouts are exhausted.';
-  warningGroup.appendChild(warning);
-  form.appendChild(warningGroup);
-
-  const saveBtn = document.createElement('button');
-  saveBtn.type = 'submit';
-  saveBtn.id = 'saveBtn';
-  saveBtn.className = 'btn btn-default bottom-space pull-right';
-  saveBtn.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save';
-  saveBtn.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    const clamp = (value, fallback) => {
-      const parsed = Number.parseInt(value, 10);
-      if (!Number.isFinite(parsed)) return fallback;
-      return Math.min(99, Math.max(1, parsed));
-    };
-    saveBtn.disabled = true;
-    saving.state = true;
-    status.loadStatus();
-    ipc.send('save-settings', {
-      newSettings: Object.assign({}, settings, {
-        modified: Date(),
-        numFailAttempts: clamp(inputFailAttempts.value, settings.numFailAttempts),
-        numLockoutRetries: clamp(inputLockoutRetry.value, settings.numLockoutRetries),
-        minutesToWaitBetweenLockout: clamp(inputBetweenLockout.value, settings.minutesToWaitBetweenLockout)
-      })
-    });
-  });
-  form.appendChild(saveBtn);
-  appendDateLine(area, 'Modified', settings.modified);
-};
 
 const showLockScreen = () => {
   sessionUnlocked = false;
+  detailActions.clear();
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
@@ -557,6 +314,7 @@ ipc.on('result-lockout-destroy', (_event, params) => {
 });
 
 const showLockoutDestroy = () => {
+  detailActions.clear();
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
