@@ -2,6 +2,44 @@
 
 const { ipcRenderer: ipc } = require('electron');
 
+const BRUTE_FORCE_MIN = 1;
+const BRUTE_FORCE_MAX = 99;
+let latestSettings = null;
+
+function rememberSettings(params) {
+  if (params && params.settings) latestSettings = Object.assign({}, params.settings);
+}
+
+ipc.on('result-init-system', (_event, params) => rememberSettings(params));
+ipc.on('result', (_event, params) => rememberSettings(params));
+ipc.on('result-save-settings', (_event, params) => rememberSettings(params));
+ipc.on('result-save-install-code', (_event, params) => rememberSettings(params));
+ipc.on('result-lockout-destroy', (_event, params) => rememberSettings(params));
+
+function clampBruteForceValue(value, fallback = BRUTE_FORCE_MIN) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(BRUTE_FORCE_MAX, Math.max(BRUTE_FORCE_MIN, parsed));
+}
+
+function configureBruteForceInput(input) {
+  input.min = String(BRUTE_FORCE_MIN);
+  input.max = String(BRUTE_FORCE_MAX);
+  input.step = '1';
+  input.inputMode = 'numeric';
+
+  const clampCurrent = () => {
+    if (input.value === '') return;
+    input.value = String(clampBruteForceValue(input.value));
+  };
+  input.addEventListener('input', clampCurrent);
+  input.addEventListener('change', clampCurrent);
+  input.addEventListener('blur', () => {
+    input.value = String(clampBruteForceValue(input.value));
+  });
+  clampCurrent();
+}
+
 function createStartupScreen() {
   if (document.getElementById('startupScreen')) return;
 
@@ -103,25 +141,60 @@ function enhanceSettingsScreen() {
   const inputFailAttempts = form.querySelector('#inputFailAttempts');
   const inputLockoutRetry = form.querySelector('#inputLockoutRetry');
   const inputBetweenLockout = form.querySelector('#inputBetweenLockout');
-  const save = form.querySelector('#saveBtn');
-  if (!inputFailAttempts || !inputLockoutRetry || !inputBetweenLockout || !save) return;
+  const legacySave = form.querySelector('#saveBtn');
+  if (!inputFailAttempts || !inputLockoutRetry || !inputBetweenLockout || !legacySave) return;
 
-  // Rebuild the form rather than restyling legacy labels. This guarantees the
-  // old wording cannot reappear when Settings is opened after another view.
+  configureBruteForceInput(inputFailAttempts);
+  configureBruteForceInput(inputLockoutRetry);
+  configureBruteForceInput(inputBetweenLockout);
+
+  // Clone the legacy save button so its historical 3-10 / 15-1440 validation
+  // listener is not carried into the modern Settings screen. The current UI
+  // uses one consistent 1-99 policy for every brute-force configuration value.
+  const save = legacySave.cloneNode(true);
+
   form.innerHTML = '';
   form.className = 'settings-brute-form';
 
   const protectionIntro = document.createElement('p');
   protectionIntro.className = 'settings-section-note settings-section-intro settings-protection-intro';
-  protectionIntro.textContent = 'Configure how SafeLedger responds to repeated failed login attempts. Self-destruct protection can permanently destroy encrypted vault data after all configured lockouts are exhausted.';
+  protectionIntro.textContent = 'Configure how SafeLedger responds to repeated failed login attempts. All brute-force values are limited to whole numbers from 1 to 99. Self-destruct protection can permanently destroy encrypted vault data after all configured lockouts are exhausted.';
 
   form.appendChild(makeField('Failed login attempts before lockout', inputFailAttempts));
   form.appendChild(makeField('Lockouts allowed before self-destruct', inputLockoutRetry));
   form.appendChild(makeField('Lockout duration in minutes', inputBetweenLockout));
 
+  const saveBruteForceSettings = (event) => {
+    if (event) event.preventDefault();
+    if (!latestSettings) {
+      alert('SafeLedger settings are still loading. Please try again.');
+      return;
+    }
+
+    const numFailAttempts = clampBruteForceValue(inputFailAttempts.value, latestSettings.numFailAttempts || 5);
+    const numLockoutRetries = clampBruteForceValue(inputLockoutRetry.value, latestSettings.numLockoutRetries || 5);
+    const minutesToWaitBetweenLockout = clampBruteForceValue(inputBetweenLockout.value, latestSettings.minutesToWaitBetweenLockout || 15);
+
+    inputFailAttempts.value = String(numFailAttempts);
+    inputLockoutRetry.value = String(numLockoutRetries);
+    inputBetweenLockout.value = String(minutesToWaitBetweenLockout);
+
+    save.disabled = true;
+    ipc.send('save-settings', {
+      newSettings: Object.assign({}, latestSettings, {
+        numFailAttempts,
+        numLockoutRetries,
+        minutesToWaitBetweenLockout
+      })
+    });
+  };
+
+  save.type = 'submit';
   save.classList.remove('pull-right');
   save.classList.add('settings-section-save');
   save.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save Brute Force Settings';
+  save.addEventListener('click', saveBruteForceSettings);
+  form.addEventListener('submit', saveBruteForceSettings);
   form.appendChild(save);
 
   const bruteSection = makeSection('Brute Force Protection');
@@ -178,3 +251,5 @@ window.addEventListener('DOMContentLoaded', () => {
   const observer = new MutationObserver(() => enhanceSettingsScreen());
   observer.observe(area, { childList: true, subtree: true });
 });
+
+exports._test = { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, configureBruteForceInput };
