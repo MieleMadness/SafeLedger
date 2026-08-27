@@ -65,9 +65,9 @@ async function run() {
     assert(ui.includes('bruteSection.appendChild(form);'));
 
     const pkg = JSON.parse(read('package.json'));
-    assert.strictEqual(pkg.version, '2.0.43');
+    assert.strictEqual(pkg.version, '2.0.44');
 
-    console.log('PASS SafeLedger 2.0.43 brute-force limits and Settings section order.');
+    console.log('PASS SafeLedger 2.0.44 brute-force limits and Settings section order.');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
