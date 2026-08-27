@@ -249,17 +249,7 @@ ipc.on('record-password-failure', () => {
   recordPasswordFailure().catch(() => sendResult({ status: 'ERROR', statusMsg: 'Unable to update login security state.' }));
 });
 
-ipc.on('save', (evt, params) => {
-  const key = getSessionKey();
-  if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, currentVault), JSON.stringify(params.vaultData), key)
-    .then((val) => sendResult(val === 'SUCCESS'
-      ? { status: 'SUCCESS', statusMsg: 'Save successful' }
-      : { status: 'ERROR', statusMsg: 'Save failed' }))
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
-});
-
-ipc.on('read', (evt, params) => {
+ipc.on('read', (_event, params) => {
   const key = getSessionKey();
   if (!key) return sendLocked();
   vault.readVault(path.join(vaultDir, params.file), key)
@@ -282,7 +272,7 @@ ipc.on('read-vaultlist-init', async () => {
     let valList;
     try {
       valList = await vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
-    } catch (err) {
+    } catch (_) {
       return sendResult({
         status: 'ERROR',
         statusMsg: 'The master password was accepted, but the encrypted vault list could not be authenticated or read. Your failed-login counter was not changed.',
@@ -295,7 +285,6 @@ ipc.on('read-vaultlist-init', async () => {
     settings.lockOutCount = 0;
     settings.lockLogin = false;
     settings.lockLoginTime = 0;
-    delete settings.masterKeyVerifier;
     currentSettings = settings;
     const saved = await settingsManager.saveSettings(settingsDir, settings);
     currentSettings = saved.settings;
@@ -304,7 +293,7 @@ ipc.on('read-vaultlist-init', async () => {
       statusMsg: 'Loaded Successfully',
       type: 'vaultlist-init',
       vaultList: valList,
-      cryptoKey: true,
+      sessionUnlocked: true,
       settings: currentSettings
     });
   } catch (_) {
@@ -312,7 +301,7 @@ ipc.on('read-vaultlist-init', async () => {
   }
 });
 
-ipc.on('process-vault-list', (evt, params) => {
+ipc.on('process-vault-list', (_event, params) => {
   const key = getSessionKey();
   if (!key) return sendLocked();
   let idInfo = null;
@@ -346,7 +335,7 @@ ipc.on('process-vault-list', (evt, params) => {
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
-ipc.on('vault-list-delete', (evt, params) => {
+ipc.on('vault-list-delete', (_event, params) => {
   const key = getSessionKey();
   if (!key) return sendLocked();
   vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), key)
@@ -355,7 +344,7 @@ ipc.on('vault-list-delete', (evt, params) => {
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Delete failed' }));
 });
 
-ipc.on('process-group', (evt, params) => {
+ipc.on('process-group', (_event, params) => {
   const key = getSessionKey();
   if (!key) return sendLocked();
   vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), key)
@@ -363,7 +352,7 @@ ipc.on('process-group', (evt, params) => {
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
-ipc.on('process-record', (evt, params) => {
+ipc.on('process-record', (_event, params) => {
   const key = getSessionKey();
   if (!key) return sendLocked();
   vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), key)
@@ -377,7 +366,8 @@ ipc.on('init-system', () => {
       currentSettings = valSettings.settings;
       buildMenu();
       mainWindow.webContents.send('result-init-system', {
-        keyStatus: 'SUCCESS', settings: valSettings.settings, portableRoot: getPortableRoot()
+        settings: valSettings.settings,
+        portableRoot: getPortableRoot()
       });
     })
     .catch(() => mainWindow.webContents.send('result-init-system', {
@@ -385,7 +375,7 @@ ipc.on('init-system', () => {
     }));
 });
 
-ipc.on('save-settings', (evt, params) => {
+ipc.on('save-settings', (_event, params) => {
   settingsManager.saveSettings(settingsDir, params.newSettings)
     .then((val) => {
       currentSettings = val.settings;

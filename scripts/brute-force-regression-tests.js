@@ -36,12 +36,20 @@ async function run() {
     fs.writeFileSync(path.join(settingsDir, 'settings.json'), JSON.stringify({
       numFailAttempts: -500,
       numLockoutRetries: 1000,
-      minutesToWaitBetweenLockout: -1
+      minutesToWaitBetweenLockout: -1,
+      activationCode: 'FREE',
+      atime: 'legacy',
+      upper: 'legacy',
+      lower: 'legacy',
+      masterKeyVerifier: 'a'.repeat(64)
     }), 'utf8');
     const loaded = await settingsManager.loadSettings(settingsDir);
     assert.strictEqual(loaded.settings.numFailAttempts, 1);
     assert.strictEqual(loaded.settings.numLockoutRetries, 99);
     assert.strictEqual(loaded.settings.minutesToWaitBetweenLockout, 1);
+    for (const retired of ['activationCode', 'atime', 'upper', 'lower', 'masterKeyVerifier']) {
+      assert.strictEqual(Object.prototype.hasOwnProperty.call(loaded.settings, retired), false, `${retired} should be stripped`);
+    }
 
     const ui = read('src/main/settings-enhancements.js');
     assert(ui.includes('const BRUTE_FORCE_MIN = 1;'));
@@ -49,13 +57,15 @@ async function run() {
     assert(ui.includes("input.min = String(BRUTE_FORCE_MIN)"));
     assert(ui.includes("input.max = String(BRUTE_FORCE_MAX)"));
     assert(ui.includes("input.step = '1'"));
+    assert(!ui.includes('result-save-install-code'));
+    assert(!ui.includes('Activation Code'));
 
     const passwordSection = ui.indexOf("const passwordSection = makeSection('Password');");
     const backupSection = ui.indexOf("const backupSection = makeSection('Backup & Recovery');");
     const bruteSection = ui.indexOf("const bruteSection = makeSection('Brute Force Protection');");
     assert(passwordSection >= 0 && backupSection > passwordSection && bruteSection > backupSection);
 
-    console.log('PASS SafeLedger brute-force limits and Settings section order.');
+    console.log('PASS SafeLedger brute-force limits, retired settings cleanup, and Settings section order.');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

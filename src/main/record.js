@@ -2,8 +2,7 @@
   Author: Edward Seufert - Cborgtech, LLC
 */
 
-const electron = require('electron');
-const { ipcRenderer: ipc } = electron;
+const { ipcRenderer: ipc } = require('electron');
 const statusMgr = require('./status');
 const utils = require('./utils');
 const securityUi = require('./security-ui');
@@ -96,7 +95,7 @@ const renderRecords = (params) => {
         e.preventDefault();
         if (params.saving.state) return alert('Please wait for processing to complete');
         params.vaultData.recordSelected = i;
-        renderRecordDetail({ cryptoKey: params.cryptoKey, vaultData: params.vaultData, record: coin, saving: params.saving });
+        renderRecordDetail({ vaultData: params.vaultData, record: coin, saving: params.saving });
         renderRecords(params);
       });
       if (params.vaultData.recordSelected == i) href.className = 'item-selected';
@@ -188,7 +187,6 @@ const createEditRecord = (params) => {
     records.sort(utils.compareIgnoreCase);
     params.vaultData.recordSelected = records.indexOf(rec);
     ipc.send('process-record', {
-      cryptoKey: params.cryptoKey,
       action: params.record ? 'modify' : 'create',
       vaultData: params.vaultData
     });
@@ -294,7 +292,7 @@ const confirmDelete = (params) => {
         params.vaultData.recordSelected = null;
         params.saving.state = true;
         statusMgr.loadStatus();
-        ipc.send('process-record', { cryptoKey: params.cryptoKey, action: 'delete', vaultData: params.vaultData });
+        ipc.send('process-record', { action: 'delete', vaultData: params.vaultData });
         area.innerHTML = '';
         detailActions.clear();
       }

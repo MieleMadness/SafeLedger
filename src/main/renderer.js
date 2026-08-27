@@ -1,410 +1,347 @@
+'use strict';
+
 // SafeLedger trusted UI module. This file is loaded by preload.js in the
 // isolated preload world; the HTML page itself does not receive Node.js APIs.
-/*
-  Author: Edward Seufert - Cborgtech, LLC
-*/
 
-const electron = require('electron');
-const {ipcRenderer : ipc } = electron;
-const crypto = require('crypto');
-const vault = require('./vault');
+const { ipcRenderer: ipc } = require('electron');
 const group = require('./group');
 const record = require('./record');
 const status = require('./status');
 const encryption = require('./encryption');
-const installCodeManager = require('./installManager/installManager/installCodeManager');
 
 let vaultData;
 let vaultList;
-let masterCrypto;
-let installCode;
-let saving = {state:false};
+let sessionUnlocked = false;
+const saving = { state: false };
 let settings;
 
-window.addEventListener('DOMContentLoaded', _ => {
+function requireUnlocked(action) {
+  if (!sessionUnlocked) {
+    status.showStatus({ status: 'ERROR', statusMsg: 'Please login.' });
+    return false;
+  }
+  action();
+  return true;
+}
+
+window.addEventListener('DOMContentLoaded', () => {
   const addVault = document.getElementById('addVault');
   const addGroup = document.getElementById('addGroup');
   const addRecord = document.getElementById('addRecord');
   const groupSearch = document.getElementById('groupSearch');
   const recordSearch = document.getElementById('recordSearch');
-  const encrytionSettings = document.getElementById('encryptionSettings');
-  //const loginBtn = document.getElementById('loginBtn');
-  const detailArea = document.getElementById('detailArea');
+  const encryptionSettings = document.getElementById('encryptionSettings');
 
   initSystem();
 
-  addVault.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      if (masterCrypto != null) {
-        if (vaultList != null) {
-          createEditVault();
-        } else {
-          status.showStatus({status:'ERROR',statusMsg:'Vault list is empty'});
-        }
-      } else {
-        status.showStatus({status:'ERROR',statusMsg:'Please login'});
+  addVault.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    requireUnlocked(() => {
+      if (vaultList) createEditVault();
+      else status.showStatus({ status: 'ERROR', statusMsg: 'Vault list is empty' });
+    });
+  });
+
+  addGroup.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    requireUnlocked(() => {
+      if (vaultList && vaultList.vaultSelected != null) group.createGroup({ vaultData, saving });
+      else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Profile.' });
+    });
+  });
+
+  addRecord.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    requireUnlocked(() => {
+      if (vaultData && vaultData.groupSelected != null) record.createRecord({ vaultData, saving });
+      else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Wallet.' });
+    });
+  });
+
+  groupSearch.addEventListener('keyup', (event) => {
+    event.preventDefault();
+    group.listGroups({ vaultData, saving });
+  });
+
+  recordSearch.addEventListener('keyup', (event) => {
+    event.preventDefault();
+    record.listRecords({ vaultData, saving });
+  });
+
+  encryptionSettings.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    requireUnlocked(() => {
+      if (vaultList) {
+        vaultList.vaultSelected = null;
+        listVaults(vaultList.vaults);
       }
-    }
-  });
-  addGroup.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      if (masterCrypto != null) {
-        if (vaultList != null && vaultList.vaultSelected != null){
-            group.createGroup({vaultData,cryptoKey:masterCrypto,saving});
-        } else {
-          status.showStatus({status:'ERROR',statusMsg:'Please select a Profile.'});
-        }
-      } else {
-        status.showStatus({status:'ERROR',statusMsg:'Please login.'});
+      if (vaultData) {
+        vaultData.groupSelected = null;
+        vaultData.recordSelected = null;
+        document.getElementById('groupArea').innerHTML = '';
+        document.getElementById('recordArea').innerHTML = '';
       }
-    }
-  });
-  addRecord.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      if (masterCrypto != null) {
-        if (vaultData != null && vaultData.groupSelected != null) {
-          record.createRecord({vaultData,cryptoKey:masterCrypto,saving});
-        } else {
-          status.showStatus({status:'ERROR',statusMsg:'Please select a Wallet.'});
-        }
-      } else {
-        status.showStatus({status:'ERROR',statusMsg:'Please login.'});
-      }
-    }
-  });
-  groupSearch.addEventListener('keyup', (e) => {
-    e.preventDefault();
-    group.listGroups({cryptoKey:masterCrypto,vaultData,saving});
-  });
-  recordSearch.addEventListener('keyup', (e) => {
-    e.preventDefault();
-    record.listRecords({cryptoKey:masterCrypto,vaultData,saving});
-  });
-  encrytionSettings.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      if (masterCrypto != null) {
-        if (vaultList != null) {
-          vaultList.vaultSelected = null;
-          listVaults(vaultList.vaults);
-        }
-        if (vaultData != null) {
-          vaultData.groupSelected = null;
-          vaultData.recordSelected = null;
-          const groupArea = document.getElementById('groupArea');
-          groupArea.innerHTML = "";
-          const recordArea = document.getElementById('recordArea');
-          recordArea.innerHTML = "";
-        }
-        encryption.showEncrptionDetail({vaultList,saving});
-      } else {
-        status.showStatus({status:'ERROR',statusMsg:'Please login.'});
-      }
-    }
+      encryption.showEncrptionDetail({ vaultList, saving });
+    });
   });
 });
 
-ipc.on('result',(evt, params) => {
+ipc.on('result', (_event, params) => {
   saving.state = false;
-  if (params.status != null && params.status != ""){
-    status.showStatus({status:params.status,statusMsg:params.statusMsg});
-  }
-  if (params.cryptoKey != null) {
-    masterCrypto = params.cryptoKey;
-  }
-  if (params.settings != null) {
+  if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
+  if (params.sessionUnlocked === true) sessionUnlocked = true;
+  if (params.type === 'session-locked') sessionUnlocked = false;
+
+  if (params.settings) {
     settings = params.settings;
-    if (params.settings.lockLogin) {
-      const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
-      const y = new Date().getTime();
-      if (x > y) {
+    if (settings.lockLogin) {
+      const unlockAt = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+      if (unlockAt > Date.now()) {
+        sessionUnlocked = false;
         showLockScreen();
         return;
       }
     }
   }
-  if (params.type === "vault-delete") {
+
+  if (params.type === 'vault-delete') {
     vaultList.vaultSelected = null;
-    const groupArea = document.getElementById('groupArea');
-    groupArea.innerHTML = "";
+    document.getElementById('groupArea').innerHTML = '';
     listVaults(vaultList.vaults);
   }
+
   const recordArea = document.getElementById('recordArea');
-  if (params.vaultList != null){
+  if (params.vaultList) {
     if (params.type === 'vaultlist-init') {
+      sessionUnlocked = true;
       params.vaultList.vaultSelected = null;
     }
     vaultList = params.vaultList;
-    const vaults = vaultList.vaults;
-    listVaults(vaults);
-    if (params.type === "vault-create"){
-      const groupArea = document.getElementById('groupArea');
-      groupArea.innerHTML = "";
-      recordArea.innerHTML = "";
+    listVaults(vaultList.vaults);
+    if (params.type === 'vault-create') {
+      document.getElementById('groupArea').innerHTML = '';
+      recordArea.innerHTML = '';
     }
-    if (params.vaultList.vaultSelected != null) {
-      showVaultDetail(params.vaultList.vaults[params.vaultList.vaultSelected]);
-    } else {
-      showAfterLogin();
-    }
+    if (vaultList.vaultSelected != null) showVaultDetail(vaultList.vaults[vaultList.vaultSelected]);
+    else showAfterLogin();
   }
-  if (params.vaultData != null){
+
+  if (params.vaultData) {
     vaultData = params.vaultData;
-    if (params.type != null && (params.type === "vault-create" || params.type === "vault-read" || params.type === "group-delete")) {
+    if (['vault-create', 'vault-read', 'group-delete'].includes(params.type)) {
       vaultData.groupSelected = null;
       vaultData.recordSelected = null;
-      recordArea.innerHTML = "";
+      recordArea.innerHTML = '';
     }
-    group.listGroups({cryptoKey:masterCrypto,vaultData,groups:vaultData.groups,saving});
+    group.listGroups({ vaultData, saving });
 
-    if (params.type != null && (params.type === "group-create" || params.type === "group-modify")) {
-      if (params.type === "group-create") {
-        recordArea.innerHTML = "";
-      }
-      if (params.vaultData.groupSelected != null) {
-        let groupSelected = params.vaultData.groups[params.vaultData.groupSelected];
-        if (groupSelected != null) {
-          params.group = groupSelected;
-          params.cryptoKey = masterCrypto;
-          params.saving = saving;
-          group.showGroupDetail(params);
-        }
+    if (params.type === 'group-create' || params.type === 'group-modify') {
+      if (params.type === 'group-create') recordArea.innerHTML = '';
+      if (vaultData.groupSelected != null) {
+        const selected = vaultData.groups[vaultData.groupSelected];
+        if (selected) group.showGroupDetail({ vaultData, group: selected, saving });
       }
     }
 
-    if (params.type != null && params.type === "record") {
-      if (params.vaultData.groupSelected != null) {
-        let theGroup = params.vaultData.groups[params.vaultData.groupSelected];
-        if (theGroup != null && theGroup != "" && theGroup.records != null) {
-          record.listRecords({cryptoKey:masterCrypto,vaultData,records:theGroup.records,saving});
-          if (params.vaultData.recordSelected != null) {
-            let recordSelected = theGroup.records[params.vaultData.recordSelected];
-            if (recordSelected != null) {
-              record.showRecordDetail({cryptoKey:masterCrypto,vaultData,record:recordSelected,saving});
-            }
-          }
+    if (params.type === 'record' && vaultData.groupSelected != null) {
+      const selectedGroup = vaultData.groups[vaultData.groupSelected];
+      if (selectedGroup && Array.isArray(selectedGroup.records)) {
+        record.listRecords({ vaultData, saving });
+        if (vaultData.recordSelected != null) {
+          const selectedRecord = selectedGroup.records[vaultData.recordSelected];
+          if (selectedRecord) record.showRecordDetail({ vaultData, record: selectedRecord, saving });
         }
       }
     }
   }
 });
 
-const initSystem = () => {
-  ipc.send('init-system',"test");
-};
+const initSystem = () => ipc.send('init-system');
 
-ipc.on('result-init-system',(evt, params) => {
+ipc.on('result-init-system', (_event, params) => {
   saving.state = false;
-  if (params.status != null && params.status != ""){
-    status.showStatus({status:params.status,statusMsg:params.statusMsg});
-  }
-  if (params.settings != null) {
+  if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
+  if (params.settings) {
     settings = params.settings;
-    if (params.settings.lockLogin) {
-      const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
-      const y = new Date().getTime();
-      if (x > y) {
+    if (settings.lockLogin) {
+      const unlockAt = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+      if (unlockAt > Date.now()) {
         showLockScreen();
         return;
       }
     }
   }
-
-  if(params.keyStatus === "SUCCESS") {
-    installCode = "good";
-    showLogin();
-  } else {
-    installCode = null;
-    showInstallCode({keyCode:params.keyCode,initialCode:params.initialCode});
-  }
+  showLogin();
 });
 
 const listVaults = (vaults) => {
   const vaultArea = document.getElementById('vaultArea');
-  vaultArea.innerHTML = "";
-  const ul = document.createElement("UL");
-  ul.className = "nav";
-  if (vaults != null) {
-    const vaultsArray = vaultList.vaults;
-    for (let i = 0; i < vaultsArray.length; i++) {
-        const li = document.createElement("LI");
-        ul.appendChild(li);
-        const href = document.createElement("A");
-        href.addEventListener('click', (e) => {
-          e.preventDefault();
-          if (saving.state == true) {
-            alert("Please wait for processing to complete");
-          } else {
-            saving.state = true;
-            status.loadStatus();
-            vaultList.vaultSelected = vaultList.vaults.indexOf(vaultsArray[i]);
-            showVaultDetail(vaults[i]);
-            listVaults(vaultList.vaults);
-            ipc.send('read',{cryptoKey:masterCrypto,type:"vault-read",file:vaultsArray[i].file});
-          }
-        });
-        const firstChar = vaultsArray[i].name.charAt(0).toUpperCase();
-        let nameString = "";
-        if (vaultList.vaultSelected != null && vaultList.vaultSelected == i) {
-          nameString = "<div class='badge-circle badge-selected' style='display:inline-block;'><div class='text-center' style='margin-top:2px;font-size:25px;'>"+firstChar+"</div></div>";
-        } else {
-          nameString = "<div class='badge-circle' style='display:inline-block;'><div class='text-center' style='margin-top:4px;font-size:25px;'>"+firstChar+"</div></div>";
-        }
-        nameString = nameString + "<div style='display:inline-block;'><div style='margin-top:10px; margin-left:10px;'>"+vaultsArray[i].name+"</div></div>";
-        href.innerHTML = nameString;
-        li.appendChild(href);
-    }
-    vaultArea.appendChild(ul);
-  } else {
-    vaultArea.innerHTML = "No items";
+  vaultArea.innerHTML = '';
+  const ul = document.createElement('ul');
+  ul.className = 'nav';
+
+  if (!vaults) {
+    vaultArea.textContent = 'No items';
+    return;
   }
+
+  vaults.forEach((item, index) => {
+    const li = document.createElement('li');
+    const link = document.createElement('a');
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (saving.state) return alert('Please wait for processing to complete');
+      if (!sessionUnlocked) return status.showStatus({ status: 'ERROR', statusMsg: 'Please login.' });
+      saving.state = true;
+      status.loadStatus();
+      vaultList.vaultSelected = index;
+      showVaultDetail(item);
+      listVaults(vaultList.vaults);
+      ipc.send('read', { type: 'vault-read', file: item.file });
+    });
+
+    const badge = document.createElement('div');
+    badge.className = vaultList.vaultSelected === index ? 'badge-circle badge-selected' : 'badge-circle';
+    badge.style.display = 'inline-block';
+    const initial = document.createElement('div');
+    initial.className = 'text-center';
+    initial.style.marginTop = vaultList.vaultSelected === index ? '2px' : '4px';
+    initial.style.fontSize = '25px';
+    initial.textContent = String(item.name || '').charAt(0).toUpperCase();
+    badge.appendChild(initial);
+    link.appendChild(badge);
+
+    const labelWrap = document.createElement('div');
+    labelWrap.style.display = 'inline-block';
+    const label = document.createElement('div');
+    label.style.marginTop = '10px';
+    label.style.marginLeft = '10px';
+    label.textContent = item.name || '';
+    labelWrap.appendChild(label);
+    link.appendChild(labelWrap);
+    li.appendChild(link);
+    ul.appendChild(li);
+  });
+  vaultArea.appendChild(ul);
 };
 
-ipc.on('result-rotate-crypto',(evt, params) => {
+ipc.on('result-rotate-crypto', (_event, params) => {
   saving.state = false;
-  if (params.status != null && params.status != ""){
-    status.showStatus({status:params.status,statusMsg:params.statusMsg});
-  }
-  if (params.status === "SUCCESS") {;
-    vaultList = params.vaultList;
-    masterCrypto = params.cryptoKey;
-    listVaults(vaultList.vaults);
+  if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
+  if (params.status === 'SUCCESS') {
+    sessionUnlocked = params.sessionUnlocked === true;
+    if (params.vaultList) vaultList = params.vaultList;
+    if (vaultList) listVaults(vaultList.vaults);
     showAfterLogin();
   } else {
     const editBtn = document.getElementById('encryptionEditBtn');
-    editBtn.disabled = false;
+    if (editBtn) editBtn.disabled = false;
   }
 });
 
-const createEditVault = (vault) => {
+const createEditVault = (profile) => {
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  if (vault != null) {
-    header.innerHTML = "Modify Profile";
-  } else {
-    header.innerHTML = "Add Profile";
-  }
+  header.textContent = profile ? 'Modify Profile' : 'Add Profile';
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
-  const form = document.createElement('form');
-  area.appendChild(form);
+  area.appendChild(document.createElement('hr'));
 
-  const formgroup = document.createElement('div');
-  formgroup.className = "form-group";
-  form.appendChild(formgroup);
+  const form = document.createElement('form');
+  form.addEventListener('submit', (event) => event.preventDefault());
+  area.appendChild(form);
+  const formGroup = document.createElement('div');
+  formGroup.className = 'form-group';
+  form.appendChild(formGroup);
   const label = document.createElement('label');
-  label.for = "inputName";
-  label.innerHTML = "Name";
-  formgroup.appendChild(label);
+  label.htmlFor = 'inputName';
+  label.textContent = 'Name';
+  formGroup.appendChild(label);
   const input = document.createElement('input');
-  input.type = "text";
-  input.className = "form-control";
-  input.id = "inputName";
-  input.setAttribute('maxlength','25');
-  if (vault != null) {
-    input.value = vault.name;
-  }
-  formgroup.appendChild(input);
+  input.type = 'text';
+  input.className = 'form-control';
+  input.id = 'inputName';
+  input.maxLength = 25;
+  input.value = profile ? profile.name || '' : '';
+  formGroup.appendChild(input);
 
   const saveBtn = document.createElement('button');
-  saveBtn.type = "submit";
-  saveBtn.id = "saveBtn";
-  saveBtn.className = "btn btn-default bottom-space pull-right";
-  saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  saveBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
+  saveBtn.type = 'submit';
+  saveBtn.id = 'saveBtn';
+  saveBtn.className = 'btn btn-default bottom-space pull-right';
+  saveBtn.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save';
+  saveBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    if (!input.value) return;
+    saveBtn.disabled = true;
+    let nextProfile = profile;
+    if (nextProfile) {
+      nextProfile.name = input.value;
+      nextProfile.modified = Date();
     } else {
-      saveBtn.disabled = true;
-      const name = document.getElementById('inputName');
-      if (name != null && name.value != "") {
-        if (vault != null) {
-          vault.name = name.value;
-          vault.modified = Date();
-          saving.state = true;
-          status.loadStatus();
-          ipc.send('process-vault-list', {cryptoKey:masterCrypto,action:"modify",vault,vaultList});
-        } else {
-          vault = {};
-          vault.name = name.value;
-          vault.created = Date();
-          saving.state = true;
-          status.loadStatus();
-          ipc.send('process-vault-list', {cryptoKey:masterCrypto,action:"create",vault,vaultList});
-        }
-      } else {
-        saveBtn.disabled = false;
-      }
+      nextProfile = { name: input.value, created: Date() };
     }
+    saving.state = true;
+    status.loadStatus();
+    ipc.send('process-vault-list', {
+      action: profile ? 'modify' : 'create',
+      vault: nextProfile,
+      vaultList
+    });
   });
   form.appendChild(saveBtn);
 };
 
-const showVaultDetail = (vault) => {
+function appendDateLine(area, label, value) {
+  if (value == null || value === '') return;
+  const p = document.createElement('p');
+  p.className = 'dates';
+  const strong = document.createElement('b');
+  strong.textContent = `${label}: `;
+  p.appendChild(strong);
+  p.appendChild(document.createTextNode(String(value)));
+  area.appendChild(p);
+}
+
+const showVaultDetail = (profile) => {
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  header.innerHTML = vault.name;
+  header.textContent = profile.name || 'Profile';
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
-  const created = document.createElement('p');
-  created.className = "dates";
-  created.innerHTML = "<b>Created:</b> "+vault.created;
-  area.appendChild(created);
-  const modified = document.createElement('p');
-  modified.className = "dates";
-  if (vault.modified != null) {
-    modified.innerHTML = "<b>Modified:</b> "+vault.modified;
-  }
-  area.appendChild(modified);
-  const location = document.createElement('p');
-  location.className = "dates";
-  location.innerHTML = "<b>Location:</b> "+vault.path;
-  area.appendChild(location);
+  area.appendChild(document.createElement('hr'));
+  appendDateLine(area, 'Created', profile.created);
+  appendDateLine(area, 'Modified', profile.modified);
+  appendDateLine(area, 'Location', profile.path);
 
   const deleteBtn = document.createElement('button');
-  deleteBtn.type = "button";
-  deleteBtn.id = "deleteBtn";
-  deleteBtn.className = "btn btn-default bottom-space pull-right";
-  deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Delete";
-  deleteBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      deleteBtn.disabled = true;
-      confirmDelete({vault});
-    }
+  deleteBtn.type = 'button';
+  deleteBtn.id = 'deleteBtn';
+  deleteBtn.className = 'btn btn-default bottom-space pull-right';
+  deleteBtn.innerHTML = '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Delete';
+  deleteBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    deleteBtn.disabled = true;
+    confirmDelete({ vault: profile });
   });
   area.appendChild(deleteBtn);
+
   const editBtn = document.createElement('button');
-  editBtn.type = "button";
-  editBtn.id = "editBtn";
-  editBtn.className = "btn btn-default bottom-space pull-right";
-  editBtn.innerHTML = "<span class='glyphicon glyphicon-edit' aria-hidden='true'></span> Edit";
-  editBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      editBtn.disabled = true;
-      createEditVault(vault);
-    }
+  editBtn.type = 'button';
+  editBtn.id = 'editBtn';
+  editBtn.className = 'btn btn-default bottom-space pull-right';
+  editBtn.innerHTML = '<span class="glyphicon glyphicon-edit" aria-hidden="true"></span> Edit';
+  editBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    editBtn.disabled = true;
+    createEditVault(profile);
   });
   area.appendChild(editBtn);
 };
@@ -412,421 +349,233 @@ const showVaultDetail = (vault) => {
 const confirmDelete = (params) => {
   const vaultFilename = params.vault.file;
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  header.innerHTML = "Confirm delete of profile: "+params.vault.name;
+  header.textContent = `Confirm delete of profile: ${params.vault.name}`;
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
+  area.appendChild(document.createElement('hr'));
 
   const deleteBtn = document.createElement('button');
-  deleteBtn.type = "button";
-  deleteBtn.id = "deleteBtn";
-  deleteBtn.className = "btn btn-default bottom-space pull-right";
-  deleteBtn.innerHTML = "<span class='glyphicon glyphicon-trash' aria-hidden='true'></span> Confirm";
-  deleteBtn.addEventListener('click', (e) => {
-    e.preventDefault();
+  deleteBtn.type = 'button';
+  deleteBtn.id = 'deleteBtn';
+  deleteBtn.className = 'btn btn-default bottom-space pull-right';
+  deleteBtn.innerHTML = '<span class="glyphicon glyphicon-trash" aria-hidden="true"></span> Confirm';
+  deleteBtn.addEventListener('click', (event) => {
+    event.preventDefault();
     deleteBtn.disabled = true;
-    vaultList.vaults.splice(vaultList.vaultSelected,1);
+    vaultList.vaults.splice(vaultList.vaultSelected, 1);
     vaultList.vaultSelected = null;
     saving.state = true;
     status.loadStatus();
-    ipc.send('vault-list-delete', {cryptoKey:masterCrypto,action:"delete",vaultList,fileName:vaultFilename});
-    area.innerHTML = "";
+    ipc.send('vault-list-delete', { action: 'delete', vaultList, fileName: vaultFilename });
+    area.innerHTML = '';
   });
   area.appendChild(deleteBtn);
 };
 
 const showAfterLogin = () => {
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  header.innerHTML = "Welcome to SafeLedger";
+  header.textContent = 'Welcome to SafeLedger';
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
-  const created = document.createElement('p');
-  created.innerHTML = "Please select a profile";
-  area.appendChild(created);
+  area.appendChild(document.createElement('hr'));
+  const text = document.createElement('p');
+  text.textContent = 'Please select a profile';
+  area.appendChild(text);
 };
 
 const showLogin = () => {
+  sessionUnlocked = false;
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  header.innerHTML = "Welcome to SafeLedger";
+  header.textContent = 'Welcome to SafeLedger';
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
+  area.appendChild(document.createElement('hr'));
 
   const form = document.createElement('form');
+  form.addEventListener('submit', (event) => event.preventDefault());
   area.appendChild(form);
-
-  const formgroup = document.createElement('div');
-  formgroup.className = "form-group";
-  form.appendChild(formgroup);
+  const formGroup = document.createElement('div');
+  formGroup.className = 'form-group';
+  form.appendChild(formGroup);
   const label = document.createElement('label');
-  label.for = "masterCryptoInput";
-  label.innerHTML = "Password";
-  formgroup.appendChild(label);
+  label.htmlFor = 'masterCryptoInput';
+  label.textContent = 'Password';
+  formGroup.appendChild(label);
   const input = document.createElement('input');
-  input.type = "password";
-  input.className = "form-control";
-  input.id = "masterCryptoInput";
-  input.setAttribute('maxlength','40');
+  input.type = 'password';
+  input.className = 'form-control';
+  input.id = 'masterCryptoInput';
+  input.maxLength = 128;
+  input.autocomplete = 'off';
+  formGroup.appendChild(input);
 
-  formgroup.appendChild(input);
-  const text2 = document.createElement('p');
-  text2.innerHTML = "Must be 8 characters long.";
-  area.appendChild(text2);
-  const text3 = document.createElement('p');
-  text3.innerHTML = "Must contain numbers and letters";
-  area.appendChild(text3);
-  const text4 = document.createElement('p');
-  text4.innerHTML = "Must contain Uppercase letters";
-  area.appendChild(text4);
-  const saveBtn = document.createElement('button');
-  saveBtn.type = "submit";
-  saveBtn.id = "loginBtn";
-  saveBtn.className = "btn btn-default bottom-space pull-right";
-  saveBtn.innerHTML = "<i class='fa fa-unlock'></i> Login";
-  saveBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      saveBtn.disabled = true;
-      let masterCryptoInput = document.getElementById('masterCryptoInput');
-      let statusCode = true;
-      let statusMsg = "";
-      let rx = new RegExp(/[a-z]/);
-      if (!(rx.test(masterCryptoInput.value))) { statusCode = false; statusMsg='Password must contain at least 1 alpha character' };
-      rx = new RegExp(/[0-9]/);
-      if (!(rx.test(masterCryptoInput.value))) { statusCode = false; statusMsg='Password must contain at least 1 number' };
-      rx = new RegExp(/[A-Z]/);
-      if (!(rx.test(masterCryptoInput.value))) { statusCode = false; statusMsg='Password must contain at least 1 Uppercase letter' };
-      if (!(masterCryptoInput.value.length >= 8)) { statusCode = false; statusMsg='Password must be at least 8 character' };
-      if (statusCode == false){
-        saveBtn.disabled = false;
-        status.showStatus({status:'ERROR',statusMsg});
-      } else {
-        saving.state = true;
-        saveBtn.disabled = false;
-        status.loadStatus();
-        let tempMasterCrypto = crypto.createHmac('sha256',masterCryptoInput.value.split("").reverse().join("")).update(masterCryptoInput.value).digest();
-        ipc.send('read-vaultlist-init',{cryptoKey:tempMasterCrypto,settings});
-        masterCryptoInput.value = "********************";
-      }
-    }
-  });
-  form.appendChild(saveBtn);
+  for (const message of [
+    'Must be at least 8 characters long.',
+    'Must contain at least one number and one lowercase letter.',
+    'Must contain at least one uppercase letter.'
+  ]) {
+    const p = document.createElement('p');
+    p.textContent = message;
+    area.appendChild(p);
+  }
+
+  const loginBtn = document.createElement('button');
+  loginBtn.type = 'submit';
+  loginBtn.id = 'loginBtn';
+  loginBtn.className = 'btn btn-default bottom-space pull-right';
+  loginBtn.innerHTML = '<i class="fa fa-unlock"></i> Login';
+  form.appendChild(loginBtn);
 };
 
-const showInstallCode = (params) => {
-  const area = document.getElementById('detailArea');
-  area.innerHTML = "";
-  const header = document.createElement('h1');
-  header.innerHTML = "Welcome to SafeLedger";
-  area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
-  const form = document.createElement('form');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-  });
-  area.appendChild(form);
-  const formgroup = document.createElement('div');
-  formgroup.className = "form-group";
-  form.appendChild(formgroup);
-  const labelCode = document.createElement('label');
-  labelCode.for = "inputCode";
-  labelCode.innerHTML = "Copy code to activation manager.";
-  formgroup.appendChild(labelCode);
-  const inputCode = document.createElement('textarea');
-  inputCode.rows = "5";
-  inputCode.className = "form-control";
-  inputCode.setAttribute('maxlength','500');
-  inputCode.id = "inputCode";
-  inputCode.innerHTML = params.keyCode;
-  formgroup.appendChild(inputCode);
-
-  const label = document.createElement('label');
-  label.for = "inputInstallCode";
-  label.innerHTML = "Please enter activation code";
-  formgroup.appendChild(label);
-  const input = document.createElement('input');
-  input.type = "text";
-  input.className = "form-control";
-  input.id = "inputInstallCode";
-  input.setAttribute('maxlength','200');
-  formgroup.appendChild(input);
-
-  const saveBtn = document.createElement('button');
-  saveBtn.type = "submit";
-  saveBtn.id = "saveBtn";
-  saveBtn.className = "btn btn-default bottom-space pull-right";
-  saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  saveBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      saveBtn.disabled = true;
-      const installCodeField = document.getElementById('inputInstallCode');
-      if (installCodeField != null && installCodeField.value != "") {
-        const s = installCodeManager.getInstallCode(params.initialCode);
-        if (s == installCodeField.value) {
-          const k = JSON.parse(params.initialCode);
-          let mySettings = Object.assign({},settings);
-          mySettings.modified = Date();
-          mySettings.atime = k.atime;
-          mySettings.upper = k.upper;
-          mySettings.lower = k.lower;
-          mySettings.activationCode = s;
-          saving.state = true;
-          status.loadStatus();
-          ipc.send('save-install-code', {newSettings:mySettings,keyCode:params.keyCode,initialCode:params.initialCode});
-        } else {
-          alert("Invalid Activation code");
-          saveBtn.disabled = false;
-        }
-      } else {
-        saveBtn.disabled = false;
-      }
-    }
-  });
-  form.appendChild(saveBtn);
-};
-
-ipc.on('result-save-install-code',(evt, params) => {
-  saving.state = false;
-  if (params.status != null && params.status != ""){
-    status.showStatus({status:params.status,statusMsg:params.statusMsg});
+ipc.on('show-settings', () => {
+  if (!sessionUnlocked) return;
+  if (vaultList) {
+    vaultList.vaultSelected = null;
+    listVaults(vaultList.vaults);
   }
-  if (params.settings != null) {
-    settings = params.settings;
+  if (vaultData) {
+    vaultData.groupSelected = null;
+    vaultData.recordSelected = null;
+    document.getElementById('groupArea').innerHTML = '';
+    document.getElementById('recordArea').innerHTML = '';
   }
-  if(params.status === "SUCCESS") {
-    installCode = params.keyCode;
-    showLogin();
-  } else {
-    installCode = null;
-    showInstallCode({keyCode:params.keyCode,initialCode:params.initialCode});
-  }
-});
-
-ipc.on('show-settings',(evt, params) => {
-  if (masterCrypto != null) {
-    if (vaultList != null) {
-      vaultList.vaultSelected = null;
-      listVaults(vaultList.vaults);
-    }
-    if (vaultData != null) {
-      vaultData.groupSelected = null;
-      vaultData.recordSelected = null;
-      const groupArea = document.getElementById('groupArea');
-      groupArea.innerHTML = "";
-      const recordArea = document.getElementById('recordArea');
-      recordArea.innerHTML = "";
-    }
-      showSettings();
-  }
-});
-
-ipc.on('result-save-settings',(evt, params) => {
-  saving.state = false;
-  if (params.status != null && params.status != ""){
-    status.showStatus({status:params.status,statusMsg:params.statusMsg});
-  }
-  settings = params.settings;
   showSettings();
 });
 
-const showSettings = (params) => {
+ipc.on('result-save-settings', (_event, params) => {
+  saving.state = false;
+  if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
+  if (params.settings) settings = params.settings;
+  showSettings();
+});
+
+const showSettings = () => {
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  header.innerHTML = "Settings";
+  header.textContent = 'Settings';
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
-  const activation = document.createElement('p');
-  activation.className = "dates";
-  activation.innerHTML = "<b>Activation Code:</b> "+settings.activationCode;
-  area.appendChild(activation);
+  area.appendChild(document.createElement('hr'));
+
   const form = document.createElement('form');
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-  });
+  form.addEventListener('submit', (event) => event.preventDefault());
   area.appendChild(form);
-  const formgroup = document.createElement('div');
-  formgroup.className = "form-group";
-  form.appendChild(formgroup);
-  const labelFailAttempts = document.createElement('label');
-  labelFailAttempts.for = "inputFailAttempts";
-  labelFailAttempts.innerHTML = "Consecutive login failure attempts per lockout (Limited 3 to 10)";
-  formgroup.appendChild(labelFailAttempts);
-  const inputFailAttempts = document.createElement('input');
-  inputFailAttempts.type = "number";
-  inputFailAttempts.className = "form-control";
-  inputFailAttempts.id = "inputFailAttempts";
-  inputFailAttempts.value = settings.numFailAttempts;
-  formgroup.appendChild(inputFailAttempts);
+  const formGroup = document.createElement('div');
+  formGroup.className = 'form-group';
+  form.appendChild(formGroup);
 
-  const labelLockoutRetry = document.createElement('label');
-  labelLockoutRetry.for = "inputLockoutRetry";
-  labelLockoutRetry.innerHTML = "Consecutive lockout attempts (Limited 3 to 10)";
-  formgroup.appendChild(labelLockoutRetry);
-  const inputLockoutRetry = document.createElement('input');
-  inputLockoutRetry.type = "number";
-  inputLockoutRetry.className = "form-control";
-  inputLockoutRetry.id = "inputLockoutRetry";
-  inputLockoutRetry.value = settings.numLockoutRetries;
-  formgroup.appendChild(inputLockoutRetry);
+  const makeNumber = (id, labelText, value) => {
+    const label = document.createElement('label');
+    label.htmlFor = id;
+    label.textContent = labelText;
+    formGroup.appendChild(label);
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.className = 'form-control';
+    input.id = id;
+    input.value = value;
+    formGroup.appendChild(input);
+    return input;
+  };
 
-  const labelBetweenLockout = document.createElement('label');
-  labelBetweenLockout.for = "inputBetweenLockout";
-  labelBetweenLockout.innerHTML = "Minutes to wait between lockouts (Limited 15 to 1440(24hr))";
-  formgroup.appendChild(labelBetweenLockout);
-  const inputBetweenLockout = document.createElement('input');
-  inputBetweenLockout.type = "number";
-  inputBetweenLockout.className = "form-control";
-  inputBetweenLockout.id = "inputBetweenLockout";
-  inputBetweenLockout.value = settings.minutesToWaitBetweenLockout;
-  formgroup.appendChild(inputBetweenLockout);
+  const inputFailAttempts = makeNumber('inputFailAttempts', 'Consecutive login failure attempts per lockout', settings.numFailAttempts);
+  const inputLockoutRetry = makeNumber('inputLockoutRetry', 'Consecutive lockout attempts', settings.numLockoutRetries);
+  const inputBetweenLockout = makeNumber('inputBetweenLockout', 'Minutes to wait between lockouts', settings.minutesToWaitBetweenLockout);
 
-  const formGroupScrubContent = document.createElement('div');
-  formGroupScrubContent.className = "form-group";
-  form.appendChild(formGroupScrubContent);
-  const labelScrubContent = document.createElement('label');
-  labelScrubContent.for = "inputScrubContent";
-  labelScrubContent.innerHTML = "*** Brute force attack interception enabled - Destroy data after all lockouts have been exhausted ***";
-  formGroupScrubContent.appendChild(labelScrubContent);
+  const warningGroup = document.createElement('div');
+  warningGroup.className = 'form-group';
+  const warning = document.createElement('label');
+  warning.textContent = 'Brute force attack interception can destroy encrypted data after all configured lockouts are exhausted.';
+  warningGroup.appendChild(warning);
+  form.appendChild(warningGroup);
 
   const saveBtn = document.createElement('button');
-  saveBtn.type = "submit";
-  saveBtn.id = "saveBtn";
-  saveBtn.className = "btn btn-default bottom-space pull-right";
-  saveBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  saveBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      saveBtn.disabled = true;
-
-      let statusCode = true;
-      let statusMsg = "";
-      rx = new RegExp(/^[1-9]?\d$/);
-      if (!(rx.test(inputFailAttempts.value)) || inputFailAttempts.value < 3 || inputFailAttempts.value > 10) { statusCode = false; statusMsg='Login failures must be a number greater than 3 less than 10' };
-      if (!(rx.test(inputLockoutRetry.value)) || inputLockoutRetry.value < 2 || inputLockoutRetry.value > 5) { statusCode = false; statusMsg='Lockout retires must be a number greater than 2 less than 5' };
-      rx = new RegExp(/^[1-9]?\d{1,3}$/);
-      if (!(rx.test(inputBetweenLockout.value))) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 1440' };
-      if (!(inputBetweenLockout.value >= 15 && inputBetweenLockout.value <= 1440)) { statusCode = false; statusMsg='Minutes must be a number greater than 15 less than 1440' };
-      if (statusCode == false){
-        saveBtn.disabled = false;
-        status.showStatus({status:'ERROR',statusMsg});
-      } else {
-        saving.state = true;
-        saveBtn.disabled = false;
-        status.loadStatus();
-        let mySettings = Object.assign({},settings);
-        mySettings.numFailAttempts = parseInt(inputFailAttempts.value);
-        mySettings.modified = Date();
-        mySettings.numLockoutRetries = parseInt(inputLockoutRetry.value);
-        mySettings.minutesToWaitBetweenLockout = parseInt(inputBetweenLockout.value);
-        saving.state = true;
-        status.loadStatus();
-        ipc.send('save-settings', {newSettings:mySettings});
-      }
-    }
+  saveBtn.type = 'submit';
+  saveBtn.id = 'saveBtn';
+  saveBtn.className = 'btn btn-default bottom-space pull-right';
+  saveBtn.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save';
+  saveBtn.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    const clamp = (value, fallback) => {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isFinite(parsed)) return fallback;
+      return Math.min(99, Math.max(1, parsed));
+    };
+    saveBtn.disabled = true;
+    saving.state = true;
+    status.loadStatus();
+    ipc.send('save-settings', {
+      newSettings: Object.assign({}, settings, {
+        modified: Date(),
+        numFailAttempts: clamp(inputFailAttempts.value, settings.numFailAttempts),
+        numLockoutRetries: clamp(inputLockoutRetry.value, settings.numLockoutRetries),
+        minutesToWaitBetweenLockout: clamp(inputBetweenLockout.value, settings.minutesToWaitBetweenLockout)
+      })
+    });
   });
   form.appendChild(saveBtn);
-  const modified = document.createElement('p');
-  modified.className = "dates";
-  if (settings.modified != null) {
-    modified.innerHTML = "<b>Modified:</b> "+settings.modified;
-  }
-  area.appendChild(modified);
+  appendDateLine(area, 'Modified', settings.modified);
 };
 
 const showLockScreen = () => {
+  sessionUnlocked = false;
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  let t = settings.minutesToWaitBetweenLockout + " minutes.";
-  if (settings.minutesToWaitBetweenLockout > 59) {
-    const hours = settings.minutesToWaitBetweenLockout % 60;
-    const min = (hours * 60) - settings.minutesToWaitBetweenLockout;
-    t = hours + " hours " + min + " minutes.";
-  }
-  header.innerHTML = "Account is locked for " + t;
+  header.textContent = `Account is locked for ${settings.minutesToWaitBetweenLockout} minutes.`;
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
-  const created = document.createElement('p');
-  let x = new Date();
-  x.setTime(settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000));
-  created.innerHTML = "Try again after " + x;
-  area.appendChild(created);
-  const saveBtn = document.createElement('button');
-  saveBtn.type = "submit";
-  saveBtn.id = "saveBtn";
-  saveBtn.className = "btn btn-default bottom-space pull-right";
-  saveBtn.innerHTML = "<span class='fa fa-unlock' aria-hidden='true'></span> Retry Login";
-  saveBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      if (settings.lockLogin) {
-        const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
-        const y = new Date().getTime();
-        if (x > y) {
-          alert("Lock timeout is still active");
-        } else {
-          showLogin();
-        }
-      }
-    }
+  area.appendChild(document.createElement('hr'));
+  const retry = document.createElement('p');
+  const unlockAt = new Date(settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000));
+  retry.textContent = `Try again after ${unlockAt}`;
+  area.appendChild(retry);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'saveBtn';
+  button.className = 'btn btn-default bottom-space pull-right';
+  button.innerHTML = '<span class="fa fa-unlock" aria-hidden="true"></span> Retry Login';
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (saving.state) return alert('Please wait for processing to complete');
+    const unlockTime = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+    if (settings.lockLogin && unlockTime > Date.now()) alert('Lock timeout is still active');
+    else showLogin();
   });
-  area.appendChild(saveBtn);
+  area.appendChild(button);
 };
 
-ipc.on('result-lockout-destroy',(evt, params) => {
+ipc.on('result-lockout-destroy', (_event, params) => {
   saving.state = false;
-  if (params.status != null && params.status != ""){
-    status.showStatus({status:params.status,statusMsg:params.statusMsg});
-  }
-  settings = params.settings;
+  sessionUnlocked = false;
+  if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
+  if (params.settings) settings = params.settings;
   showLockoutDestroy();
 });
 
 const showLockoutDestroy = () => {
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  header.innerHTML = "System lockout";
+  header.textContent = 'System lockout';
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
-  const created = document.createElement('p');
-  let x = "<b>You have exceeded your password attempts and the system brute force attack interception has been executed. ";
-  x = x + "The data on this system has been destroyed. The next login will accept a new password and will create a new initial system setup.</b>";
-  created.innerHTML = x;
-  area.appendChild(created);
-  const saveBtn = document.createElement('button');
-  saveBtn.type = "submit";
-  saveBtn.id = "saveBtn";
-  saveBtn.className = "btn btn-default bottom-space pull-right";
-  saveBtn.innerHTML = "<span class='fa fa-unlock' aria-hidden='true'></span> Go to Login";
-  saveBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      showLogin();
-    }
+  area.appendChild(document.createElement('hr'));
+  const text = document.createElement('p');
+  const strong = document.createElement('b');
+  strong.textContent = 'You have exceeded your password attempts and SafeLedger self-destruct protection has destroyed the encrypted vault data. The next login will create a new initial system setup.';
+  text.appendChild(strong);
+  area.appendChild(text);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.id = 'saveBtn';
+  button.className = 'btn btn-default bottom-space pull-right';
+  button.innerHTML = '<span class="fa fa-unlock" aria-hidden="true"></span> Go to Login';
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (!saving.state) showLogin();
   });
-  area.appendChild(saveBtn);
+  area.appendChild(button);
 };

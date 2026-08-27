@@ -92,20 +92,32 @@ function validateEnvelope(envelope) {
     && !Object.prototype.hasOwnProperty.call(envelope, 'migration');
 }
 
-async function createEnvelope(password, dataKey = crypto.randomBytes(KEY_BYTES)) {
+async function createEnvelope(password, dataKey = null) {
+  const workingDataKey = dataKey == null ? crypto.randomBytes(KEY_BYTES) : Buffer.from(dataKey);
+  if (workingDataKey.length !== KEY_BYTES) {
+    workingDataKey.fill(0);
+    throw new Error('SafeLedger data key has an invalid length.');
+  }
+
   const kdf = defaultKdf();
   const kek = await argon2id(password, kdf);
-  const envelope = {
-    format: 'safeledger-key-envelope',
-    version: CRYPTO_VERSION,
-    created: new Date().toISOString(),
-    modified: new Date().toISOString(),
-    kdf,
-    kekVerifier: verifierForKek(kek),
-    wrappedKey: wrapDataKey(kek, dataKey)
-  };
-  kek.fill(0);
-  return { envelope, dataKey: Buffer.from(dataKey) };
+  try {
+    const envelope = {
+      format: 'safeledger-key-envelope',
+      version: CRYPTO_VERSION,
+      created: new Date().toISOString(),
+      modified: new Date().toISOString(),
+      kdf,
+      kekVerifier: verifierForKek(kek),
+      wrappedKey: wrapDataKey(kek, workingDataKey)
+    };
+    return { envelope, dataKey: workingDataKey };
+  } catch (err) {
+    workingDataKey.fill(0);
+    throw err;
+  } finally {
+    kek.fill(0);
+  }
 }
 
 async function unlockEnvelope(password, envelope) {
@@ -143,10 +155,13 @@ async function unlockEnvelope(password, envelope) {
 async function rewrapEnvelope(oldPassword, newPassword, envelope) {
   const unlocked = await unlockEnvelope(oldPassword, envelope);
   if (!unlocked.ok) return unlocked;
-  const created = await createEnvelope(newPassword, unlocked.dataKey);
-  unlocked.dataKey.fill(0);
-  created.envelope.created = envelope.created || created.envelope.created;
-  return { ok: true, envelope: created.envelope, dataKey: created.dataKey };
+  try {
+    const created = await createEnvelope(newPassword, unlocked.dataKey);
+    created.envelope.created = envelope.created || created.envelope.created;
+    return { ok: true, envelope: created.envelope, dataKey: created.dataKey };
+  } finally {
+    unlocked.dataKey.fill(0);
+  }
 }
 
 exports.CRYPTO_VERSION = CRYPTO_VERSION;

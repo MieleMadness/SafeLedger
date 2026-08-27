@@ -13,7 +13,6 @@ function rememberSettings(params) {
 ipc.on('result-init-system', (_event, params) => rememberSettings(params));
 ipc.on('result', (_event, params) => rememberSettings(params));
 ipc.on('result-save-settings', (_event, params) => rememberSettings(params));
-ipc.on('result-save-install-code', (_event, params) => rememberSettings(params));
 ipc.on('result-lockout-destroy', (_event, params) => rememberSettings(params));
 
 function clampBruteForceValue(value, fallback = BRUTE_FORCE_MIN) {
@@ -134,10 +133,6 @@ function enhanceSettingsScreen() {
   const form = area.querySelector('form');
   if (!form) return;
 
-  Array.from(area.querySelectorAll('p')).forEach((p) => {
-    if (/activation\s*code/i.test(p.textContent || '')) p.remove();
-  });
-
   const inputFailAttempts = form.querySelector('#inputFailAttempts');
   const inputLockoutRetry = form.querySelector('#inputLockoutRetry');
   const inputBetweenLockout = form.querySelector('#inputBetweenLockout');
@@ -148,9 +143,8 @@ function enhanceSettingsScreen() {
   configureBruteForceInput(inputLockoutRetry);
   configureBruteForceInput(inputBetweenLockout);
 
-  // Clone the legacy save button so its historical 3-10 / 15-1440 validation
-  // listener is not carried into the modern Settings screen. The current UI
-  // uses one consistent 1-99 policy for every brute-force configuration value.
+  // Clone the base renderer button to keep only the current 1-99 validation
+  // policy used by this Settings screen.
   const save = legacySave.cloneNode(true);
 
   form.innerHTML = '';
@@ -200,7 +194,7 @@ function enhanceSettingsScreen() {
   const passwordSection = makeSection('Password');
   const passwordNote = document.createElement('p');
   passwordNote.className = 'settings-section-note settings-section-intro';
-  passwordNote.textContent = 'Change the master password used to unlock and encrypt your SafeLedger vaults. You will need your current password to complete the change.';
+  passwordNote.textContent = 'Change the master password used to unlock your SafeLedger vaults. You will need your current password to complete the change.';
   passwordSection.appendChild(passwordNote);
 
   const changePassword = document.createElement('button');
@@ -236,9 +230,6 @@ function enhanceSettingsScreen() {
   const bruteSection = makeSection('Brute Force Protection');
   bruteSection.appendChild(protectionIntro);
 
-  // Insert the three Settings sections while the legacy form is still a
-  // direct child of the detail area. This keeps the requested visual order
-  // deterministic and avoids using a nested form as insertBefore's reference.
   area.insertBefore(passwordSection, form);
   area.insertBefore(backupSection, form);
   area.insertBefore(bruteSection, form);

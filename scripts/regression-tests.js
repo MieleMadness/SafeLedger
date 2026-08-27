@@ -14,8 +14,6 @@ Module._load = function patchedLoad(request, parent, isMain) {
 };
 
 const runtimeUtils = require('../src/main/runtime-utils');
-const masterKeyVerifier = require('../src/main/master-key-verifier');
-const loginFailurePolicy = require('../src/main/login-failure-policy');
 const robustVault = require('../src/main/robust-vault');
 const encryption = require('../src/main/encryption');
 
@@ -121,16 +119,12 @@ async function run() {
       assert.strictEqual(list.vaults.length, 1);
     });
 
-    await check('authenticated vault tampering is classified as corruption with the verified key', async () => {
+    await check('authenticated vault tampering cannot be decrypted', async () => {
       const file = path.join(vaultDir, 'vaultlist.json');
       const original = fs.readFileSync(file, 'utf8');
       const last = original[original.length - 1];
       fs.writeFileSync(file, `${original.slice(0, -1)}${last === '0' ? '1' : '0'}`, 'utf8');
-      const err = await expectRejectType(robustVault.readVaultList(file, key), 'password-or-corrupt');
-      const verifier = masterKeyVerifier.createMasterKeyVerifier(key);
-      const classification = loginFailurePolicy.classifyVaultListFailure(err, key, { masterKeyVerifier: verifier });
-      assert.strictEqual(classification.failure.type, 'vault-corrupt');
-      assert.strictEqual(classification.countPasswordFailure, false);
+      await expectRejectType(robustVault.readVaultList(file, key), 'password-or-corrupt');
       fs.writeFileSync(file, original);
     });
 
@@ -139,7 +133,7 @@ async function run() {
       assert.deepStrictEqual(robustVault.nextVaultFileName({ vaults: [{}] }), { id: 0, fileName: 'zvault-0.json' });
     });
 
-    await check('wrong data key remains ambiguous for password policy classification', async () => {
+    await check('wrong data key cannot authenticate the encrypted vault list', async () => {
       await expectRejectType(robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), wrongKey), 'password-or-corrupt');
     });
 
@@ -151,32 +145,22 @@ async function run() {
       fs.writeFileSync(file, original);
     });
 
-    await check('valid ciphertext with damaged JSON is corruption with verified key', async () => {
+    await check('valid ciphertext with damaged JSON cannot be accepted as a vault list', async () => {
       const file = path.join(vaultDir, 'vaultlist.json');
       const original = fs.readFileSync(file, 'utf8');
       fs.writeFileSync(file, encryption.encrypt(key, '{broken-json'));
-      const err = await expectRejectType(robustVault.readVaultList(file, key), 'password-or-corrupt');
-      const verifier = masterKeyVerifier.createMasterKeyVerifier(key);
-      const classification = loginFailurePolicy.classifyVaultListFailure(err, key, { masterKeyVerifier: verifier });
-      assert.strictEqual(classification.failure.type, 'vault-corrupt');
-      assert.strictEqual(classification.countPasswordFailure, false);
+      await expectRejectType(robustVault.readVaultList(file, key), 'password-or-corrupt');
       fs.writeFileSync(file, original);
     });
 
-    await check('wrong password increments only when verifier proves the key is wrong', async () => {
-      const verifier = masterKeyVerifier.createMasterKeyVerifier(key);
-      const classification = loginFailurePolicy.classifyVaultListFailure(
-        { status: 'ERROR', type: 'password-or-corrupt' }, wrongKey, { masterKeyVerifier: verifier }
-      );
-      assert.strictEqual(classification.failure.type, 'password-failed');
-      assert.strictEqual(classification.countPasswordFailure, true);
-    });
-
-    await check('unreadable/corrupt vault failures never count as password failures', async () => {
-      const classification = loginFailurePolicy.classifyVaultListFailure(
-        { status: 'ERROR', type: 'vault-read-error' }, key, {}
-      );
-      assert.strictEqual(classification.countPasswordFailure, false);
+    await check('runtime separates password failure from vault corruption before vault read', async () => {
+      const mainSource = fs.readFileSync(path.join(__dirname, '../src/main/main.js'), 'utf8');
+      const bridgeSource = fs.readFileSync(path.join(__dirname, '../src/main/crypto-ui-bridge.js'), 'utf8');
+      assert(mainSource.includes("ipc.on('record-password-failure'"));
+      assert(bridgeSource.includes("unlocked.type === 'password-failed'"));
+      assert(bridgeSource.includes("ipc.send('record-password-failure')"));
+      assert(mainSource.includes("type: 'vault-corrupt'"));
+      assert(mainSource.includes('Your failed-login counter was not changed.'));
     });
 
     await check('atomic authenticated vault save leaves readable final file and no temp file', async () => {
@@ -189,6 +173,8 @@ async function run() {
       assert.deepStrictEqual(leftovers, []);
     });
   } finally {
+    key.fill(0);
+    wrongKey.fill(0);
     fs.rmSync(root, { recursive: true, force: true });
   }
 

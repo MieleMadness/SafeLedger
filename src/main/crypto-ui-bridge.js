@@ -98,13 +98,13 @@ async function handlePasswordChange(button) {
       return failButton(button, (changed && changed.message) || 'Password change failed');
     }
 
-    // Compatibility event for the current renderer. `cryptoKey: true` is only
-    // an unlocked-session marker; no key bytes ever leave the main process.
+    // Compatibility event for the current password-change screen. It carries
+    // only session state and never any key bytes.
     ipc.emit('result-rotate-crypto', {}, {
       status: 'SUCCESS',
       statusMsg: changed.statusMsg,
       vaultList: latestVaultList,
-      cryptoKey: true
+      sessionUnlocked: true
     });
   } catch (err) {
     oldInput.value = '';

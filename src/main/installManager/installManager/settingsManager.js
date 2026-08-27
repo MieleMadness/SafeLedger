@@ -11,7 +11,6 @@ const defaults = () => ({
   formatVersion: 2,
   created: new Date().toISOString(),
   modified: new Date().toISOString(),
-  activationCode: 'FREE',
   failAttemptCount: 0,
   numFailAttempts: 5,
   lockOutCount: 0,
@@ -38,7 +37,17 @@ function normalizeCounter(value, fallback = 0) {
 
 function normalizeSettings(settings, now = Date.now()) {
   const baseDefaults = defaults();
-  const next = Object.assign({}, baseDefaults, settings || {}, { activationCode: 'FREE' });
+  const next = Object.assign({}, baseDefaults, settings || {});
+
+  // SafeLedger 2.x is free and password verification now belongs to the
+  // Argon2id key envelope. Strip retired licensing/verifier fields when an
+  // older 2.x settings file is normalized.
+  delete next.activationCode;
+  delete next.atime;
+  delete next.upper;
+  delete next.lower;
+  delete next.masterKeyVerifier;
+
   next.numFailAttempts = clampBruteForceValue(next.numFailAttempts, baseDefaults.numFailAttempts);
   next.numLockoutRetries = clampBruteForceValue(next.numLockoutRetries, baseDefaults.numLockoutRetries);
   next.minutesToWaitBetweenLockout = clampBruteForceValue(next.minutesToWaitBetweenLockout, baseDefaults.minutesToWaitBetweenLockout);

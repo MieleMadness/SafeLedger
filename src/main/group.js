@@ -2,8 +2,7 @@
   Author: Edward Seufert - Cborgtech, LLC
 */
 
-const electron = require('electron');
-const { ipcRenderer: ipc } = electron;
+const { ipcRenderer: ipc } = require('electron');
 const statusMgr = require('./status');
 const record = require('./record');
 const utils = require('./utils');
@@ -74,9 +73,9 @@ const renderGroups = (params) => {
         if (params.saving.state) return alert('Please wait for processing to complete');
         params.vaultData.groupSelected = i;
         params.vaultData.recordSelected = null;
-        renderGroupDetail({ cryptoKey: params.cryptoKey, vaultData: params.vaultData, group: current, saving: params.saving });
-        renderGroups({ cryptoKey: params.cryptoKey, vaultData: params.vaultData, groups: params.vaultData.groups, saving: params.saving });
-        record.listRecords({ cryptoKey: params.cryptoKey, vaultData: params.vaultData, records: current.records, saving: params.saving });
+        renderGroupDetail({ vaultData: params.vaultData, group: current, saving: params.saving });
+        renderGroups({ vaultData: params.vaultData, saving: params.saving });
+        record.listRecords({ vaultData: params.vaultData, saving: params.saving });
       });
       if (params.vaultData.groupSelected == i) href.className = 'item-selected';
 
@@ -170,7 +169,6 @@ const createEditGroup = (params) => {
     params.saving.state = true;
     statusMgr.loadStatus();
     ipc.send('process-group', {
-      cryptoKey: params.cryptoKey,
       type: params.group ? 'group-modify' : 'group-create',
       vaultData: params.vaultData
     });
@@ -273,7 +271,7 @@ const confirmDelete = (params) => {
         params.vaultData.recordSelected = null;
         params.saving.state = true;
         statusMgr.loadStatus();
-        ipc.send('process-group', { cryptoKey: params.cryptoKey, type: 'group-delete', vaultData: params.vaultData });
+        ipc.send('process-group', { type: 'group-delete', vaultData: params.vaultData });
         area.innerHTML = '';
         detailActions.clear();
       }
