@@ -16,6 +16,7 @@ execFileSync(process.execPath, ['--check', securityPath], { stdio: 'pipe' });
 const index = read('src/main/index.html');
 const layout = read('src/main/edit-form-grid-enhancements.js');
 const security = read('src/main/edit-security-enhancements.js');
+const securityUi = read('src/main/security-ui.js');
 const css = read('src/main/css/2.0.39.css');
 const record = read('src/main/record.js');
 
@@ -50,6 +51,12 @@ assert(!security.includes('fa-qrcode'));
 assert(security.includes("securityUi.appendSensitiveField(area, 'Balance', value)"));
 assert(security.includes("field.label === 'Balance'"));
 
+assert(security.includes("const VIEW_COPY_ONLY_LABELS = new Set(['Balance', 'Password', 'PIN code', 'Recovery link', 'Seed phrase']);"));
+assert(security.includes("wrapper.querySelectorAll('.qr-inline-button, .compact-qr-area')"));
+assert(security.includes('restrictViewQr(area);'));
+assert(securityUi.includes("actions.appendChild(makeIconButton('fa-copy', copyHandler, 'Copy'))"));
+assert(securityUi.includes("makeQrButton(qrValueGetter, qrArea, qrCaption, onQrOpen)"));
+
 assert(css.includes('.safeledger-edit-form .compact-qr-area'));
 assert(css.includes('display: none !important'));
 assert(css.includes('.edit-sensitive-actions'));
@@ -60,4 +67,4 @@ assert(record.includes("addLine('Balance',params.record.manualBalance)"));
 assert(record.includes("{label:'Balance',value:params.record.manualBalance}"));
 assert(!record.includes('Last known balance'));
 
-console.log('PASS SafeLedger 2.0.39 edit-only security and private Balance regression checks.');
+console.log('PASS SafeLedger 2.0.40 QR restrictions and private Balance regression checks.');

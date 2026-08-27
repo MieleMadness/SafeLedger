@@ -11,6 +11,8 @@ const EDIT_SENSITIVE_FIELDS = [
   { id: 'inputSeedPhrase', label: 'seed phrase' }
 ];
 
+const VIEW_COPY_ONLY_LABELS = new Set(['Balance', 'Password', 'PIN code', 'Recovery link', 'Seed phrase']);
+
 const originalPrintRecoverySheet = securityUi.printRecoverySheet;
 securityUi.printRecoverySheet = (title, fields, includesSensitive) => {
   const hasPrivateBalance = Array.isArray(fields) && fields.some((field) =>
@@ -97,6 +99,18 @@ function protectCoinBalanceView(area) {
   balanceRow.remove();
 }
 
+function restrictViewQr(area) {
+  if (!area) return;
+  area.querySelectorAll('.sensitive-field').forEach((wrapper) => {
+    const labelNode = wrapper.querySelector('.secure-field-summary-text');
+    const label = String(labelNode ? labelNode.textContent : '').trim();
+    if (!VIEW_COPY_ONLY_LABELS.has(label)) return;
+    wrapper.querySelectorAll('.qr-inline-button, .compact-qr-area').forEach((node) => node.remove());
+    const actions = wrapper.querySelector('.field-inline-actions');
+    if (actions && actions.children.length === 0) actions.remove();
+  });
+}
+
 function applyEditSecurity() {
   const area = document.getElementById('detailArea');
   if (!area) return;
@@ -107,6 +121,7 @@ function applyEditSecurity() {
     return;
   }
   protectCoinBalanceView(area);
+  restrictViewQr(area);
 }
 
 function install() {
@@ -123,4 +138,4 @@ if (document.readyState === 'loading') {
   install();
 }
 
-exports._test = { EDIT_SENSITIVE_FIELDS, configureEditForm, protectCoinBalanceView, applyEditSecurity };
+exports._test = { EDIT_SENSITIVE_FIELDS, VIEW_COPY_ONLY_LABELS, configureEditForm, protectCoinBalanceView, restrictViewQr, applyEditSecurity };
