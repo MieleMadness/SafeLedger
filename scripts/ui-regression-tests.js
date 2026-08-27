@@ -105,7 +105,7 @@ check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.46');
+  assert.strictEqual(pkg.version, '2.0.47');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -209,6 +209,19 @@ check('wallet and coin view/edit headers and field actions use normalized spacin
   assert(css.includes('padding: 10px'));
 });
 
+check('Phase 1 obsolete layout and asset files stay removed', () => {
+  const index = read('src/main/index.html');
+  for (const relative of [
+    'src/main/coin-form-layout-enhancements.js',
+    'src/main/css/2.0.37.css',
+    'scripts/coin-layout-regression-tests.js',
+    'scripts/generate-icons.js',
+    'build/icon.png'
+  ]) assert.strictEqual(fs.existsSync(path.join(root, relative)), false, `${relative} should remain removed`);
+  assert(!index.includes('./css/2.0.37.css'));
+  assert(!read('src/main/utils.js').includes('testSleep'));
+});
+
 check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('src/main/detail-actions.js');
   syntaxCheck('src/main/detail-action-enhancements.js');
@@ -216,7 +229,6 @@ check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('src/main/form-spacing-enhancements.js');
   syntaxCheck('src/main/search-enhancements.js');
   syntaxCheck('src/main/detail-spacing-enhancements.js');
-  syntaxCheck('src/main/coin-form-layout-enhancements.js');
   syntaxCheck('src/main/edit-form-grid-enhancements.js');
   syntaxCheck('src/main/edit-security-enhancements.js');
   syntaxCheck('src/main/profile-selection-enhancements.js');
@@ -234,4 +246,4 @@ check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('scripts/run-electron-crypto-smoke.js');
 });
 
-console.log('\n17 SafeLedger 2.0.46 UI/runtime regression checks passed.');
+console.log('\n18 SafeLedger 2.0.47 UI/runtime regression checks passed.');
