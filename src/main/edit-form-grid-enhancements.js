@@ -6,7 +6,7 @@ const COIN_LAYOUT = [
   { id: 'inputPublicAddress', label: 'Public address' },
   { id: 'inputPrivateAddress', label: 'Private key', sensitive: true },
   { id: 'inputTags', label: 'Tags (comma separated)' },
-  { id: 'inputManualBalance', label: 'Balance' },
+  { id: 'inputManualBalance', label: 'Balance', sensitive: true },
   { id: 'inputNotes', label: 'Notes', full: true }
 ];
 
