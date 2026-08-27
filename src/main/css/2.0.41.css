@@ -1,12 +1,12 @@
-/* SafeLedger 2.0.41 selected Profile row */
+/* Selected Profile row */
 
 #vaultArea .badge-circle.badge-selected {
   border: 0 !important;
 }
 
-#vaultArea .nav > li > a.profile-selected,
-#vaultArea .nav > li > a.profile-selected:hover,
-#vaultArea .nav > li > a.profile-selected:focus {
+#vaultArea .nav > li > a:has(.badge-selected),
+#vaultArea .nav > li > a:has(.badge-selected):hover,
+#vaultArea .nav > li > a:has(.badge-selected):focus {
   border: 2px solid #fff !important;
   border-radius: 6px;
   background-color: transparent !important;

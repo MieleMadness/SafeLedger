@@ -55,9 +55,7 @@ async function run() {
     const bruteSection = ui.indexOf("const bruteSection = makeSection('Brute Force Protection');");
     assert(passwordSection >= 0 && backupSection > passwordSection && bruteSection > backupSection);
 
-    const pkg = JSON.parse(read('package.json'));
-    assert.strictEqual(pkg.version, '2.0.50');
-    console.log('PASS SafeLedger 2.0.50 brute-force limits and Settings section order.');
+    console.log('PASS SafeLedger brute-force limits and Settings section order.');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

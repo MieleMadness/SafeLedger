@@ -68,11 +68,10 @@ assert(ui.includes('window.setInterval(updateCountdown, 1000)'));
 assert(css.includes('.safeledger-lockout-panel'));
 assert(css.includes('.safeledger-lockout-countdown'));
 assert(retryGuard.includes('params.settings && params.settings.lockLogin'));
-assert.strictEqual(pkg.version, '2.0.50');
 assert(pkg.scripts['test:regression'].includes('node scripts/lockout-regression-tests.js'));
 
 syntaxCheck('src/main/lockout-state.js');
 syntaxCheck('src/main/lockout-ui-enhancements.js');
 syntaxCheck('src/main/installManager/installManager/settingsManager.js');
 
-console.log('PASS SafeLedger 2.0.50 lockout UI, countdown, restart recovery, and stale-lock normalization checks.');
+console.log('PASS SafeLedger lockout UI, countdown, restart recovery, and stale-lock normalization checks.');

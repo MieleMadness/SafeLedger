@@ -52,7 +52,7 @@ async function run() {
     const fakeLegacy = `${crypto.randomBytes(16).toString('hex')}:${crypto.randomBytes(32).toString('hex')}`;
     assert.strictEqual(encryption.encryptedPayloadLooksValid(fakeLegacy), false);
 
-    console.log('PASS SafeLedger 2.0.50 creates v2 data directly and exposes no v1 migration path.');
+    console.log('PASS SafeLedger creates v2 data directly and exposes no v1 migration path.');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

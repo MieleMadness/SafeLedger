@@ -77,7 +77,7 @@ check('Electron-safe Argon2 provider remains bundled', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.50');
+  assert.strictEqual(pkg.version, '2.0.51');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -107,12 +107,9 @@ check('failed password retry guard remains active', () => {
 });
 
 check('Coin and Wallet forms render their final grid directly', () => {
-  const index = read('src/main/index.html');
   const formUi = read('src/main/edit-form-ui.js');
   const record = read('src/main/record.js');
   const group = read('src/main/group.js');
-  assert(index.includes('./css/2.0.35.css'));
-  assert(index.includes('./css/2.0.38.css'));
   assert(formUi.includes("form.className = 'safeledger-edit-form'"));
   assert(formUi.includes("grid.className = 'edit-info-grid'"));
   assert(record.includes("const editFormUi = require('./edit-form-ui');"));
@@ -140,13 +137,14 @@ check('profile search matches wallet and coin search', () => {
   assert(search.includes('function filterProfiles()'));
 });
 
-check('selected profile borders the full row instead of the initial', () => {
-  const selection = read('src/main/profile-selection-enhancements.js');
+check('selected Profile row is CSS-driven without a MutationObserver', () => {
+  const index = read('src/main/index.html');
   const css = read('src/main/css/2.0.41.css');
-  assert(selection.includes("link.classList.add('profile-selected')"));
+  assert(!index.includes("require('./profile-selection-enhancements.js')"));
+  assert.strictEqual(exists('src/main/profile-selection-enhancements.js'), false);
   assert(css.includes('#vaultArea .badge-circle.badge-selected'));
   assert(css.includes('border: 0 !important'));
-  assert(css.includes('a.profile-selected'));
+  assert(css.includes('a:has(.badge-selected)'));
   assert(css.includes('border: 2px solid #fff !important'));
 });
 
@@ -160,7 +158,8 @@ check('obsolete Phase 1 and Phase 3 files stay removed', () => {
     'src/main/form-spacing-enhancements.js',
     'src/main/edit-form-grid-enhancements.js',
     'src/main/edit-security-enhancements.js',
-    'src/main/detail-spacing-enhancements.js'
+    'src/main/detail-spacing-enhancements.js',
+    'src/main/profile-selection-enhancements.js'
   ];
   for (const relative of removed) assert.strictEqual(exists(relative), false, `${relative} should remain removed`);
   assert(!read('src/main/utils.js').includes('testSleep'));
@@ -174,7 +173,6 @@ check('updated renderer and crypto JavaScript parses cleanly', () => {
     'src/main/search-enhancements.js',
     'src/main/edit-form-ui.js',
     'src/main/security-ui.js',
-    'src/main/profile-selection-enhancements.js',
     'src/main/settings-enhancements.js',
     'src/main/lockout-state.js',
     'src/main/lockout-ui-enhancements.js',
@@ -190,4 +188,4 @@ check('updated renderer and crypto JavaScript parses cleanly', () => {
   ]) syntaxCheck(relative);
 });
 
-console.log('\n15 SafeLedger 2.0.50 UI/runtime regression checks passed.');
+console.log('\n15 SafeLedger 2.0.51 UI/runtime regression checks passed.');

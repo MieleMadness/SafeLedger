@@ -90,4 +90,4 @@ assert(!securityUi.includes('addSensitiveInputControls'));
 assert(securityCss.includes('.edit-sensitive-shell'));
 assert(!securityCss.includes('.edit-public-shell'));
 
-console.log('PASS SafeLedger 2.0.50 direct Coin/Wallet form rendering and security controls.');
+console.log('PASS direct Coin/Wallet form rendering and security controls.');
