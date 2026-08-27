@@ -1,15 +1,12 @@
 'use strict';
 
-const electron = require('electron');
-const remote = electron.remote;
-const { ipcRenderer: ipc } = electron;
+const { ipcRenderer: ipc } = require('electron');
 const crypto = require('crypto');
 const status = require('./status');
 const runtimeUtils = require('./runtime-utils');
 const masterKeyVerifier = require('./master-key-verifier');
 
 const MAX_MASTER_PASSWORD_LENGTH = runtimeUtils.MAX_MASTER_PASSWORD_LENGTH;
-remote.require('./crypto-session-main');
 let latestSettings = null;
 let latestVaultList = null;
 

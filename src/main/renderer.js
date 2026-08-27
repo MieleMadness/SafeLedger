@@ -1,12 +1,10 @@
-// This file is required by the index.html file and will
-// be executed in the renderer process for that window.
-// All of the Node.js APIs are available in this process.
+// SafeLedger trusted UI module. This file is loaded by preload.js in the
+// isolated preload world; the HTML page itself does not receive Node.js APIs.
 /*
   Author: Edward Seufert - Cborgtech, LLC
 */
 
 const electron = require('electron');
-const remote = electron.remote;
 const {ipcRenderer : ipc } = electron;
 const crypto = require('crypto');
 const vault = require('./vault');
@@ -14,7 +12,6 @@ const group = require('./group');
 const record = require('./record');
 const status = require('./status');
 const encryption = require('./encryption');
-const con = remote.getGlobal('console');
 const installCodeManager = require('./installManager/installManager/installCodeManager');
 
 let vaultData;
@@ -116,78 +113,6 @@ window.addEventListener('DOMContentLoaded', _ => {
       }
     }
   });
-
-
-});
-
-window.addEventListener("beforeunload", function (event) {
-  event.preventDefault();
-  //alert("clean data");
-  if (masterCrypto != null) {
-    const mc = new Buffer(masterCrypto,'hex');
-    masterCrypto = crypto.randomBytes(mc.length * 2);
-  }
-  if (installCode != null) {
-    const ic = new Buffer(installCode,'hex');
-    installCode = crypto.randomBytes(ic.length * 2);
-  }
-  //alert("clean group");
-  if (vaultData != null) {
-    if (vaultData.groups != null) {
-      vaultData.file = crypto.randomBytes(vaultData.file.length * 2).toString('hex');
-      for(let group of vaultData.groups){
-        if (group.name != null) {
-          group.name = crypto.randomBytes(group.name.length * 2).toString('hex');
-        }
-        if (group.password != null) {
-          group.password = crypto.randomBytes(group.password.length * 2).toString('hex');
-        }
-        if (group.pin != null) {
-          group.pin = crypto.randomBytes(group.pin.length * 2).toString('hex');
-        }
-        if (group.seedPhrase != null) {
-          group.seedPhrase = crypto.randomBytes(group.seedPhrase.length * 2).toString('hex');
-        }
-        if (group.recoveryLink != null) {
-          group.recoveryLink = crypto.randomBytes(group.recoveryLink.length * 2).toString('hex');
-        }
-        if (group.notes != null) {
-          group.notes = crypto.randomBytes(group.notes.length * 2).toString('hex');
-        }
-        if (group.records != null) {
-          for (let record of group.records) {
-            if (record.name != null) {
-              record.name = crypto.randomBytes(record.name.length * 2).toString('hex');
-            }
-            if (record.symbol != null) {
-              record.symbol = crypto.randomBytes(record.symbol.length * 2).toString('hex');
-            }
-            if (record.publicAddress != null) {
-              record.publicAddress = crypto.randomBytes(record.publicAddress.length * 2).toString('hex');
-            }
-            if (record.privateAddress != null) {
-              record.privateAddress = crypto.randomBytes(record.privateAddress.length * 2).toString('hex');
-            }
-            if (record.notes != null) {
-              record.notes = crypto.randomBytes(record.notes.length * 2).toString('hex');
-            }
-          }
-        }
-      }
-    }
-  }
-  //con.log("vault data " + JSON.stringify(vaultData));
-  //alert("clean vault list");
-  if (vaultList != null) {
-    if (vaultList.vaults != null) {
-      for(let vault of vaultList.vaults){
-        vault.file = crypto.randomBytes(vault.file.length * 2).toString('hex');
-        vault.path = crypto.randomBytes(vault.path.length * 2).toString('hex');
-      }
-    }
-  }
-  //con.log("vault list " + JSON.stringify(vaultList));
-  alert("Your history has been cleared for your security");
 });
 
 ipc.on('result',(evt, params) => {
@@ -221,13 +146,11 @@ ipc.on('result',(evt, params) => {
       params.vaultList.vaultSelected = null;
     }
     vaultList = params.vaultList;
-    //con.log("vaultList " + JSON.stringify(vaultList));
     const vaults = vaultList.vaults;
     listVaults(vaults);
     if (params.type === "vault-create"){
       const groupArea = document.getElementById('groupArea');
       groupArea.innerHTML = "";
-      // record area
       recordArea.innerHTML = "";
     }
     if (params.vaultList.vaultSelected != null) {
@@ -287,7 +210,6 @@ ipc.on('result-init-system',(evt, params) => {
     status.showStatus({status:params.status,statusMsg:params.statusMsg});
   }
   if (params.settings != null) {
-    //con.log("settings " + JSON.stringify(params.settings));
     settings = params.settings;
     if (params.settings.lockLogin) {
       const x = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
@@ -309,7 +231,6 @@ ipc.on('result-init-system',(evt, params) => {
 });
 
 const listVaults = (vaults) => {
-  // list of vaults
   const vaultArea = document.getElementById('vaultArea');
   vaultArea.innerHTML = "";
   const ul = document.createElement("UL");
@@ -318,8 +239,8 @@ const listVaults = (vaults) => {
     const vaultsArray = vaultList.vaults;
     for (let i = 0; i < vaultsArray.length; i++) {
         const li = document.createElement("LI");
-				ul.appendChild(li);
-				const href = document.createElement("A");
+        ul.appendChild(li);
+        const href = document.createElement("A");
         href.addEventListener('click', (e) => {
           e.preventDefault();
           if (saving.state == true) {
@@ -341,7 +262,7 @@ const listVaults = (vaults) => {
           nameString = "<div class='badge-circle' style='display:inline-block;'><div class='text-center' style='margin-top:4px;font-size:25px;'>"+firstChar+"</div></div>";
         }
         nameString = nameString + "<div style='display:inline-block;'><div style='margin-top:10px; margin-left:10px;'>"+vaultsArray[i].name+"</div></div>";
-				href.innerHTML = nameString;
+        href.innerHTML = nameString;
         li.appendChild(href);
     }
     vaultArea.appendChild(ul);
@@ -356,12 +277,10 @@ ipc.on('result-rotate-crypto',(evt, params) => {
     status.showStatus({status:params.status,statusMsg:params.statusMsg});
   }
   if (params.status === "SUCCESS") {;
-    //con.log("vault list before " + JSON.stringify(vaultList));
     vaultList = params.vaultList;
     masterCrypto = params.cryptoKey;
     listVaults(vaultList.vaults);
     showAfterLogin();
-    //con.log("vault list after" + JSON.stringify(vaultList));
   } else {
     const editBtn = document.getElementById('encryptionEditBtn');
     editBtn.disabled = false;
@@ -537,11 +456,6 @@ const showLogin = () => {
   const header = document.createElement('h1');
   header.innerHTML = "Welcome to SafeLedger";
   area.appendChild(header);
-  //const image = document.createElement('img');
-  //image.src = "img/sl_logo.jpg";
-  //image.alt = "SafeLeder";
-  //image.style = "width:400px;height:200px;"
-  //area.appendChild(image);
   const divider = document.createElement('hr');
   area.appendChild(divider);
 
@@ -624,7 +538,6 @@ const showInstallCode = (params) => {
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
-  //console.log("file Code " + params.fileCode);
   const labelCode = document.createElement('label');
   labelCode.for = "inputCode";
   labelCode.innerHTML = "Copy code to activation manager.";
@@ -661,9 +574,7 @@ const showInstallCode = (params) => {
       saveBtn.disabled = true;
       const installCodeField = document.getElementById('inputInstallCode');
       if (installCodeField != null && installCodeField.value != "") {
-        //console.log("file code " + params.initialCode);
         const s = installCodeManager.getInstallCode(params.initialCode);
-        //console.log("hash " + s);
         if (s == installCodeField.value) {
           const k = JSON.parse(params.initialCode);
           let mySettings = Object.assign({},settings);
@@ -697,7 +608,6 @@ ipc.on('result-save-install-code',(evt, params) => {
   }
   if(params.status === "SUCCESS") {
     installCode = params.keyCode;
-    //console.log("key code " + params.keyCode);
     showLogin();
   } else {
     installCode = null;
@@ -752,7 +662,6 @@ const showSettings = (params) => {
   const formgroup = document.createElement('div');
   formgroup.className = "form-group";
   form.appendChild(formgroup);
-  //console.log("file Code " + params.fileCode);
   const labelFailAttempts = document.createElement('label');
   labelFailAttempts.for = "inputFailAttempts";
   labelFailAttempts.innerHTML = "Consecutive login failure attempts per lockout (Limited 3 to 10)";
@@ -789,32 +698,10 @@ const showSettings = (params) => {
   const formGroupScrubContent = document.createElement('div');
   formGroupScrubContent.className = "form-group";
   form.appendChild(formGroupScrubContent);
-  /*const inputScrubContent = document.createElement('input');
-  inputScrubContent.type = "checkbox";
-  inputScrubContent.className = "checkBox";
-  inputScrubContent.id = "inputScrubContent";
-  inputScrubContent.checked = settings.scrubContentAfterRetries;
-  inputScrubContent.disabled = true;
-  formGroupScrubContent.appendChild(inputScrubContent); */
   const labelScrubContent = document.createElement('label');
   labelScrubContent.for = "inputScrubContent";
   labelScrubContent.innerHTML = "*** Brute force attack interception enabled - Destroy data after all lockouts have been exhausted ***";
   formGroupScrubContent.appendChild(labelScrubContent);
-
-/*  const formGroupScrubInstall = document.createElement('div');
-  formGroupScrubInstall.className = "form-group";
-  form.appendChild(formGroupScrubInstall);
-  const inputScrubInstall = document.createElement('input');
-  inputScrubInstall.type = "checkbox";
-  inputScrubInstall.className = "checkBox";
-  inputScrubInstall.id = "inputScrubInstall";
-  inputScrubInstall.checked = settings.scrubInstallAfterRetries;
-  inputScrubInstall.disabled = true;
-  formGroupScrubInstall.appendChild(inputScrubInstall);
-  const labelScrubInstall = document.createElement('label');
-  labelScrubInstall.for = "inputScrubInstall";
-  labelScrubInstall.innerHTML = " Destroy activation code after all lockouts have been exhausted";
-  formGroupScrubInstall.appendChild(labelScrubInstall);*/
 
   const saveBtn = document.createElement('button');
   saveBtn.type = "submit";

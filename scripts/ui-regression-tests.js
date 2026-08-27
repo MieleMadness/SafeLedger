@@ -34,9 +34,10 @@ check('new installations name the first profile SafeLedger', () => {
 
 check('shared bottom detail-action dock is present', () => {
   const index = read('src/main/index.html');
+  const preload = read('src/main/preload.js');
   const css = read('src/main/css/site.css');
   assert(index.includes('id="detailActionArea"'));
-  assert(index.includes("require('./detail-action-enhancements.js')"));
+  assert(preload.includes("require('./detail-action-enhancements.js')"));
   assert(css.includes('.detail-action-area'));
   assert(css.includes('.emergency-lock-cell .panic-lock-inline'));
 });
@@ -77,7 +78,7 @@ check('Electron-safe Argon2 provider remains bundled', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.52');
+  assert.strictEqual(pkg.version, '2.0.53');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -98,9 +99,9 @@ check('Windows artifact stays flat with PDF README', () => {
 });
 
 check('failed password retry guard remains active', () => {
-  const index = read('src/main/index.html');
+  const preload = read('src/main/preload.js');
   const guard = read('src/main/login-retry-guard.js');
-  assert(index.includes("require('./login-retry-guard.js')"));
+  assert(preload.includes("require('./login-retry-guard.js')"));
   assert(guard.includes('params.settings && params.settings.lockLogin'));
   assert(guard.includes("document.getElementById('loginBtn')"));
   assert(guard.includes('button.disabled = false'));
@@ -185,6 +186,7 @@ check('updated renderer and crypto JavaScript parses cleanly', () => {
     'src/main/record.js',
     'src/main/group.js',
     'src/main/main.js',
+    'src/main/preload.js',
     'src/main/robust-vault.js',
     'src/main/argon2-provider.js',
     'src/main/key-envelope.js',
@@ -194,4 +196,4 @@ check('updated renderer and crypto JavaScript parses cleanly', () => {
   ]) syntaxCheck(relative);
 });
 
-console.log('\n15 SafeLedger 2.0.52 UI/runtime regression checks passed.');
+console.log('\n15 SafeLedger 2.0.53 UI/runtime regression checks passed.');

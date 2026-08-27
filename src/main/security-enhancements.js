@@ -1,8 +1,6 @@
 'use strict';
 
-const electron = require('electron');
-const remote = electron.remote;
-const { ipcRenderer: ipc } = electron;
+const { ipcRenderer: ipc } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const statusMgr = require('./status');
@@ -14,11 +12,12 @@ let idleTimer = null;
 let panicRunning = false;
 let unlockedSession = false;
 let latestSettings = null;
+let portableRoot = null;
 
-const getPortableRoot = () => runtimeUtils.getPortableRoot({
-  appPath: remote.app.getAppPath(),
-  isPackaged: remote.app.isPackaged
-});
+const getPortableRoot = () => {
+  if (!portableRoot) throw new Error('SafeLedger portable storage path is not initialized yet.');
+  return portableRoot;
+};
 const getDataRoot = () => path.join(getPortableRoot(), 'SafeLedgerData');
 const getSettingsDir = () => path.join(getDataRoot(), 'settings');
 
@@ -47,7 +46,6 @@ function panicLock(reason = 'panic-lock') {
   audit(reason);
   try { clearVisibleSensitiveFields(); } catch (_) {}
   try { ipc.send('panic-lock', { reason }); } catch (_) {}
-  try { remote.getCurrentWindow().minimize(); } catch (_) {}
   setTimeout(() => window.location.reload(), 100);
 }
 
@@ -184,6 +182,10 @@ const observer = new MutationObserver(enhanceDynamicSecurityUi);
 observer.observe(document.documentElement, { childList: true, subtree: true });
 
 ipc.on('result-init-system', (_evt, params) => {
+  if (params && params.portableRoot) {
+    portableRoot = params.portableRoot;
+    audit('app-opened');
+  }
   if (params && params.settings) latestSettings = params.settings;
   setTimeout(enhanceDynamicSecurityUi, 0);
 });
@@ -214,7 +216,6 @@ ipc.on('result-lockout-destroy', (_evt, params) => {
 });
 
 window.addEventListener('DOMContentLoaded', () => {
-  audit('app-opened');
   enhanceDynamicSecurityUi();
   resetIdleTimer();
   const panic = document.getElementById('panicLockButton');
@@ -272,12 +273,10 @@ async function exportEncryptedBackup() {
     const files = await collectFiles(dataRoot);
     if (!files['vaults/vaultlist.json']) return alert('No SafeLedger vault data was found to back up.');
 
-    const selection = await remote.dialog.showSaveDialog(remote.getCurrentWindow(), {
-      title: 'Export Complete SafeLedger Backup',
-      defaultPath: `SafeLedger-All-Data-${new Date().toISOString().slice(0,10)}.slgbak`,
-      filters: [{ name: 'SafeLedger Backup', extensions: ['slgbak'] }]
+    const selection = await ipc.invoke('security-select-backup-destination', {
+      defaultName: `SafeLedger-All-Data-${new Date().toISOString().slice(0,10)}.slgbak`
     });
-    if (selection.canceled || !selection.filePath) return;
+    if (!selection || selection.canceled || !selection.filePath) return;
 
     const payload = {
       format: 'safeledger-complete-data-backup',
@@ -296,12 +295,8 @@ async function exportEncryptedBackup() {
 
 async function restoreEncryptedBackup() {
   try {
-    const selection = await remote.dialog.showOpenDialog(remote.getCurrentWindow(), {
-      title: 'Restore Complete SafeLedger Backup',
-      properties: ['openFile'],
-      filters: [{ name: 'SafeLedger Backup', extensions: ['slgbak'] }]
-    });
-    if (selection.canceled || !selection.filePaths.length) return;
+    const selection = await ipc.invoke('security-select-backup-source');
+    if (!selection || selection.canceled || !selection.filePaths || !selection.filePaths.length) return;
 
     const payload = JSON.parse(await fs.promises.readFile(selection.filePaths[0], 'utf8'));
     if (!payload || payload.format !== 'safeledger-complete-data-backup' || payload.version !== 2 || !payload.files || !payload.files['vaults/vaultlist.json']) {

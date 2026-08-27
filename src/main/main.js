@@ -1,7 +1,6 @@
 'use strict';
 
 const { app, BrowserWindow, Menu, ipcMain: ipc, dialog } = require('electron');
-const remoteMain = require('@electron/remote/main');
 const path = require('path');
 const vault = require('./robust-vault');
 const masterKeyVerifier = require('./master-key-verifier');
@@ -12,7 +11,7 @@ const logger = require('./logger');
 const installCodeManager = require('./installManager/installManager/installCodeManager');
 const settingsManager = require('./installManager/installManager/settingsManager');
 
-remoteMain.initialize();
+require('./crypto-session-main').registerIpcHandlers();
 
 let mainWindow;
 let vaultDir;
@@ -133,13 +132,13 @@ function createWindow() {
     backgroundColor: '#0D47A1',
     icon: path.join(app.getAppPath(), 'sl.png'),
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      preload: path.join(__dirname, 'preload-compat.js')
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: false,
+      preload: path.join(__dirname, 'preload.js')
     }
   });
 
-  remoteMain.enable(mainWindow.webContents);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.on('closed', () => {
     activeVaultData = null;
@@ -154,6 +153,24 @@ const showSettings = () => mainWindow && mainWindow.webContents.send('show-setti
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+
+ipc.on('panic-lock', () => {
+  activeVaultData = null;
+  activeCryptoKey = null;
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
+});
+
+ipc.handle('security-select-backup-destination', (_event, params = {}) => dialog.showSaveDialog(mainWindow, {
+  title: 'Export Complete SafeLedger Backup',
+  defaultPath: params.defaultName || `SafeLedger-All-Data-${new Date().toISOString().slice(0,10)}.slgbak`,
+  filters: [{ name: 'SafeLedger Backup', extensions: ['slgbak'] }]
+}));
+
+ipc.handle('security-select-backup-source', () => dialog.showOpenDialog(mainWindow, {
+  title: 'Restore Complete SafeLedger Backup',
+  properties: ['openFile'],
+  filters: [{ name: 'SafeLedger Backup', extensions: ['slgbak'] }]
+}));
 
 ipc.on('save', (evt, params) => {
   vault.saveVault(path.join(vaultDir, currentVault), JSON.stringify(params.vaultData), params.cryptoKey)
