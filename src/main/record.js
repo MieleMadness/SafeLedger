@@ -3,95 +3,301 @@
 */
 
 const electron = require('electron');
-const {ipcRenderer : ipc } = electron;
+const { ipcRenderer: ipc } = electron;
 const statusMgr = require('./status');
 const utils = require('./utils');
 const securityUi = require('./security-ui');
 const walletCatalog = require('./wallet-catalog');
 const tokenIcons = require('./token-icons');
 const detailActions = require('./detail-actions');
+const editFormUi = require('./edit-form-ui');
 
-const normalize=(v)=>String(v||'').trim().toLowerCase();
-const getUserCoinNotes=(vaultData,rec)=>{
-  const wallet=vaultData&&vaultData.groupSelected!=null?vaultData.groups[vaultData.groupSelected]:null;
-  const catalogWallet=walletCatalog.catalog.find(w=>normalize(w.name)===normalize(wallet&&wallet.name));
-  if(!catalogWallet)return rec&&rec.notes||'';
-  const catalogRecord=catalogWallet.records.find(([name,symbol])=>(normalize(symbol)&&normalize(symbol)===normalize(rec&&rec.symbol))||normalize(name)===normalize(rec&&rec.name));
-  return catalogRecord&&catalogRecord[2]===rec.notes?'':(rec&&rec.notes||'');
+const normalize = (v) => String(v || '').trim().toLowerCase();
+
+const getUserCoinNotes = (vaultData, rec) => {
+  const wallet = vaultData && vaultData.groupSelected != null ? vaultData.groups[vaultData.groupSelected] : null;
+  const catalogWallet = walletCatalog.catalog.find((w) => normalize(w.name) === normalize(wallet && wallet.name));
+  if (!catalogWallet) return rec && rec.notes || '';
+  const catalogRecord = catalogWallet.records.find(([name, symbol]) =>
+    (normalize(symbol) && normalize(symbol) === normalize(rec && rec.symbol)) || normalize(name) === normalize(rec && rec.name)
+  );
+  return catalogRecord && catalogRecord[2] === rec.notes ? '' : (rec && rec.notes || '');
 };
 
-const formatEasternDate=(value)=>{
-  if(!value)return '';
-  const date=new Date(value);
-  if(Number.isNaN(date.getTime()))return String(value);
-  try{
-    return new Intl.DateTimeFormat('en-US',{
-      weekday:'short',month:'short',day:'2-digit',year:'numeric',
-      hour:'numeric',minute:'2-digit',second:'2-digit',hour12:true,
-      timeZone:'America/New_York',timeZoneName:'short'
+const formatEasternDate = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: '2-digit', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
+      timeZone: 'America/New_York', timeZoneName: 'short'
     }).format(date);
-  }catch(_){return String(value).replace('Eastern Daylight Time','EDT').replace('Eastern Standard Time','EST');}
+  } catch (_) {
+    return String(value).replace('Eastern Daylight Time', 'EDT').replace('Eastern Standard Time', 'EST');
+  }
 };
 
-const appendCoinHeader=(area,record)=>{
-  const header=document.createElement('div');
-  header.className='coin-detail-header';
-  const symbol=String(record.symbol||'').toUpperCase();
-  const brandedIcon=tokenIcons.createIconElement(record,'coin-brand-image');
-  if(brandedIcon){
-    header.appendChild(brandedIcon);
-  }else{
-    const fallback=document.createElement('div');
-    fallback.className='coin-brand-icon coin-brand-generic';
-    fallback.textContent=symbol?symbol.slice(0,3):'•';
+const appendCoinHeader = (area, record) => {
+  const header = document.createElement('div');
+  header.className = 'coin-detail-header';
+  const symbol = String(record.symbol || '').toUpperCase();
+  const brandedIcon = tokenIcons.createIconElement(record, 'coin-brand-image');
+  if (brandedIcon) header.appendChild(brandedIcon);
+  else {
+    const fallback = document.createElement('div');
+    fallback.className = 'coin-brand-icon coin-brand-generic';
+    fallback.textContent = symbol ? symbol.slice(0, 3) : '•';
     header.appendChild(fallback);
   }
-  const titleWrap=document.createElement('div');
-  titleWrap.className='coin-detail-title-wrap';
-  const title=document.createElement('h1');
-  title.textContent=record.name||'Coin';
+  const titleWrap = document.createElement('div');
+  titleWrap.className = 'coin-detail-title-wrap';
+  const title = document.createElement('h1');
+  title.textContent = record.name || 'Coin';
   titleWrap.appendChild(title);
-  if(symbol){const symbolLine=document.createElement('div');symbolLine.className='coin-detail-symbol';symbolLine.textContent=symbol;titleWrap.appendChild(symbolLine);}
+  if (symbol) {
+    const symbolLine = document.createElement('div');
+    symbolLine.className = 'coin-detail-symbol';
+    symbolLine.textContent = symbol;
+    titleWrap.appendChild(symbolLine);
+  }
   header.appendChild(titleWrap);
   area.appendChild(header);
 };
 
-exports.listRecords=(params)=>renderRecords(params);
-const renderRecords=(params)=>{
-  const recordSearch=document.getElementById('recordSearch');const recordArea=document.getElementById('recordArea');recordArea.innerHTML='';const ul=document.createElement('UL');ul.className='nav';
-  if(params.vaultData&&params.vaultData.groupSelected!=null){const wallet=params.vaultData.groups[params.vaultData.groupSelected];const records=wallet&&Array.isArray(wallet.records)?wallet.records:[];const sorted=records.map((record,originalIndex)=>({record,originalIndex})).sort((a,b)=>String(a.record.name||'').localeCompare(String(b.record.name||''),undefined,{sensitivity:'base'}));const query=recordSearch&&recordSearch.value?recordSearch.value.toLowerCase():'';
-    for(const entry of sorted){const coin=entry.record,i=entry.originalIndex;const searchable=[coin.name,coin.symbol,coin.publicAddress,getUserCoinNotes(params.vaultData,coin),coin.tags,coin.manualBalance].map(v=>String(v||'').toLowerCase()).join(' ');if(query&&!searchable.includes(query))continue;const li=document.createElement('LI'),href=document.createElement('A');href.addEventListener('click',(e)=>{e.preventDefault();if(params.saving.state)return alert('Please wait for processing to complete');params.vaultData.recordSelected=i;renderRecordDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,record:coin,saving:params.saving});renderRecords(params);});if(params.vaultData.recordSelected==i)href.className='item-selected';const row=document.createElement('span');row.className='coin-list-row';const brandedIcon=tokenIcons.createIconElement(coin,'coin-list-brand-image');if(brandedIcon)row.appendChild(brandedIcon);else{const generic=document.createElement('span');generic.className='coin-list-generic-icon';generic.textContent=(String(coin.symbol||'').toUpperCase().slice(0,2)||'•');row.appendChild(generic);}const text=document.createElement('span');text.className='coin-list-label';text.textContent=`${coin.name||'Unnamed'}${coin.symbol?` (${coin.symbol})`:''}`;row.appendChild(text);href.appendChild(row);li.appendChild(href);ul.appendChild(li);}recordArea.appendChild(ul);if(records.length===0)recordArea.innerHTML='No items';
-  }else recordArea.innerHTML='No items';
+exports.listRecords = (params) => renderRecords(params);
+
+const renderRecords = (params) => {
+  const recordSearch = document.getElementById('recordSearch');
+  const recordArea = document.getElementById('recordArea');
+  recordArea.innerHTML = '';
+  const ul = document.createElement('UL');
+  ul.className = 'nav';
+
+  if (params.vaultData && params.vaultData.groupSelected != null) {
+    const wallet = params.vaultData.groups[params.vaultData.groupSelected];
+    const records = wallet && Array.isArray(wallet.records) ? wallet.records : [];
+    const sorted = records
+      .map((record, originalIndex) => ({ record, originalIndex }))
+      .sort((a, b) => String(a.record.name || '').localeCompare(String(b.record.name || ''), undefined, { sensitivity: 'base' }));
+    const query = recordSearch && recordSearch.value ? recordSearch.value.toLowerCase() : '';
+
+    for (const entry of sorted) {
+      const coin = entry.record;
+      const i = entry.originalIndex;
+      const searchable = [coin.name, coin.symbol, coin.publicAddress, getUserCoinNotes(params.vaultData, coin), coin.tags, coin.manualBalance]
+        .map((v) => String(v || '').toLowerCase()).join(' ');
+      if (query && !searchable.includes(query)) continue;
+
+      const li = document.createElement('LI');
+      const href = document.createElement('A');
+      href.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (params.saving.state) return alert('Please wait for processing to complete');
+        params.vaultData.recordSelected = i;
+        renderRecordDetail({ cryptoKey: params.cryptoKey, vaultData: params.vaultData, record: coin, saving: params.saving });
+        renderRecords(params);
+      });
+      if (params.vaultData.recordSelected == i) href.className = 'item-selected';
+
+      const row = document.createElement('span');
+      row.className = 'coin-list-row';
+      const brandedIcon = tokenIcons.createIconElement(coin, 'coin-list-brand-image');
+      if (brandedIcon) row.appendChild(brandedIcon);
+      else {
+        const generic = document.createElement('span');
+        generic.className = 'coin-list-generic-icon';
+        generic.textContent = String(coin.symbol || '').toUpperCase().slice(0, 2) || '•';
+        row.appendChild(generic);
+      }
+      const text = document.createElement('span');
+      text.className = 'coin-list-label';
+      text.textContent = `${coin.name || 'Unnamed'}${coin.symbol ? ` (${coin.symbol})` : ''}`;
+      row.appendChild(text);
+      href.appendChild(row);
+      li.appendChild(href);
+      ul.appendChild(li);
+    }
+    recordArea.appendChild(ul);
+    if (records.length === 0) recordArea.innerHTML = 'No items';
+  } else recordArea.innerHTML = 'No items';
 };
 
-exports.createRecord=(params)=>createEditRecord(params);
-const createEditRecord=(params)=>{
-  const area=document.getElementById('detailArea');area.innerHTML='';const header=document.createElement('h1');header.textContent=params.record?'Modify Coin':'Add Coin';area.appendChild(header);area.appendChild(document.createElement('hr'));const form=document.createElement('form');area.appendChild(form);const group=document.createElement('div');group.className='form-group';form.appendChild(group);
-  const textInput=(id,labelText,value,max=500)=>{const label=document.createElement('label');label.for=id;label.textContent=labelText;group.appendChild(label);const input=document.createElement('input');input.type='text';input.className='form-control';input.id=id;input.maxLength=max;input.value=value||'';group.appendChild(input);return input;};
-  const inputName=textInput('inputName','Coin',params.record&&params.record.name,25),inputSymbol=textInput('inputSymbol','Symbol',params.record&&params.record.symbol,30),inputPublicAddress=textInput('inputPublicAddress','Public address',params.record&&params.record.publicAddress);
-  securityUi.addPublicInputControls(inputPublicAddress,group,()=>inputSymbol.value);
-  const inputTags=textInput('inputTags','Tags (comma separated)',params.record&&params.record.tags,250),inputBalance=textInput('inputManualBalance','Balance',params.record&&params.record.manualBalance,100);
-  const privateLabel=document.createElement('label');privateLabel.for='inputPrivateAddress';privateLabel.textContent='Private key';group.appendChild(privateLabel);const inputPrivateAddress=document.createElement('input');inputPrivateAddress.type='password';inputPrivateAddress.className='form-control';inputPrivateAddress.id='inputPrivateAddress';inputPrivateAddress.maxLength=500;inputPrivateAddress.value=(params.record&&params.record.privateAddress)||'';group.appendChild(inputPrivateAddress);securityUi.addSensitiveInputControls(inputPrivateAddress,group,'private key');
-  const notesLabel=document.createElement('label');notesLabel.for='inputNotes';notesLabel.textContent='Notes';group.appendChild(notesLabel);const inputNotes=document.createElement('textarea');inputNotes.rows=4;inputNotes.className='form-control coin-notes-input';inputNotes.id='inputNotes';inputNotes.maxLength=500;inputNotes.value=getUserCoinNotes(params.vaultData,params.record);group.appendChild(inputNotes);
+exports.createRecord = (params) => createEditRecord(params);
 
-  const saveRecord=(button)=>{if(params.saving.state)return alert('Please wait for processing to complete');if(!inputName.value){if(button)button.disabled=false;return;}if(button)button.disabled=true;params.saving.state=true;statusMgr.loadStatus();const rec=params.record||{created:Date()};rec.name=inputName.value;rec.symbol=inputSymbol.value;rec.publicAddress=inputPublicAddress.value;rec.privateAddress=inputPrivateAddress.value;rec.tags=inputTags.value;rec.manualBalance=inputBalance.value;rec.balanceUpdated=inputBalance.value?new Date().toISOString():(rec.balanceUpdated||'');rec.notes=inputNotes.value;if(params.record)rec.modified=Date();const records=params.vaultData.groups[params.vaultData.groupSelected].records||(params.vaultData.groups[params.vaultData.groupSelected].records=[]);if(params.record)records[params.vaultData.recordSelected]=rec;else records.push(rec);records.sort(utils.compareIgnoreCase);params.vaultData.recordSelected=records.indexOf(rec);ipc.send('process-record',{cryptoKey:params.cryptoKey,action:params.record?'modify':'create',vaultData:params.vaultData});};
-  form.addEventListener('submit',(e)=>{e.preventDefault();saveRecord(null);});
-  detailActions.set([{icon:'fa-save',title:'Save coin',className:'detail-action-save',onClick:(_event,button)=>saveRecord(button)}]);
-};
+const createEditRecord = (params) => {
+  const area = document.getElementById('detailArea');
+  area.innerHTML = '';
+  const header = document.createElement('h1');
+  header.textContent = params.record ? 'Modify Coin' : 'Add Coin';
+  area.appendChild(header);
+  area.appendChild(document.createElement('hr'));
 
-exports.showRecordDetail=(params)=>renderRecordDetail(params);
-const renderRecordDetail=(params)=>{
-  const area=document.getElementById('detailArea');area.innerHTML='';appendCoinHeader(area,params.record);area.appendChild(document.createElement('hr'));const addLine=(label,value,formatter)=>{if(value==null||value==='')return;const p=document.createElement('p'),b=document.createElement('b');b.textContent=`${label}: `;p.appendChild(b);const span=document.createElement('span');span.textContent=formatter?formatter(value):value;p.appendChild(span);area.appendChild(p);};
-  addLine('Symbol',params.record.symbol);addLine('Tags',params.record.tags);addLine('Balance',params.record.manualBalance);addLine('Balance updated',params.record.balanceUpdated,formatEasternDate);
-  securityUi.appendPublicAddressField(area,params.record.publicAddress||'',params.record.symbol||'');
-  if(!params.record.publicAddress){const placeholder=area.querySelector('.public-address-field .public-address-value');if(placeholder){placeholder.textContent='Use edit button to update asset.';placeholder.classList.add('public-address-placeholder');}}
-  if(String(params.record.privateAddress||'').trim())securityUi.appendSensitiveField(area,'Private key',params.record.privateAddress);
-  const notesWrap=document.createElement('div');notesWrap.className='coin-notes-section';const notesLabel=document.createElement('b');notesLabel.textContent='Notes:';notesWrap.appendChild(notesLabel);const notesValue=document.createElement('div');notesValue.className='outData coin-notes-value';notesValue.textContent=getUserCoinNotes(params.vaultData,params.record);notesWrap.appendChild(notesValue);area.appendChild(notesWrap);addLine('Created',params.record.created,formatEasternDate);addLine('Modified',params.record.modified,formatEasternDate);
+  const { form, grid } = editFormUi.createForm(area);
+  const inputName = editFormUi.addTextInput(grid, {
+    id: 'inputName', label: 'Coin', value: params.record && params.record.name, maxLength: 25
+  });
+  const inputSymbol = editFormUi.addTextInput(grid, {
+    id: 'inputSymbol', label: 'Symbol', value: params.record && params.record.symbol, maxLength: 30
+  });
+  const inputPublicAddress = editFormUi.addTextInput(grid, {
+    id: 'inputPublicAddress', label: 'Public address', value: params.record && params.record.publicAddress
+  });
+  const inputPrivateAddress = editFormUi.addTextInput(grid, {
+    id: 'inputPrivateAddress', label: 'Private key', value: params.record && params.record.privateAddress,
+    sensitive: true, revealLabel: 'private key'
+  });
+  const inputTags = editFormUi.addTextInput(grid, {
+    id: 'inputTags', label: 'Tags (comma separated)', value: params.record && params.record.tags, maxLength: 250
+  });
+  const inputBalance = editFormUi.addTextInput(grid, {
+    id: 'inputManualBalance', label: 'Balance', value: params.record && params.record.manualBalance,
+    maxLength: 100, sensitive: true, revealLabel: 'balance'
+  });
+  const inputNotes = editFormUi.addTextarea(grid, {
+    id: 'inputNotes', label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record),
+    rows: 4, maxLength: 500, className: 'coin-notes-input', full: true
+  });
 
+  const saveRecord = (button) => {
+    if (params.saving.state) return alert('Please wait for processing to complete');
+    if (!inputName.value) {
+      if (button) button.disabled = false;
+      return;
+    }
+    if (button) button.disabled = true;
+    params.saving.state = true;
+    statusMgr.loadStatus();
+
+    const rec = params.record || { created: Date() };
+    rec.name = inputName.value;
+    rec.symbol = inputSymbol.value;
+    rec.publicAddress = inputPublicAddress.value;
+    rec.privateAddress = inputPrivateAddress.value;
+    rec.tags = inputTags.value;
+    rec.manualBalance = inputBalance.value;
+    rec.balanceUpdated = inputBalance.value ? new Date().toISOString() : (rec.balanceUpdated || '');
+    rec.notes = inputNotes.value;
+    if (params.record) rec.modified = Date();
+
+    const records = params.vaultData.groups[params.vaultData.groupSelected].records ||
+      (params.vaultData.groups[params.vaultData.groupSelected].records = []);
+    if (params.record) records[params.vaultData.recordSelected] = rec;
+    else records.push(rec);
+    records.sort(utils.compareIgnoreCase);
+    params.vaultData.recordSelected = records.indexOf(rec);
+    ipc.send('process-record', {
+      cryptoKey: params.cryptoKey,
+      action: params.record ? 'modify' : 'create',
+      vaultData: params.vaultData
+    });
+  };
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveRecord(null);
+  });
   detailActions.set([
-    {icon:'fa-print',title:'Print coin sheet',className:'detail-action-print',onClick:()=>securityUi.printRecoverySheet(`${params.record.name||'Coin'} Recovery Sheet`,[{label:'Coin',value:params.record.name},{label:'Symbol',value:params.record.symbol},{label:'Tags',value:params.record.tags},{label:'Public address',value:params.record.publicAddress},{label:'Private key',value:params.record.privateAddress},{label:'Balance',value:params.record.manualBalance},{label:'Balance updated',value:params.record.balanceUpdated},{label:'Notes',value:getUserCoinNotes(params.vaultData,params.record)}],!!params.record.privateAddress)},
-    {icon:'fa-pencil',title:'Edit coin',onClick:()=>createEditRecord(params)},
-    {icon:'fa-trash',title:'Delete coin',className:'detail-action-delete',onClick:()=>confirmDelete(params)}
+    { icon: 'fa-save', title: 'Save coin', className: 'detail-action-save', onClick: (_event, button) => saveRecord(button) }
   ]);
 };
-const confirmDelete=(params)=>{const area=document.getElementById('detailArea');area.innerHTML='';const header=document.createElement('h1');header.textContent=`Confirm Delete of coin: ${params.record.name}`;area.appendChild(header);area.appendChild(document.createElement('hr'));const note=document.createElement('p');note.textContent='Use the red trash icon below to permanently delete this coin from the wallet.';area.appendChild(note);detailActions.set([{icon:'fa-trash',title:'Confirm delete coin',className:'detail-action-delete',onClick:()=>{params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected,1);params.vaultData.recordSelected=null;params.saving.state=true;statusMgr.loadStatus();ipc.send('process-record',{cryptoKey:params.cryptoKey,action:'delete',vaultData:params.vaultData});area.innerHTML='';detailActions.clear();}}]);};
+
+exports.showRecordDetail = (params) => renderRecordDetail(params);
+
+const renderRecordDetail = (params) => {
+  const area = document.getElementById('detailArea');
+  area.innerHTML = '';
+  appendCoinHeader(area, params.record);
+  area.appendChild(document.createElement('hr'));
+
+  const addLine = (label, value, formatter) => {
+    if (value == null || value === '') return;
+    const p = document.createElement('p');
+    const b = document.createElement('b');
+    b.textContent = `${label}: `;
+    p.appendChild(b);
+    const span = document.createElement('span');
+    span.textContent = formatter ? formatter(value) : value;
+    p.appendChild(span);
+    area.appendChild(p);
+  };
+
+  addLine('Symbol', params.record.symbol);
+  addLine('Tags', params.record.tags);
+  if (String(params.record.manualBalance || '').trim()) {
+    securityUi.appendSensitiveField(area, 'Balance', params.record.manualBalance, { allowQr: false });
+  }
+  addLine('Balance updated', params.record.balanceUpdated, formatEasternDate);
+
+  securityUi.appendPublicAddressField(area, params.record.publicAddress || '', params.record.symbol || '');
+  if (!params.record.publicAddress) {
+    const placeholder = area.querySelector('.public-address-field .public-address-value');
+    if (placeholder) {
+      placeholder.textContent = 'Use edit button to update asset.';
+      placeholder.classList.add('public-address-placeholder');
+    }
+  }
+  if (String(params.record.privateAddress || '').trim()) {
+    securityUi.appendSensitiveField(area, 'Private key', params.record.privateAddress);
+  }
+
+  const notesWrap = document.createElement('div');
+  notesWrap.className = 'coin-notes-section';
+  const notesLabel = document.createElement('b');
+  notesLabel.textContent = 'Notes:';
+  notesWrap.appendChild(notesLabel);
+  const notesValue = document.createElement('div');
+  notesValue.className = 'outData coin-notes-value';
+  notesValue.textContent = getUserCoinNotes(params.vaultData, params.record);
+  notesWrap.appendChild(notesValue);
+  area.appendChild(notesWrap);
+
+  addLine('Created', params.record.created, formatEasternDate);
+  addLine('Modified', params.record.modified, formatEasternDate);
+
+  const printIncludesSensitive = !!String(params.record.privateAddress || '').trim() || !!String(params.record.manualBalance || '').trim();
+  detailActions.set([
+    {
+      icon: 'fa-print', title: 'Print coin sheet', className: 'detail-action-print',
+      onClick: () => securityUi.printRecoverySheet(`${params.record.name || 'Coin'} Recovery Sheet`, [
+        { label: 'Coin', value: params.record.name },
+        { label: 'Symbol', value: params.record.symbol },
+        { label: 'Tags', value: params.record.tags },
+        { label: 'Public address', value: params.record.publicAddress },
+        { label: 'Private key', value: params.record.privateAddress },
+        { label: 'Balance', value: params.record.manualBalance },
+        { label: 'Balance updated', value: params.record.balanceUpdated },
+        { label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record) }
+      ], printIncludesSensitive)
+    },
+    { icon: 'fa-pencil', title: 'Edit coin', onClick: () => createEditRecord(params) },
+    { icon: 'fa-trash', title: 'Delete coin', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
+  ]);
+};
+
+const confirmDelete = (params) => {
+  const area = document.getElementById('detailArea');
+  area.innerHTML = '';
+  const header = document.createElement('h1');
+  header.textContent = `Confirm Delete of coin: ${params.record.name}`;
+  area.appendChild(header);
+  area.appendChild(document.createElement('hr'));
+  const note = document.createElement('p');
+  note.textContent = 'Use the red trash icon below to permanently delete this coin from the wallet.';
+  area.appendChild(note);
+  detailActions.set([
+    {
+      icon: 'fa-trash', title: 'Confirm delete coin', className: 'detail-action-delete',
+      onClick: () => {
+        params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected, 1);
+        params.vaultData.recordSelected = null;
+        params.saving.state = true;
+        statusMgr.loadStatus();
+        ipc.send('process-record', { cryptoKey: params.cryptoKey, action: 'delete', vaultData: params.vaultData });
+        area.innerHTML = '';
+        detailActions.clear();
+      }
+    }
+  ]);
+};

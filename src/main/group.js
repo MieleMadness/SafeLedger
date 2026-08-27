@@ -3,15 +3,14 @@
 */
 
 const electron = require('electron');
-const remote = electron.remote;
-const {ipcRenderer : ipc } = electron;
+const { ipcRenderer: ipc } = electron;
 const statusMgr = require('./status');
-const con = remote.getGlobal('console');
 const record = require('./record');
 const utils = require('./utils');
 const securityUi = require('./security-ui');
 const walletCatalog = require('./wallet-catalog');
 const detailActions = require('./detail-actions');
+const editFormUi = require('./edit-form-ui');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
@@ -51,6 +50,7 @@ const renderGroups = (params) => {
   groupArea.innerHTML = '';
   const ul = document.createElement('UL');
   ul.className = 'nav';
+
   if (params.vaultData && params.vaultData.groups) {
     const groupsArray = params.vaultData.groups;
     const displayGroups = groupsArray
@@ -74,9 +74,9 @@ const renderGroups = (params) => {
         if (params.saving.state) return alert('Please wait for processing to complete');
         params.vaultData.groupSelected = i;
         params.vaultData.recordSelected = null;
-        renderGroupDetail({cryptoKey:params.cryptoKey,vaultData:params.vaultData,group:current,saving:params.saving});
-        renderGroups({cryptoKey:params.cryptoKey,vaultData:params.vaultData,groups:params.vaultData.groups,saving:params.saving});
-        record.listRecords({cryptoKey:params.cryptoKey,vaultData:params.vaultData,records:current.records,saving:params.saving});
+        renderGroupDetail({ cryptoKey: params.cryptoKey, vaultData: params.vaultData, group: current, saving: params.saving });
+        renderGroups({ cryptoKey: params.cryptoKey, vaultData: params.vaultData, groups: params.vaultData.groups, saving: params.saving });
+        record.listRecords({ cryptoKey: params.cryptoKey, vaultData: params.vaultData, records: current.records, saving: params.saving });
       });
       if (params.vaultData.groupSelected == i) href.className = 'item-selected';
 
@@ -105,86 +105,178 @@ const renderGroups = (params) => {
 
 exports.createGroup = (params) => createEditGroup(params);
 
-const createSensitiveInput = (form, id, labelText, value) => {
-  const formGroup = document.createElement('div'); formGroup.className='form-group'; form.appendChild(formGroup);
-  const label = document.createElement('label'); label.for=id; label.textContent=labelText; formGroup.appendChild(label);
-  const input = document.createElement('input'); input.type='password'; input.className='form-control'; input.id=id; input.maxLength=500; input.value=value||''; formGroup.appendChild(input);
-  securityUi.addSensitiveInputControls(input, formGroup, labelText.toLowerCase());
-  return input;
-};
-
 const createEditGroup = (params) => {
-  const area=document.getElementById('detailArea'); area.innerHTML='';
-  const header=document.createElement('h1'); header.textContent=params.group?'Modify Wallet':'Add Wallet'; area.appendChild(header); area.appendChild(document.createElement('hr'));
-  const form=document.createElement('form'); area.appendChild(form);
-  const general=document.createElement('div'); general.className='form-group'; form.appendChild(general);
+  const area = document.getElementById('detailArea');
+  area.innerHTML = '';
+  const header = document.createElement('h1');
+  header.textContent = params.group ? 'Modify Wallet' : 'Add Wallet';
+  area.appendChild(header);
+  area.appendChild(document.createElement('hr'));
 
-  const labelName=document.createElement('label'); labelName.for='inputName'; labelName.textContent='Name'; general.appendChild(labelName);
-  const inputName=document.createElement('input'); inputName.type='text'; inputName.className='form-control'; inputName.id='inputName'; inputName.maxLength=25; inputName.value=params.group?displayWalletName(params.group.name):''; general.appendChild(inputName);
-
-  const categoryLabel=document.createElement('label'); categoryLabel.for='inputCategory'; categoryLabel.textContent='Wallet category'; general.appendChild(categoryLabel);
-  const inputCategory=document.createElement('select'); inputCategory.className='form-control'; inputCategory.id='inputCategory';
-  ['', 'Hardware Wallet', 'Software Wallet', 'Other Wallet'].forEach((value) => {
-    const option=document.createElement('option'); option.value=value; option.textContent=value || 'Not specified'; inputCategory.appendChild(option);
+  const { form, grid } = editFormUi.createForm(area);
+  const inputName = editFormUi.addTextInput(grid, {
+    id: 'inputName', label: 'Name', value: params.group ? displayWalletName(params.group.name) : '', maxLength: 25
   });
-  inputCategory.value=getWalletCategory(params.group)||''; general.appendChild(inputCategory);
+  const inputCategory = editFormUi.addSelect(grid, {
+    id: 'inputCategory', label: 'Wallet category', value: getWalletCategory(params.group) || '',
+    options: ['', 'Hardware Wallet', 'Software Wallet', 'Other Wallet']
+  });
+  const inputTags = editFormUi.addTextInput(grid, {
+    id: 'inputTags', label: 'Tags (comma separated)', value: params.group && params.group.tags, maxLength: 250
+  });
+  const inputPassword = editFormUi.addTextInput(grid, {
+    id: 'inputPassword', label: 'Password', value: params.group && params.group.password,
+    sensitive: true, revealLabel: 'password'
+  });
+  const inputPin = editFormUi.addTextInput(grid, {
+    id: 'inputPin', label: 'PIN code', value: params.group && params.group.pin,
+    sensitive: true, revealLabel: 'PIN code'
+  });
+  const inputRecoveryLink = editFormUi.addTextInput(grid, {
+    id: 'inputRecoveryLink', label: 'Recovery link', value: params.group && params.group.recoveryLink,
+    sensitive: true, revealLabel: 'recovery link'
+  });
+  const inputSeedPhrase = editFormUi.addTextInput(grid, {
+    id: 'inputSeedPhrase', label: 'Seed phrase', value: params.group && params.group.seedPhrase,
+    sensitive: true, revealLabel: 'seed phrase'
+  });
+  const inputNotes = editFormUi.addTextarea(grid, {
+    id: 'inputNotes', label: 'Notes', value: getUserWalletNotes(params.group), rows: 5, maxLength: 500, full: true
+  });
 
-  const labelTags=document.createElement('label'); labelTags.for='inputTags'; labelTags.textContent='Tags (comma separated)'; general.appendChild(labelTags);
-  const inputTags=document.createElement('input'); inputTags.type='text'; inputTags.className='form-control'; inputTags.id='inputTags'; inputTags.maxLength=250; inputTags.value=(params.group&&params.group.tags)||''; general.appendChild(inputTags);
+  const saveGroup = (button) => {
+    if (params.saving.state) return alert('Please wait for processing to complete');
+    if (!inputName.value) {
+      if (button) button.disabled = false;
+      return;
+    }
+    if (button) button.disabled = true;
 
-  const inputPassword=createSensitiveInput(form,'inputPassword','Password',params.group&&params.group.password);
-  const inputPin=createSensitiveInput(form,'inputPin','PIN code',params.group&&params.group.pin);
-  const inputRecoveryLink=createSensitiveInput(form,'inputRecoveryLink','Recovery link',params.group&&params.group.recoveryLink);
-  const inputSeedPhrase=createSensitiveInput(form,'inputSeedPhrase','Seed phrase',params.group&&params.group.seedPhrase);
+    const g = params.group || { created: Date() };
+    g.name = inputName.value;
+    g.category = inputCategory.value;
+    g.tags = inputTags.value;
+    g.password = inputPassword.value;
+    g.pin = inputPin.value;
+    g.recoveryLink = inputRecoveryLink.value;
+    g.seedPhrase = inputSeedPhrase.value;
+    g.notes = inputNotes.value;
+    if (params.group) g.modified = Date();
 
-  const notesGroup=document.createElement('div'); notesGroup.className='form-group'; form.appendChild(notesGroup);
-  const labelNotes=document.createElement('label'); labelNotes.for='inputNotes'; labelNotes.textContent='Notes'; notesGroup.appendChild(labelNotes);
-  const inputNotes=document.createElement('textarea'); inputNotes.rows=5; inputNotes.className='form-control'; inputNotes.id='inputNotes'; inputNotes.maxLength=500; inputNotes.value=getUserWalletNotes(params.group); notesGroup.appendChild(inputNotes);
-
-  const saveGroup=(button)=>{
-    if(params.saving.state)return alert('Please wait for processing to complete');
-    if(!inputName.value){if(button)button.disabled=false;return;}
-    if(button)button.disabled=true;
-    const g=params.group||{created:Date()};
-    g.name=inputName.value; g.category=inputCategory.value; g.tags=inputTags.value; g.password=inputPassword.value; g.pin=inputPin.value; g.recoveryLink=inputRecoveryLink.value; g.seedPhrase=inputSeedPhrase.value; g.notes=inputNotes.value; if(params.group)g.modified=Date();
-    if(params.group)params.vaultData.groups[params.vaultData.groupSelected]=g; else params.vaultData.groups.push(g);
-    params.vaultData.groups.sort(utils.compareIgnoreCase); params.vaultData.groupSelected=params.vaultData.groups.indexOf(g); params.saving.state=true; statusMgr.loadStatus();
-    ipc.send('process-group',{cryptoKey:params.cryptoKey,type:params.group?'group-modify':'group-create',vaultData:params.vaultData});
+    if (params.group) params.vaultData.groups[params.vaultData.groupSelected] = g;
+    else params.vaultData.groups.push(g);
+    params.vaultData.groups.sort(utils.compareIgnoreCase);
+    params.vaultData.groupSelected = params.vaultData.groups.indexOf(g);
+    params.saving.state = true;
+    statusMgr.loadStatus();
+    ipc.send('process-group', {
+      cryptoKey: params.cryptoKey,
+      type: params.group ? 'group-modify' : 'group-create',
+      vaultData: params.vaultData
+    });
   };
-  form.addEventListener('submit',(e)=>{e.preventDefault();saveGroup(null);});
-  detailActions.set([{icon:'fa-save',title:'Save wallet',className:'detail-action-save',onClick:(_event,button)=>saveGroup(button)}]);
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    saveGroup(null);
+  });
+  detailActions.set([
+    { icon: 'fa-save', title: 'Save wallet', className: 'detail-action-save', onClick: (_event, button) => saveGroup(button) }
+  ]);
 };
 
 exports.showGroupDetail = (params) => renderGroupDetail(params);
 
 const renderGroupDetail = (params) => {
-  const area=document.getElementById('detailArea'); area.innerHTML='';
-  const header=document.createElement('h1'); header.textContent=displayWalletName(params.group.name)||'Wallet'; area.appendChild(header);
-  const category=getWalletCategory(params.group);
-  if(category){const sub=document.createElement('div');sub.className='wallet-detail-category';sub.textContent=category;area.appendChild(sub);}
+  const area = document.getElementById('detailArea');
+  area.innerHTML = '';
+  const header = document.createElement('h1');
+  header.textContent = displayWalletName(params.group.name) || 'Wallet';
+  area.appendChild(header);
+  const category = getWalletCategory(params.group);
+  if (category) {
+    const sub = document.createElement('div');
+    sub.className = 'wallet-detail-category';
+    sub.textContent = category;
+    area.appendChild(sub);
+  }
   area.appendChild(document.createElement('hr'));
-  if(params.group.tags){const tags=document.createElement('p'); tags.innerHTML='<b>Tags:</b> '; const span=document.createElement('span'); span.textContent=params.group.tags; tags.appendChild(span); area.appendChild(tags);}
-  securityUi.appendSensitiveField(area,'Password',params.group.password||'');
-  securityUi.appendSensitiveField(area,'PIN code',params.group.pin||'');
-  securityUi.appendSensitiveField(area,'Recovery link',params.group.recoveryLink||'');
-  securityUi.appendSensitiveField(area,'Seed phrase',params.group.seedPhrase||'');
-  const notes=document.createElement('p'); notes.innerHTML='<b>Notes:</b>'; area.appendChild(notes);
-  const notesDetail=document.createElement('div'); notesDetail.className='outData'; notesDetail.textContent=getUserWalletNotes(params.group); area.appendChild(notesDetail);
-  const created=document.createElement('p'); created.className='dates'; created.innerHTML=`<b>Created:</b> ${params.group.created||''}`; area.appendChild(created);
-  if(params.group.modified){const modified=document.createElement('p'); modified.className='dates'; modified.innerHTML=`<b>Modified:</b> ${params.group.modified}`; area.appendChild(modified);}
+
+  if (params.group.tags) {
+    const tags = document.createElement('p');
+    tags.innerHTML = '<b>Tags:</b> ';
+    const span = document.createElement('span');
+    span.textContent = params.group.tags;
+    tags.appendChild(span);
+    area.appendChild(tags);
+  }
+
+  securityUi.appendSensitiveField(area, 'Password', params.group.password || '', { allowQr: false });
+  securityUi.appendSensitiveField(area, 'PIN code', params.group.pin || '', { allowQr: false });
+  securityUi.appendSensitiveField(area, 'Recovery link', params.group.recoveryLink || '', { allowQr: false });
+  securityUi.appendSensitiveField(area, 'Seed phrase', params.group.seedPhrase || '', { allowQr: false });
+
+  const notes = document.createElement('p');
+  notes.innerHTML = '<b>Notes:</b>';
+  area.appendChild(notes);
+  const notesDetail = document.createElement('div');
+  notesDetail.className = 'outData';
+  notesDetail.textContent = getUserWalletNotes(params.group);
+  area.appendChild(notesDetail);
+
+  const created = document.createElement('p');
+  created.className = 'dates';
+  created.innerHTML = `<b>Created:</b> ${params.group.created || ''}`;
+  area.appendChild(created);
+  if (params.group.modified) {
+    const modified = document.createElement('p');
+    modified.className = 'dates';
+    modified.innerHTML = `<b>Modified:</b> ${params.group.modified}`;
+    area.appendChild(modified);
+  }
 
   detailActions.set([
-    {icon:'fa-print',title:'Print recovery sheet',className:'detail-action-print',onClick:()=>securityUi.printRecoverySheet(`${displayWalletName(params.group.name)||'Wallet'} Recovery Sheet`,[
-      {label:'Wallet',value:displayWalletName(params.group.name)},{label:'Category',value:category},{label:'Tags',value:params.group.tags},{label:'Password',value:params.group.password},{label:'PIN',value:params.group.pin},{label:'Recovery link',value:params.group.recoveryLink},{label:'Seed phrase',value:params.group.seedPhrase},{label:'Notes',value:getUserWalletNotes(params.group)}
-    ],true)},
-    {icon:'fa-pencil',title:'Edit wallet',onClick:()=>createEditGroup(params)},
-    {icon:'fa-trash',title:'Delete wallet',className:'detail-action-delete',onClick:()=>confirmDelete(params)}
+    {
+      icon: 'fa-print', title: 'Print recovery sheet', className: 'detail-action-print',
+      onClick: () => securityUi.printRecoverySheet(`${displayWalletName(params.group.name) || 'Wallet'} Recovery Sheet`, [
+        { label: 'Wallet', value: displayWalletName(params.group.name) },
+        { label: 'Category', value: category },
+        { label: 'Tags', value: params.group.tags },
+        { label: 'Password', value: params.group.password },
+        { label: 'PIN', value: params.group.pin },
+        { label: 'Recovery link', value: params.group.recoveryLink },
+        { label: 'Seed phrase', value: params.group.seedPhrase },
+        { label: 'Notes', value: getUserWalletNotes(params.group) }
+      ], true)
+    },
+    { icon: 'fa-pencil', title: 'Edit wallet', onClick: () => createEditGroup(params) },
+    { icon: 'fa-trash', title: 'Delete wallet', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
   ]);
 };
 
 const confirmDelete = (params) => {
-  const area=document.getElementById('detailArea'); area.innerHTML='';
-  const header=document.createElement('h1'); header.textContent=`Confirm Delete of wallet: ${displayWalletName(params.group.name)}`; area.appendChild(header); area.appendChild(document.createElement('hr'));
-  const note=document.createElement('p'); note.textContent='Use the red trash icon below to permanently delete this wallet.'; area.appendChild(note);
-  detailActions.set([{icon:'fa-trash',title:'Confirm delete wallet',className:'detail-action-delete',onClick:()=>{params.vaultData.groups.splice(params.vaultData.groupSelected,1); params.vaultData.groupSelected=null; params.vaultData.recordSelected=null; params.saving.state=true; statusMgr.loadStatus(); ipc.send('process-group',{cryptoKey:params.cryptoKey,type:'group-delete',vaultData:params.vaultData}); area.innerHTML=''; detailActions.clear();}}]);
+  const area = document.getElementById('detailArea');
+  area.innerHTML = '';
+  const header = document.createElement('h1');
+  header.textContent = `Confirm Delete of wallet: ${displayWalletName(params.group.name)}`;
+  area.appendChild(header);
+  area.appendChild(document.createElement('hr'));
+  const note = document.createElement('p');
+  note.textContent = 'Use the red trash icon below to permanently delete this wallet.';
+  area.appendChild(note);
+  detailActions.set([
+    {
+      icon: 'fa-trash', title: 'Confirm delete wallet', className: 'detail-action-delete',
+      onClick: () => {
+        params.vaultData.groups.splice(params.vaultData.groupSelected, 1);
+        params.vaultData.groupSelected = null;
+        params.vaultData.recordSelected = null;
+        params.saving.state = true;
+        statusMgr.loadStatus();
+        ipc.send('process-group', { cryptoKey: params.cryptoKey, type: 'group-delete', vaultData: params.vaultData });
+        area.innerHTML = '';
+        detailActions.clear();
+      }
+    }
+  ]);
 };

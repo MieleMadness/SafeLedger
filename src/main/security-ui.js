@@ -20,7 +20,7 @@ exports.copySensitive = (value) => {
   autoClearClipboard(text);
 };
 
-function makeIconButton(icon, onClick, title, extraClass='') {
+function makeIconButton(icon, onClick, title, extraClass = '') {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `btn btn-default btn-sm field-inline-action ${extraClass}`.trim();
@@ -75,74 +75,42 @@ function makeQrButton(valueGetter, qrArea, captionText, onOpen) {
   }, 'Show QR code', 'qr-inline-button');
 }
 
-function makeInlineActions(copyHandler, qrValueGetter, qrArea, qrCaption, onQrOpen) {
+function makeInlineActions(copyHandler, qrValueGetter, qrArea, qrCaption, onQrOpen, allowQr = true) {
   const actions = document.createElement('div');
   actions.className = 'field-inline-actions';
   actions.appendChild(makeIconButton('fa-copy', copyHandler, 'Copy'));
-  actions.appendChild(makeQrButton(qrValueGetter, qrArea, qrCaption, onQrOpen));
+  if (allowQr) actions.appendChild(makeQrButton(qrValueGetter, qrArea, qrCaption, onQrOpen));
   return actions;
 }
 
-exports.addPublicInputControls = (input, parent, symbolGetter) => {
-  const shell = document.createElement('div');
-  shell.className = 'secure-input-shell';
-  parent.insertBefore(shell, input);
-  shell.appendChild(input);
+function makeEditRevealButton(input, label) {
+  const actions = document.createElement('div');
+  actions.className = 'field-inline-actions edit-sensitive-actions';
+  const button = makeIconButton('fa-eye', (_event, control) => {
+    const hidden = input.type === 'password';
+    input.type = hidden ? 'text' : 'password';
+    const title = `${hidden ? 'Hide' : 'Show'} ${label}`;
+    control.title = title;
+    control.setAttribute('aria-label', title);
+    control.innerHTML = `<i class="fa ${hidden ? 'fa-eye-slash' : 'fa-eye'}" aria-hidden="true"></i>`;
+  }, `Show ${label}`, 'edit-sensitive-toggle');
+  actions.appendChild(button);
+  return actions;
+}
 
-  const qrArea = document.createElement('div');
-  qrArea.className = 'qr-area compact-qr-area';
-  qrArea.style.display = 'none';
-
-  const actions = makeInlineActions(
-    () => clipboard.writeText(String(input.value || '')),
-    () => input.value,
-    qrArea,
-    `Generated locally from the ${(typeof symbolGetter === 'function' ? symbolGetter() : symbolGetter) || 'coin'} public address. No network connection is used.`
-  );
-  shell.appendChild(actions);
-  parent.insertBefore(qrArea, shell.nextSibling);
-};
-
-exports.addSensitiveInputControls = (input, parent, label) => {
+exports.addEditSensitiveInputControl = (input, parent, label) => {
   input.type = 'password';
   input.setAttribute('autocomplete', 'off');
-
   const shell = document.createElement('div');
-  shell.className = 'secure-input-shell';
-  parent.insertBefore(shell, input);
+  shell.className = 'secure-input-shell edit-sensitive-shell';
+  parent.appendChild(shell);
   shell.appendChild(input);
-
-  const qrArea = document.createElement('div');
-  qrArea.className = 'qr-area compact-qr-area';
-  qrArea.style.display = 'none';
-
-  const actions = makeInlineActions(
-    () => exports.copySensitive(input.value),
-    () => input.value,
-    qrArea,
-    `Generated locally from the ${label}. Treat this QR code as sensitive recovery information.`
-  );
-  shell.appendChild(actions);
-  parent.insertBefore(qrArea, shell.nextSibling);
-
-  const controls = document.createElement('div');
-  controls.className = 'sensitive-controls';
-  const reveal = document.createElement('button');
-  reveal.type = 'button';
-  reveal.className = 'btn btn-default btn-sm';
-  reveal.innerHTML = `<i class="fa fa-eye"></i> Show ${label}`;
-  reveal.addEventListener('click', () => {
-    const isHidden = input.type === 'password';
-    input.type = isHidden ? 'text' : 'password';
-    reveal.innerHTML = isHidden
-      ? `<i class="fa fa-eye-slash"></i> Hide ${label}`
-      : `<i class="fa fa-eye"></i> Show ${label}`;
-  });
-  controls.appendChild(reveal);
-  parent.appendChild(controls);
+  shell.appendChild(makeEditRevealButton(input, label));
+  return shell;
 };
 
-exports.appendSensitiveField = (parent, label, value) => {
+exports.appendSensitiveField = (parent, label, value, options = {}) => {
+  const allowQr = options.allowQr !== false;
   const wrapper = document.createElement('div');
   wrapper.className = 'sensitive-field';
   const details = document.createElement('details');
@@ -169,7 +137,8 @@ exports.appendSensitiveField = (parent, label, value) => {
     () => value,
     qrArea,
     `Generated locally from the ${label}. Treat this QR code as sensitive recovery information.`,
-    () => { details.open = true; }
+    () => { details.open = true; },
+    allowQr
   );
   summary.appendChild(actions);
   details.appendChild(summary);
@@ -180,7 +149,7 @@ exports.appendSensitiveField = (parent, label, value) => {
   out.className = 'outData sensitive-value';
   out.textContent = value || '';
   content.appendChild(out);
-  content.appendChild(qrArea);
+  if (allowQr) content.appendChild(qrArea);
 
   details.addEventListener('toggle', () => {
     stateIcon.className = details.open ? 'fa fa-minus-circle' : 'fa fa-plus-circle';
@@ -242,3 +211,5 @@ exports.printRecoverySheet = (title, fields, includesSensitive) => {
   popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#111}h1{font-size:24px}p.warn{border:2px solid #000;padding:10px;font-weight:bold}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #999;padding:10px;text-align:left;vertical-align:top;word-break:break-all}th{width:180px;background:#eee}@media print{button{display:none}}</style></head><body><h1>${escapeHtml(title)}</h1>${includesSensitive ? '<p class="warn">CONFIDENTIAL RECOVERY INFORMATION — KEEP SECURE</p>' : ''}<table>${rows}</table><p>Generated offline by SafeLedger on ${escapeHtml(new Date().toString())}</p><button onclick="window.print()">Print</button></body></html>`);
   popup.document.close();
 };
+
+exports._test = { makeIconButton, makeEditRevealButton, makeInlineActions };

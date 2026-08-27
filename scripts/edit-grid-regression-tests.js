@@ -7,64 +7,87 @@ const { execFileSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
-const layoutPath = path.join(root, 'src/main/edit-form-grid-enhancements.js');
-const securityPath = path.join(root, 'src/main/edit-security-enhancements.js');
+const exists = (relative) => fs.existsSync(path.join(root, relative));
 
-execFileSync(process.execPath, ['--check', layoutPath], { stdio: 'pipe' });
-execFileSync(process.execPath, ['--check', securityPath], { stdio: 'pipe' });
+for (const file of ['src/main/edit-form-ui.js', 'src/main/security-ui.js', 'src/main/record.js', 'src/main/group.js']) {
+  execFileSync(process.execPath, ['--check', path.join(root, file)], { stdio: 'pipe' });
+}
 
 const index = read('src/main/index.html');
-const layout = read('src/main/edit-form-grid-enhancements.js');
-const security = read('src/main/edit-security-enhancements.js');
+const formUi = read('src/main/edit-form-ui.js');
 const securityUi = read('src/main/security-ui.js');
-const css = read('src/main/css/2.0.39.css');
 const record = read('src/main/record.js');
+const group = read('src/main/group.js');
+const gridCss = read('src/main/css/2.0.38.css');
+const securityCss = read('src/main/css/2.0.39.css');
 
+assert(index.includes('./css/2.0.38.css'));
 assert(index.includes('./css/2.0.39.css'));
-assert(index.includes("require('./edit-form-grid-enhancements.js')"));
-assert(index.includes("require('./edit-security-enhancements.js')"));
+assert(!index.includes("require('./edit-form-grid-enhancements.js')"));
+assert(!index.includes("require('./form-spacing-enhancements.js')"));
+assert(!index.includes("require('./edit-security-enhancements.js')"));
+assert.strictEqual(exists('src/main/edit-form-grid-enhancements.js'), false);
+assert.strictEqual(exists('src/main/form-spacing-enhancements.js'), false);
+assert.strictEqual(exists('src/main/edit-security-enhancements.js'), false);
 
-assert(layout.includes("{ id: 'inputPublicAddress', label: 'Public address' }"));
-assert(layout.includes("{ id: 'inputPrivateAddress', label: 'Private key', sensitive: true }"));
-assert(layout.includes("{ id: 'inputManualBalance', label: 'Balance', sensitive: true }"));
-assert(layout.includes("{ id: 'inputNotes', label: 'Notes', full: true }"));
+assert(formUi.includes("form.className = 'safeledger-edit-form'"));
+assert(formUi.includes("grid.className = 'edit-info-grid'"));
+assert(formUi.includes("edit-info-grid-full"));
+assert(formUi.includes('securityUi.addEditSensitiveInputControl'));
+assert(gridCss.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)'));
+assert(gridCss.includes('column-gap: 16px'));
+assert(gridCss.includes('row-gap: 18px'));
 
-for (const walletField of [
-  "{ id: 'inputName', label: 'Name' }",
-  "{ id: 'inputCategory', label: 'Wallet category' }",
-  "{ id: 'inputTags', label: 'Tags (comma separated)' }",
-  "{ id: 'inputPassword', label: 'Password', sensitive: true }",
-  "{ id: 'inputPin', label: 'PIN code', sensitive: true }",
-  "{ id: 'inputRecoveryLink', label: 'Recovery link', sensitive: true }",
-  "{ id: 'inputSeedPhrase', label: 'Seed phrase', sensitive: true }"
-]) assert(layout.includes(walletField));
+const coinOrder = [
+  "id: 'inputName', label: 'Coin'",
+  "id: 'inputSymbol', label: 'Symbol'",
+  "id: 'inputPublicAddress', label: 'Public address'",
+  "id: 'inputPrivateAddress', label: 'Private key'",
+  "id: 'inputTags', label: 'Tags (comma separated)'",
+  "id: 'inputManualBalance', label: 'Balance'",
+  "id: 'inputNotes', label: 'Notes'"
+];
+let last = -1;
+for (const token of coinOrder) {
+  const current = record.indexOf(token);
+  assert(current > last, `Expected ${token} in direct Coin form order`);
+  last = current;
+}
+assert(record.includes("sensitive: true, revealLabel: 'private key'"));
+assert(record.includes("sensitive: true, revealLabel: 'balance'"));
+assert(record.includes("{ allowQr: false }"));
+assert(record.includes("appendSensitiveField(area, 'Private key', params.record.privateAddress)"));
+assert(record.includes('printIncludesSensitive'));
 
-assert(security.includes("{ id: 'inputPrivateAddress', label: 'private key' }"));
-assert(security.includes("{ id: 'inputManualBalance', label: 'balance' }"));
-assert(security.includes("{ id: 'inputPassword', label: 'password' }"));
-assert(security.includes("form.querySelectorAll('.compact-qr-area, .sensitive-controls')"));
-assert(security.includes("form.querySelectorAll('.secure-input-shell .field-inline-actions')"));
-assert(security.includes('fa fa-eye'));
-assert(security.includes('fa-eye-slash'));
-assert(!security.includes('fa-copy'));
-assert(!security.includes('fa-qrcode'));
-assert(security.includes("securityUi.appendSensitiveField(area, 'Balance', value)"));
-assert(security.includes("field.label === 'Balance'"));
+const walletOrder = [
+  "id: 'inputName', label: 'Name'",
+  "id: 'inputCategory', label: 'Wallet category'",
+  "id: 'inputTags', label: 'Tags (comma separated)'",
+  "id: 'inputPassword', label: 'Password'",
+  "id: 'inputPin', label: 'PIN code'",
+  "id: 'inputRecoveryLink', label: 'Recovery link'",
+  "id: 'inputSeedPhrase', label: 'Seed phrase'",
+  "id: 'inputNotes', label: 'Notes'"
+];
+last = -1;
+for (const token of walletOrder) {
+  const current = group.indexOf(token);
+  assert(current > last, `Expected ${token} in direct Wallet form order`);
+  last = current;
+}
+for (const label of ['Password', 'PIN code', 'Recovery link', 'Seed phrase']) {
+  assert(group.includes(`appendSensitiveField(area, '${label}'`));
+}
+assert((group.match(/allowQr: false/g) || []).length >= 4);
 
-assert(security.includes("const VIEW_COPY_ONLY_LABELS = new Set(['Balance', 'Password', 'PIN code', 'Recovery link', 'Seed phrase']);"));
-assert(security.includes("wrapper.querySelectorAll('.qr-inline-button, .compact-qr-area')"));
-assert(security.includes('restrictViewQr(area);'));
-assert(securityUi.includes("actions.appendChild(makeIconButton('fa-copy', copyHandler, 'Copy'))"));
-assert(securityUi.includes("makeQrButton(qrValueGetter, qrArea, qrCaption, onQrOpen)"));
+assert(securityUi.includes('exports.addEditSensitiveInputControl'));
+assert(securityUi.includes("'fa-eye'"));
+assert(securityUi.includes('fa-eye-slash'));
+assert(securityUi.includes('const allowQr = options.allowQr !== false'));
+assert(securityUi.includes('if (allowQr) actions.appendChild(makeQrButton'));
+assert(!securityUi.includes('addPublicInputControls'));
+assert(!securityUi.includes('addSensitiveInputControls'));
+assert(securityCss.includes('.edit-sensitive-shell'));
+assert(!securityCss.includes('.edit-public-shell'));
 
-assert(css.includes('.safeledger-edit-form .compact-qr-area'));
-assert(css.includes('display: none !important'));
-assert(css.includes('.edit-sensitive-actions'));
-assert(css.includes('padding-right: 44px'));
-
-assert(record.includes("textInput('inputManualBalance','Balance'"));
-assert(record.includes("addLine('Balance',params.record.manualBalance)"));
-assert(record.includes("{label:'Balance',value:params.record.manualBalance}"));
-assert(!record.includes('Last known balance'));
-
-console.log('PASS SafeLedger 2.0.40 QR restrictions and private Balance regression checks.');
+console.log('PASS SafeLedger 2.0.49 direct Coin/Wallet form rendering and security controls.');

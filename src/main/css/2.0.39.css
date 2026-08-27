@@ -1,13 +1,4 @@
-/* SafeLedger 2.0.39 edit-only reveal controls and private Balance */
-
-#detailArea .safeledger-edit-form .compact-qr-area,
-#detailArea .safeledger-edit-form .sensitive-controls {
-  display: none !important;
-}
-
-#detailArea .safeledger-edit-form .secure-input-shell.edit-public-shell .form-control {
-  padding-right: 12px;
-}
+/* SafeLedger edit-only reveal controls */
 
 #detailArea .safeledger-edit-form .secure-input-shell.edit-sensitive-shell .form-control {
   padding-right: 44px;
