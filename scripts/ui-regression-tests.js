@@ -105,7 +105,7 @@ check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.44');
+  assert.strictEqual(pkg.version, '2.0.45');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -118,6 +118,8 @@ check('Windows and Linux workflows test crypto inside Electron before packaging'
   const linux = read('.github/workflows/linux-appimage.yml');
   assert(windows.includes('Run Electron crypto smoke test'));
   assert(windows.includes('npm run test:electron-crypto'));
+  assert(windows.includes('README.md'));
+  assert(fs.existsSync(path.join(root, 'README.md')));
   assert(linux.includes('Run Electron crypto smoke test'));
   assert(linux.includes('npm run test:electron-crypto'));
 });
@@ -219,4 +221,4 @@ check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('scripts/run-electron-crypto-smoke.js');
 });
 
-console.log('\n17 SafeLedger 2.0.44 UI/runtime regression checks passed.');
+console.log('\n17 SafeLedger 2.0.45 UI/runtime regression checks passed.');

@@ -39,9 +39,11 @@ jobs:
         shell: pwsh
         run: npm run dist:win
 
-      - name: Upload portable EXE
+      - name: Upload portable EXE and README
         uses: actions/upload-artifact@v6
         with:
           name: SafeLedger-Windows-Portable
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            README.md
           if-no-files-found: error
