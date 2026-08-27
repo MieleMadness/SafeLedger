@@ -56,11 +56,16 @@ assert(cryptoUi.includes('sessionUnlocked: true'));
 assert(!cryptoUi.includes('dataKeyHex'));
 assert(!cryptoUi.includes('cryptoKey'));
 assert(!cryptoUi.includes('randomBytes(32)'));
-assert(!renderer.includes('masterCrypto'));
+assert(!renderer.includes('let masterCrypto'));
+assert(!renderer.includes('masterCrypto ='));
 assert(!renderer.includes('cryptoKey'));
 assert(!renderer.includes("require('crypto')"));
 assert(!group.includes('cryptoKey'));
 assert(!record.includes('cryptoKey'));
+
+// `masterCryptoInput` is retained only as the DOM id of the password input so
+// the existing security UI can find it. It does not contain or name a DEK variable.
+assert(renderer.includes("input.id = 'masterCryptoInput'"));
 
 // Cleanup must not weaken the product's core security/portability invariants.
 assert(encryption.includes("createCipheriv('aes-256-gcm'"));
