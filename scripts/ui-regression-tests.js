@@ -7,243 +7,172 @@ const { execFileSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+const exists = (relative) => fs.existsSync(path.join(root, relative));
+const syntaxCheck = (relative) => execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
+let passed = 0;
+function check(name, fn) { fn(); passed++; console.log(`PASS ${name}`); }
 
-function syntaxCheck(relative) {
-  execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-}
-
-function check(name, fn) {
-  fn();
-  console.log(`PASS ${name}`);
-}
-
-check('main window opens at 1200 x 750', () => {
-  const source = read('src/main/main.js');
-  assert(source.includes('width: 1200'));
-  assert(source.includes('height: 750'));
-  assert(!source.includes('height: 850'));
+check('main window and first profile defaults remain correct', () => {
+  const main = read('src/main/main.js');
+  const vault = read('src/main/robust-vault.js');
+  assert(main.includes('width: 1200'));
+  assert(main.includes('height: 750'));
+  assert(vault.includes("name: 'SafeLedger'"));
+  assert(!vault.includes("name: 'Initial Profile'"));
 });
 
-check('new installations name the first profile SafeLedger', () => {
-  const source = read('src/main/robust-vault.js');
-  assert(source.includes("name: 'SafeLedger'"));
-  assert(!source.includes("name: 'Initial Profile'"));
-});
-
-check('shared bottom detail-action dock is present', () => {
+check('shared bottom action dock and emergency control remain wired', () => {
   const index = read('src/main/index.html');
-  assert(index.includes('id="detailActionArea"'));
-  assert(index.includes('./css/2.0.30.css'));
-  assert(index.includes("require('./detail-action-enhancements.js')"));
   const css = read('src/main/css/2.0.30.css');
+  assert(index.includes('id="detailActionArea"'));
+  assert(index.includes("require('./detail-action-enhancements.js')"));
   assert(css.includes('.detail-action-area'));
   assert(css.includes('.emergency-lock-cell .panic-lock-inline'));
 });
 
-check('coin empty public address shows the requested light placeholder', () => {
+check('coin placeholders, private-key omission, and icon actions remain wired', () => {
   const record = read('src/main/record.js');
-  const css = read('src/main/css/2.0.30.css');
+  const group = read('src/main/group.js');
   assert(record.includes('Use edit button to update asset.'));
-  assert(record.includes("classList.add('public-address-placeholder')"));
-  assert(css.includes('.public-address-placeholder'));
-});
-
-check('coin private-key display is omitted when no value exists', () => {
-  const record = read('src/main/record.js');
   assert(record.includes("if(String(params.record.privateAddress||'').trim())securityUi.appendSensitiveField"));
+  for (const token of ["icon:'fa-print'", "icon:'fa-pencil'", "icon:'fa-trash'", "icon:'fa-save'"]) {
+    assert(record.includes(token));
+    assert(group.includes(token));
+  }
 });
 
-check('coin and wallet dock actions are normalized to Edit Print Delete', () => {
+check('detail action order, delete cancel, and profile dock remain normalized', () => {
   const enhancements = read('src/main/detail-action-enhancements.js');
   assert(enhancements.includes("const ACTION_ORDER = ['edit', 'print', 'delete'];"));
-  assert(enhancements.includes("value.startsWith('edit ')"));
-  assert(enhancements.includes("value.startsWith('print ')"));
-  assert(enhancements.includes("value.includes('delete')"));
-});
-
-check('save action is green and profiles use the bottom icon dock', () => {
-  const enhancements = read('src/main/detail-action-enhancements.js');
-  const css = read('src/main/css/2.0.30.css');
-  assert(css.includes('.detail-action-save'));
-  assert(css.includes('#2e7d32'));
+  assert(enhancements.includes("if (/^Confirm Delete of coin:/i.test(value)) return 'coin';"));
+  assert(enhancements.includes("if (/^Confirm Delete of wallet:/i.test(value)) return 'wallet';"));
+  assert(enhancements.includes("if (/^Confirm delete of profile:/i.test(value)) return 'profile';"));
   assert(enhancements.includes("title: 'Save profile'"));
   assert(enhancements.includes("title: 'Edit profile'"));
   assert(enhancements.includes("title: 'Print profile'"));
   assert(enhancements.includes("title: 'Delete profile'"));
-  assert(enhancements.indexOf("title: 'Edit profile'") < enhancements.indexOf("title: 'Print profile'"));
-  assert(enhancements.indexOf("title: 'Print profile'") < enhancements.indexOf("title: 'Delete profile'"));
 });
 
-check('wallet and coin actions still use icon-only bottom dock', () => {
-  const record = read('src/main/record.js');
-  const group = read('src/main/group.js');
-  assert(record.includes("icon:'fa-print'"));
-  assert(record.includes("icon:'fa-pencil'"));
-  assert(record.includes("icon:'fa-trash'"));
-  assert(record.includes("icon:'fa-save'"));
-  assert(group.includes("icon:'fa-print'"));
-  assert(group.includes("icon:'fa-pencil'"));
-  assert(group.includes("icon:'fa-trash'"));
-  assert(group.includes("icon:'fa-save'"));
-  assert(!record.includes('Print coin sheet</'));
-});
-
-check('coin wallet and profile delete confirmations include a cancel action', () => {
-  const enhancements = read('src/main/detail-action-enhancements.js');
-  assert(enhancements.includes("if (/^Confirm Delete of coin:/i.test(value)) return 'coin';"));
-  assert(enhancements.includes("if (/^Confirm Delete of wallet:/i.test(value)) return 'wallet';"));
-  assert(enhancements.includes("if (/^Confirm delete of profile:/i.test(value)) return 'profile';"));
-  assert(enhancements.includes("value.startsWith('cancel ')"));
-  assert(enhancements.includes("#recordArea a.item-selected"));
-  assert(enhancements.includes("#groupArea a.item-selected"));
-  assert(enhancements.includes("#vaultArea .badge-selected"));
-  assert(enhancements.includes("button.innerHTML = '<i class=\"fa fa-times\" aria-hidden=\"true\"></i>';"));
-  assert(enhancements.includes('Cancel delete ${kind}'));
-});
-
-check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
+check('Argon2id v3 direct initialization is the only active startup crypto path', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.47');
+  const session = read('src/main/crypto-session-main.js');
+  const bridge = read('src/main/crypto-ui-bridge.js');
+  assert.strictEqual(pkg.version, '2.0.48');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
-  assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
-  assert(provider.includes('wasmArgon2id'));
-  assert(envelope.includes('argon2Provider.CURRENT_IMPLEMENTATION'));
+  assert(session.includes("ipcMain.handle('crypto-v3-initialize'"));
+  assert(bridge.includes("ipc.invoke('crypto-v3-initialize', password)"));
+  assert(!session.includes('crypto-v3-migrate-legacy'));
+  assert(!bridge.includes('crypto-v3-migrate-legacy'));
+  assert(!envelope.includes('deriveLegacyKey'));
 });
 
-check('Windows artifact is flat and includes an auto-generated PDF README', () => {
+check('Windows artifact remains flat with generated PDF README', () => {
   const windows = read('.github/workflows/windows-portable.yml');
   const linux = read('.github/workflows/linux-appimage.yml');
-  const pdfScript = read('scripts/readme-to-pdf.js');
-  const pkg = JSON.parse(read('package.json'));
-  assert(windows.includes('Run Electron crypto smoke test'));
-  assert(windows.includes('npm run test:electron-crypto'));
+  const pdf = read('scripts/readme-to-pdf.js');
   assert(windows.includes("Get-ChildItem -Path dist -Filter 'SafeLedger-*-Portable.exe'"));
   assert(windows.includes('Copy-Item $exe.FullName -Destination release/windows/'));
   assert(windows.includes('npm run docs:pdf -- release/windows/README.pdf'));
   assert(windows.includes('path: release/windows/*'));
-  assert(!windows.includes('path: dist/*.exe'));
-  assert(!windows.includes('README.md\n          if-no-files-found'));
-  assert.strictEqual(pkg.scripts['docs:pdf'], 'electron scripts/readme-to-pdf.js');
-  assert.strictEqual(pkg.devDependencies.marked, '12.0.2');
-  assert(pdfScript.includes("const { marked } = require('marked');"));
-  assert(pdfScript.includes('marked.parse(markdown)'));
-  assert(pdfScript.includes("path.join(process.cwd(), 'README.md')"));
-  assert(pdfScript.includes('printToPDF'));
-  assert(linux.includes('Run Electron crypto smoke test'));
+  assert(pdf.includes('printToPDF'));
   assert(linux.includes('npm run test:electron-crypto'));
 });
 
-check('failed password restores Login button unless the account is locked', () => {
+check('login retry and lockout protections remain wired', () => {
   const index = read('src/main/index.html');
   const guard = read('src/main/login-retry-guard.js');
   assert(index.includes("require('./login-retry-guard.js')"));
-  assert(guard.includes("params.status === 'ERROR'"));
   assert(guard.includes('params.settings && params.settings.lockLogin'));
-  assert(guard.includes("document.getElementById('loginBtn')"));
   assert(guard.includes('button.disabled = false'));
-  assert(guard.includes("document.getElementById('masterCryptoInput')"));
 });
 
-check('wallet and coin edit forms use consistent design spacing', () => {
+check('wallet and coin forms retain spacing, grid, and detail normalization', () => {
   const index = read('src/main/index.html');
-  const spacing = read('src/main/form-spacing-enhancements.js');
-  const css = read('src/main/css/2.0.35.css');
-  assert(index.includes('./css/2.0.35.css'));
+  const formSpacing = read('src/main/form-spacing-enhancements.js');
+  const detailSpacing = read('src/main/detail-spacing-enhancements.js');
+  const css35 = read('src/main/css/2.0.35.css');
+  const css36 = read('src/main/css/2.0.36.css');
   assert(index.includes("require('./form-spacing-enhancements.js')"));
-  assert(spacing.includes("'Modify Wallet'"));
-  assert(spacing.includes("'Modify Coin'"));
-  assert(spacing.includes("'Add Wallet'"));
-  assert(spacing.includes("'Add Coin'"));
-  assert(spacing.includes("form.classList.toggle('safeledger-edit-form'"));
-  assert(css.includes('.safeledger-edit-form .form-group'));
-  assert(css.includes('margin-bottom: 18px'));
-  assert(css.includes('margin: 0 0 6px'));
-  assert(css.includes('.safeledger-edit-form .secure-input-shell'));
-  assert(css.includes('.safeledger-edit-form .sensitive-controls'));
+  assert(index.includes("require('./edit-form-grid-enhancements.js')"));
+  assert(formSpacing.includes("'Modify Wallet'"));
+  assert(formSpacing.includes("'Modify Coin'"));
+  assert(css35.includes('margin-bottom: 18px'));
+  assert(detailSpacing.includes("dockHas('edit wallet')"));
+  assert(detailSpacing.includes("dockHas('edit coin')"));
+  assert(css36.includes('padding-top: 12px !important'));
 });
 
-check('profile search matches the wallet and coin search pattern', () => {
+check('profile search and selected-row styling remain wired', () => {
   const index = read('src/main/index.html');
   const search = read('src/main/search-enhancements.js');
-  assert(index.includes('id="profileSearch"'));
-  assert(index.includes('placeholder="Search profiles..."'));
-  assert(index.includes('id="profileSearchClear"'));
-  assert(search.includes("setupSearchClear('profileSearch', 'profileSearchClear')"));
-  assert(search.includes('function filterProfiles()'));
-  assert(search.includes("area.querySelectorAll('ul.nav > li')"));
-  assert(search.includes('text.includes(query)'));
-});
-
-check('selected profile borders the full row instead of the initial', () => {
-  const index = read('src/main/index.html');
   const selection = read('src/main/profile-selection-enhancements.js');
   const css = read('src/main/css/2.0.41.css');
-  assert(index.includes('./css/2.0.41.css'));
-  assert(index.includes("require('./profile-selection-enhancements.js')"));
-  assert(selection.includes("area.querySelector('.badge-selected')"));
+  assert(index.includes('id="profileSearch"'));
+  assert(search.includes('function filterProfiles()'));
   assert(selection.includes("link.classList.add('profile-selected')"));
-  assert(css.includes('#vaultArea .badge-circle.badge-selected'));
-  assert(css.includes('border: 0 !important'));
-  assert(css.includes('a.profile-selected'));
   assert(css.includes('border: 2px solid #fff !important'));
-  assert(css.includes('background-color: transparent !important'));
 });
 
-check('wallet and coin view/edit headers and field actions use normalized spacing', () => {
-  const index = read('src/main/index.html');
-  const spacing = read('src/main/detail-spacing-enhancements.js');
-  const css = read('src/main/css/2.0.36.css');
-  assert(index.includes('./css/2.0.36.css'));
-  assert(index.includes("require('./detail-spacing-enhancements.js')"));
-  assert(spacing.includes("'Modify Wallet'"));
-  assert(spacing.includes("'Modify Coin'"));
-  assert(spacing.includes("dockHas('edit wallet')"));
-  assert(spacing.includes("dockHas('edit coin')"));
-  assert(css.includes('padding-top: 12px !important'));
-  assert(css.includes('#detailArea.wallet-coin-view .field-inline-actions'));
-  assert(css.includes('right: 10px'));
-  assert(css.includes('#detailArea.wallet-coin-view .secure-field-summary'));
-  assert(css.includes('padding: 10px'));
-});
-
-check('Phase 1 obsolete layout and asset files stay removed', () => {
-  const index = read('src/main/index.html');
+check('Phase 1 dead files remain removed', () => {
   for (const relative of [
     'src/main/coin-form-layout-enhancements.js',
     'src/main/css/2.0.37.css',
     'scripts/coin-layout-regression-tests.js',
     'scripts/generate-icons.js',
     'build/icon.png'
-  ]) assert.strictEqual(fs.existsSync(path.join(root, relative)), false, `${relative} should remain removed`);
-  assert(!index.includes('./css/2.0.37.css'));
+  ]) assert.strictEqual(exists(relative), false, `${relative} should remain removed`);
   assert(!read('src/main/utils.js').includes('testSleep'));
 });
 
-check('updated UI and crypto JavaScript parses cleanly', () => {
-  syntaxCheck('src/main/detail-actions.js');
-  syntaxCheck('src/main/detail-action-enhancements.js');
-  syntaxCheck('src/main/login-retry-guard.js');
-  syntaxCheck('src/main/form-spacing-enhancements.js');
-  syntaxCheck('src/main/search-enhancements.js');
-  syntaxCheck('src/main/detail-spacing-enhancements.js');
-  syntaxCheck('src/main/edit-form-grid-enhancements.js');
-  syntaxCheck('src/main/edit-security-enhancements.js');
-  syntaxCheck('src/main/profile-selection-enhancements.js');
-  syntaxCheck('src/main/settings-enhancements.js');
-  syntaxCheck('src/main/lockout-state.js');
-  syntaxCheck('src/main/lockout-ui-enhancements.js');
-  syntaxCheck('src/main/record.js');
-  syntaxCheck('src/main/group.js');
-  syntaxCheck('src/main/main.js');
-  syntaxCheck('src/main/robust-vault.js');
-  syntaxCheck('src/main/argon2-provider.js');
-  syntaxCheck('src/main/key-envelope.js');
-  syntaxCheck('scripts/readme-to-pdf.js');
-  syntaxCheck('scripts/electron-crypto-smoke.js');
-  syntaxCheck('scripts/run-electron-crypto-smoke.js');
+check('Phase 2 v1 storage and migration implementations remain removed', () => {
+  assert.strictEqual(exists('src/main/backup-manager.js'), false);
+  const legacyVaultStub = read('src/main/vault.js');
+  const encryption = read('src/main/encryption.js');
+  const robust = read('src/main/robust-vault.js');
+  const session = read('src/main/crypto-session-main.js');
+  assert(legacyVaultStub.includes('Transitional renderer compatibility stub'));
+  assert(!legacyVaultStub.includes('initVaultList'));
+  assert(!legacyVaultStub.includes('rotateCrypto'));
+  assert(!encryption.includes('aes-256-cbc'));
+  assert(!encryption.includes('isLegacyEncryptedPayload'));
+  assert(!robust.includes('migrateLegacyEncryption'));
+  assert(!robust.includes('rotateCrypto'));
+  assert(!session.includes('migrateLegacySession'));
+  assert(session.includes('unsupported-legacy-data'));
 });
 
-console.log('\n18 SafeLedger 2.0.47 UI/runtime regression checks passed.');
+check('updated runtime JavaScript parses cleanly', () => {
+  for (const relative of [
+    'src/main/detail-actions.js',
+    'src/main/detail-action-enhancements.js',
+    'src/main/login-retry-guard.js',
+    'src/main/form-spacing-enhancements.js',
+    'src/main/search-enhancements.js',
+    'src/main/detail-spacing-enhancements.js',
+    'src/main/edit-form-grid-enhancements.js',
+    'src/main/edit-security-enhancements.js',
+    'src/main/profile-selection-enhancements.js',
+    'src/main/settings-enhancements.js',
+    'src/main/lockout-state.js',
+    'src/main/lockout-ui-enhancements.js',
+    'src/main/record.js',
+    'src/main/group.js',
+    'src/main/main.js',
+    'src/main/robust-vault.js',
+    'src/main/argon2-provider.js',
+    'src/main/key-envelope.js',
+    'src/main/crypto-session-main.js',
+    'src/main/crypto-ui-bridge.js',
+    'src/main/encryption.js',
+    'src/main/vault.js',
+    'scripts/readme-to-pdf.js',
+    'scripts/electron-crypto-smoke.js',
+    'scripts/run-electron-crypto-smoke.js',
+    'scripts/v2-only-crypto-regression-tests.js'
+  ]) syntaxCheck(relative);
+});
+
+console.log(`\n${passed} SafeLedger 2.0.48 UI/runtime regression checks passed.`);

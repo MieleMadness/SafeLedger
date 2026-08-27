@@ -70,12 +70,7 @@ function validateWrappedKey(wrappedKey) {
 
 function unwrapDataKeyWithKek(kek, wrappedKey) {
   if (!validateWrappedKey(wrappedKey)) throw new Error('SafeLedger key envelope is damaged.');
-  const decipher = crypto.createDecipheriv(
-    'aes-256-gcm',
-    kek,
-    Buffer.from(wrappedKey.iv, 'hex'),
-    { authTagLength: WRAP_TAG_BYTES }
-  );
+  const decipher = crypto.createDecipheriv('aes-256-gcm', kek, Buffer.from(wrappedKey.iv, 'hex'), { authTagLength: WRAP_TAG_BYTES });
   decipher.setAAD(WRAP_AAD);
   decipher.setAuthTag(Buffer.from(wrappedKey.tag, 'hex'));
   const dataKey = Buffer.concat([
@@ -94,10 +89,10 @@ function validateEnvelope(envelope) {
     && validateWrappedKey(envelope.wrappedKey)
     && typeof envelope.kekVerifier === 'string'
     && /^[0-9a-f]{64}$/i.test(envelope.kekVerifier)
-    && (!envelope.migration || envelope.migration.status === 'pending');
+    && !Object.prototype.hasOwnProperty.call(envelope, 'migration');
 }
 
-async function createEnvelope(password, dataKey = crypto.randomBytes(KEY_BYTES), migration = null) {
+async function createEnvelope(password, dataKey = crypto.randomBytes(KEY_BYTES)) {
   const kdf = defaultKdf();
   const kek = await argon2id(password, kdf);
   const envelope = {
@@ -109,7 +104,6 @@ async function createEnvelope(password, dataKey = crypto.randomBytes(KEY_BYTES),
     kekVerifier: verifierForKek(kek),
     wrappedKey: wrapDataKey(kek, dataKey)
   };
-  if (migration) envelope.migration = migration;
   kek.fill(0);
   return { envelope, dataKey: Buffer.from(dataKey) };
 }
@@ -126,10 +120,7 @@ async function unlockEnvelope(password, envelope) {
   }
 
   const candidateVerifier = verifierForKek(kek);
-  const verifierMatches = crypto.timingSafeEqual(
-    Buffer.from(candidateVerifier, 'hex'),
-    Buffer.from(envelope.kekVerifier, 'hex')
-  );
+  const verifierMatches = crypto.timingSafeEqual(Buffer.from(candidateVerifier, 'hex'), Buffer.from(envelope.kekVerifier, 'hex'));
   if (!verifierMatches) {
     kek.fill(0);
     return { ok: false, type: 'password-failed', message: 'Invalid Password' };
@@ -150,24 +141,12 @@ async function unlockEnvelope(password, envelope) {
 }
 
 async function rewrapEnvelope(oldPassword, newPassword, envelope) {
-  if (envelope && envelope.migration) {
-    return {
-      ok: false,
-      type: 'migration-pending',
-      message: 'SafeLedger is finishing its encryption upgrade. Please wait for the upgrade to complete before changing the password.'
-    };
-  }
   const unlocked = await unlockEnvelope(oldPassword, envelope);
   if (!unlocked.ok) return unlocked;
   const created = await createEnvelope(newPassword, unlocked.dataKey);
   unlocked.dataKey.fill(0);
   created.envelope.created = envelope.created || created.envelope.created;
   return { ok: true, envelope: created.envelope, dataKey: created.dataKey };
-}
-
-function deriveLegacyKey(password) {
-  const value = String(password);
-  return crypto.createHmac('sha256', value.split('').reverse().join('')).update(value).digest();
 }
 
 exports.CRYPTO_VERSION = CRYPTO_VERSION;
@@ -178,5 +157,4 @@ exports.validateEnvelope = validateEnvelope;
 exports.createEnvelope = createEnvelope;
 exports.unlockEnvelope = unlockEnvelope;
 exports.rewrapEnvelope = rewrapEnvelope;
-exports.deriveLegacyKey = deriveLegacyKey;
 exports._test = { argon2id, verifierForKek, wrapDataKey, unwrapDataKeyWithKek, validateKdf, validateWrappedKey };

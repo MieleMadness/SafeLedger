@@ -42,10 +42,7 @@ async function run() {
   const dataKey = crypto.randomBytes(32);
 
   await check('Electron-safe Argon2id provider matches the stock Node reference', async () => {
-    if (typeof crypto.argon2 !== 'function') {
-      console.log('  Native Node Argon2 reference unavailable in this runtime; Electron smoke test still verifies the bundled provider.');
-      return;
-    }
+    if (typeof crypto.argon2 !== 'function') return;
     const kdf = keyEnvelope.defaultKdf();
     kdf.salt = '00112233445566778899aabbccddeeff';
     const bundled = await keyEnvelope._test.argon2id(password, kdf);
@@ -67,6 +64,7 @@ async function run() {
     assert.strictEqual(first.envelope.kdf.keyBytes, 32);
     assert.notStrictEqual(first.envelope.kdf.salt, second.envelope.kdf.salt);
     assert.notStrictEqual(first.envelope.wrappedKey.ciphertext, second.envelope.wrappedKey.ciphertext);
+    assert.strictEqual(first.envelope.migration, undefined);
   });
 
   await check('correct password unwraps the exact random data key', async () => {
@@ -105,48 +103,27 @@ async function run() {
     assert.strictEqual(newTry.dataKey.toString('hex'), dataKey.toString('hex'));
   });
 
-  await check('password changes are blocked while a crypto migration is pending', async () => {
-    const created = await keyEnvelope.createEnvelope(password, dataKey, {
-      status: 'pending',
-      started: new Date().toISOString(),
-      files: []
-    });
-    const rewrapped = await keyEnvelope.rewrapEnvelope(password, newPassword, created.envelope);
-    assert.strictEqual(rewrapped.ok, false);
-    assert.strictEqual(rewrapped.type, 'migration-pending');
-  });
-
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'safeledger-v3-'));
   const vaultDir = path.join(root, 'vaults');
   const controller = cryptoSession.createController(vaultDir);
   try {
-    await check('legacy password-derived vault migrates transactionally to random DEK + Argon2id envelope', async () => {
+    await check('new installation creates Argon2id envelope and random DEK directly', async () => {
+      const initialized = await controller.initializeSession(password);
+      assert.strictEqual(initialized.ok, true);
+      assert.strictEqual(fs.existsSync(path.join(vaultDir, 'key-envelope.json')), true);
+      const dek = Buffer.from(initialized.dataKeyHex, 'hex');
+      assert.strictEqual(dek.length, 32);
       await robustVault.makeDir(vaultDir);
-      const legacyKey = keyEnvelope.deriveLegacyKey(password);
-      await robustVault.initVaultList(vaultDir, legacyKey);
+      await robustVault.initVaultList(vaultDir, dek);
       await robustVault.saveVault(
         path.join(vaultDir, 'zvault-0.json'),
-        JSON.stringify({ file: 'zvault-0.json', groups: [{ name: 'Ledger', records: [{ name: 'Bitcoin', symbol: 'BTC' }] }] }),
-        legacyKey
+        JSON.stringify({ file: 'zvault-0.json', groups: [{ name: 'Ledger', records: [] }] }),
+        dek
       );
-      legacyKey.fill(0);
-
-      const migrated = await controller.migrateLegacySession(password);
-      assert.strictEqual(migrated.ok, true);
-      assert.strictEqual(fs.existsSync(path.join(vaultDir, 'key-envelope.json')), true);
-      assert.strictEqual(fs.existsSync(path.join(vaultDir, 'zvault-0.json')), false);
-
       const envelope = JSON.parse(fs.readFileSync(path.join(vaultDir, 'key-envelope.json'), 'utf8'));
       assert.strictEqual(envelope.version, 3);
-      assert.strictEqual(envelope.kdf.implementation, 'hash-wasm-argon2id-v1');
       assert.strictEqual(envelope.migration, undefined);
-
-      const dek = Buffer.from(migrated.dataKeyHex, 'hex');
-      const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), dek);
-      assert.strictEqual(list.vaults.length, 1);
-      assert.notStrictEqual(list.vaults[0].file, 'zvault-0.json');
-      const profile = await robustVault.readVault(path.join(vaultDir, list.vaults[0].file), dek);
-      assert.strictEqual(profile.groups[0].name, 'Ledger');
+      assert(fs.readFileSync(path.join(vaultDir, 'vaultlist.json'), 'utf8').startsWith('SLG2:'));
     });
 
     await check('envelope login returns the same DEK and rejects the wrong password', async () => {
@@ -160,17 +137,12 @@ async function run() {
     await check('changing password only rewraps DEK; encrypted vault ciphertext stays unchanged', async () => {
       const beforeLogin = await controller.loginWithEnvelope(password);
       const dekHex = beforeLogin.dataKeyHex;
-      const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), Buffer.from(dekHex, 'hex'));
-      const profileFile = path.join(vaultDir, list.vaults[0].file);
-      const beforeCiphertext = fs.readFileSync(profileFile, 'utf8');
-
+      const beforeCiphertext = fs.readFileSync(path.join(vaultDir, 'zvault-0.json'), 'utf8');
       const changed = await controller.changePassword(password, newPassword);
       assert.strictEqual(changed.ok, true);
       assert.strictEqual(changed.dataKeyHex, dekHex);
-      assert.strictEqual(fs.readFileSync(profileFile, 'utf8'), beforeCiphertext);
-
-      const oldTry = await controller.loginWithEnvelope(password);
-      assert.strictEqual(oldTry.ok, false);
+      assert.strictEqual(fs.readFileSync(path.join(vaultDir, 'zvault-0.json'), 'utf8'), beforeCiphertext);
+      assert.strictEqual((await controller.loginWithEnvelope(password)).ok, false);
       const newTry = await controller.loginWithEnvelope(newPassword);
       assert.strictEqual(newTry.ok, true);
       assert.strictEqual(newTry.dataKeyHex, dekHex);
@@ -179,14 +151,15 @@ async function run() {
     fs.rmSync(root, { recursive: true, force: true });
   }
 
-  await check('128-character UI policy is enforced by the login/password bridge', async () => {
-    const source = fs.readFileSync(path.join(__dirname, '../src/main/crypto-ui-bridge.js'), 'utf8');
-    assert(source.includes('MAX_MASTER_PASSWORD_LENGTH'));
-    assert(source.includes("target.id === 'loginBtn'"));
-    assert(source.includes("target.id === 'encryptionEditBtn'"));
-    assert(source.includes('masterKeyVerifier.createMasterKeyVerifier(dataKey)'));
-    const indexSource = fs.readFileSync(path.join(__dirname, '../src/main/index.html'), 'utf8');
-    assert(indexSource.includes("require('./crypto-ui-bridge.js')"));
+  await check('v1 migration APIs are not exposed', async () => {
+    assert.strictEqual(typeof keyEnvelope.deriveLegacyKey, 'undefined');
+    assert.strictEqual(typeof robustVault.migrateLegacyEncryption, 'undefined');
+    assert.strictEqual(typeof robustVault.rotateCrypto, 'undefined');
+    assert.strictEqual(typeof controller.migrateLegacySession, 'undefined');
+    const bridge = fs.readFileSync(path.join(__dirname, '../src/main/crypto-ui-bridge.js'), 'utf8');
+    assert(bridge.includes("ipc.invoke('crypto-v3-initialize', password)"));
+    assert(!bridge.includes('crypto-v3-migrate-legacy'));
+    assert(!bridge.includes('deriveLegacyKey'));
   });
 
   console.log(`\n${passed} Argon2id/envelope regression checks passed.`);

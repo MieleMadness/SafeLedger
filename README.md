@@ -1,17 +1,17 @@
 # SafeLedger
 
-SafeLedger is a free, local-first encrypted information vault designed for organizing cryptocurrency wallet and asset information. It can store profiles, wallets, public addresses, recovery information, private keys, notes, and other details in encrypted files on your own computer.
+SafeLedger is a free, local-first encrypted information vault for organizing cryptocurrency wallet and asset information. It stores profiles, wallets, public addresses, recovery information, private keys, balances, notes, and other details in encrypted files on your own computer.
 
-SafeLedger does not need a cloud account to store your vault. Your working data lives in a folder named `SafeLedgerData` beside the packaged SafeLedger application.
+SafeLedger does not require a cloud account. Your working data lives in a folder named `SafeLedgerData` beside the packaged SafeLedger application.
 
 > [!IMPORTANT]
-> **Understand where SafeLedger saves your data before using it.**
+> **SafeLedger 2.x is not backward compatible with SafeLedger 1.x data.**
 >
-> The `SafeLedgerData` folder is your live SafeLedger database. It must stay with the SafeLedger executable or AppImage if you move the application.
+> Do not place a SafeLedger 1.x vault folder beside a SafeLedger 2.x executable expecting it to migrate. Keep older data separate and preserve a backup of it.
 
 ## How saving and the SafeLedgerData folder work
 
-For packaged builds, SafeLedger creates and uses a folder named `SafeLedgerData` in the same folder as the SafeLedger application you launch.
+For packaged builds, SafeLedger creates and uses `SafeLedgerData` in the same folder as the SafeLedger application you launch.
 
 ### Windows portable example
 
@@ -33,58 +33,25 @@ D:\My SafeLedger\
    └─ vaults/
 ```
 
-The important part is that the application and its `SafeLedgerData` folder stay together.
+The application and its `SafeLedgerData` folder should stay together.
 
 ### If you move SafeLedger
 
-Close SafeLedger first, then move **both** of these items to the new folder:
+Close SafeLedger first, then move both the application and the entire `SafeLedgerData` folder. Moving only the application may cause SafeLedger to create a new empty data folder in the new location, which can make existing profiles appear to be missing.
 
-1. The SafeLedger `.exe` or `.AppImage`.
-2. The entire `SafeLedgerData` folder.
+If that happens, close SafeLedger, locate the original `SafeLedgerData` folder, make a backup copy, and place the correct folder beside the SafeLedger application you intend to use.
 
-For example, if you move the Windows portable EXE from:
-
-```text
-C:\Downloads\SafeLedger\
-```
-
-to:
-
-```text
-D:\Secure Apps\SafeLedger\
-```
-
-move `SafeLedgerData` to the new folder too.
-
-If you move only the application and then launch it, SafeLedger may create a **new empty `SafeLedgerData` folder** beside the moved application. This can make it look like your profiles are missing even though the original encrypted data may still be in the old folder.
-
-If this happens:
-
-1. Close SafeLedger.
-2. Find your original `SafeLedgerData` folder.
-3. Make a backup copy of it before changing anything.
-4. Place the original `SafeLedgerData` folder beside the SafeLedger application you intend to use.
-5. Reopen SafeLedger.
-
-Do not merge two different `SafeLedgerData` folders unless you understand the individual encrypted files and profile references. Use SafeLedger's Backup and Restore functions instead when possible.
-
-### Multiple copies of SafeLedger
-
-If you keep SafeLedger in several different folders, each copy can use a different `SafeLedgerData` folder. In practice, this means each folder can behave like a separate SafeLedger installation with separate profiles and settings.
+Do not merge two different `SafeLedgerData` folders manually. Use SafeLedger Backup and Restore when possible.
 
 ## When changes are saved
 
-SafeLedger does not continuously sync your form while you type.
+SafeLedger does not continuously save while you type. After choosing Add or Edit/Modify, use the **green Save icon** in the bottom action area to commit the change.
 
-When you choose **Add** or **Edit/Modify**, make your changes and then use the **green Save icon** in the bottom action area. The data is written to the encrypted vault only after Save is used successfully.
+If you leave a Modify screen without saving, those form changes are not written to the encrypted vault.
 
-If you leave a Modify screen without pressing Save, the unsaved form changes are not written to the vault.
-
-Deleting an item also requires a confirmation step. Opening the delete screen does not immediately remove the item.
+Deleting a Profile, Wallet, or Coin also requires confirmation.
 
 ## How SafeLedger is organized
-
-SafeLedger uses three main levels:
 
 ```text
 Profile
@@ -94,15 +61,13 @@ Profile
 
 ### Profile
 
-A Profile is the top-level container. Profiles can be used to separate people, purposes, businesses, storage strategies, or any other grouping you want.
-
-Each profile has its own encrypted vault file.
+A Profile is the top-level container. Profiles can separate people, purposes, businesses, storage strategies, or any other grouping you choose. Each Profile has its own encrypted vault file.
 
 ### Wallet
 
-Wallets live inside a Profile. A wallet can store information such as:
+Wallets can store:
 
-- Wallet name
+- Name
 - Wallet category
 - Tags
 - Password
@@ -110,95 +75,46 @@ Wallets live inside a Profile. A wallet can store information such as:
 - Recovery link
 - Seed phrase
 - Notes
-- Coins/assets associated with the wallet
+- Coins/assets associated with the Wallet
 
-Sensitive wallet fields are hidden or collapsed in normal viewing until you choose to reveal them.
+Sensitive Wallet values are collapsed in View mode. Wallet sensitive fields provide Copy controls in View mode but do not generate QR codes. In Add/Modify mode, sensitive values use an eye icon to reveal or hide the field; Copy and QR controls are not shown while editing.
 
 ### Coin / Asset
 
-Coins and assets live inside a Wallet. A coin record can store:
+Coins and assets can store:
 
 - Coin/asset name
 - Symbol
 - Public address
 - Tags
-- Last known balance
+- Balance
 - Private key, when you choose to store one
 - Notes
 
-If a coin has no private key saved, the Private Key field is not displayed in the normal View screen.
+If no private key is saved, the Private Key field is omitted from the normal View screen. If no public address is entered, SafeLedger displays a lighter placeholder telling you to use Edit to update the asset.
 
-If no public address has been entered, SafeLedger displays a lighter placeholder telling you to use Edit to update the asset.
+Coin Public Address and Private Key may use Copy and local QR controls in View mode. Balance is treated as sensitive and is Copy-only in View mode. In Add/Modify mode, private values use an eye icon rather than Copy/QR controls.
 
-## The four main areas of the application
+## Main application areas
 
-From left to right, SafeLedger is organized into:
+From left to right, SafeLedger displays:
 
-1. **Profiles** — select or add a Profile.
-2. **Wallets** — select or add a Wallet inside the selected Profile.
-3. **Coins** — select or add a Coin/Asset inside the selected Wallet.
-4. **Detail View** — view, modify, print, or delete the currently selected item.
+1. **Profiles**
+2. **Wallets** inside the selected Profile
+3. **Coins** inside the selected Wallet
+4. **Detail View** for the selected item
 
-Wallet and coin search boxes are available at the top of their columns.
+Profile, Wallet, and Coin search boxes are available at the top of their columns. The upper-right status area displays success messages, errors, lockout information, and processing status.
 
-The status area in the upper-right portion of the application displays success messages, errors, lockout information, and processing status.
+## View, Edit, Print, and Delete
 
-## View, Modify, and Delete views
-
-### View
-
-Selecting a Profile, Wallet, or Coin opens its normal View screen.
-
-View mode is intended for reading stored information without changing it. Depending on the item, the bottom action area displays:
+Selecting a Profile, Wallet, or Coin opens its View screen. The normal bottom action order is:
 
 **Edit → Print → Delete**
 
-Sensitive values can have additional reveal, copy, or QR controls.
+The pencil opens Edit/Modify. The printer opens a printable local information or recovery sheet. The red trash icon opens delete confirmation. On a delete confirmation screen, the X cancels and returns to the selected item.
 
-### Modify / Edit
-
-Select the **pencil icon** to open Modify mode.
-
-Modify mode displays editable fields. Sensitive wallet and coin fields include Show/Hide controls so you can inspect a value before saving when needed.
-
-Use the **green Save icon** at the bottom of the application to commit your changes.
-
-### Delete confirmation
-
-Select the **red trash icon** to open the delete confirmation screen.
-
-Two actions are then available:
-
-- **X / Cancel** — return to the item without deleting it.
-- **Red trash / Confirm Delete** — permanently remove the selected Profile, Wallet, or Coin from the current SafeLedger data.
-
-## Button and icon reference
-
-| Button / Icon | What it does |
-| --- | --- |
-| **Add Profile** | Creates a new top-level Profile. |
-| **Add Wallet** | Creates a Wallet inside the selected Profile. |
-| **Add Coin** | Creates a Coin/Asset inside the selected Wallet. |
-| **Pencil** | Opens the selected item in Modify/Edit mode. |
-| **Printer** | Opens a printable information or recovery sheet for the selected item. |
-| **Red Trash** | Opens delete confirmation, or confirms deletion when already on the confirmation screen. |
-| **X** | Cancels a pending delete and returns to the selected item. |
-| **Green Save** | Saves the current Add/Modify form to the encrypted vault. |
-| **Copy** | Copies the displayed value to the system clipboard. Sensitive-value clipboard copies are automatically cleared after approximately 30 seconds if the clipboard still contains that value. |
-| **QR Code** | Generates a QR code locally from the value. QR generation does not require a network connection. |
-| **Show / Hide** | Reveals or hides a sensitive value while editing. |
-| **+ / − on a sensitive field** | Expands or collapses sensitive information in View mode. |
-| **SafeLedger shield button** | Emergency-locks SafeLedger, clears visible sensitive fields, minimizes the window, and returns the app to the locked/login state. |
-
-## Printing
-
-The printer icon creates a local print view.
-
-Wallet recovery sheets can contain sensitive recovery information and SafeLedger displays a warning before printing. Coin sheets also warn when a private key is included.
-
-Treat printed recovery sheets like the secrets they contain. Anyone who obtains a seed phrase or private key may be able to control the associated cryptocurrency.
-
-Prefer a trusted local printer rather than a shared, office, cloud-connected, or remotely managed printer when printing sensitive recovery information.
+Printed recovery sheets can contain highly sensitive data. Prefer a trusted local printer rather than a shared, cloud-connected, or remotely managed printer.
 
 ## Backup and Restore
 
@@ -208,150 +124,106 @@ Open:
 
 ### Backup
 
-The **Backup** button creates a `.slgbak` file containing a complete copy of the current `SafeLedgerData` folder.
+Backup creates a `.slgbak` file containing a complete copy of the current `SafeLedgerData` folder. Vault contents inside the backup remain encrypted, and the backup includes the settings/encryption metadata needed for a complete restore.
 
-The vault files inside the backup remain encrypted with SafeLedger's encryption. The backup also contains local settings needed for a complete restore.
-
-Keep backup files somewhere separate from the working SafeLedger folder so a drive failure does not destroy both the live data and its backup.
+Store backups separately from the working SafeLedger folder so a single drive failure does not destroy both the live data and its backup.
 
 ### Restore
 
-The **Restore** button restores a complete `.slgbak` backup.
-
-Before replacing the current `SafeLedgerData` folder, SafeLedger creates a safety copy with a name similar to:
+Restore accepts the current complete SafeLedger `.slgbak` format. Before replacing the active data, SafeLedger creates a safety copy named similarly to:
 
 ```text
 SafeLedgerData-pre-restore-2026-08-22T...
 ```
 
-After a restore, SafeLedger locks and reloads so the restored data is opened through a new authenticated session.
+After restore, SafeLedger locks and reloads so the restored data is opened through a new authenticated session.
 
-## Security features
+SafeLedger 2.x does not import or migrate SafeLedger 1.x vault formats.
 
-SafeLedger is designed around local encrypted storage and includes several layers of protection.
+## SafeLedger 2.x encryption
+
+A new SafeLedger 2.x installation creates the current encryption format directly. It does not bootstrap through the SafeLedger 1.x password-derived vault format.
 
 ### Argon2id master-password protection
 
-The current key-envelope format derives the password-protection key with **Argon2id** using a random salt.
+SafeLedger derives the password-protection key with **Argon2id** and a random salt.
 
-Current default parameters are:
+Current defaults:
 
 - 64 MiB memory
 - 3 passes
 - Parallelism of 1
 - 256-bit derived key
 
-The master password protects a randomly generated 256-bit Data Encryption Key rather than directly becoming the vault encryption key.
+### Random Data Encryption Key
+
+SafeLedger generates a random 256-bit Data Encryption Key (DEK). The master password protects the DEK through the key envelope rather than being used directly as the vault encryption key.
+
+Changing the master password re-wraps the existing DEK. SafeLedger does not need to decrypt and re-encrypt every vault file merely to change the password.
 
 ### AES-256-GCM authenticated encryption
 
-Vault data is encrypted with **AES-256-GCM**.
+SafeLedger 2.x vault files use **AES-256-GCM** authenticated encryption and the `SLG2` encrypted payload format. SafeLedger 1.x AES-CBC vault payloads are not accepted by the current application.
 
-Authenticated encryption helps SafeLedger detect modified, damaged, or unauthenticated encrypted data instead of silently accepting altered ciphertext.
-
-### Random Data Encryption Key
-
-SafeLedger's current crypto format uses a random 256-bit Data Encryption Key (DEK) for the vault. The DEK is wrapped with a key derived from the master password.
-
-This allows a master-password change to re-protect the data key without requiring the application to use the master password itself as the vault key.
+Authenticated encryption helps detect modified, damaged, or unauthenticated ciphertext instead of silently accepting it.
 
 ### Password requirements
 
-The current login policy requires at least:
+The master password requires at least:
 
 - 8 characters
 - 1 lowercase letter
 - 1 uppercase letter
 - 1 number
 
-Master passwords support up to 128 characters. SafeLedger recommends using a longer password or passphrase; the interface recommends 15 or more characters.
+Passwords may be up to 128 characters. A longer unique password or passphrase is recommended; the interface recommends 15 or more characters.
 
-### Brute-force lockouts
+## Brute Force Protection
 
 SafeLedger tracks failed login attempts and can temporarily lock login after too many failures.
 
-The default settings are:
-
-- **5 failed login attempts before a lockout**
-- **5 lockouts allowed before self-destruct protection is reached**
-- **15-minute lockout duration**
-
-These values can be changed under:
-
-**SafeLedger → Settings → Brute Force Protection**
-
-### Self-Destruct Protection
-
-> [!CAUTION]
-> Self-Destruct Protection is intentionally destructive. Understand and back up your SafeLedger data before relying on it.
-
-Self-Destruct Protection is **enabled by default**.
-
-The on/off control is located in the application menu:
-
-**SafeLedger → Self-Destruct Protection**
-
-A checkmark means Self-Destruct Protection is enabled.
-
-When enabled, exhausting the configured failed-login and lockout limits causes SafeLedger to destroy the encrypted files in the active `SafeLedgerData/vaults` folder.
-
-When disabled, failed logins continue to cause lockouts, but SafeLedger does not intentionally destroy the vault files after the lockout limit is exhausted.
-
-Turning Self-Destruct Protection on requires confirmation because the action it protects can permanently remove vault data.
-
-The **thresholds** used by self-destruct are managed separately under:
-
-**SafeLedger → Settings → Brute Force Protection**
-
-There you can configure:
+The three configurable brute-force values are limited to whole numbers from **1 through 99**:
 
 - Failed login attempts before lockout
 - Lockouts allowed before self-destruct
 - Lockout duration in minutes
 
-Self-destruct affects the active encrypted vault files. It does **not** erase separate `.slgbak` backups that you have stored elsewhere.
+Open:
 
-#### Important secure-deletion limitation
+**SafeLedger → Settings → Brute Force Protection**
 
-SafeLedger overwrites vault files with random data before deleting them when performing its secure-delete operations. However, no application can guarantee physical erasure on every storage device. SSD wear-leveling, flash storage, filesystem snapshots, cloud-sync history, backups, and operating-system caching can preserve older blocks or copies outside the application's control.
+When a lockout occurs, SafeLedger displays a lockout screen with the remaining time. Closing and reopening the application during an active lockout does not bypass it.
 
-For higher assurance, use SafeLedger together with full-disk encryption and appropriate physical/device security.
+## Self-Destruct Protection
 
-### Five-minute inactivity lock
+> [!CAUTION]
+> Self-Destruct Protection is intentionally destructive. Maintain verified backups before relying on it.
 
-After SafeLedger has been unlocked, approximately **5 minutes of inactivity** triggers an automatic security lock.
+Self-Destruct Protection is enabled by default and can be controlled from:
 
-The auto-lock clears visible sensitive data and returns SafeLedger to a locked state.
+**SafeLedger → Self-Destruct Protection**
 
-### Emergency Lock
+When enabled, exhausting the configured failed-login and lockout limits causes SafeLedger to destroy files in the active `SafeLedgerData/vaults` folder. When disabled, SafeLedger continues to enforce lockouts without intentionally destroying the vault files.
 
-The SafeLedger shield button in the bottom-right corner is the Emergency Lock control.
+SafeLedger overwrites files before deleting them during secure-delete operations, but no application can guarantee physical erasure on every storage device. SSD wear-leveling, snapshots, cloud-sync history, backups, and operating-system caching may preserve older blocks or copies outside SafeLedger's control.
 
-Using it:
+For higher assurance, use SafeLedger with full-disk encryption and appropriate device security.
 
-1. Marks the session as locked.
-2. Clears visible sensitive fields.
-3. records an emergency-lock event in the local audit log.
-4. Minimizes the SafeLedger window.
-5. Reloads SafeLedger back to the locked/login state.
+## Automatic and Emergency Lock
 
-Use this if you need to hide and lock the application quickly.
+After SafeLedger is unlocked, approximately five minutes of inactivity triggers an automatic security lock.
 
-### Sensitive information controls
+The SafeLedger shield button in the bottom-right corner provides Emergency Lock. It clears visible sensitive fields, records the security event in the local audit log, minimizes the window, and reloads SafeLedger back to the locked/login state.
 
-Sensitive values such as passwords, PINs, seed phrases, recovery links, and private keys are hidden or collapsed by default in applicable views.
+## Clipboard and QR safety
 
-Sensitive copy actions use a timed clipboard clear. If the clipboard still contains the copied sensitive value, SafeLedger clears it after approximately 30 seconds.
+Sensitive Copy actions automatically clear the clipboard after approximately 30 seconds if the clipboard still contains the copied value.
 
-### Local QR generation
+QR generation is local and does not use an online QR service. Treat a QR code containing a private key or other secret exactly like the original secret.
 
-SafeLedger generates public-address and recovery QR codes locally. The QR code is generated from the value already stored in or entered into SafeLedger and does not require an online QR service.
+## Local audit log
 
-A QR code containing a seed phrase, private key, password, or other recovery secret should be treated exactly like the original secret.
-
-### Local audit log
-
-SafeLedger maintains a local audit log under the settings portion of `SafeLedgerData`. It records security-related event names and timestamps such as application opens, emergency locks, auto-locks, backups, and restores. It is not intended to store the contents of your vault secrets.
+SafeLedger maintains `audit.log` under the settings portion of `SafeLedgerData`. It records security-related event names and timestamps such as application opens, emergency locks, auto-locks, backups, and restores. It is not intended to contain passwords, seed phrases, private keys, or other vault secrets.
 
 ## Password changes
 
@@ -359,45 +231,46 @@ Open:
 
 **SafeLedger → Settings → Password → Change Password**
 
-You must provide the current master password before changing it.
+Provide the current master password and the new password. In SafeLedger 2.x, a password change re-wraps the random Data Encryption Key rather than rotating every encrypted vault file.
 
-A password change does not mean you should delete your backup. After changing the password, create a new backup and verify that you can close and reopen SafeLedger successfully with the new password.
+After changing the password, close and reopen SafeLedger to verify the new password, then create a fresh backup.
 
-## Legacy SafeLedger data
+## SafeLedger 1.x compatibility
 
-SafeLedger contains migration support for older compatible encrypted vault formats.
+SafeLedger 2.x **does not support opening, migrating, or converting SafeLedger 1.x vault data**.
 
-When upgrading an older data folder, make a full copy of `SafeLedgerData` before opening it with a newer build. Allow any encryption migration to finish before moving files, changing the password, shutting down the computer, or disconnecting removable storage.
+If you still have SafeLedger 1.x data:
+
+- Keep a complete untouched backup of the old data.
+- Do not copy it over an active SafeLedger 2.x `SafeLedgerData` folder.
+- Use the appropriate older software/environment if you need to access that old data.
+- Create new SafeLedger 2.x data separately.
+
+If SafeLedger detects an existing vault list without the required 2.x key envelope, it refuses to initialize that directory as a new 2.x vault so older data is not silently overwritten.
 
 ## Recommended operating practices
 
-- Keep the SafeLedger application and its `SafeLedgerData` folder together.
-- Back up `SafeLedgerData` before upgrading or moving the application.
+- Keep the SafeLedger application and `SafeLedgerData` together.
 - Use the built-in `.slgbak` Backup function regularly.
 - Keep at least one backup on a separate device or location.
 - Use a long, unique master password or passphrase.
-- Do not share screenshots containing recovery information.
 - Treat seed phrases and private keys as highly sensitive secrets.
 - Use full-disk encryption on the computer or removable drive containing SafeLedger.
-- Lock SafeLedger when stepping away from the computer.
-- Test that backups restore correctly before depending on them.
-- Do not assume self-destruct can erase copies stored by cloud-sync software, snapshots, backups, or SSD wear-leveling.
+- Lock SafeLedger when stepping away.
+- Test restores before depending on a backup strategy.
+- Do not assume self-destruct can erase cloud-sync copies, snapshots, backups, or SSD-remapped blocks.
 
-## If SafeLedger opens but your profiles appear missing
+## If profiles appear missing
 
-The first thing to check is the application folder.
+First confirm that you launched the intended SafeLedger executable/AppImage and that the expected `SafeLedgerData` folder is beside that exact application file.
 
-Look beside the exact SafeLedger `.exe` or `.AppImage` you launched and confirm that the expected `SafeLedgerData` folder is there.
-
-Then check whether an older copy of `SafeLedgerData` still exists beside a previous copy of SafeLedger.
-
-Do not create, delete, merge, or overwrite folders until you have made a backup copy of the data you are trying to recover.
+Check whether an older copy of `SafeLedgerData` remains beside a previous SafeLedger executable. Before moving, deleting, merging, or replacing anything, make a backup copy of the data you are trying to recover.
 
 ## What SafeLedger is not
 
 SafeLedger is an encrypted information organizer. It is not a cryptocurrency exchange, blockchain node, hardware wallet, or transaction-signing device.
 
-Storing a seed phrase or private key in any software creates risk. Decide which secrets you are comfortable storing digitally and maintain appropriate offline backups for critical recovery information.
+Storing a seed phrase or private key in any software creates risk. Decide which secrets you are comfortable storing digitally and maintain appropriate offline recovery backups for critical assets.
 
 ## License
 

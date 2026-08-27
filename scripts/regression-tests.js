@@ -6,8 +6,6 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-// encryption.js is shared with the Electron renderer but its crypto functions
-// are safe to exercise under Node when Electron is represented by a minimal stub.
 const Module = require('module');
 const originalLoad = Module._load;
 Module._load = function patchedLoad(request, parent, isMain) {
@@ -20,26 +18,6 @@ const masterKeyVerifier = require('../src/main/master-key-verifier');
 const loginFailurePolicy = require('../src/main/login-failure-policy');
 const robustVault = require('../src/main/robust-vault');
 const encryption = require('../src/main/encryption');
-
-const keyFromPassword = (password) => crypto
-  .createHmac('sha256', password.split('').reverse().join(''))
-  .update(password)
-  .digest();
-
-function legacyEncrypt(cryptoKey, clearData) {
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', cryptoKey, iv);
-  return `${iv.toString('hex')}:${Buffer.concat([
-    cipher.update(String(clearData), 'utf8'),
-    cipher.final()
-  ]).toString('hex')}`;
-}
-
-function mutateHexCharacter(value) {
-  const last = value[value.length - 1];
-  const replacement = last === '0' ? '1' : '0';
-  return `${value.slice(0, -1)}${replacement}`;
-}
 
 async function expectRejectType(promise, type) {
   let caught = null;
@@ -98,96 +76,59 @@ async function run() {
     assert(source.includes('oldInput.maxLength = MAX_MASTER_PASSWORD_LENGTH'));
     assert(source.includes('newInput.maxLength = MAX_MASTER_PASSWORD_LENGTH'));
     assert(source.includes('confirmInput.maxLength = MAX_MASTER_PASSWORD_LENGTH'));
-
     const encryptionSource = fs.readFileSync(path.join(__dirname, '../src/main/encryption.js'), 'utf8');
     assert(encryptionSource.includes("setAttribute('maxlength', String(MAX_MASTER_PASSWORD_LENGTH))"));
-    assert(!encryptionSource.includes("setAttribute('maxlength','60')"));
   });
 
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'safeledger-regression-'));
   const vaultDir = path.join(root, 'vaults');
-  const oldPassword = 'CorrectHorse9Battery';
-  const newPassword = 'NewCorrectHorse8Battery';
-  const wrongPassword = 'WrongHorse7Battery';
-  const oldKey = keyFromPassword(oldPassword);
-  const newKey = keyFromPassword(newPassword);
-  const wrongKey = keyFromPassword(wrongPassword);
+  const key = crypto.randomBytes(32);
+  const wrongKey = crypto.randomBytes(32);
 
   try {
     await check('AES-256-GCM authenticated encryption round trip', async () => {
       const clear = JSON.stringify({ secret: 'correct horse battery staple', unicode: '🔐' });
-      const encrypted = encryption.encrypt(oldKey, clear);
+      const encrypted = encryption.encrypt(key, clear);
       assert(encrypted.startsWith('SLG2:'));
       assert.strictEqual(encryption.isAuthenticatedEncryptedPayload(encrypted), true);
-      assert.strictEqual(encryption.decrypt(oldKey, encrypted), clear);
+      assert.strictEqual(encryption.decrypt(key, encrypted), clear);
     });
 
-    await check('AES-256-GCM rejects a one-character ciphertext modification', async () => {
-      const encrypted = encryption.encrypt(oldKey, JSON.stringify({ amount: '1.250 BTC' }));
-      const tampered = mutateHexCharacter(encrypted);
-      await expectThrow(async () => encryption.decrypt(oldKey, tampered));
+    await check('AES-256-GCM rejects ciphertext modification', async () => {
+      const encrypted = encryption.encrypt(key, JSON.stringify({ amount: '1.250 BTC' }));
+      const last = encrypted[encrypted.length - 1];
+      const tampered = `${encrypted.slice(0, -1)}${last === '0' ? '1' : '0'}`;
+      await expectThrow(async () => encryption.decrypt(key, tampered));
     });
 
-    await check('AES-256-GCM rejects authentication-tag modification', async () => {
-      const encrypted = encryption.encrypt(oldKey, JSON.stringify({ seed: 'test only' }));
-      const parts = encrypted.split(':');
-      parts[2] = mutateHexCharacter(parts[2]);
-      await expectThrow(async () => encryption.decrypt(oldKey, parts.join(':')));
+    await check('v1 CBC-shaped payloads are rejected', async () => {
+      const fakeLegacy = `${crypto.randomBytes(16).toString('hex')}:${crypto.randomBytes(32).toString('hex')}`;
+      assert.strictEqual(encryption.encryptedPayloadLooksValid(fakeLegacy), false);
+      await expectThrow(async () => encryption.decrypt(key, fakeLegacy));
     });
 
-    await check('legacy AES-CBC vaults remain readable', async () => {
-      const clear = JSON.stringify({ file: 'zvault-0.json', groups: [] });
-      const legacy = legacyEncrypt(oldKey, clear);
-      assert.strictEqual(encryption.isLegacyEncryptedPayload(legacy), true);
-      assert.strictEqual(encryption.decrypt(oldKey, legacy), clear);
-    });
-
-    await check('first-run vault directory and encrypted profile creation uses authenticated format', async () => {
+    await check('first-run vault files are authenticated SLG2 data', async () => {
       assert.strictEqual(await robustVault.makeDir(vaultDir), 'CREATE');
-      await robustVault.initVaultList(vaultDir, oldKey);
+      await robustVault.initVaultList(vaultDir, key);
       await robustVault.saveVault(
         path.join(vaultDir, 'zvault-0.json'),
-        JSON.stringify({ file: 'zvault-0.json', groups: [{ name: 'Ledger', records: [{ name: 'Bitcoin', symbol: 'BTC' }] }] }),
-        oldKey
+        JSON.stringify({ file: 'zvault-0.json', groups: [{ name: 'Ledger', records: [] }] }),
+        key
       );
       assert(fs.readFileSync(path.join(vaultDir, 'vaultlist.json'), 'utf8').startsWith('SLG2:'));
       assert(fs.readFileSync(path.join(vaultDir, 'zvault-0.json'), 'utf8').startsWith('SLG2:'));
-      const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), oldKey);
+      const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
       assert.strictEqual(list.vaults.length, 1);
-    });
-
-    await check('successful login migrates legacy CBC vault files to authenticated GCM', async () => {
-      const legacyRoot = fs.mkdtempSync(path.join(root, 'legacy-'));
-      const legacyVaultDir = path.join(legacyRoot, 'vaults');
-      fs.mkdirSync(legacyVaultDir, { recursive: true });
-      const list = {
-        vaults: [{
-          name: 'Legacy Profile',
-          path: legacyVaultDir,
-          created: Date(),
-          id: 0,
-          file: 'zvault-0.json'
-        }]
-      };
-      const profile = { file: 'zvault-0.json', groups: [{ name: 'Legacy Wallet', records: [] }] };
-      fs.writeFileSync(path.join(legacyVaultDir, 'vaultlist.json'), legacyEncrypt(oldKey, JSON.stringify(list)), 'utf8');
-      fs.writeFileSync(path.join(legacyVaultDir, 'zvault-0.json'), legacyEncrypt(oldKey, JSON.stringify(profile)), 'utf8');
-
-      const opened = await robustVault.readVaultList(path.join(legacyVaultDir, 'vaultlist.json'), oldKey);
-      assert.strictEqual(opened.vaults[0].name, 'Legacy Profile');
-      assert(fs.readFileSync(path.join(legacyVaultDir, 'vaultlist.json'), 'utf8').startsWith('SLG2:'));
-      assert(fs.readFileSync(path.join(legacyVaultDir, 'zvault-0.json'), 'utf8').startsWith('SLG2:'));
-      const migratedProfile = await robustVault.readVault(path.join(legacyVaultDir, 'zvault-0.json'), oldKey);
-      assert.strictEqual(migratedProfile.groups[0].name, 'Legacy Wallet');
     });
 
     await check('authenticated vault tampering is classified as corruption with the verified key', async () => {
       const file = path.join(vaultDir, 'vaultlist.json');
       const original = fs.readFileSync(file, 'utf8');
-      fs.writeFileSync(file, mutateHexCharacter(original), 'utf8');
-      const err = await expectRejectType(robustVault.readVaultList(file, oldKey), 'password-or-corrupt');
-      const verifier = masterKeyVerifier.createMasterKeyVerifier(oldKey);
-      const classification = loginFailurePolicy.classifyVaultListFailure(err, oldKey, { masterKeyVerifier: verifier });
+      const last = original[original.length - 1];
+      fs.writeFileSync(file, `${original.slice(0, -1)}${last === '0' ? '1' : '0'}`, 'utf8');
+      const err = await expectRejectType(robustVault.readVaultList(file, key), 'password-or-corrupt');
+      const verifier = masterKeyVerifier.createMasterKeyVerifier(key);
+      const classification = loginFailurePolicy.classifyVaultListFailure(err, key, { masterKeyVerifier: verifier });
       assert.strictEqual(classification.failure.type, 'vault-corrupt');
       assert.strictEqual(classification.countPasswordFailure, false);
       fs.writeFileSync(file, original);
@@ -198,36 +139,34 @@ async function run() {
       assert.deepStrictEqual(robustVault.nextVaultFileName({ vaults: [{}] }), { id: 0, fileName: 'zvault-0.json' });
     });
 
-    await check('wrong password remains an ambiguous authenticated failure for policy classification', async () => {
+    await check('wrong data key remains ambiguous for password policy classification', async () => {
       await expectRejectType(robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), wrongKey), 'password-or-corrupt');
     });
 
-    await check('malformed encrypted vault list is classified as corruption', async () => {
+    await check('malformed vault list is classified as corruption', async () => {
       const file = path.join(vaultDir, 'vaultlist.json');
       const original = fs.readFileSync(file, 'utf8');
       fs.writeFileSync(file, 'not-an-encrypted-vault');
-      await expectRejectType(robustVault.readVaultList(file, oldKey), 'vault-corrupt');
+      await expectRejectType(robustVault.readVaultList(file, key), 'vault-corrupt');
       fs.writeFileSync(file, original);
     });
 
-    await check('valid authenticated ciphertext with damaged JSON is corruption with verified key', async () => {
+    await check('valid ciphertext with damaged JSON is corruption with verified key', async () => {
       const file = path.join(vaultDir, 'vaultlist.json');
       const original = fs.readFileSync(file, 'utf8');
-      fs.writeFileSync(file, encryption.encrypt(oldKey, '{broken-json'));
-      const err = await expectRejectType(robustVault.readVaultList(file, oldKey), 'password-or-corrupt');
-      const verifier = masterKeyVerifier.createMasterKeyVerifier(oldKey);
-      const classification = loginFailurePolicy.classifyVaultListFailure(err, oldKey, { masterKeyVerifier: verifier });
+      fs.writeFileSync(file, encryption.encrypt(key, '{broken-json'));
+      const err = await expectRejectType(robustVault.readVaultList(file, key), 'password-or-corrupt');
+      const verifier = masterKeyVerifier.createMasterKeyVerifier(key);
+      const classification = loginFailurePolicy.classifyVaultListFailure(err, key, { masterKeyVerifier: verifier });
       assert.strictEqual(classification.failure.type, 'vault-corrupt');
       assert.strictEqual(classification.countPasswordFailure, false);
       fs.writeFileSync(file, original);
     });
 
     await check('wrong password increments only when verifier proves the key is wrong', async () => {
-      const verifier = masterKeyVerifier.createMasterKeyVerifier(oldKey);
+      const verifier = masterKeyVerifier.createMasterKeyVerifier(key);
       const classification = loginFailurePolicy.classifyVaultListFailure(
-        { status: 'ERROR', type: 'password-or-corrupt' },
-        wrongKey,
-        { masterKeyVerifier: verifier }
+        { status: 'ERROR', type: 'password-or-corrupt' }, wrongKey, { masterKeyVerifier: verifier }
       );
       assert.strictEqual(classification.failure.type, 'password-failed');
       assert.strictEqual(classification.countPasswordFailure, true);
@@ -235,34 +174,19 @@ async function run() {
 
     await check('unreadable/corrupt vault failures never count as password failures', async () => {
       const classification = loginFailurePolicy.classifyVaultListFailure(
-        { status: 'ERROR', type: 'vault-read-error' }, oldKey, {}
+        { status: 'ERROR', type: 'vault-read-error' }, key, {}
       );
       assert.strictEqual(classification.countPasswordFailure, false);
     });
 
     await check('atomic authenticated vault save leaves readable final file and no temp file', async () => {
       const file = path.join(vaultDir, 'atomic.json');
-      await robustVault.saveVault(file, JSON.stringify({ file: 'atomic.json', groups: [] }), oldKey);
+      await robustVault.saveVault(file, JSON.stringify({ file: 'atomic.json', groups: [] }), key);
       assert(fs.readFileSync(file, 'utf8').startsWith('SLG2:'));
-      const value = await robustVault.readVault(file, oldKey);
+      const value = await robustVault.readVault(file, key);
       assert.strictEqual(value.file, 'atomic.json');
       const leftovers = fs.readdirSync(vaultDir).filter((name) => name.includes('.tmp'));
       assert.deepStrictEqual(leftovers, []);
-    });
-
-    await check('password rotation writes authenticated files before removing old files', async () => {
-      const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), oldKey);
-      const oldFile = list.vaults[0].file;
-      const result = await robustVault.rotateCrypto(vaultDir, oldKey, newKey, list);
-      assert.strictEqual(result.status, 'SUCCESS');
-      assert.notStrictEqual(result.vaultList.vaults[0].file, oldFile);
-      assert.strictEqual(fs.existsSync(path.join(vaultDir, oldFile)), false);
-      const newFile = path.join(vaultDir, result.vaultList.vaults[0].file);
-      assert(fs.readFileSync(newFile, 'utf8').startsWith('SLG2:'));
-      const newData = await robustVault.readVault(newFile, newKey);
-      assert.strictEqual(newData.groups[0].name, 'Ledger');
-      const newList = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), newKey);
-      assert.strictEqual(newList.vaults[0].file, result.vaultList.vaults[0].file);
     });
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

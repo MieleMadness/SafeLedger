@@ -6,16 +6,12 @@ const { ipcRenderer: ipc } = electron;
 const crypto = require('crypto');
 const status = require('./status');
 const runtimeUtils = require('./runtime-utils');
-const keyEnvelope = require('./key-envelope');
 const masterKeyVerifier = require('./master-key-verifier');
 
 const MAX_MASTER_PASSWORD_LENGTH = runtimeUtils.MAX_MASTER_PASSWORD_LENGTH;
-// Load the main-process crypto session module once; it registers narrow IPC handlers.
 remote.require('./crypto-session-main');
 let latestSettings = null;
 let latestVaultList = null;
-let pendingLegacyPassword = null;
-let migrationRunning = false;
 
 function validatePassword(value) {
   const password = String(value || '');
@@ -32,6 +28,18 @@ function failButton(button, message) {
   status.showStatus({ status: 'ERROR', statusMsg: message });
 }
 
+function sendUnlockedDataKey(dataKeyHex) {
+  const dataKey = Buffer.from(dataKeyHex, 'hex');
+  const sessionSettings = Object.assign({}, latestSettings, {
+    masterKeyVerifier: masterKeyVerifier.createMasterKeyVerifier(dataKey)
+  });
+  latestSettings = sessionSettings;
+  ipc.send('read-vaultlist-init', {
+    cryptoKey: dataKey,
+    settings: sessionSettings
+  });
+}
+
 async function handleLogin(button) {
   const input = document.getElementById('masterCryptoInput');
   if (!input) return failButton(button, 'Password field is unavailable');
@@ -45,91 +53,36 @@ async function handleLogin(button) {
   status.loadStatus();
 
   try {
-    if (await ipc.invoke('crypto-v3-has-envelope')) {
-      const unlocked = await ipc.invoke('crypto-v3-login', password);
+    const hasEnvelope = await ipc.invoke('crypto-v3-has-envelope');
+    if (!hasEnvelope) {
+      const initialized = await ipc.invoke('crypto-v3-initialize', password);
       input.value = '';
-      if (unlocked && unlocked.ok) {
-        const dataKey = Buffer.from(unlocked.dataKeyHex, 'hex');
-        const sessionSettings = Object.assign({}, latestSettings, {
-          masterKeyVerifier: masterKeyVerifier.createMasterKeyVerifier(dataKey)
-        });
-        latestSettings = sessionSettings;
-        ipc.send('read-vaultlist-init', {
-          cryptoKey: dataKey,
-          settings: sessionSettings
-        });
-        return;
+      if (!initialized || !initialized.ok) {
+        return failButton(button, (initialized && initialized.message) || 'Unable to initialize SafeLedger encryption');
       }
-
-      if (unlocked && unlocked.type === 'password-failed') {
-        // Let the existing main-process brute-force policy own counters,
-        // lockouts, and optional self-destruct. A random candidate key is used
-        // only after Argon2 has already proved this password is incorrect.
-        ipc.send('read-vaultlist-init', {
-          cryptoKey: crypto.randomBytes(32),
-          settings: latestSettings
-        });
-        return;
-      }
-
-      return failButton(button, (unlocked && unlocked.message) || 'Unable to unlock SafeLedger key envelope');
+      sendUnlockedDataKey(initialized.dataKeyHex);
+      return;
     }
 
-    // Legacy SafeLedger data uses the historical HMAC-derived vault key for
-    // this one login. The successful result triggers a transactional migration
-    // to Argon2id + a random data-encryption key.
-    pendingLegacyPassword = password;
+    const unlocked = await ipc.invoke('crypto-v3-login', password);
     input.value = '';
-    ipc.send('read-vaultlist-init', {
-      cryptoKey: keyEnvelope.deriveLegacyKey(password),
-      settings: latestSettings
-    });
-  } catch (err) {
-    pendingLegacyPassword = null;
-    input.value = '';
-    failButton(button, err && err.message ? err.message : String(err));
-  }
-}
+    if (unlocked && unlocked.ok) {
+      sendUnlockedDataKey(unlocked.dataKeyHex);
+      return;
+    }
 
-async function migrateAfterLegacyLogin(params) {
-  if (!pendingLegacyPassword || migrationRunning) return;
-  const password = pendingLegacyPassword;
-  pendingLegacyPassword = null;
-  migrationRunning = true;
-  try {
-    const migrated = await ipc.invoke('crypto-v3-migrate-legacy', password);
-    if (!migrated || !migrated.ok) {
-      status.showStatus({
-        status: 'ERROR',
-        statusMsg: `SafeLedger opened, but the encryption upgrade could not finish: ${(migrated && migrated.message) || 'unknown migration error'}`
+    if (unlocked && unlocked.type === 'password-failed') {
+      ipc.send('read-vaultlist-init', {
+        cryptoKey: crypto.randomBytes(32),
+        settings: latestSettings
       });
       return;
     }
 
-    const migratedVaultList = migrated.vaultList || params.vaultList;
-    const dataKey = Buffer.from(migrated.dataKeyHex, 'hex');
-    const migratedSettings = Object.assign({}, params.settings || latestSettings, {
-      masterKeyVerifier: masterKeyVerifier.createMasterKeyVerifier(dataKey)
-    });
-    latestVaultList = migratedVaultList;
-    latestSettings = migratedSettings;
-    ipc.emit('result', {}, {
-      status: 'SUCCESS',
-      statusMsg: migrated.pendingCleanup
-        ? 'SafeLedger encryption upgraded to Argon2id. Legacy-file cleanup will finish on the next login.'
-        : 'SafeLedger encryption upgraded to Argon2id and AES-256-GCM.',
-      type: 'vaultlist-init',
-      vaultList: migratedVaultList,
-      cryptoKey: dataKey,
-      settings: migratedSettings
-    });
+    return failButton(button, (unlocked && unlocked.message) || 'Unable to unlock SafeLedger key envelope');
   } catch (err) {
-    status.showStatus({
-      status: 'ERROR',
-      statusMsg: `SafeLedger opened, but the encryption upgrade could not finish: ${err && err.message ? err.message : err}`
-    });
-  } finally {
-    migrationRunning = false;
+    input.value = '';
+    failButton(button, err && err.message ? err.message : String(err));
   }
 }
 
@@ -200,11 +153,6 @@ ipc.on('result-init-system', (_event, params) => {
 ipc.on('result', (_event, params) => {
   if (params && params.settings) latestSettings = params.settings;
   if (params && params.vaultList) latestVaultList = params.vaultList;
-  if (params && params.status === 'SUCCESS' && params.type === 'vaultlist-init') {
-    migrateAfterLegacyLogin(params);
-  } else if (pendingLegacyPassword && params && params.status === 'ERROR') {
-    pendingLegacyPassword = null;
-  }
 });
 
 ipc.on('result-save-settings', (_event, params) => {
@@ -212,7 +160,6 @@ ipc.on('result-save-settings', (_event, params) => {
 });
 
 ipc.on('result-lockout-destroy', (_event, params) => {
-  pendingLegacyPassword = null;
   latestVaultList = null;
   if (params && params.settings) latestSettings = params.settings;
 });
