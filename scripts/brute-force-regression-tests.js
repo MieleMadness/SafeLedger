@@ -55,10 +55,19 @@ async function run() {
     assert(ui.includes('configureBruteForceInput(inputBetweenLockout)'));
     assert(ui.includes("newSettings: Object.assign({}, latestSettings"));
 
-    const pkg = JSON.parse(read('package.json'));
-    assert.strictEqual(pkg.version, '2.0.42');
+    const passwordSection = ui.indexOf("const passwordSection = makeSection('Password');");
+    const backupSection = ui.indexOf("const backupSection = makeSection('Backup & Recovery');");
+    const bruteSection = ui.indexOf("const bruteSection = makeSection('Brute Force Protection');");
+    assert(passwordSection >= 0 && backupSection > passwordSection && bruteSection > backupSection);
+    assert(ui.includes('area.insertBefore(passwordSection, form);'));
+    assert(ui.includes('area.insertBefore(backupSection, form);'));
+    assert(ui.includes('area.insertBefore(bruteSection, form);'));
+    assert(ui.includes('bruteSection.appendChild(form);'));
 
-    console.log('PASS SafeLedger 2.0.42 brute-force settings are constrained to whole numbers from 1 to 99.');
+    const pkg = JSON.parse(read('package.json'));
+    assert.strictEqual(pkg.version, '2.0.43');
+
+    console.log('PASS SafeLedger 2.0.43 brute-force limits and Settings section order.');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

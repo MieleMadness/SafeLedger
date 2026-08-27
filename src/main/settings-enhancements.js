@@ -197,13 +197,18 @@ function enhanceSettingsScreen() {
   form.addEventListener('submit', saveBruteForceSettings);
   form.appendChild(save);
 
-  const bruteSection = makeSection('Brute Force Protection');
-  bruteSection.appendChild(protectionIntro);
-  bruteSection.appendChild(form);
-  area.insertBefore(bruteSection, area.querySelector('form'));
+  const passwordSection = makeSection('Password');
+  const passwordNote = document.createElement('p');
+  passwordNote.className = 'settings-section-note settings-section-intro';
+  passwordNote.textContent = 'Change the master password used to unlock and encrypt your SafeLedger vaults. You will need your current password to complete the change.';
+  passwordSection.appendChild(passwordNote);
 
-  const modified = Array.from(area.querySelectorAll('p.dates')).find((p) => /modified/i.test(p.textContent || ''));
-  if (modified) bruteSection.appendChild(modified);
+  const changePassword = document.createElement('button');
+  changePassword.type = 'button';
+  changePassword.className = 'btn btn-default';
+  changePassword.innerHTML = '<i class="fa fa-lock"></i> Change Password';
+  changePassword.addEventListener('click', () => clickLegacyAction('encryptionSettings'));
+  passwordSection.appendChild(changePassword);
 
   const backupSection = makeSection('Backup & Recovery');
   const backupNote = document.createElement('p');
@@ -227,21 +232,20 @@ function enhanceSettingsScreen() {
   restore.addEventListener('click', () => clickLegacyAction('restoreButton'));
   backupActions.appendChild(restore);
   backupSection.appendChild(backupActions);
-  area.appendChild(backupSection);
 
-  const passwordSection = makeSection('Password');
-  const passwordNote = document.createElement('p');
-  passwordNote.className = 'settings-section-note settings-section-intro';
-  passwordNote.textContent = 'Change the master password used to unlock and encrypt your SafeLedger vaults. You will need your current password to complete the change.';
-  passwordSection.appendChild(passwordNote);
+  const bruteSection = makeSection('Brute Force Protection');
+  bruteSection.appendChild(protectionIntro);
 
-  const changePassword = document.createElement('button');
-  changePassword.type = 'button';
-  changePassword.className = 'btn btn-default';
-  changePassword.innerHTML = '<i class="fa fa-lock"></i> Change Password';
-  changePassword.addEventListener('click', () => clickLegacyAction('encryptionSettings'));
-  passwordSection.appendChild(changePassword);
-  area.appendChild(passwordSection);
+  // Insert the three Settings sections while the legacy form is still a
+  // direct child of the detail area. This keeps the requested visual order
+  // deterministic and avoids using a nested form as insertBefore's reference.
+  area.insertBefore(passwordSection, form);
+  area.insertBefore(backupSection, form);
+  area.insertBefore(bruteSection, form);
+  bruteSection.appendChild(form);
+
+  const modified = Array.from(area.querySelectorAll('p.dates')).find((p) => /modified/i.test(p.textContent || ''));
+  if (modified) bruteSection.appendChild(modified);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
