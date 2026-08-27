@@ -39,11 +39,19 @@ jobs:
         shell: pwsh
         run: npm run dist:win
 
-      - name: Upload portable EXE and README
+      - name: Stage portable EXE and PDF README
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release/windows | Out-Null
+          $exe = Get-ChildItem -Path dist -Filter 'SafeLedger-*-Portable.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'Portable EXE was not created.' }
+          Copy-Item $exe.FullName -Destination release/windows/
+          npm run docs:pdf -- release/windows/README.pdf
+          if (-not (Test-Path 'release/windows/README.pdf')) { throw 'README.pdf was not generated.' }
+
+      - name: Upload flat portable download
         uses: actions/upload-artifact@v6
         with:
           name: SafeLedger-Windows-Portable
-          path: |
-            dist/*.exe
-            README.md
+          path: release/windows/*
           if-no-files-found: error

@@ -105,7 +105,7 @@ check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.45');
+  assert.strictEqual(pkg.version, '2.0.46');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -113,13 +113,25 @@ check('Electron-safe Argon2 provider is bundled for crypto v3', () => {
   assert(envelope.includes('argon2Provider.CURRENT_IMPLEMENTATION'));
 });
 
-check('Windows and Linux workflows test crypto inside Electron before packaging', () => {
+check('Windows artifact is flat and includes an auto-generated PDF README', () => {
   const windows = read('.github/workflows/windows-portable.yml');
   const linux = read('.github/workflows/linux-appimage.yml');
+  const pdfScript = read('scripts/readme-to-pdf.js');
+  const pkg = JSON.parse(read('package.json'));
   assert(windows.includes('Run Electron crypto smoke test'));
   assert(windows.includes('npm run test:electron-crypto'));
-  assert(windows.includes('README.md'));
-  assert(fs.existsSync(path.join(root, 'README.md')));
+  assert(windows.includes("Get-ChildItem -Path dist -Filter 'SafeLedger-*-Portable.exe'"));
+  assert(windows.includes('Copy-Item $exe.FullName -Destination release/windows/'));
+  assert(windows.includes('npm run docs:pdf -- release/windows/README.pdf'));
+  assert(windows.includes('path: release/windows/*'));
+  assert(!windows.includes('path: dist/*.exe'));
+  assert(!windows.includes('README.md\n          if-no-files-found'));
+  assert.strictEqual(pkg.scripts['docs:pdf'], 'electron scripts/readme-to-pdf.js');
+  assert.strictEqual(pkg.devDependencies.marked, '12.0.2');
+  assert(pdfScript.includes("const { marked } = require('marked');"));
+  assert(pdfScript.includes('marked.parse(markdown)'));
+  assert(pdfScript.includes("path.join(process.cwd(), 'README.md')"));
+  assert(pdfScript.includes('printToPDF'));
   assert(linux.includes('Run Electron crypto smoke test'));
   assert(linux.includes('npm run test:electron-crypto'));
 });
@@ -217,8 +229,9 @@ check('updated UI and crypto JavaScript parses cleanly', () => {
   syntaxCheck('src/main/robust-vault.js');
   syntaxCheck('src/main/argon2-provider.js');
   syntaxCheck('src/main/key-envelope.js');
+  syntaxCheck('scripts/readme-to-pdf.js');
   syntaxCheck('scripts/electron-crypto-smoke.js');
   syntaxCheck('scripts/run-electron-crypto-smoke.js');
 });
 
-console.log('\n17 SafeLedger 2.0.45 UI/runtime regression checks passed.');
+console.log('\n17 SafeLedger 2.0.46 UI/runtime regression checks passed.');

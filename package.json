@@ -1,7 +1,7 @@
 {
   "name": "safe-ledger",
   "productName": "SafeLedger",
-  "version": "2.0.45",
+  "version": "2.0.46",
   "description": "Free, offline and portable encrypted information vault",
   "main": "src/main/main.js",
   "scripts": {
@@ -9,6 +9,7 @@
     "start": "npm run prepare:icons && electron .",
     "test:regression": "node scripts/regression-tests.js && node scripts/crypto-v3-tests.js && node scripts/ui-regression-tests.js && node scripts/edit-grid-regression-tests.js && node scripts/brute-force-regression-tests.js && node scripts/lockout-regression-tests.js",
     "test:electron-crypto": "node scripts/run-electron-crypto-smoke.js",
+    "docs:pdf": "electron scripts/readme-to-pdf.js",
     "dist:win": "npm run prepare:icons && electron-builder --win portable --publish never",
     "dist:linux": "npm run prepare:icons && electron-builder --linux AppImage --publish never",
     "dist:dir": "npm run prepare:icons && electron-builder --dir --publish never"
@@ -26,7 +27,8 @@
   "devDependencies": {
     "@web3icons/core": "4.0.55",
     "electron": "43.4.0",
-    "electron-builder": "26.15.7"
+    "electron-builder": "26.15.7",
+    "marked": "12.0.2"
   },
   "dependencies": {
     "@electron/remote": "2.1.3",
