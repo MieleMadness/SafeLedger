@@ -18,11 +18,10 @@ const formUi = read('src/main/edit-form-ui.js');
 const securityUi = read('src/main/security-ui.js');
 const record = read('src/main/record.js');
 const group = read('src/main/group.js');
-const gridCss = read('src/main/css/2.0.38.css');
-const securityCss = read('src/main/css/2.0.39.css');
+const siteCss = read('src/main/css/site.css');
 
-assert(index.includes('./css/2.0.38.css'));
-assert(index.includes('./css/2.0.39.css'));
+assert(index.includes('./css/site.css'));
+assert(!index.includes('./css/2.0.'));
 assert(!index.includes("require('./edit-form-grid-enhancements.js')"));
 assert(!index.includes("require('./form-spacing-enhancements.js')"));
 assert(!index.includes("require('./edit-security-enhancements.js')"));
@@ -34,9 +33,9 @@ assert(formUi.includes("form.className = 'safeledger-edit-form'"));
 assert(formUi.includes("grid.className = 'edit-info-grid'"));
 assert(formUi.includes('edit-info-grid-full'));
 assert(formUi.includes('securityUi.addEditSensitiveInputControl'));
-assert(gridCss.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)'));
-assert(gridCss.includes('column-gap: 16px'));
-assert(gridCss.includes('row-gap: 18px'));
+assert(siteCss.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)'));
+assert(siteCss.includes('column-gap: 16px'));
+assert(siteCss.includes('row-gap: 18px'));
 
 const coinOrder = [
   "id: 'inputName', label: 'Coin'",
@@ -87,7 +86,7 @@ assert(securityUi.includes('const allowQr = options.allowQr !== false'));
 assert(securityUi.includes('if (allowQr) actions.appendChild(makeQrButton'));
 assert(!securityUi.includes('addPublicInputControls'));
 assert(!securityUi.includes('addSensitiveInputControls'));
-assert(securityCss.includes('.edit-sensitive-shell'));
-assert(!securityCss.includes('.edit-public-shell'));
+assert(siteCss.includes('.edit-sensitive-shell'));
+assert(!siteCss.includes('.edit-public-shell'));
 
 console.log('PASS direct Coin/Wallet form rendering and security controls.');

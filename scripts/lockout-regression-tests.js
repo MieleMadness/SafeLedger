@@ -52,11 +52,12 @@ assert.strictEqual(malformed.lockOutCount, 4);
 
 const index = read('src/main/index.html');
 const ui = read('src/main/lockout-ui-enhancements.js');
-const css = read('src/main/css/2.0.44.css');
+const css = read('src/main/css/site.css');
 const retryGuard = read('src/main/login-retry-guard.js');
 const pkg = JSON.parse(read('package.json'));
 
-assert(index.includes('./css/2.0.44.css'));
+assert(index.includes('./css/site.css'));
+assert(!index.includes('./css/2.0.'));
 assert(index.includes("require('./lockout-ui-enhancements.js')"));
 assert(ui.includes("ipc.on('result-init-system'"));
 assert(ui.includes("ipc.on('result'"));

@@ -165,7 +165,7 @@ a { color: white; }
 .settings-security-actions .btn { margin: 0; }
 .settings-backup-note { width: 100%; margin-top: 8px; font-size: 12px; color: #555; }
 
-/* SafeLedger 2.0.11 coin detail refinements */
+/* Coin detail refinements */
 .coin-detail-header { display: flex; align-items: center; gap: 14px; margin: 4px 0 10px; }
 .coin-detail-title-wrap { min-width: 0; }
 .coin-detail-title-wrap h1 { margin: 0 !important; font-size: 30px; font-weight: 700; line-height: 1.05; }
@@ -213,4 +213,404 @@ a { color: white; }
   .btn { font-size: 12px; padding-left: 8px; padding-right: 8px; }
   .coin-detail-title-wrap h1 { font-size: 25px; }
   .coin-brand-icon { width: 46px; height: 46px; flex-basis: 46px; font-size: 23px; }
+}
+
+/* Navigation refinements */
+.badge-circle {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+.badge-circle > div {
+  width: 100%;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  text-align: center;
+}
+
+.content-middle .nav > li > a {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  transition: background-color .12s ease, transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.content-middle .nav > li > a:hover,
+.content-middle .nav > li > a:focus {
+  background-color: rgba(255, 255, 255, .10);
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .12);
+}
+.content-middle .nav > li > a.item-selected,
+.content-middle .nav > li > a.item-selected:hover,
+.content-middle .nav > li > a.item-selected:focus {
+  background-color: #000;
+  color: #fff;
+  border-color: #fff;
+  border-radius: 6px;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Settings layout */
+.settings-section {
+  margin: 0 0 14px;
+  padding: 14px;
+  background: #fff;
+  border: 1px solid #d9dee7;
+  border-radius: 8px;
+}
+.settings-section-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #222;
+}
+.settings-section .form-group { margin-bottom: 12px; }
+.settings-section .form-control { margin-bottom: 10px; }
+.settings-field-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
+  line-height: 1.42857143;
+  font-weight: 400;
+  color: #333;
+}
+.settings-protection-note {
+  display: block;
+  margin: 2px 0 10px;
+  padding: 9px 10px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  color: #4f5967;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 400;
+}
+.settings-section-save {
+  float: none !important;
+  margin: 2px 0 4px !important;
+}
+.settings-section-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.settings-section-note {
+  margin: 9px 0 0;
+  color: #5b6470;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.settings-section-intro {
+  margin: 0 0 10px;
+}
+.settings-section .dates {
+  margin: 8px 0 0;
+  color: #6b7280;
+}
+
+/* Emergency minimize button */
+.panic-lock-inline {
+  width: 54px;
+  height: 54px;
+  padding: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.panic-lock-inline img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: auto;
+  object-fit: contain;
+  object-position: center;
+}
+
+/* Bottom action dock and empty-field refinements */
+.emergency-lock-cell {
+  justify-content: flex-start !important;
+  align-items: flex-end !important;
+  gap: 12px;
+}
+
+.detail-action-area {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 54px;
+  flex: 0 1 auto;
+}
+
+.detail-action-area:empty {
+  display: none;
+}
+
+.emergency-lock-cell .panic-lock-inline {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.detail-action-button {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px !important;
+}
+
+.detail-action-button i {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.detail-action-print {
+  color: #1565C0 !important;
+}
+
+.detail-action-delete {
+  color: #d32f2f !important;
+}
+
+.detail-action-save {
+  color: #2e7d32 !important;
+}
+.detail-action-save:hover,
+.detail-action-save:focus {
+  color: #1b5e20 !important;
+}
+
+.profile-legacy-action-hidden {
+  display: none !important;
+}
+
+.public-address-placeholder {
+  color: #8a94a3 !important;
+  font-family: inherit !important;
+  font-style: italic;
+}
+
+/* Wallet and coin edit-form spacing */
+.safeledger-edit-form {
+  padding-top: 2px;
+  padding-bottom: 20px;
+}
+
+.safeledger-edit-form .form-group {
+  margin-top: 0;
+  margin-bottom: 18px;
+}
+
+.safeledger-edit-form .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.safeledger-edit-form .form-group > label {
+  display: block;
+  margin: 0 0 6px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.safeledger-edit-form .form-group > label:not(:first-child) {
+  margin-top: 18px;
+}
+
+.safeledger-edit-form .form-control {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.safeledger-edit-form .secure-input-shell {
+  margin: 0;
+}
+
+.safeledger-edit-form .sensitive-controls {
+  margin: 6px 0 0;
+}
+
+.safeledger-edit-form .compact-qr-area {
+  margin: 8px 0 0;
+}
+
+.safeledger-edit-form textarea.form-control {
+  line-height: 1.45;
+}
+
+/* Profile search and detail spacing refinements */
+#detailArea.wallet-coin-detail {
+  padding-top: 12px !important;
+}
+
+#detailArea.wallet-coin-detail > h1,
+#detailArea.wallet-coin-detail > .coin-detail-header {
+  margin-top: 0 !important;
+}
+
+#detailArea.wallet-coin-view .field-inline-actions {
+  gap: 6px;
+}
+
+#detailArea.wallet-coin-view .field-inline-action {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#detailArea.wallet-coin-view .field-display-shell {
+  min-height: 52px;
+}
+
+#detailArea.wallet-coin-view .field-display-shell .field-inline-actions {
+  right: 10px;
+  top: 10px;
+  transform: none;
+}
+
+#detailArea.wallet-coin-view .field-display-shell .public-address-value {
+  min-height: 52px;
+  padding-right: 92px;
+}
+
+#detailArea.wallet-coin-view .secure-field-summary {
+  padding: 10px;
+}
+
+#detailArea.wallet-coin-view .secure-field-summary .field-inline-actions {
+  margin: 0;
+}
+
+/* Shared coin and wallet edit-form grid */
+#detailArea .edit-info-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 16px;
+  row-gap: 18px;
+  width: 100%;
+}
+
+#detailArea .edit-info-grid-field {
+  min-width: 0;
+  margin: 0 !important;
+}
+
+#detailArea .edit-info-grid-full {
+  grid-column: 1 / -1;
+}
+
+#detailArea .edit-info-grid-field > label {
+  display: block;
+  margin: 0 0 6px !important;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+#detailArea .edit-info-grid .form-control,
+#detailArea .edit-info-grid .secure-input-shell {
+  width: 100%;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+#detailArea .edit-info-grid .sensitive-controls {
+  margin: 6px 0 0;
+}
+
+#detailArea .edit-info-grid .compact-qr-area {
+  margin: 8px 0 0;
+}
+
+/* Edit-only reveal controls */
+#detailArea .safeledger-edit-form .secure-input-shell.edit-sensitive-shell .form-control {
+  padding-right: 44px;
+}
+
+#detailArea .safeledger-edit-form .edit-sensitive-actions {
+  right: 6px;
+  gap: 0;
+}
+
+#detailArea .safeledger-edit-form .edit-sensitive-toggle {
+  width: 32px;
+  min-width: 32px;
+  height: 30px;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Selected Profile row */
+#vaultArea .badge-circle.badge-selected {
+  border: 0 !important;
+}
+
+#vaultArea .nav > li > a:has(.badge-selected),
+#vaultArea .nav > li > a:has(.badge-selected):hover,
+#vaultArea .nav > li > a:has(.badge-selected):focus {
+  border: 2px solid #fff !important;
+  border-radius: 6px;
+  background-color: transparent !important;
+  color: inherit;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Lockout state */
+#detailArea.safeledger-lockout-view {
+  padding-top: 12px !important;
+}
+
+.safeledger-lockout-panel {
+  max-width: 520px;
+  margin-top: 12px;
+  padding: 18px;
+  border: 1px solid #d6d6d6;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.safeledger-lockout-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  border: 1px solid #b9b9b9;
+  border-radius: 50%;
+  font-size: 18px;
+}
+
+.safeledger-lockout-message {
+  margin-bottom: 14px;
+  line-height: 1.45;
+}
+
+.safeledger-lockout-countdown {
+  margin: 8px 0 6px;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.safeledger-lockout-retry-time,
+.safeledger-lockout-note {
+  color: #666;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.safeledger-lockout-note {
+  margin: 14px 0;
 }

@@ -34,7 +34,7 @@ check('new installations name the first profile SafeLedger', () => {
 
 check('shared bottom detail-action dock is present', () => {
   const index = read('src/main/index.html');
-  const css = read('src/main/css/2.0.30.css');
+  const css = read('src/main/css/site.css');
   assert(index.includes('id="detailActionArea"'));
   assert(index.includes("require('./detail-action-enhancements.js')"));
   assert(css.includes('.detail-action-area'));
@@ -77,7 +77,7 @@ check('Electron-safe Argon2 provider remains bundled', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.51');
+  assert.strictEqual(pkg.version, '2.0.52');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -107,9 +107,15 @@ check('failed password retry guard remains active', () => {
 });
 
 check('Coin and Wallet forms render their final grid directly', () => {
+  const index = read('src/main/index.html');
+  const css = read('src/main/css/site.css');
   const formUi = read('src/main/edit-form-ui.js');
   const record = read('src/main/record.js');
   const group = read('src/main/group.js');
+  assert(index.includes('./css/site.css'));
+  assert(!index.includes('./css/2.0.'));
+  assert(css.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)'));
+  assert(css.includes('.edit-sensitive-shell'));
   assert(formUi.includes("form.className = 'safeledger-edit-form'"));
   assert(formUi.includes("grid.className = 'edit-info-grid'"));
   assert(record.includes("const editFormUi = require('./edit-form-ui');"));
@@ -139,7 +145,7 @@ check('profile search matches wallet and coin search', () => {
 
 check('selected Profile row is CSS-driven without a MutationObserver', () => {
   const index = read('src/main/index.html');
-  const css = read('src/main/css/2.0.41.css');
+  const css = read('src/main/css/site.css');
   assert(!index.includes("require('./profile-selection-enhancements.js')"));
   assert.strictEqual(exists('src/main/profile-selection-enhancements.js'), false);
   assert(css.includes('#vaultArea .badge-circle.badge-selected'));
@@ -188,4 +194,4 @@ check('updated renderer and crypto JavaScript parses cleanly', () => {
   ]) syntaxCheck(relative);
 });
 
-console.log('\n15 SafeLedger 2.0.51 UI/runtime regression checks passed.');
+console.log('\n15 SafeLedger 2.0.52 UI/runtime regression checks passed.');
