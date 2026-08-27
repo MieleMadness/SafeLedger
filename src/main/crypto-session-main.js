@@ -128,5 +128,4 @@ function registerIpcHandlers() {
     getDefaultController().changePassword(oldPassword, newPassword));
 }
 
-try { registerIpcHandlers(); } catch (_) {}
 exports.registerIpcHandlers = registerIpcHandlers;

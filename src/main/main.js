@@ -7,8 +7,6 @@ const masterKeyVerifier = require('./master-key-verifier');
 const loginFailurePolicy = require('./login-failure-policy');
 const runtimeUtils = require('./runtime-utils');
 const utils = require('./utils');
-const logger = require('./logger');
-const installCodeManager = require('./installManager/installManager/installCodeManager');
 const settingsManager = require('./installManager/installManager/settingsManager');
 
 require('./crypto-session-main').registerIpcHandlers();
@@ -17,11 +15,8 @@ let mainWindow;
 let vaultDir;
 let settingsDir;
 let currentSettings;
-let activeVaultData = null;
-let activeCryptoKey = null;
 let walletCatalog = null;
 const currentVault = 'zvault-0.json';
-const debug = false;
 const excludedDefaultWallets = new Set(['bitbox02 multi', 'coldcard', 'keystone', 'rabby wallet']);
 
 function getWalletCatalog() {
@@ -44,7 +39,6 @@ function configureStorage() {
   const root = getPortableRoot();
   vaultDir = path.join(root, 'SafeLedgerData', 'vaults');
   settingsDir = path.join(root, 'SafeLedgerData', 'settings');
-  logger.initLogger(settingsDir, debug);
 }
 
 function buildMenu() {
@@ -141,8 +135,6 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.on('closed', () => {
-    activeVaultData = null;
-    activeCryptoKey = null;
     mainWindow = null;
   });
   buildMenu();
@@ -155,8 +147,6 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 
 ipc.on('panic-lock', () => {
-  activeVaultData = null;
-  activeCryptoKey = null;
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
 });
 
@@ -183,23 +173,16 @@ ipc.on('save', (evt, params) => {
 ipc.on('read', (evt, params) => {
   vault.readVault(path.join(vaultDir, params.file), params.cryptoKey)
     .then((val) => {
-      activeVaultData = val;
-      activeCryptoKey = params.cryptoKey;
       mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Load successful.', type: params.type, vaultData: val });
     })
     .catch((val) => mainWindow.webContents.send('result', val));
 });
 
 ipc.on('read-vaultlist-init', (evt, params) => {
-  activeVaultData = null;
-  activeCryptoKey = params.cryptoKey;
-
   if (params.settings.lockOutCount >= params.settings.numLockoutRetries) {
     if (params.settings.scrubContentAfterRetries !== false) {
       vault.scrubContent(vaultDir)
         .then(() => {
-          activeVaultData = null;
-          activeCryptoKey = null;
           params.settings.failAttemptCount = 0;
           params.settings.lockOutCount = 0;
           params.settings.lockLogin = false;
@@ -245,7 +228,6 @@ ipc.on('read-vaultlist-init', (evt, params) => {
         });
       })
       .catch((valList) => {
-        activeCryptoKey = null;
         const classification = loginFailurePolicy.classifyVaultListFailure(valList, params.cryptoKey, params.settings);
         const failure = classification.failure;
 
@@ -302,8 +284,6 @@ ipc.on('process-vault-list', (evt, params) => {
       if (params.action === 'create' && val === 'SUCCESS') {
         return initializeModernVault(idInfo.fileName, params.cryptoKey)
           .then((data) => {
-            activeVaultData = data;
-            activeCryptoKey = params.cryptoKey;
             mainWindow.webContents.send('result', {
               status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: params.vaultList, vaultData: data
             });
@@ -318,7 +298,6 @@ ipc.on('vault-list-delete', (evt, params) => {
   vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey)
     .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
     .then(() => {
-      if (activeVaultData && activeVaultData.file === params.fileName) activeVaultData = null;
       mainWindow.webContents.send('result', { type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' });
     })
     .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Delete failed' }));
@@ -327,8 +306,6 @@ ipc.on('vault-list-delete', (evt, params) => {
 ipc.on('process-group', (evt, params) => {
   vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
     .then(() => {
-      activeVaultData = params.vaultData;
-      activeCryptoKey = params.cryptoKey;
       mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: params.vaultData });
     })
     .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
@@ -337,31 +314,9 @@ ipc.on('process-group', (evt, params) => {
 ipc.on('process-record', (evt, params) => {
   vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
     .then(() => {
-      activeVaultData = params.vaultData;
-      activeCryptoKey = params.cryptoKey;
       mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: params.vaultData });
     })
     .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
-});
-
-ipc.on('process-rotate-crypto', (evt, params) => {
-  vault.rotateCrypto(vaultDir, params.oldCryptoKey, params.newCryptoKey, params.vaultList)
-    .then(async (val) => {
-      if (val && val.status === 'SUCCESS') {
-        activeCryptoKey = params.newCryptoKey;
-        if (currentSettings) {
-          currentSettings = Object.assign({}, currentSettings, {
-            masterKeyVerifier: masterKeyVerifier.createMasterKeyVerifier(params.newCryptoKey)
-          });
-          try {
-            const saved = await settingsManager.saveSettings(settingsDir, currentSettings);
-            currentSettings = saved.settings;
-          } catch (_) {}
-        }
-      }
-      mainWindow.webContents.send('result-rotate-crypto', val);
-    })
-    .catch((val) => mainWindow.webContents.send('result-rotate-crypto', val));
 });
 
 ipc.on('init-system', () => {
@@ -369,27 +324,13 @@ ipc.on('init-system', () => {
     .then((valSettings) => {
       currentSettings = valSettings.settings;
       buildMenu();
-      return installCodeManager.checkInstallCode(settingsDir)
-        .then(() => mainWindow.webContents.send('result-init-system', {
-          keyStatus: 'SUCCESS', settings: valSettings.settings, portableRoot: getPortableRoot()
-        }));
+      mainWindow.webContents.send('result-init-system', {
+        keyStatus: 'SUCCESS', settings: valSettings.settings, portableRoot: getPortableRoot()
+      });
     })
     .catch(() => mainWindow.webContents.send('result-init-system', {
       status: 'ERROR', statusMsg: 'Not able to load settings file'
     }));
-});
-
-ipc.on('save-install-code', (evt, params) => {
-  const settings = Object.assign({}, params.newSettings || {}, { activationCode: 'FREE' });
-  settingsManager.saveSettings(settingsDir, settings)
-    .then((val) => {
-      currentSettings = val.settings;
-      buildMenu();
-      mainWindow.webContents.send('result-save-install-code', {
-        status: 'SUCCESS', statusMsg: 'SafeLedger is free; no activation is required.', settings: val.settings
-      });
-    })
-    .catch(() => mainWindow.webContents.send('result-save-install-code', { status: 'ERROR', statusMsg: 'Unable to save settings' }));
 });
 
 ipc.on('save-settings', (evt, params) => {
