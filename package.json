@@ -1,7 +1,7 @@
 {
   "name": "safe-ledger",
   "productName": "SafeLedger",
-  "version": "2.0.49",
+  "version": "2.0.50",
   "description": "Free, offline and portable encrypted information vault",
   "main": "src/main/main.js",
   "scripts": {
@@ -15,13 +15,7 @@
     "dist:dir": "npm run prepare:icons && electron-builder --dir --publish never"
   },
   "repository": "https://github.com/MieleMadness/SafeLedger",
-  "keywords": [
-    "Electron",
-    "SafeLedger",
-    "portable",
-    "offline",
-    "encrypted-vault"
-  ],
+  "keywords": ["Electron", "SafeLedger", "portable", "offline", "encrypted-vault"],
   "author": "SafeLedger contributors",
   "license": "Apache-2.0",
   "devDependencies": {
@@ -42,32 +36,16 @@
     "appId": "com.safeledger.app",
     "productName": "SafeLedger",
     "asar": true,
-    "files": [
-      "src/**/*",
-      "build/icon-source.png",
-      "sl.png",
-      "LICENSE",
-      "package.json"
-    ],
+    "files": ["src/**/*", "build/icon-source.png", "sl.png", "LICENSE", "package.json"],
     "win": {
       "icon": "build/icon-source.png",
-      "target": [
-        {
-          "target": "portable",
-          "arch": ["x64"]
-        }
-      ],
+      "target": [{"target": "portable", "arch": ["x64"]}],
       "artifactName": "SafeLedger-${version}-Portable.${ext}"
     },
     "linux": {
       "icon": "build/icon-source.png",
       "category": "Utility",
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": ["x64"]
-        }
-      ],
+      "target": [{"target": "AppImage", "arch": ["x64"]}],
       "artifactName": "SafeLedger-${version}-x86_64.${ext}"
     }
   }

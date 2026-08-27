@@ -1,5 +1,7 @@
 'use strict';
 
+const DETAIL_MODE_CLASSES = ['wallet-coin-detail', 'wallet-coin-view', 'wallet-coin-edit'];
+
 function getDock() {
   return document.getElementById('detailActionArea');
 }
@@ -13,8 +15,25 @@ function clearDockOnly() {
   if (dock) dock.innerHTML = '';
 }
 
+function setDetailMode(mode = '') {
+  const detail = getDetailArea();
+  if (!detail) return;
+  detail.classList.remove(...DETAIL_MODE_CLASSES);
+  if (mode === 'edit') detail.classList.add('wallet-coin-detail', 'wallet-coin-edit');
+  if (mode === 'view') detail.classList.add('wallet-coin-detail', 'wallet-coin-view');
+}
+
+function modeForActions(actions) {
+  const titles = (Array.isArray(actions) ? actions : [])
+    .map((action) => String(action && action.title || '').trim().toLowerCase());
+  if (titles.some((title) => title === 'save coin' || title === 'save wallet')) return 'edit';
+  if (titles.some((title) => title === 'edit coin' || title === 'edit wallet')) return 'view';
+  return '';
+}
+
 function clear() {
   clearDockOnly();
+  setDetailMode('');
   const detail = getDetailArea();
   if (detail) {
     detail.querySelectorAll('.detail-action-context-marker').forEach((marker) => marker.remove());
@@ -50,6 +69,7 @@ function set(actions) {
   const dock = getDock();
   if (!dock) return;
   clearDockOnly();
+  setDetailMode(modeForActions(actions));
   markContext();
   (Array.isArray(actions) ? actions : []).forEach((action) => {
     if (action && action.icon && action.title) dock.appendChild(makeIconButton(action));
@@ -62,7 +82,10 @@ function installDetailObserver() {
   detail.dataset.detailActionObserver = '1';
   const observer = new MutationObserver(() => {
     queueMicrotask(() => {
-      if (!detail.querySelector('.detail-action-context-marker')) clearDockOnly();
+      if (!detail.querySelector('.detail-action-context-marker')) {
+        clearDockOnly();
+        setDetailMode('');
+      }
     });
   });
   observer.observe(detail, { childList: true });
@@ -76,4 +99,5 @@ if (document.readyState === 'loading') {
 
 exports.set = set;
 exports.clear = clear;
-exports._test = { makeIconButton };
+exports.setDetailMode = setDetailMode;
+exports._test = { DETAIL_MODE_CLASSES, makeIconButton, modeForActions };

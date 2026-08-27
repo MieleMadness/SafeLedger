@@ -32,7 +32,7 @@ assert.strictEqual(exists('src/main/edit-security-enhancements.js'), false);
 
 assert(formUi.includes("form.className = 'safeledger-edit-form'"));
 assert(formUi.includes("grid.className = 'edit-info-grid'"));
-assert(formUi.includes("edit-info-grid-full"));
+assert(formUi.includes('edit-info-grid-full'));
 assert(formUi.includes('securityUi.addEditSensitiveInputControl'));
 assert(gridCss.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)'));
 assert(gridCss.includes('column-gap: 16px'));
@@ -90,4 +90,4 @@ assert(!securityUi.includes('addSensitiveInputControls'));
 assert(securityCss.includes('.edit-sensitive-shell'));
 assert(!securityCss.includes('.edit-public-shell'));
 
-console.log('PASS SafeLedger 2.0.49 direct Coin/Wallet form rendering and security controls.');
+console.log('PASS SafeLedger 2.0.50 direct Coin/Wallet form rendering and security controls.');

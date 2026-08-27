@@ -77,7 +77,7 @@ check('Electron-safe Argon2 provider remains bundled', () => {
   const pkg = JSON.parse(read('package.json'));
   const provider = read('src/main/argon2-provider.js');
   const envelope = read('src/main/key-envelope.js');
-  assert.strictEqual(pkg.version, '2.0.49');
+  assert.strictEqual(pkg.version, '2.0.50');
   assert.strictEqual(pkg.dependencies['hash-wasm'], '4.12.0');
   assert.strictEqual(pkg.scripts['test:electron-crypto'], 'node scripts/run-electron-crypto-smoke.js');
   assert(provider.includes("CURRENT_IMPLEMENTATION = 'hash-wasm-argon2id-v1'"));
@@ -106,7 +106,7 @@ check('failed password retry guard remains active', () => {
   assert(guard.includes('button.disabled = false'));
 });
 
-check('Coin and Wallet forms now render their final grid directly', () => {
+check('Coin and Wallet forms render their final grid directly', () => {
   const index = read('src/main/index.html');
   const formUi = read('src/main/edit-form-ui.js');
   const record = read('src/main/record.js');
@@ -117,9 +117,17 @@ check('Coin and Wallet forms now render their final grid directly', () => {
   assert(formUi.includes("grid.className = 'edit-info-grid'"));
   assert(record.includes("const editFormUi = require('./edit-form-ui');"));
   assert(group.includes("const editFormUi = require('./edit-form-ui');"));
-  assert(!index.includes("require('./form-spacing-enhancements.js')"));
-  assert(!index.includes("require('./edit-form-grid-enhancements.js')"));
-  assert(!index.includes("require('./edit-security-enhancements.js')"));
+});
+
+check('detail view/edit spacing is controlled without a second observer', () => {
+  const index = read('src/main/index.html');
+  const actions = read('src/main/detail-actions.js');
+  assert(!index.includes("require('./detail-spacing-enhancements.js')"));
+  assert.strictEqual(exists('src/main/detail-spacing-enhancements.js'), false);
+  assert(actions.includes("const DETAIL_MODE_CLASSES = ['wallet-coin-detail', 'wallet-coin-view', 'wallet-coin-edit'];"));
+  assert(actions.includes("if (titles.some((title) => title === 'save coin' || title === 'save wallet')) return 'edit';"));
+  assert(actions.includes("if (titles.some((title) => title === 'edit coin' || title === 'edit wallet')) return 'view';"));
+  assert(actions.includes('setDetailMode(modeForActions(actions));'));
 });
 
 check('profile search matches wallet and coin search', () => {
@@ -142,17 +150,6 @@ check('selected profile borders the full row instead of the initial', () => {
   assert(css.includes('border: 2px solid #fff !important'));
 });
 
-check('wallet and coin detail spacing remains normalized', () => {
-  const index = read('src/main/index.html');
-  const spacing = read('src/main/detail-spacing-enhancements.js');
-  const css = read('src/main/css/2.0.36.css');
-  assert(index.includes("require('./detail-spacing-enhancements.js')"));
-  assert(spacing.includes("'Modify Wallet'"));
-  assert(spacing.includes("'Modify Coin'"));
-  assert(css.includes('padding-top: 12px !important'));
-  assert(css.includes('right: 10px'));
-});
-
 check('obsolete Phase 1 and Phase 3 files stay removed', () => {
   const removed = [
     'src/main/coin-form-layout-enhancements.js',
@@ -162,11 +159,10 @@ check('obsolete Phase 1 and Phase 3 files stay removed', () => {
     'build/icon.png',
     'src/main/form-spacing-enhancements.js',
     'src/main/edit-form-grid-enhancements.js',
-    'src/main/edit-security-enhancements.js'
+    'src/main/edit-security-enhancements.js',
+    'src/main/detail-spacing-enhancements.js'
   ];
-  for (const relative of removed) {
-    assert.strictEqual(exists(relative), false, `${relative} should remain removed`);
-  }
+  for (const relative of removed) assert.strictEqual(exists(relative), false, `${relative} should remain removed`);
   assert(!read('src/main/utils.js').includes('testSleep'));
 });
 
@@ -176,7 +172,6 @@ check('updated renderer and crypto JavaScript parses cleanly', () => {
     'src/main/detail-action-enhancements.js',
     'src/main/login-retry-guard.js',
     'src/main/search-enhancements.js',
-    'src/main/detail-spacing-enhancements.js',
     'src/main/edit-form-ui.js',
     'src/main/security-ui.js',
     'src/main/profile-selection-enhancements.js',
@@ -195,4 +190,4 @@ check('updated renderer and crypto JavaScript parses cleanly', () => {
   ]) syntaxCheck(relative);
 });
 
-console.log('\n15 SafeLedger 2.0.49 UI/runtime regression checks passed.');
+console.log('\n15 SafeLedger 2.0.50 UI/runtime regression checks passed.');

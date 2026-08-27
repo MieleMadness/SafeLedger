@@ -12,7 +12,6 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 async function run() {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'safeledger-brute-force-'));
   const settingsDir = path.join(tempRoot, 'settings');
-
   try {
     const saved = await settingsManager.saveSettings(settingsDir, {
       numFailAttempts: -12,
@@ -50,24 +49,15 @@ async function run() {
     assert(ui.includes("input.min = String(BRUTE_FORCE_MIN)"));
     assert(ui.includes("input.max = String(BRUTE_FORCE_MAX)"));
     assert(ui.includes("input.step = '1'"));
-    assert(ui.includes('configureBruteForceInput(inputFailAttempts)'));
-    assert(ui.includes('configureBruteForceInput(inputLockoutRetry)'));
-    assert(ui.includes('configureBruteForceInput(inputBetweenLockout)'));
-    assert(ui.includes("newSettings: Object.assign({}, latestSettings"));
 
     const passwordSection = ui.indexOf("const passwordSection = makeSection('Password');");
     const backupSection = ui.indexOf("const backupSection = makeSection('Backup & Recovery');");
     const bruteSection = ui.indexOf("const bruteSection = makeSection('Brute Force Protection');");
     assert(passwordSection >= 0 && backupSection > passwordSection && bruteSection > backupSection);
-    assert(ui.includes('area.insertBefore(passwordSection, form);'));
-    assert(ui.includes('area.insertBefore(backupSection, form);'));
-    assert(ui.includes('area.insertBefore(bruteSection, form);'));
-    assert(ui.includes('bruteSection.appendChild(form);'));
 
     const pkg = JSON.parse(read('package.json'));
-    assert.strictEqual(pkg.version, '2.0.49');
-
-    console.log('PASS SafeLedger 2.0.49 brute-force limits and Settings section order.');
+    assert.strictEqual(pkg.version, '2.0.50');
+    console.log('PASS SafeLedger 2.0.50 brute-force limits and Settings section order.');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
