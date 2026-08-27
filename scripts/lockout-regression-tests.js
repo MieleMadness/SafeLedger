@@ -51,6 +51,7 @@ assert.strictEqual(malformed.failAttemptCount, 3);
 assert.strictEqual(malformed.lockOutCount, 4);
 
 const index = read('src/main/index.html');
+const preload = read('src/main/preload.js');
 const ui = read('src/main/lockout-ui-enhancements.js');
 const css = read('src/main/css/site.css');
 const retryGuard = read('src/main/login-retry-guard.js');
@@ -58,7 +59,8 @@ const pkg = JSON.parse(read('package.json'));
 
 assert(index.includes('./css/site.css'));
 assert(!index.includes('./css/2.0.'));
-assert(index.includes("require('./lockout-ui-enhancements.js')"));
+assert(!index.includes("require('./lockout-ui-enhancements.js')"));
+assert(preload.includes("require('./lockout-ui-enhancements.js')"));
 assert(ui.includes("ipc.on('result-init-system'"));
 assert(ui.includes("ipc.on('result'"));
 assert(ui.includes("header.textContent = 'Login temporarily locked'"));
@@ -71,6 +73,7 @@ assert(css.includes('.safeledger-lockout-countdown'));
 assert(retryGuard.includes('params.settings && params.settings.lockLogin'));
 assert(pkg.scripts['test:regression'].includes('node scripts/lockout-regression-tests.js'));
 
+syntaxCheck('src/main/preload.js');
 syntaxCheck('src/main/lockout-state.js');
 syntaxCheck('src/main/lockout-ui-enhancements.js');
 syntaxCheck('src/main/installManager/installManager/settingsManager.js');
