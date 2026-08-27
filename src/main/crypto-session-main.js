@@ -30,7 +30,27 @@ async function atomicWriteJson(file, value) {
 function createController(vaultDir) {
   const envelopePath = path.join(vaultDir, ENVELOPE_FILE);
   const vaultListPath = path.join(vaultDir, 'vaultlist.json');
+  let activeDataKey = null;
+
   const hasEnvelope = () => fs.existsSync(envelopePath);
+  const isUnlocked = () => Buffer.isBuffer(activeDataKey) && activeDataKey.length === keyEnvelope.KEY_BYTES;
+
+  function clearSession() {
+    if (Buffer.isBuffer(activeDataKey)) activeDataKey.fill(0);
+    activeDataKey = null;
+  }
+
+  function setSessionKey(dataKey) {
+    if (!Buffer.isBuffer(dataKey) || dataKey.length !== keyEnvelope.KEY_BYTES) {
+      throw new Error('SafeLedger data key has an invalid length.');
+    }
+    clearSession();
+    activeDataKey = Buffer.from(dataKey);
+  }
+
+  function getSessionKey() {
+    return activeDataKey;
+  }
 
   async function readEnvelope() {
     let parsed;
@@ -44,6 +64,7 @@ function createController(vaultDir) {
   }
 
   async function initializeSession(password) {
+    clearSession();
     if (hasEnvelope()) return { ok: false, type: 'already-initialized', message: 'SafeLedger is already initialized.' };
     if (fs.existsSync(vaultListPath)) {
       return {
@@ -53,16 +74,22 @@ function createController(vaultDir) {
       };
     }
     const created = await keyEnvelope.createEnvelope(password);
-    await atomicWriteJson(envelopePath, created.envelope);
-    return {
-      ok: true,
-      initialized: true,
-      dataKeyHex: created.dataKey.toString('hex'),
-      envelopeVersion: created.envelope.version
-    };
+    try {
+      await atomicWriteJson(envelopePath, created.envelope);
+      setSessionKey(created.dataKey);
+      return {
+        ok: true,
+        initialized: true,
+        unlocked: true,
+        envelopeVersion: created.envelope.version
+      };
+    } finally {
+      created.dataKey.fill(0);
+    }
   }
 
   async function loginWithEnvelope(password) {
+    clearSession();
     let envelope;
     try { envelope = await readEnvelope(); }
     catch (err) { return { ok: false, type: 'envelope-corrupt', message: err.message }; }
@@ -70,11 +97,16 @@ function createController(vaultDir) {
 
     const unlocked = await keyEnvelope.unlockEnvelope(password, envelope);
     if (!unlocked.ok) return unlocked;
-    return {
-      ok: true,
-      dataKeyHex: unlocked.dataKey.toString('hex'),
-      envelopeVersion: envelope.version
-    };
+    try {
+      setSessionKey(unlocked.dataKey);
+      return {
+        ok: true,
+        unlocked: true,
+        envelopeVersion: envelope.version
+      };
+    } finally {
+      unlocked.dataKey.fill(0);
+    }
   }
 
   async function changePassword(oldPassword, newPassword) {
@@ -85,18 +117,32 @@ function createController(vaultDir) {
 
     const rewrapped = await keyEnvelope.rewrapEnvelope(oldPassword, newPassword, envelope);
     if (!rewrapped.ok) return rewrapped;
-    rewrapped.envelope.modified = new Date().toISOString();
-    await atomicWriteJson(envelopePath, rewrapped.envelope);
-    return {
-      ok: true,
-      status: 'SUCCESS',
-      statusMsg: 'Password change successful. Vault data did not need to be re-encrypted.',
-      dataKeyHex: rewrapped.dataKey.toString('hex'),
-      envelopeVersion: rewrapped.envelope.version
-    };
+    try {
+      rewrapped.envelope.modified = new Date().toISOString();
+      await atomicWriteJson(envelopePath, rewrapped.envelope);
+      setSessionKey(rewrapped.dataKey);
+      return {
+        ok: true,
+        status: 'SUCCESS',
+        statusMsg: 'Password change successful. Vault data did not need to be re-encrypted.',
+        unlocked: true,
+        envelopeVersion: rewrapped.envelope.version
+      };
+    } finally {
+      rewrapped.dataKey.fill(0);
+    }
   }
 
-  return { hasEnvelope, readEnvelope, initializeSession, loginWithEnvelope, changePassword };
+  return {
+    hasEnvelope,
+    readEnvelope,
+    initializeSession,
+    loginWithEnvelope,
+    changePassword,
+    isUnlocked,
+    getSessionKey,
+    clearSession
+  };
 }
 
 let defaultController = null;
@@ -112,6 +158,9 @@ exports.hasEnvelope = () => getDefaultController().hasEnvelope();
 exports.initializeSession = (password) => getDefaultController().initializeSession(password);
 exports.loginWithEnvelope = (password) => getDefaultController().loginWithEnvelope(password);
 exports.changePassword = (oldPassword, newPassword) => getDefaultController().changePassword(oldPassword, newPassword);
+exports.isUnlocked = () => getDefaultController().isUnlocked();
+exports.getSessionKey = () => getDefaultController().getSessionKey();
+exports.clearSession = () => getDefaultController().clearSession();
 exports.createController = createController;
 exports.ENVELOPE_FILE = ENVELOPE_FILE;
 exports._test = { atomicWriteJson };

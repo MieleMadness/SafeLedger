@@ -1,10 +1,8 @@
 'use strict';
 
 const { ipcRenderer: ipc } = require('electron');
-const crypto = require('crypto');
 const status = require('./status');
 const runtimeUtils = require('./runtime-utils');
-const masterKeyVerifier = require('./master-key-verifier');
 
 const MAX_MASTER_PASSWORD_LENGTH = runtimeUtils.MAX_MASTER_PASSWORD_LENGTH;
 let latestSettings = null;
@@ -25,16 +23,8 @@ function failButton(button, message) {
   status.showStatus({ status: 'ERROR', statusMsg: message });
 }
 
-function sendUnlockedDataKey(dataKeyHex) {
-  const dataKey = Buffer.from(dataKeyHex, 'hex');
-  const sessionSettings = Object.assign({}, latestSettings, {
-    masterKeyVerifier: masterKeyVerifier.createMasterKeyVerifier(dataKey)
-  });
-  latestSettings = sessionSettings;
-  ipc.send('read-vaultlist-init', {
-    cryptoKey: dataKey,
-    settings: sessionSettings
-  });
+function loadUnlockedVaultList() {
+  ipc.send('read-vaultlist-init');
 }
 
 async function handleLogin(button) {
@@ -57,22 +47,19 @@ async function handleLogin(button) {
       if (!initialized || !initialized.ok) {
         return failButton(button, (initialized && initialized.message) || 'Unable to initialize SafeLedger encryption');
       }
-      sendUnlockedDataKey(initialized.dataKeyHex);
+      loadUnlockedVaultList();
       return;
     }
 
     const unlocked = await ipc.invoke('crypto-v3-login', password);
     input.value = '';
     if (unlocked && unlocked.ok) {
-      sendUnlockedDataKey(unlocked.dataKeyHex);
+      loadUnlockedVaultList();
       return;
     }
 
     if (unlocked && unlocked.type === 'password-failed') {
-      ipc.send('read-vaultlist-init', {
-        cryptoKey: crypto.randomBytes(32),
-        settings: latestSettings
-      });
+      ipc.send('record-password-failure');
       return;
     }
 
@@ -111,11 +98,13 @@ async function handlePasswordChange(button) {
       return failButton(button, (changed && changed.message) || 'Password change failed');
     }
 
+    // Compatibility event for the current renderer. `cryptoKey: true` is only
+    // an unlocked-session marker; no key bytes ever leave the main process.
     ipc.emit('result-rotate-crypto', {}, {
       status: 'SUCCESS',
       statusMsg: changed.statusMsg,
       vaultList: latestVaultList,
-      cryptoKey: Buffer.from(changed.dataKeyHex, 'hex')
+      cryptoKey: true
     });
   } catch (err) {
     oldInput.value = '';

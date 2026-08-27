@@ -23,9 +23,14 @@ async function run() {
     const initialized = await controller.initializeSession(password);
     assert.strictEqual(initialized.ok, true);
     assert.strictEqual(controller.hasEnvelope(), true);
-    assert.strictEqual(Buffer.from(initialized.dataKeyHex, 'hex').length, 32);
+    assert.strictEqual(initialized.dataKeyHex, undefined);
+    assert.strictEqual(initialized.cryptoKey, undefined);
+    assert.strictEqual(controller.isUnlocked(), true);
 
-    const dataKey = Buffer.from(initialized.dataKeyHex, 'hex');
+    const dataKey = controller.getSessionKey();
+    assert(Buffer.isBuffer(dataKey));
+    assert.strictEqual(dataKey.length, 32);
+    const initialDekHex = dataKey.toString('hex');
     await robustVault.makeDir(vaultDir);
     await robustVault.initVaultList(vaultDir, dataKey);
     await robustVault.initVaultData(vaultDir, 'zvault-0.json', dataKey);
@@ -35,9 +40,12 @@ async function run() {
     assert.strictEqual(envelope.migration, undefined);
     assert.strictEqual(keyEnvelope.validateEnvelope(envelope), true);
 
+    controller.clearSession();
     const login = await controller.loginWithEnvelope(password);
     assert.strictEqual(login.ok, true);
-    assert.strictEqual(login.dataKeyHex, initialized.dataKeyHex);
+    assert.strictEqual(login.dataKeyHex, undefined);
+    assert.strictEqual(login.cryptoKey, undefined);
+    assert.strictEqual(controller.getSessionKey().toString('hex'), initialDekHex);
 
     const encrypted = fs.readFileSync(path.join(vaultDir, 'vaultlist.json'), 'utf8');
     assert.strictEqual(encryption.isAuthenticatedEncryptedPayload(encrypted), true);
@@ -52,7 +60,12 @@ async function run() {
     const fakeLegacy = `${crypto.randomBytes(16).toString('hex')}:${crypto.randomBytes(32).toString('hex')}`;
     assert.strictEqual(encryption.encryptedPayloadLooksValid(fakeLegacy), false);
 
-    console.log('PASS SafeLedger creates v2 data directly and exposes no v1 migration path.');
+    const heldReference = controller.getSessionKey();
+    controller.clearSession();
+    assert.strictEqual(controller.getSessionKey(), null);
+    assert(heldReference.every((byte) => byte === 0));
+
+    console.log('PASS SafeLedger creates v2 data directly, keeps the DEK main-only, and exposes no v1 migration path.');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

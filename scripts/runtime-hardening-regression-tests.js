@@ -23,12 +23,14 @@ assert.strictEqual(exists('src/main/preload-compat.js'), false);
 
 assert(!main.includes('@electron/remote'));
 assert(!main.includes('remoteMain'));
-assert(main.includes("require('./crypto-session-main').registerIpcHandlers()"));
+assert(main.includes("const cryptoSession = require('./crypto-session-main')"));
+assert(main.includes('cryptoSession.registerIpcHandlers()'));
 assert(main.includes('nodeIntegration: false'));
 assert(main.includes('contextIsolation: true'));
 assert(main.includes('sandbox: false'));
 assert(main.includes("preload: path.join(__dirname, 'preload.js')"));
 assert(main.includes("ipc.on('panic-lock'"));
+assert(main.includes('cryptoSession.clearSession()'));
 assert(main.includes("ipc.handle('security-select-backup-destination'"));
 assert(main.includes("ipc.handle('security-select-backup-source'"));
 
@@ -49,6 +51,7 @@ assert(!renderer.includes('event.preventDefault();\n  //alert("clean data")'));
 
 assert(!cryptoUi.includes('electron.remote'));
 assert(!cryptoUi.includes('remote.require'));
+assert(!cryptoUi.includes('dataKeyHex'));
 assert(!security.includes('electron.remote'));
 assert(!security.includes('remote.dialog'));
 assert(!security.includes('remote.getCurrentWindow'));
@@ -66,4 +69,4 @@ for (const relative of [
   execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 }
 
-console.log('PASS SafeLedger 2.0.53 Electron runtime hardening and Remote removal.');
+console.log('PASS SafeLedger 2.0.53 Electron runtime hardening, main-only DEK session, and Remote removal.');

@@ -3,13 +3,12 @@
 const { app, BrowserWindow, Menu, ipcMain: ipc, dialog } = require('electron');
 const path = require('path');
 const vault = require('./robust-vault');
-const masterKeyVerifier = require('./master-key-verifier');
-const loginFailurePolicy = require('./login-failure-policy');
 const runtimeUtils = require('./runtime-utils');
 const utils = require('./utils');
 const settingsManager = require('./installManager/installManager/settingsManager');
+const cryptoSession = require('./crypto-session-main');
 
-require('./crypto-session-main').registerIpcHandlers();
+cryptoSession.registerIpcHandlers();
 
 let mainWindow;
 let vaultDir;
@@ -115,6 +114,87 @@ async function initializeModernVault(vaultName, cryptoKey) {
   return data;
 }
 
+function sendResult(payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('result', payload);
+}
+
+function getSessionKey() {
+  const key = cryptoSession.getSessionKey();
+  if (!Buffer.isBuffer(key) || key.length !== 32) return null;
+  return key;
+}
+
+function sendLocked() {
+  sendResult({ status: 'ERROR', statusMsg: 'SafeLedger is locked. Please log in again.', type: 'session-locked' });
+}
+
+async function ensureCurrentSettings() {
+  if (currentSettings) return currentSettings;
+  const loaded = await settingsManager.loadSettings(settingsDir);
+  currentSettings = loaded.settings;
+  return currentSettings;
+}
+
+async function enforceRetryExhaustion() {
+  const settings = await ensureCurrentSettings();
+  if (settings.lockOutCount < settings.numLockoutRetries) return false;
+
+  cryptoSession.clearSession();
+  if (settings.scrubContentAfterRetries !== false) {
+    try {
+      await vault.scrubContent(vaultDir);
+      settings.failAttemptCount = 0;
+      settings.lockOutCount = 0;
+      settings.lockLogin = false;
+      settings.lockLoginTime = 0;
+      currentSettings = settings;
+      await settingsManager.saveSettings(settingsDir, settings);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('result-lockout-destroy', {
+          status: 'ERROR',
+          statusMsg: 'Self-destruct protection triggered. Encrypted vault data has been destroyed after repeated failed password attempts.',
+          settings
+        });
+      }
+    } catch (_) {
+      sendResult({
+        status: 'ERROR',
+        statusMsg: 'Self-destruct protection triggered, but SafeLedger could not complete vault cleanup.'
+      });
+    }
+    return true;
+  }
+
+  settings.lockOutCount = Math.max(0, settings.numLockoutRetries - 1);
+  settings.lockLogin = true;
+  settings.lockLoginTime = Date.now();
+  currentSettings = settings;
+  await settingsManager.saveSettings(settingsDir, settings);
+  sendResult({
+    status: 'ERROR',
+    statusMsg: 'Login temporarily locked. Self-destruct protection is disabled.',
+    type: 'password-failed',
+    settings
+  });
+  return true;
+}
+
+async function recordPasswordFailure() {
+  if (await enforceRetryExhaustion()) return;
+  const settings = await ensureCurrentSettings();
+  cryptoSession.clearSession();
+  settings.failAttemptCount++;
+  if (settings.failAttemptCount >= settings.numFailAttempts) {
+    settings.failAttemptCount = 0;
+    settings.lockOutCount++;
+    settings.lockLogin = true;
+    settings.lockLoginTime = Date.now();
+  }
+  currentSettings = settings;
+  await settingsManager.saveSettings(settingsDir, settings);
+  sendResult({ status: 'ERROR', statusMsg: 'Invalid Password', type: 'password-failed', settings });
+}
+
 function createWindow() {
   configureStorage();
 
@@ -135,6 +215,7 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.on('closed', () => {
+    cryptoSession.clearSession();
     mainWindow = null;
   });
   buildMenu();
@@ -145,8 +226,10 @@ const showSettings = () => mainWindow && mainWindow.webContents.send('show-setti
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+app.on('before-quit', () => cryptoSession.clearSession());
 
 ipc.on('panic-lock', () => {
+  cryptoSession.clearSession();
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
 });
 
@@ -162,105 +245,76 @@ ipc.handle('security-select-backup-source', () => dialog.showOpenDialog(mainWind
   filters: [{ name: 'SafeLedger Backup', extensions: ['slgbak'] }]
 }));
 
+ipc.on('record-password-failure', () => {
+  recordPasswordFailure().catch(() => sendResult({ status: 'ERROR', statusMsg: 'Unable to update login security state.' }));
+});
+
 ipc.on('save', (evt, params) => {
-  vault.saveVault(path.join(vaultDir, currentVault), JSON.stringify(params.vaultData), params.cryptoKey)
-    .then((val) => mainWindow.webContents.send('result', val === 'SUCCESS'
+  const key = getSessionKey();
+  if (!key) return sendLocked();
+  vault.saveVault(path.join(vaultDir, currentVault), JSON.stringify(params.vaultData), key)
+    .then((val) => sendResult(val === 'SUCCESS'
       ? { status: 'SUCCESS', statusMsg: 'Save successful' }
       : { status: 'ERROR', statusMsg: 'Save failed' }))
-    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
+    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
 ipc.on('read', (evt, params) => {
-  vault.readVault(path.join(vaultDir, params.file), params.cryptoKey)
-    .then((val) => {
-      mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Load successful.', type: params.type, vaultData: val });
-    })
-    .catch((val) => mainWindow.webContents.send('result', val));
+  const key = getSessionKey();
+  if (!key) return sendLocked();
+  vault.readVault(path.join(vaultDir, params.file), key)
+    .then((val) => sendResult({ status: 'SUCCESS', statusMsg: 'Load successful.', type: params.type, vaultData: val }))
+    .catch((val) => sendResult(val));
 });
 
-ipc.on('read-vaultlist-init', (evt, params) => {
-  if (params.settings.lockOutCount >= params.settings.numLockoutRetries) {
-    if (params.settings.scrubContentAfterRetries !== false) {
-      vault.scrubContent(vaultDir)
-        .then(() => {
-          params.settings.failAttemptCount = 0;
-          params.settings.lockOutCount = 0;
-          params.settings.lockLogin = false;
-          currentSettings = params.settings;
-          return settingsManager.saveSettings(settingsDir, params.settings);
-        })
-        .then(() => mainWindow.webContents.send('result-lockout-destroy', {
-          status: 'ERROR',
-          statusMsg: 'Self-destruct protection triggered. Encrypted vault data has been destroyed after repeated failed password attempts.',
-          settings: params.settings
-        }))
-        .catch(() => mainWindow.webContents.send('result', {
-          status: 'ERROR', statusMsg: 'Self-destruct protection triggered, but SafeLedger could not complete vault cleanup.'
-        }));
-      return;
-    }
+ipc.on('read-vaultlist-init', async () => {
+  try {
+    if (await enforceRetryExhaustion()) return;
+    const key = getSessionKey();
+    if (!key) return sendLocked();
 
-    params.settings.lockOutCount = Math.max(0, params.settings.numLockoutRetries - 1);
-    params.settings.lockLogin = true;
-    params.settings.lockLoginTime = Date.now();
-    currentSettings = params.settings;
-    settingsManager.saveSettings(settingsDir, params.settings)
-      .finally(() => mainWindow.webContents.send('result', {
-        status: 'ERROR', statusMsg: 'Login temporarily locked. Self-destruct protection is disabled.',
-        type: 'password-failed', settings: params.settings
-      }));
-    return;
-  }
-
-  vault.makeDir(vaultDir).then((state) => {
-    const loadList = () => vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), params.cryptoKey)
-      .then((valList) => {
-        params.settings.failAttemptCount = 0;
-        params.settings.lockOutCount = 0;
-        params.settings.lockLogin = false;
-        params.settings.masterKeyVerifier = masterKeyVerifier.createMasterKeyVerifier(params.cryptoKey);
-        currentSettings = params.settings;
-        return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
-          mainWindow.webContents.send('result', {
-            status: 'SUCCESS', statusMsg: 'Loaded Successfully', type: 'vaultlist-init',
-            vaultList: valList, cryptoKey: params.cryptoKey, settings: params.settings
-          });
-        });
-      })
-      .catch((valList) => {
-        const classification = loginFailurePolicy.classifyVaultListFailure(valList, params.cryptoKey, params.settings);
-        const failure = classification.failure;
-
-        if (!classification.countPasswordFailure) {
-          failure.settings = params.settings;
-          mainWindow.webContents.send('result', failure);
-          return;
-        }
-
-        params.settings.failAttemptCount++;
-        if (params.settings.failAttemptCount >= params.settings.numFailAttempts) {
-          params.settings.failAttemptCount = 0;
-          params.settings.lockOutCount++;
-          params.settings.lockLogin = true;
-          params.settings.lockLoginTime = Date.now();
-        }
-        currentSettings = params.settings;
-        return settingsManager.saveSettings(settingsDir, params.settings).then(() => {
-          failure.settings = params.settings;
-          mainWindow.webContents.send('result', failure);
-        });
-      });
-
+    const state = await vault.makeDir(vaultDir);
     if (state === 'CREATE') {
-      return vault.initVaultList(vaultDir, params.cryptoKey)
-        .then(() => initializeModernVault(currentVault, params.cryptoKey))
-        .then(loadList);
+      await vault.initVaultList(vaultDir, key);
+      await initializeModernVault(currentVault, key);
     }
-    return loadList();
-  }).catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Unable to access vault list' }));
+
+    let valList;
+    try {
+      valList = await vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
+    } catch (err) {
+      return sendResult({
+        status: 'ERROR',
+        statusMsg: 'The master password was accepted, but the encrypted vault list could not be authenticated or read. Your failed-login counter was not changed.',
+        type: 'vault-corrupt'
+      });
+    }
+
+    const settings = await ensureCurrentSettings();
+    settings.failAttemptCount = 0;
+    settings.lockOutCount = 0;
+    settings.lockLogin = false;
+    settings.lockLoginTime = 0;
+    delete settings.masterKeyVerifier;
+    currentSettings = settings;
+    const saved = await settingsManager.saveSettings(settingsDir, settings);
+    currentSettings = saved.settings;
+    sendResult({
+      status: 'SUCCESS',
+      statusMsg: 'Loaded Successfully',
+      type: 'vaultlist-init',
+      vaultList: valList,
+      cryptoKey: true,
+      settings: currentSettings
+    });
+  } catch (_) {
+    sendResult({ status: 'ERROR', statusMsg: 'Unable to access vault list' });
+  }
 });
 
 ipc.on('process-vault-list', (evt, params) => {
+  const key = getSessionKey();
+  if (!key) return sendLocked();
   let idInfo = null;
   if (params.action === 'create') {
     idInfo = vault.nextVaultFileName(params.vaultList);
@@ -279,44 +333,42 @@ ipc.on('process-vault-list', (evt, params) => {
     params.vaultList.vaultSelected = params.vaultList.vaults.indexOf(params.vault);
   }
 
-  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey)
+  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), key)
     .then((val) => {
       if (params.action === 'create' && val === 'SUCCESS') {
-        return initializeModernVault(idInfo.fileName, params.cryptoKey)
-          .then((data) => {
-            mainWindow.webContents.send('result', {
-              status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: params.vaultList, vaultData: data
-            });
-          });
+        return initializeModernVault(idInfo.fileName, key)
+          .then((data) => sendResult({
+            status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: params.vaultList, vaultData: data
+          }));
       }
-      mainWindow.webContents.send('result', { type: 'vault-modify', vaultList: params.vaultList, status: 'SUCCESS', statusMsg: 'Save successful' });
+      sendResult({ type: 'vault-modify', vaultList: params.vaultList, status: 'SUCCESS', statusMsg: 'Save successful' });
     })
-    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
+    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
 ipc.on('vault-list-delete', (evt, params) => {
-  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), params.cryptoKey)
+  const key = getSessionKey();
+  if (!key) return sendLocked();
+  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), key)
     .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
-    .then(() => {
-      mainWindow.webContents.send('result', { type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' });
-    })
-    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Delete failed' }));
+    .then(() => sendResult({ type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' }))
+    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Delete failed' }));
 });
 
 ipc.on('process-group', (evt, params) => {
-  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
-    .then(() => {
-      mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: params.vaultData });
-    })
-    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
+  const key = getSessionKey();
+  if (!key) return sendLocked();
+  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), key)
+    .then(() => sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: params.vaultData }))
+    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
 ipc.on('process-record', (evt, params) => {
-  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), params.cryptoKey)
-    .then(() => {
-      mainWindow.webContents.send('result', { status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: params.vaultData });
-    })
-    .catch(() => mainWindow.webContents.send('result', { status: 'ERROR', statusMsg: 'Save failed' }));
+  const key = getSessionKey();
+  if (!key) return sendLocked();
+  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), key)
+    .then(() => sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: params.vaultData }))
+    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
 ipc.on('init-system', () => {
