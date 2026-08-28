@@ -7,7 +7,7 @@ on:
       - modernize-safeledger-2
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-linux:
@@ -30,27 +30,51 @@ jobs:
       - name: Install dependencies and generate lockfile
         run: npm install --no-audit --no-fund
 
-      - name: Upload generated package lock
-        uses: actions/upload-artifact@v6
-        with:
-          name: SafeLedger-package-lock-2.0.54
-          path: package-lock.json
-          if-no-files-found: error
-          retention-days: 1
-
       - name: Run regression tests
         run: npm run test:regression
 
       - name: Run Electron crypto smoke test
         run: npm run test:electron-crypto
 
+      - name: Configure Electron sandbox helper for GUI smoke
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+
       - name: Launch real SafeLedger GUI smoke test
         run: xvfb-run -a npm run test:gui-smoke
 
+      - name: Commit generated dependency lock as next version
+        id: lock_bootstrap
+        shell: bash
+        run: |
+          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node <<'NODE'
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
+          pkg.version = '2.0.56';
+          lock.version = '2.0.56';
+          if (lock.packages && lock.packages['']) lock.packages[''].version = '2.0.56';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+          NODE
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "Commit reproducible dependency lock for 2.0.56"
+          git push origin HEAD:modernize-safeledger-2
+          echo "created=true" >> "$GITHUB_OUTPUT"
+
       - name: Build AppImage
+        if: steps.lock_bootstrap.outputs.created != 'true'
         run: npm run dist:linux
 
       - name: Upload AppImage
+        if: steps.lock_bootstrap.outputs.created != 'true'
         uses: actions/upload-artifact@v6
         with:
           name: SafeLedger-Linux-AppImage
