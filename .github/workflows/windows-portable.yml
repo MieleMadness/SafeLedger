@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - modernize-safeledger-2
+      - master
 
 permissions:
   contents: read
