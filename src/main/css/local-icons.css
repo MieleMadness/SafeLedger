@@ -1,0 +1,59 @@
+/* Local text/SVG-free icon fallback set. No icon font or network dependency. */
+.fa,
+.glyphicon {
+  display: inline-block;
+  min-width: 1em;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI Symbol", sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  text-rendering: auto;
+}
+.fa::before,
+.glyphicon::before { content: "•"; }
+.fa-times::before { content: "×"; }
+.fa-search::before { content: "⌕"; }
+.fa-home::before { content: "⌂"; }
+.fa-history::before { content: "↶"; }
+.fa-refresh::before { content: "↻"; }
+.fa-unlock::before { content: "▢"; }
+.fa-folder-open-o::before { content: "▣"; }
+.fa-star::before { content: "★"; }
+.fa-star-o::before { content: "☆"; }
+.fa-save::before,
+.fa-check-circle::before { content: "✓"; }
+.fa-pencil::before { content: "✎"; }
+.fa-print::before { content: "▤"; }
+.fa-book::before { content: "▥"; }
+.fa-trash::before { content: "×"; }
+.fa-credit-card::before { content: "▭"; }
+.fa-circle-o::before { content: "○"; }
+.fa-shield::before { content: "◆"; }
+.fa-eye::before { content: "◉"; }
+.fa-eye-slash::before { content: "○"; }
+.fa-copy::before { content: "⧉"; }
+.fa-qrcode::before { content: "▦"; }
+.fa-exclamation-triangle::before { content: "!"; }
+.fa-info-circle::before { content: "i"; }
+.fa-plus::before,
+.fa-plus-circle::before,
+.glyphicon-plus::before { content: "+"; }
+.fa-minus::before,
+.fa-minus-circle::before { content: "−"; }
+.fa-chevron-left::before { content: "‹"; }
+.fa-chevron-right::before { content: "›"; }
+.fa-chevron-down::before { content: "⌄"; }
+.fa-chevron-up::before { content: "⌃"; }
+.fa-cog::before { content: "⚙"; }
+.fa-download::before { content: "⇩"; }
+.fa-upload::before { content: "⇧"; }
+.fa-lock::before { content: "■"; }
+.fa-key::before { content: "◆"; }
+.fa-file-text-o::before { content: "▤"; }
+.fa-list::before { content: "☷"; }
+.fa-check::before { content: "✓"; }
+.fa-warning::before { content: "!"; }
+.glyphicon-piggy-bank::before { content: "◇"; }
+.fa-spin { animation: safeledger-icon-spin 1s linear infinite; }
+@keyframes safeledger-icon-spin { to { transform: rotate(360deg); } }
