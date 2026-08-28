@@ -1,0 +1,109 @@
+.recovery-binder-intro {
+  max-width: 720px;
+  margin: 0 0 14px;
+  color: #4d5968;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.recovery-binder-safe-defaults {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid #bfd4f2;
+  border-radius: 8px;
+  background: #eef5ff;
+  color: #274766;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.recovery-binder-safe-defaults .fa {
+  color: #0D47A1;
+  font-size: 17px;
+  margin-top: 1px;
+}
+
+.recovery-binder-summary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 4px;
+  padding: 10px 12px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  color: #172033;
+}
+
+.recovery-binder-summary strong { font-size: 16px; }
+.recovery-binder-summary span { color: #667085; font-size: 13px; }
+.recovery-binder-loading { font-weight: 400; }
+
+.recovery-binder-options {
+  display: grid;
+  gap: 10px;
+  max-width: 780px;
+}
+
+.recovery-binder-option {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin: 0 !important;
+  padding: 12px 14px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 400 !important;
+}
+
+.recovery-binder-option:hover {
+  border-color: #aebed3;
+  background: #fbfcfe;
+}
+
+.recovery-binder-option input {
+  width: 17px;
+  height: 17px;
+  margin: 3px 0 0;
+}
+
+.recovery-binder-option-body {
+  display: grid;
+  gap: 3px;
+}
+
+.recovery-binder-option-title {
+  color: #172033;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.recovery-binder-option-text {
+  color: #596579;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.recovery-binder-risk {
+  max-width: 780px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 3px solid #93a8c2;
+  background: #f8fafc;
+  color: #596579;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 700px) {
+  .recovery-binder-summary {
+    display: grid;
+    gap: 2px;
+  }
+}

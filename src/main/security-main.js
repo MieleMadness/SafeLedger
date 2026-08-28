@@ -5,6 +5,7 @@ const path = require('path');
 const { atomicWriteJson } = require('./atomic-file');
 const robustVault = require('./robust-vault');
 const dashboardSummary = require('./dashboard-summary');
+const recoveryBinder = require('./recovery-binder');
 
 const BACKUP_FORMAT = 'safeledger-complete-data-backup';
 const BACKUP_VERSION = 2;
@@ -120,9 +121,14 @@ async function stageRestore(dataRoot, payload) {
   }
 }
 
-async function buildDashboard(dataRoot, cryptoSession) {
+function getSessionKey(cryptoSession) {
   const key = cryptoSession.getSessionKey();
   if (!Buffer.isBuffer(key) || key.length !== 32) throw new Error('SafeLedger is locked. Please log in again.');
+  return key;
+}
+
+async function buildDashboard(dataRoot, cryptoSession) {
+  const key = getSessionKey(cryptoSession);
   const vaultDir = path.join(dataRoot, 'vaults');
   const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
   const entries = [];
@@ -135,6 +141,18 @@ async function buildDashboard(dataRoot, cryptoSession) {
     }
   }
   return dashboardSummary.summarize(entries);
+}
+
+async function buildRecoveryBinder(dataRoot, cryptoSession, fileName, options) {
+  const key = getSessionKey(cryptoSession);
+  const requested = String(fileName || '').trim();
+  if (!requested || path.basename(requested) !== requested) throw new Error('Invalid SafeLedger profile selection.');
+  const vaultDir = path.join(dataRoot, 'vaults');
+  const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
+  const profile = (list.vaults || []).find((entry) => String(entry && entry.file || '') === requested);
+  if (!profile) throw new Error('The selected SafeLedger profile was not found.');
+  const vaultData = await robustVault.readVault(path.join(vaultDir, requested), key);
+  return recoveryBinder.buildBinder(profile, vaultData, options);
 }
 
 function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWindow, getDataRoot }) {
@@ -150,6 +168,17 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
       return { ok: true, summary };
     } catch (err) {
       return { ok: false, message: err && err.message ? err.message : 'Unable to build recovery dashboard.' };
+    }
+  });
+
+  ipc.handle('recovery-binder-model', async (event, request = {}) => {
+    assertTrustedEvent(event, getMainWindow);
+    assertUnlocked(cryptoSession);
+    try {
+      const binder = await buildRecoveryBinder(getDataRoot(), cryptoSession, request.file, request.options);
+      return { ok: true, binder };
+    } catch (err) {
+      return { ok: false, message: err && err.message ? err.message : 'Unable to prepare the Recovery Binder.' };
     }
   });
 
@@ -232,6 +261,7 @@ module.exports = {
     stageRestore,
     sanitizeAuditEvent,
     writeBackupFile,
-    buildDashboard
+    buildDashboard,
+    buildRecoveryBinder
   }
 };

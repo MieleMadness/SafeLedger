@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   cryptoLogin: (password) => ipcRenderer.invoke('crypto-v3-login', password),
   cryptoChangePassword: (oldPassword, newPassword) => ipcRenderer.invoke('crypto-v3-change-password', oldPassword, newPassword),
   getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary'),
+  getRecoveryBinder: (file, options) => ipcRenderer.invoke('recovery-binder-model', { file, options }),
   backupAllData: () => ipcRenderer.invoke('security-backup-all'),
   restoreAllData: () => ipcRenderer.invoke('security-restore-all'),
   clipboardWrite: (text) => ipcRenderer.invoke('security-clipboard-write', text),

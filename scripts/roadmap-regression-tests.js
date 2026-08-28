@@ -11,15 +11,19 @@ const preload = read('src/main/preload.js');
 const entry = read('src/main/renderer-entry.js');
 const dashboardUi = read('src/main/dashboard-ui.js');
 const index = read('src/main/index.html');
+const profile = read('src/main/profile.js');
 const group = read('src/main/group.js');
 const record = read('src/main/record.js');
 const customFields = read('src/main/custom-fields.js');
 const customFieldsUi = read('src/main/custom-fields-ui.js');
 const recoveryDrill = read('src/main/recovery-drill.js');
 const recoveryDrillUi = read('src/main/recovery-drill-ui.js');
+const recoveryBinder = read('src/main/recovery-binder.js');
+const recoveryBinderUi = read('src/main/recovery-binder-ui.js');
 const css = read('src/main/css/product-features.css');
+const binderCss = read('src/main/css/recovery-binder.css');
 
-assert.strictEqual(pkg.version, '2.0.63');
+assert.strictEqual(pkg.version, '2.0.64');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -51,22 +55,46 @@ assert(!recoveryDrillUi.includes('group.seedPhrase'));
 assert(!recoveryDrillUi.includes('group.password'));
 assert(!recoveryDrillUi.includes('group.pin'));
 assert(!recoveryDrillUi.includes('group.customFields'));
+
+assert(securityMain.includes("ipc.handle('recovery-binder-model'"));
+assert(securityMain.includes('path.basename(requested) !== requested'));
+assert(securityMain.includes("find((entry) => String(entry && entry.file || '') === requested)"));
+assert(preload.includes("getRecoveryBinder: (file, options) => ipcRenderer.invoke('recovery-binder-model', { file, options })"));
+assert(profile.includes("const recoveryBinderUi = require('./recovery-binder-ui')"));
+assert(profile.includes("title: 'Recovery binder'"));
+assert(profile.includes('recoveryBinderUi.show({'));
+assert(recoveryBinder.includes('includeSeedPrivateKeys: false'));
+assert(recoveryBinder.includes('includePasswordsPins: false'));
+assert(recoveryBinder.includes('includeSensitiveCustomFields: false'));
+assert(recoveryBinder.includes('if (options.includeSeedPrivateKeys)'));
+assert(recoveryBinderUi.includes("checkbox.type = 'checkbox'"));
+assert(recoveryBinderUi.includes("window.safeLedgerApi.getRecoveryBinder(profile.file, options)"));
+assert(recoveryBinderUi.includes('td.textContent = String(field.value)'));
+assert(!recoveryBinderUi.includes('document.write'));
+assert(recoveryBinderUi.includes('Nothing in this list is included unless you check it.'));
+assert(recoveryBinderUi.includes("link.href = 'css/recovery-binder.css'"));
 assert(css.includes('.custom-field-edit-row'));
 assert(css.includes('.recovery-drill-step'));
+assert(binderCss.includes('.recovery-binder-option'));
+
 for (const relative of [
   'src/main/dashboard-summary.js',
   'src/main/dashboard-ui.js',
   'src/main/security-main.js',
   'src/main/preload.js',
   'src/main/renderer-entry.js',
+  'src/main/profile.js',
   'src/main/custom-fields.js',
   'src/main/custom-fields-ui.js',
   'src/main/recovery-drill.js',
   'src/main/recovery-drill-ui.js',
+  'src/main/recovery-binder.js',
+  'src/main/recovery-binder-ui.js',
   'src/main/group.js',
   'src/main/record.js',
   'scripts/dashboard-summary-tests.js',
   'scripts/custom-fields-tests.js',
-  'scripts/recovery-drill-tests.js'
+  'scripts/recovery-drill-tests.js',
+  'scripts/recovery-binder-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.63 preserves dashboard/custom fields and adds a no-secret Recovery Drill that stores only completion timestamps.');
+console.log('PASS roadmap 2.0.64 preserves dashboard/custom fields/recovery drill and adds a safe-default Profile Recovery Binder with main-process model generation.');

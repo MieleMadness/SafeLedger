@@ -5,6 +5,7 @@ const status = require('./status');
 const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const securityUi = require('./security-ui');
+const recoveryBinderUi = require('./recovery-binder-ui');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
@@ -148,6 +149,15 @@ function showProfileDetail(params) {
         { label: 'Modified', value: profile.modified },
         { label: 'Location', value: profile.path }
       ], false)
+    },
+    {
+      icon: 'fa-book',
+      title: 'Recovery binder',
+      className: 'detail-action-binder',
+      onClick: () => recoveryBinderUi.show({
+        profile,
+        onCancel: () => showProfileDetail(params)
+      })
     },
     { icon: 'fa-trash', title: 'Delete profile', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
   ]);
