@@ -37,7 +37,7 @@ const css = read('src/main/css/product-features.css');
 const binderCss = read('src/main/css/recovery-binder.css');
 const activityCss = read('src/main/css/activity-history.css');
 
-assert.strictEqual(pkg.version, '2.0.67');
+assert.strictEqual(pkg.version, '2.0.68');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -114,6 +114,7 @@ assert(group.includes("'recovery-drill-completed'"));
 assert(activityCss.includes('.activity-row'));
 
 assert(index.includes('./css/app-theme.css'));
+assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/global-search.css'));
 assert(entry.includes("require('./app-appearance.js')"));
 assert(settingsSchema.includes("APPEARANCE_VALUES = Object.freeze(['system', 'light', 'dark'])"));
 assert(settingsSchema.includes('normalizeAppearance'));
@@ -127,6 +128,10 @@ assert(appearance.includes("window.matchMedia('(prefers-color-scheme: dark)')"))
 assert(appearance.includes("document.documentElement.dataset.theme = theme"));
 assert(themeCss.includes('html[data-theme="dark"]'));
 assert(themeCss.includes('--sl-surface'));
+assert(themeCss.includes('--sl-action-size: 42px'));
+assert(themeCss.includes('container-type: inline-size'));
+assert(themeCss.includes('@container (max-width: 560px)'));
+assert(themeCss.includes('--sl-muted: #b9c6d8'));
 assert(themeCss.includes('.workspace-empty-card'));
 assert(emptyState.includes('renderColumn'));
 assert(profile.includes("title: 'No profiles yet'"));
@@ -198,6 +203,7 @@ for (const relative of [
   'scripts/recovery-binder-tests.js',
   'scripts/activity-history-tests.js',
   'scripts/appearance-tests.js',
-  'scripts/global-search-tests.js'
+  'scripts/global-search-tests.js',
+  'scripts/ui-polish-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.67 preserves recovery/security/appearance features and adds privacy-filtered Global Search, encrypted pinning, and consistent column empty states.');
+console.log('PASS roadmap 2.0.68 preserves recovery/security/search features and polishes responsive spacing, aligned action controls, and theme readability.');
