@@ -1,8 +1,7 @@
 'use strict';
 
 const path = require('path');
-
-const MAX_MASTER_PASSWORD_LENGTH = 128;
+const { MAX_MASTER_PASSWORD_LENGTH } = require('./password-policy');
 
 function getPortableRoot(options = {}) {
   const env = options.env || process.env;
