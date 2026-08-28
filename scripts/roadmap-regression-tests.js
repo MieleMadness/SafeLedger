@@ -23,11 +23,17 @@ const recoveryDrill = read('src/main/recovery-drill.js');
 const recoveryDrillUi = read('src/main/recovery-drill-ui.js');
 const recoveryBinder = read('src/main/recovery-binder.js');
 const recoveryBinderUi = read('src/main/recovery-binder-ui.js');
+const settingsUi = read('src/main/settings-ui.js');
+const settingsSchema = read('src/main/settings-schema.js');
+const settingsManager = read('src/main/installManager/installManager/settingsManager.js');
+const appearance = read('src/main/app-appearance.js');
+const emptyState = read('src/main/empty-state-ui.js');
+const themeCss = read('src/main/css/app-theme.css');
 const css = read('src/main/css/product-features.css');
 const binderCss = read('src/main/css/recovery-binder.css');
 const activityCss = read('src/main/css/activity-history.css');
 
-assert.strictEqual(pkg.version, '2.0.65');
+assert.strictEqual(pkg.version, '2.0.66');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -102,6 +108,25 @@ assert(main.includes("securityMain.audit(getDataRoot(), 'settings-updated')"));
 assert(group.includes("'recovery-verified'"));
 assert(group.includes("'recovery-drill-completed'"));
 assert(activityCss.includes('.activity-row'));
+
+assert(index.includes('./css/app-theme.css'));
+assert(entry.includes("require('./app-appearance.js')"));
+assert(settingsSchema.includes("APPEARANCE_VALUES = Object.freeze(['system', 'light', 'dark'])"));
+assert(settingsSchema.includes('normalizeAppearance'));
+assert(settingsManager.includes("appearance: 'system'"));
+assert(settingsManager.includes('next.appearance = normalizeAppearance(next.appearance)'));
+assert(settingsUi.includes("makeSection('Appearance')"));
+assert(settingsUi.includes("addAppearanceOption(appearanceOptions, 'system'"));
+assert(settingsUi.includes("addAppearanceOption(appearanceOptions, 'light'"));
+assert(settingsUi.includes("addAppearanceOption(appearanceOptions, 'dark'"));
+assert(appearance.includes("window.matchMedia('(prefers-color-scheme: dark)')"));
+assert(appearance.includes("document.documentElement.dataset.theme = theme"));
+assert(themeCss.includes('html[data-theme="dark"]'));
+assert(themeCss.includes('--sl-surface'));
+assert(themeCss.includes('.workspace-empty-card'));
+assert(emptyState.includes('renderColumn'));
+assert(profile.includes("title: 'No profiles yet'"));
+assert(!profile.includes("area.textContent = 'No items'"));
 assert(css.includes('.custom-field-edit-row'));
 assert(css.includes('.recovery-drill-step'));
 assert(binderCss.includes('.recovery-binder-option'));
@@ -116,6 +141,10 @@ for (const relative of [
   'src/main/preload.js',
   'src/main/renderer-entry.js',
   'src/main/profile.js',
+  'src/main/settings-ui.js',
+  'src/main/settings-schema.js',
+  'src/main/app-appearance.js',
+  'src/main/empty-state-ui.js',
   'src/main/custom-fields.js',
   'src/main/custom-fields-ui.js',
   'src/main/recovery-drill.js',
@@ -128,6 +157,7 @@ for (const relative of [
   'scripts/custom-fields-tests.js',
   'scripts/recovery-drill-tests.js',
   'scripts/recovery-binder-tests.js',
-  'scripts/activity-history-tests.js'
+  'scripts/activity-history-tests.js',
+  'scripts/appearance-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.65 preserves recovery features and adds privacy-preserving local Activity History with bounded generic-event retention.');
+console.log('PASS roadmap 2.0.66 preserves recovery/security features and adds persisted Light/Dark/System appearance with a shared modern visual system.');

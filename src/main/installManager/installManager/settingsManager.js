@@ -6,12 +6,13 @@ const lockoutState = require('../../lockout-state');
 const settingsSchema = require('../../settings-schema');
 const { atomicWriteJson } = require('../../atomic-file');
 
-const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue } = settingsSchema;
+const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance } = settingsSchema;
 
 const defaults = () => ({
   formatVersion: 2,
   created: new Date().toISOString(),
   modified: new Date().toISOString(),
+  appearance: 'system',
   failAttemptCount: 0,
   numFailAttempts: 5,
   lockOutCount: 0,
@@ -43,6 +44,7 @@ function normalizeSettings(settings, now = Date.now()) {
   delete next.lower;
   delete next.masterKeyVerifier;
 
+  next.appearance = normalizeAppearance(next.appearance);
   next.numFailAttempts = clampBruteForceValue(next.numFailAttempts, baseDefaults.numFailAttempts);
   next.numLockoutRetries = clampBruteForceValue(next.numLockoutRetries, baseDefaults.numLockoutRetries);
   next.minutesToWaitBetweenLockout = clampBruteForceValue(next.minutesToWaitBetweenLockout, baseDefaults.minutesToWaitBetweenLockout);
@@ -90,5 +92,6 @@ exports._test = {
   BRUTE_FORCE_MAX,
   clampBruteForceValue,
   normalizeCounter,
-  normalizeSettings
+  normalizeSettings,
+  defaults
 };

@@ -6,17 +6,33 @@ const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const securityUi = require('./security-ui');
 const recoveryBinderUi = require('./recovery-binder-ui');
+const emptyState = require('./empty-state-ui');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
+
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: '2-digit', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
+      timeZone: 'America/New_York', timeZoneName: 'short'
+    }).format(date);
+  } catch (_) {
+    return String(value);
+  }
+}
 
 function appendDateLine(area, label, value) {
   if (value == null || value === '') return;
   const p = document.createElement('p');
-  p.className = 'dates';
+  p.className = 'detail-info-line';
   const strong = document.createElement('b');
   strong.textContent = `${label}: `;
   p.appendChild(strong);
-  p.appendChild(document.createTextNode(String(value)));
+  p.appendChild(document.createTextNode(formatDate(value)));
   area.appendChild(p);
 }
 
@@ -29,16 +45,22 @@ function listProfiles(params) {
     ? params.vaultList.vaults
     : [];
   if (!vaults.length) {
-    area.textContent = 'No items';
+    emptyState.renderColumn(area, {
+      icon: 'fa-folder-open-o',
+      title: 'No profiles yet',
+      text: 'Create a Profile to organize wallets and recovery plans.'
+    });
     return;
   }
 
   const query = normalize(search && search.value);
   const ul = document.createElement('ul');
   ul.className = 'nav';
+  let visibleCount = 0;
 
   vaults.forEach((item, index) => {
     if (query && !normalize(item && item.name).includes(query)) return;
+    visibleCount++;
 
     const li = document.createElement('li');
     const link = document.createElement('a');
@@ -54,26 +76,32 @@ function listProfiles(params) {
       ipc.send('read', { type: 'vault-read', file: item.file });
     });
 
-    const badge = document.createElement('div');
+    const row = document.createElement('span');
+    row.className = 'profile-list-row';
+    const badge = document.createElement('span');
     badge.className = params.vaultList.vaultSelected === index ? 'badge-circle badge-selected' : 'badge-circle';
-    const initial = document.createElement('div');
-    initial.className = 'text-center';
+    const initial = document.createElement('span');
+    initial.className = 'profile-list-initial';
     initial.textContent = String(item.name || '').charAt(0).toUpperCase();
     badge.appendChild(initial);
-    link.appendChild(badge);
-
-    const labelWrap = document.createElement('div');
-    labelWrap.style.display = 'inline-block';
-    const label = document.createElement('div');
-    label.style.marginTop = '10px';
-    label.style.marginLeft = '10px';
-    label.textContent = item.name || '';
-    labelWrap.appendChild(label);
-    link.appendChild(labelWrap);
+    row.appendChild(badge);
+    const label = document.createElement('span');
+    label.className = 'profile-list-name';
+    label.textContent = item.name || 'Unnamed Profile';
+    row.appendChild(label);
+    link.appendChild(row);
     li.appendChild(link);
     ul.appendChild(li);
   });
 
+  if (!visibleCount) {
+    emptyState.renderColumn(area, {
+      icon: 'fa-search',
+      title: 'No matching profiles',
+      text: 'Try a different search term.'
+    });
+    return;
+  }
   area.appendChild(ul);
 }
 
@@ -137,7 +165,15 @@ function showProfileDetail(params) {
   area.appendChild(document.createElement('hr'));
   appendDateLine(area, 'Created', profile.created);
   appendDateLine(area, 'Modified', profile.modified);
-  appendDateLine(area, 'Location', profile.path);
+  if (profile.path) {
+    const location = document.createElement('p');
+    location.className = 'detail-info-line';
+    const strong = document.createElement('b');
+    strong.textContent = 'Location: ';
+    location.appendChild(strong);
+    location.appendChild(document.createTextNode(String(profile.path)));
+    area.appendChild(location);
+  }
 
   detailActions.set([
     { icon: 'fa-pencil', title: 'Edit profile', onClick: () => createEditProfile(params) },
@@ -145,8 +181,8 @@ function showProfileDetail(params) {
       icon: 'fa-print', title: 'Print profile', className: 'detail-action-print',
       onClick: () => securityUi.printRecoverySheet(`${profile.name || 'Profile'} Profile`, [
         { label: 'Profile', value: profile.name },
-        { label: 'Created', value: profile.created },
-        { label: 'Modified', value: profile.modified },
+        { label: 'Created', value: formatDate(profile.created) },
+        { label: 'Modified', value: formatDate(profile.modified) },
         { label: 'Location', value: profile.path }
       ], false)
     },
@@ -202,4 +238,4 @@ function confirmDelete(params) {
 exports.listProfiles = listProfiles;
 exports.createProfile = (params) => createEditProfile(params);
 exports.showProfileDetail = showProfileDetail;
-exports._test = { normalize, appendDateLine };
+exports._test = { normalize, appendDateLine, formatDate };

@@ -6,7 +6,7 @@ const detailActions = require('./detail-actions');
 const passwordSettingsUi = require('./password-settings-ui');
 const securityEnhancements = require('./security-enhancements');
 const settingsSchema = require('./settings-schema');
-const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue } = settingsSchema;
+const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance } = settingsSchema;
 
 function makeSection(title) {
   const section = document.createElement('section');
@@ -64,6 +64,24 @@ function addModified(section, value) {
   p.appendChild(document.createTextNode(String(value)));
   section.appendChild(p);
 }
+function addAppearanceOption(host, value, title, description, selected) {
+  const label = document.createElement('label');
+  label.className = 'appearance-option';
+  const input = document.createElement('input');
+  input.type = 'radio';
+  input.name = 'safeLedgerAppearance';
+  input.value = value;
+  input.checked = selected === value;
+  label.appendChild(input);
+  const strong = document.createElement('strong');
+  strong.textContent = title;
+  label.appendChild(strong);
+  const note = document.createElement('span');
+  note.textContent = description;
+  label.appendChild(note);
+  host.appendChild(label);
+  return input;
+}
 function showSettings(params) {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -72,6 +90,31 @@ function showSettings(params) {
   header.textContent = 'Settings';
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
+
+  const appearanceSection = makeSection('Appearance');
+  addNote(appearanceSection, 'Choose how SafeLedger looks on this device. System follows your operating-system light or dark preference automatically.');
+  const appearanceOptions = document.createElement('div');
+  appearanceOptions.className = 'appearance-options';
+  const currentAppearance = normalizeAppearance(params.settings.appearance);
+  const system = addAppearanceOption(appearanceOptions, 'system', 'System', 'Follow the operating system and update automatically.', currentAppearance);
+  const light = addAppearanceOption(appearanceOptions, 'light', 'Light', 'Bright workspace with SafeLedger blue navigation.', currentAppearance);
+  const dark = addAppearanceOption(appearanceOptions, 'dark', 'Dark', 'Low-glare surfaces with deeper blue navigation.', currentAppearance);
+  appearanceSection.appendChild(appearanceOptions);
+  const saveAppearance = document.createElement('button');
+  saveAppearance.type = 'button';
+  saveAppearance.className = 'btn btn-default settings-section-save';
+  saveAppearance.innerHTML = '<i class="fa fa-paint-brush" aria-hidden="true"></i> Save Appearance';
+  saveAppearance.addEventListener('click', () => {
+    if (params.saving.state) return alert('Please wait for processing to complete');
+    const selected = [system, light, dark].find((input) => input.checked);
+    const appearance = normalizeAppearance(selected && selected.value);
+    saveAppearance.disabled = true;
+    params.saving.state = true;
+    status.loadStatus();
+    ipc.send('save-settings', { newSettings: Object.assign({}, params.settings, { appearance }) });
+  });
+  appearanceSection.appendChild(saveAppearance);
+  area.appendChild(appearanceSection);
 
   const passwordSection = makeSection('Password');
   addNote(passwordSection, 'Change the master password used to unlock your SafeLedger vaults. You will need your current password to complete the change.');
@@ -130,4 +173,4 @@ function showSettings(params) {
 }
 
 exports.show = showSettings;
-exports._test = { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, configureNumberInput };
+exports._test = { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, configureNumberInput, addAppearanceOption };
