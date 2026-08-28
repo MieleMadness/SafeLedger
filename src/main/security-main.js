@@ -2,15 +2,21 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { atomicWriteFile, atomicWriteJson } = require('./atomic-file');
 const robustVault = require('./robust-vault');
+const encryption = require('./encryption');
+const keyEnvelope = require('./key-envelope');
+const vaultSchema = require('./vault-schema');
+const legacyImport = require('./legacy-import');
 const dashboardSummary = require('./dashboard-summary');
 const recoveryBinder = require('./recovery-binder');
 const activityHistory = require('./activity-history');
 const globalSearch = require('./global-search');
 
 const BACKUP_FORMAT = 'safeledger-complete-data-backup';
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
+const SUPPORTED_BACKUP_VERSIONS = new Set([2, 3]);
 
 function timestampToken() {
   return new Date().toISOString().replace(/[:.]/g, '-');
@@ -72,12 +78,42 @@ function safeBackupPath(root, relative) {
   return target;
 }
 
+function sha256Base64(encoded) {
+  return crypto.createHash('sha256').update(Buffer.from(String(encoded || ''), 'base64')).digest('hex');
+}
+
+function buildBackupManifest(files) {
+  const manifest = {};
+  for (const [relative, encoded] of Object.entries(files || {})) manifest[relative] = sha256Base64(encoded);
+  return manifest;
+}
+
+function validateBackupManifest(payload) {
+  if (payload.version < 3) return true;
+  if (!payload.manifest || typeof payload.manifest !== 'object' || Array.isArray(payload.manifest)) throw new Error('Backup integrity manifest is missing.');
+  const files = Object.keys(payload.files || {}).sort();
+  const manifestFiles = Object.keys(payload.manifest).sort();
+  if (files.length !== manifestFiles.length || files.some((file, index) => file !== manifestFiles[index])) throw new Error('Backup integrity manifest does not match the file list.');
+  for (const relative of files) {
+    const expected = payload.manifest[relative];
+    if (typeof expected !== 'string' || !/^[0-9a-f]{64}$/i.test(expected)) throw new Error(`Backup integrity hash is invalid for ${relative}.`);
+    if (sha256Base64(payload.files[relative]) !== expected.toLowerCase()) throw new Error(`Backup integrity check failed for ${relative}.`);
+  }
+  return true;
+}
+
 function validateBackupPayload(payload) {
-  if (!payload || payload.format !== BACKUP_FORMAT || payload.version !== BACKUP_VERSION || !payload.files) throw new Error('That file is not a current complete SafeLedger backup.');
+  if (!payload || payload.format !== BACKUP_FORMAT || !SUPPORTED_BACKUP_VERSIONS.has(Number(payload.version)) || !payload.files || typeof payload.files !== 'object') {
+    throw new Error('That file is not a supported complete SafeLedger backup.');
+  }
+  payload.version = Number(payload.version);
   if (!Object.prototype.hasOwnProperty.call(payload.files, 'vaults/vaultlist.json')) throw new Error('Backup does not contain the encrypted SafeLedger vault list.');
+  if (payload.version >= 3 && !Object.prototype.hasOwnProperty.call(payload.files, 'vaults/key-envelope.json')) throw new Error('Backup does not contain the SafeLedger key envelope.');
   for (const [relative, encoded] of Object.entries(payload.files)) {
     if (typeof relative !== 'string' || typeof encoded !== 'string') throw new Error('Backup contains invalid file data.');
+    safeBackupPath(path.join(process.cwd(), '.safeledger-backup-validation-root'), relative);
   }
+  validateBackupManifest(payload);
   return payload;
 }
 
@@ -135,6 +171,60 @@ function getSessionKey(cryptoSession) {
   return key;
 }
 
+function decodeBackupText(payload, relative) {
+  const encoded = payload.files[relative];
+  if (typeof encoded !== 'string') throw new Error(`Backup is missing ${relative}.`);
+  return Buffer.from(encoded, 'base64').toString('utf8');
+}
+
+function verifyBackupPayload(payload, dataKey) {
+  const validated = validateBackupPayload(payload);
+  if (!Buffer.isBuffer(dataKey) || dataKey.length !== 32) throw new Error('SafeLedger is locked. Please log in again.');
+
+  if (validated.files['vaults/key-envelope.json']) {
+    let envelope;
+    try { envelope = JSON.parse(decodeBackupText(validated, 'vaults/key-envelope.json')); }
+    catch (_) { throw new Error('Backup key envelope is unreadable.'); }
+    if (!keyEnvelope.validateEnvelope(envelope)) throw new Error('Backup key envelope is damaged or unsupported.');
+  }
+
+  let list;
+  try {
+    const encryptedList = decodeBackupText(validated, 'vaults/vaultlist.json');
+    if (!encryption.isAuthenticatedEncryptedPayload(encryptedList)) throw new Error('unsupported vault list');
+    list = JSON.parse(encryption.decrypt(dataKey, encryptedList));
+  } catch (_) {
+    throw new Error('Backup files passed integrity checks, but the encrypted vault list could not be authenticated with the current SafeLedger data key.');
+  }
+  if (!robustVault.validVaultListStructure(list)) throw new Error('Backup vault list has an invalid structure.');
+
+  let walletCount = 0;
+  let assetCount = 0;
+  for (const profile of list.vaults || []) {
+    const relative = `vaults/${profile.file}`;
+    let vaultData;
+    try {
+      const encryptedVault = decodeBackupText(validated, relative);
+      if (!encryption.isAuthenticatedEncryptedPayload(encryptedVault)) throw new Error('unsupported profile');
+      vaultData = vaultSchema.migrateVaultData(JSON.parse(encryption.decrypt(dataKey, encryptedVault)));
+    } catch (_) {
+      throw new Error(`Backup profile ${profile.name || profile.file} could not be authenticated.`);
+    }
+    const groups = Array.isArray(vaultData.groups) ? vaultData.groups : [];
+    walletCount += groups.length;
+    for (const group of groups) assetCount += Array.isArray(group && group.records) ? group.records.length : 0;
+  }
+
+  return {
+    backupVersion: validated.version,
+    created: validated.created || null,
+    fileCount: Object.keys(validated.files).length,
+    profileCount: (list.vaults || []).length,
+    walletCount,
+    assetCount
+  };
+}
+
 async function buildDashboard(dataRoot, cryptoSession) {
   const key = getSessionKey(cryptoSession);
   const vaultDir = path.join(dataRoot, 'vaults');
@@ -183,6 +273,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
   const marker = '__safeLedgerSecurityMainIpcRegistered';
   if (global[marker]) return;
   global[marker] = true;
+  let selectedLegacySource = null;
 
   ipc.handle('dashboard-summary', async (event) => {
     assertTrustedEvent(event, getMainWindow);
@@ -247,11 +338,31 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
       version: BACKUP_VERSION,
       created: new Date().toISOString(),
       note: 'Contains the complete SafeLedgerData folder. Vault files and the data-key envelope remain encrypted.',
-      files
+      files,
+      manifest: buildBackupManifest(files)
     };
     await writeBackupFile(selection.filePath, payload);
     await audit(dataRoot, 'complete-data-backup-exported');
     return { ok: true, fileCount: Object.keys(files).length };
+  });
+
+  ipc.handle('security-verify-backup', async (event) => {
+    assertTrustedEvent(event, getMainWindow);
+    assertUnlocked(cryptoSession);
+    const selection = await dialog.showOpenDialog(getMainWindow(), {
+      title: 'Verify SafeLedger Backup',
+      properties: ['openFile'],
+      filters: [{ name: 'SafeLedger Backup', extensions: ['slgbak'] }]
+    });
+    if (!selection || selection.canceled || !selection.filePaths || !selection.filePaths.length) return { ok: false, canceled: true };
+    try {
+      const payload = JSON.parse(await fs.promises.readFile(selection.filePaths[0], 'utf8'));
+      const report = verifyBackupPayload(payload, getSessionKey(cryptoSession));
+      await audit(getDataRoot(), 'complete-data-backup-verified');
+      return { ok: true, report };
+    } catch (err) {
+      return { ok: false, message: err && err.message ? err.message : 'Backup verification failed.' };
+    }
   });
 
   ipc.handle('security-restore-all', async (event) => {
@@ -282,6 +393,50 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     return { ok: true, safetyDir: restored.safetyDir };
   });
 
+  ipc.handle('legacy-import-select-source', async (event) => {
+    assertTrustedEvent(event, getMainWindow);
+    assertUnlocked(cryptoSession);
+    const selection = await dialog.showOpenDialog(getMainWindow(), {
+      title: 'Choose SafeLedger 1.x Data Folder',
+      properties: ['openDirectory']
+    });
+    if (!selection || selection.canceled || !selection.filePaths || !selection.filePaths.length) return { ok: false, canceled: true };
+    try {
+      selectedLegacySource = legacyImport.resolveLegacySourceDir(selection.filePaths[0]);
+      return { ok: true, sourceFolder: path.basename(selectedLegacySource), sourcePath: selectedLegacySource };
+    } catch (err) {
+      selectedLegacySource = null;
+      return { ok: false, message: err && err.message ? err.message : 'Unable to locate SafeLedger 1.x data.' };
+    }
+  });
+
+  ipc.handle('legacy-import-run', async (event, password) => {
+    assertTrustedEvent(event, getMainWindow);
+    assertUnlocked(cryptoSession);
+    if (!selectedLegacySource) return { ok: false, message: 'Choose the SafeLedger 1.x data folder first.' };
+    try {
+      const result = await legacyImport.importIntoCurrent({
+        sourceDir: selectedLegacySource,
+        password: String(password || ''),
+        targetVaultDir: path.join(getDataRoot(), 'vaults'),
+        targetKey: getSessionKey(cryptoSession)
+      });
+      await audit(getDataRoot(), 'legacy-1x-import-completed');
+      selectedLegacySource = null;
+      return {
+        ok: true,
+        report: {
+          profileCount: result.profileCount,
+          walletCount: result.walletCount,
+          assetCount: result.assetCount,
+          sourceFolder: result.sourceFolder
+        }
+      };
+    } catch (err) {
+      return { ok: false, message: err && err.message ? err.message : 'SafeLedger 1.x import failed.' };
+    }
+  });
+
   ipc.handle('security-clipboard-write', async (event, text) => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
@@ -306,7 +461,11 @@ module.exports = {
     BACKUP_VERSION,
     collectFiles,
     safeBackupPath,
+    sha256Base64,
+    buildBackupManifest,
+    validateBackupManifest,
     validateBackupPayload,
+    verifyBackupPayload,
     stageRestore,
     sanitizeAuditEvent,
     writeBackupFile,
