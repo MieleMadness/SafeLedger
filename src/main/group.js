@@ -12,6 +12,8 @@ const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const recoveryReadiness = require('./recovery-readiness');
 const walletMetadata = require('./wallet-metadata');
+const customFields = require('./custom-fields');
+const customFieldsUi = require('./custom-fields-ui');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
@@ -148,7 +150,7 @@ const renderGroups = (params) => {
       const current = entry.group;
       const category = getWalletCategory(current);
       const visibleName = displayWalletName(current.name) || 'Unnamed Wallet';
-      const searchable = [visibleName, category, current.tags, ...walletMetadata.searchableValues(current), getUserWalletNotes(current)]
+      const searchable = [visibleName, category, current.tags, ...walletMetadata.searchableValues(current), ...customFields.searchableValues(current.customFields), getUserWalletNotes(current)]
         .map((v) => String(v || '').toLowerCase()).join(' ');
       if (query && !searchable.includes(query)) continue;
 
@@ -230,6 +232,7 @@ const createEditGroup = (params) => {
     id: 'inputNotes', label: 'Notes', value: getUserWalletNotes(params.group),
     rows: 4, maxLength: 500, className: 'detail-notes-input', full: true
   });
+  const customFieldEditor = customFieldsUi.createEditor(grid, params.group && params.group.customFields);
 
   const saveGroup = (button) => {
     if (params.saving.state) return alert('Please wait for processing to complete');
@@ -249,6 +252,7 @@ const createEditGroup = (params) => {
     g.recoveryLink = inputRecoveryLink.value;
     g.seedPhrase = inputSeedPhrase.value;
     g.notes = inputNotes.value;
+    g.customFields = customFieldEditor.getFields();
     if (params.group) g.modified = Date();
 
     if (params.group) params.vaultData.groups[params.vaultData.groupSelected] = g;
@@ -298,6 +302,7 @@ const renderGroupDetail = (params) => {
   securityUi.appendSensitiveField(area, 'PIN code', params.group.pin || '', { allowQr: false });
   securityUi.appendSensitiveField(area, 'Recovery link', params.group.recoveryLink || '', { allowQr: false });
   securityUi.appendSensitiveField(area, 'Seed phrase', params.group.seedPhrase || '', { allowQr: false });
+  customFieldsUi.appendDetail(area, params.group.customFields, (label, value) => appendDetailLine(area, label, value));
 
   const notesWrap = document.createElement('div');
   notesWrap.className = 'detail-notes-section';
@@ -326,6 +331,7 @@ const renderGroupDetail = (params) => {
         { label: 'PIN', value: params.group.pin },
         { label: 'Recovery link', value: params.group.recoveryLink },
         { label: 'Seed phrase', value: params.group.seedPhrase },
+        ...customFields.printFields(params.group.customFields),
         { label: 'Last verified', value: params.group.lastVerified ? formatEasternDate(params.group.lastVerified) : 'Never' },
         { label: 'Notes', value: getUserWalletNotes(params.group) }
       ], true)

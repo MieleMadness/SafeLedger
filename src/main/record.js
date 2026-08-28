@@ -10,6 +10,8 @@ const walletCatalog = require('./wallet-catalog');
 const tokenIcons = require('./token-icons');
 const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
+const customFields = require('./custom-fields');
+const customFieldsUi = require('./custom-fields-ui');
 
 const normalize = (v) => String(v || '').trim().toLowerCase();
 
@@ -85,7 +87,7 @@ const renderRecords = (params) => {
     for (const entry of sorted) {
       const coin = entry.record;
       const i = entry.originalIndex;
-      const searchable = [coin.name, coin.symbol, coin.publicAddress, getUserCoinNotes(params.vaultData, coin), coin.tags, coin.manualBalance]
+      const searchable = [coin.name, coin.symbol, coin.publicAddress, getUserCoinNotes(params.vaultData, coin), coin.tags, ...customFields.searchableValues(coin.customFields)]
         .map((v) => String(v || '').toLowerCase()).join(' ');
       if (query && !searchable.includes(query)) continue;
 
@@ -158,6 +160,7 @@ const createEditRecord = (params) => {
     id: 'inputNotes', label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record),
     rows: 4, maxLength: 500, className: 'detail-notes-input', full: true
   });
+  const customFieldEditor = customFieldsUi.createEditor(grid, params.record && params.record.customFields);
 
   const saveRecord = (button) => {
     if (params.saving.state) return alert('Please wait for processing to complete');
@@ -178,6 +181,7 @@ const createEditRecord = (params) => {
     rec.manualBalance = inputBalance.value;
     rec.balanceUpdated = inputBalance.value ? new Date().toISOString() : (rec.balanceUpdated || '');
     rec.notes = inputNotes.value;
+    rec.customFields = customFieldEditor.getFields();
     if (params.record) rec.modified = Date();
 
     const records = params.vaultData.groups[params.vaultData.groupSelected].records ||
@@ -245,6 +249,7 @@ const renderRecordDetail = (params) => {
   if (String(params.record.privateAddress || '').trim()) {
     securityUi.appendSensitiveField(area, 'Private key', params.record.privateAddress);
   }
+  customFieldsUi.appendDetail(area, params.record.customFields, addLine);
 
   const notesWrap = document.createElement('div');
   notesWrap.className = 'detail-notes-section';
@@ -260,7 +265,7 @@ const renderRecordDetail = (params) => {
   addLine('Created', params.record.created, formatEasternDate);
   addLine('Modified', params.record.modified, formatEasternDate);
 
-  const printIncludesSensitive = !!String(params.record.privateAddress || '').trim() || !!String(params.record.manualBalance || '').trim();
+  const printIncludesSensitive = !!String(params.record.privateAddress || '').trim() || !!String(params.record.manualBalance || '').trim() || customFields.hasSensitive(params.record.customFields);
   detailActions.set([
     { icon: 'fa-pencil', title: 'Edit coin', onClick: () => createEditRecord(params) },
     {
@@ -273,6 +278,7 @@ const renderRecordDetail = (params) => {
         { label: 'Private key', value: params.record.privateAddress },
         { label: 'Balance', value: params.record.manualBalance },
         { label: 'Balance updated', value: params.record.balanceUpdated },
+        ...customFields.printFields(params.record.customFields),
         { label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record) }
       ], printIncludesSensitive)
     },
