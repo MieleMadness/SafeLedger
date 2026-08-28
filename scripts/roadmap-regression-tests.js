@@ -174,7 +174,7 @@ assert(record.includes("title: 'No assets yet'"));
 assert(!group.includes("groupArea.textContent = 'No items'"));
 assert(!record.includes("recordArea.innerHTML = 'No items'"));
 assert(group.includes("title: 'Cancel edit wallet'"));
-assert(record.includes("title: 'Cancel edit coin'"));
+assert(record.includes("title: 'Cancel edit asset'"));
 assert(css.includes('.custom-field-edit-row'));
 assert(css.includes('.recovery-drill-step'));
 assert(binderCss.includes('.recovery-binder-option'));
