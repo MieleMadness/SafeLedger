@@ -7,6 +7,7 @@ const robustVault = require('./robust-vault');
 const dashboardSummary = require('./dashboard-summary');
 const recoveryBinder = require('./recovery-binder');
 const activityHistory = require('./activity-history');
+const globalSearch = require('./global-search');
 
 const BACKUP_FORMAT = 'safeledger-complete-data-backup';
 const BACKUP_VERSION = 2;
@@ -150,6 +151,22 @@ async function buildDashboard(dataRoot, cryptoSession) {
   return dashboardSummary.summarize(entries);
 }
 
+async function buildGlobalSearch(dataRoot, cryptoSession, query) {
+  const key = getSessionKey(cryptoSession);
+  const vaultDir = path.join(dataRoot, 'vaults');
+  const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
+  const entries = [];
+  for (const profile of list.vaults || []) {
+    try {
+      const vaultData = await robustVault.readVault(path.join(vaultDir, profile.file), key);
+      entries.push({ profile, vaultData });
+    } catch (_) {
+      entries.push({ profile, vaultData: { groups: [] } });
+    }
+  }
+  return globalSearch.search(entries, query);
+}
+
 async function buildRecoveryBinder(dataRoot, cryptoSession, fileName, options) {
   const key = getSessionKey(cryptoSession);
   const requested = String(fileName || '').trim();
@@ -175,6 +192,17 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
       return { ok: true, summary };
     } catch (err) {
       return { ok: false, message: err && err.message ? err.message : 'Unable to build recovery dashboard.' };
+    }
+  });
+
+  ipc.handle('global-search', async (event, query) => {
+    assertTrustedEvent(event, getMainWindow);
+    assertUnlocked(cryptoSession);
+    try {
+      const results = await buildGlobalSearch(getDataRoot(), cryptoSession, String(query || '').slice(0, 120));
+      return { ok: true, results };
+    } catch (err) {
+      return { ok: false, message: err && err.message ? err.message : 'Unable to search SafeLedger.' };
     }
   });
 
@@ -283,6 +311,7 @@ module.exports = {
     sanitizeAuditEvent,
     writeBackupFile,
     buildDashboard,
+    buildGlobalSearch,
     buildRecoveryBinder,
     readActivityHistory
   }

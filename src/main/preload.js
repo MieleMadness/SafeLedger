@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   cryptoChangePassword: (oldPassword, newPassword) => ipcRenderer.invoke('crypto-v3-change-password', oldPassword, newPassword),
   getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary'),
   getActivityHistory: (limit) => ipcRenderer.invoke('activity-history', limit),
+  globalSearch: (query) => ipcRenderer.invoke('global-search', query),
   getRecoveryBinder: (file, options, recordActivity = false) => ipcRenderer.invoke('recovery-binder-model', { file, options, recordActivity: recordActivity === true }),
   backupAllData: () => ipcRenderer.invoke('security-backup-all'),
   restoreAllData: () => ipcRenderer.invoke('security-restore-all'),

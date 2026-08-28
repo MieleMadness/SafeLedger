@@ -12,6 +12,7 @@ const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const customFields = require('./custom-fields');
 const customFieldsUi = require('./custom-fields-ui');
+const emptyState = require('./empty-state-ui');
 
 const normalize = (v) => String(v || '').trim().toLowerCase();
 
@@ -67,62 +68,100 @@ const appendCoinHeader = (area, record) => {
   area.appendChild(header);
 };
 
+function assetSort(a, b) {
+  const aPinned = a.record && a.record.pinned === true;
+  const bPinned = b.record && b.record.pinned === true;
+  if (aPinned !== bPinned) return aPinned ? -1 : 1;
+  return String(a.record && a.record.name || '').localeCompare(String(b.record && b.record.name || ''), undefined, { sensitivity: 'base' });
+}
+
 exports.listRecords = (params) => renderRecords(params);
 
 const renderRecords = (params) => {
   const recordSearch = document.getElementById('recordSearch');
   const recordArea = document.getElementById('recordArea');
   recordArea.innerHTML = '';
+
+  if (!params.vaultData || params.vaultData.groupSelected == null) {
+    emptyState.renderColumn(recordArea, {
+      icon: 'fa-circle-o',
+      title: 'Select a wallet',
+      text: 'Assets appear after a Wallet is selected.'
+    });
+    return;
+  }
+
+  const wallet = params.vaultData.groups[params.vaultData.groupSelected];
+  const records = wallet && Array.isArray(wallet.records) ? wallet.records : [];
+  if (!records.length) {
+    emptyState.renderColumn(recordArea, {
+      icon: 'fa-circle-o',
+      title: 'No assets yet',
+      text: 'Add an Asset to document addresses, keys, and recovery details.'
+    });
+    return;
+  }
+
   const ul = document.createElement('UL');
   ul.className = 'nav';
+  const sorted = records.map((record, originalIndex) => ({ record, originalIndex })).sort(assetSort);
+  const query = recordSearch && recordSearch.value ? recordSearch.value.toLowerCase() : '';
+  let visibleCount = 0;
 
-  if (params.vaultData && params.vaultData.groupSelected != null) {
-    const wallet = params.vaultData.groups[params.vaultData.groupSelected];
-    const records = wallet && Array.isArray(wallet.records) ? wallet.records : [];
-    const sorted = records
-      .map((record, originalIndex) => ({ record, originalIndex }))
-      .sort((a, b) => String(a.record.name || '').localeCompare(String(b.record.name || ''), undefined, { sensitivity: 'base' }));
-    const query = recordSearch && recordSearch.value ? recordSearch.value.toLowerCase() : '';
+  for (const entry of sorted) {
+    const coin = entry.record;
+    const i = entry.originalIndex;
+    const searchable = [coin.name, coin.symbol, coin.publicAddress, getUserCoinNotes(params.vaultData, coin), coin.tags, ...customFields.searchableValues(coin.customFields)]
+      .map((v) => String(v || '').toLowerCase()).join(' ');
+    if (query && !searchable.includes(query)) continue;
+    visibleCount++;
 
-    for (const entry of sorted) {
-      const coin = entry.record;
-      const i = entry.originalIndex;
-      const searchable = [coin.name, coin.symbol, coin.publicAddress, getUserCoinNotes(params.vaultData, coin), coin.tags, ...customFields.searchableValues(coin.customFields)]
-        .map((v) => String(v || '').toLowerCase()).join(' ');
-      if (query && !searchable.includes(query)) continue;
+    const li = document.createElement('LI');
+    const href = document.createElement('A');
+    href.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (params.saving.state) return alert('Please wait for processing to complete');
+      params.vaultData.recordSelected = i;
+      renderRecordDetail({ vaultData: params.vaultData, record: coin, saving: params.saving });
+      renderRecords(params);
+    });
+    if (params.vaultData.recordSelected == i) href.className = 'item-selected';
 
-      const li = document.createElement('LI');
-      const href = document.createElement('A');
-      href.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (params.saving.state) return alert('Please wait for processing to complete');
-        params.vaultData.recordSelected = i;
-        renderRecordDetail({ vaultData: params.vaultData, record: coin, saving: params.saving });
-        renderRecords(params);
-      });
-      if (params.vaultData.recordSelected == i) href.className = 'item-selected';
-
-      const row = document.createElement('span');
-      row.className = 'coin-list-row';
-      const brandedIcon = tokenIcons.createIconElement(coin, 'coin-list-brand-image');
-      if (brandedIcon) row.appendChild(brandedIcon);
-      else {
-        const generic = document.createElement('span');
-        generic.className = 'coin-list-generic-icon';
-        generic.textContent = String(coin.symbol || '').toUpperCase().slice(0, 2) || '•';
-        row.appendChild(generic);
-      }
-      const text = document.createElement('span');
-      text.className = 'coin-list-label';
-      text.textContent = `${coin.name || 'Unnamed'}${coin.symbol ? ` (${coin.symbol})` : ''}`;
-      row.appendChild(text);
-      href.appendChild(row);
-      li.appendChild(href);
-      ul.appendChild(li);
+    const row = document.createElement('span');
+    row.className = 'coin-list-row';
+    const brandedIcon = tokenIcons.createIconElement(coin, 'coin-list-brand-image');
+    if (brandedIcon) row.appendChild(brandedIcon);
+    else {
+      const generic = document.createElement('span');
+      generic.className = 'coin-list-generic-icon';
+      generic.textContent = String(coin.symbol || '').toUpperCase().slice(0, 2) || '•';
+      row.appendChild(generic);
     }
-    recordArea.appendChild(ul);
-    if (records.length === 0) recordArea.innerHTML = 'No items';
-  } else recordArea.innerHTML = 'No items';
+    const text = document.createElement('span');
+    text.className = 'coin-list-label';
+    text.textContent = `${coin.name || 'Unnamed'}${coin.symbol ? ` (${coin.symbol})` : ''}`;
+    row.appendChild(text);
+    if (coin.pinned === true) {
+      const pin = document.createElement('i');
+      pin.className = 'fa fa-star pin-indicator';
+      pin.setAttribute('title', 'Pinned');
+      pin.setAttribute('aria-label', 'Pinned');
+      row.appendChild(pin);
+    }
+    href.appendChild(row);
+    li.appendChild(href);
+    ul.appendChild(li);
+  }
+
+  if (!visibleCount) {
+    emptyState.renderColumn(recordArea, {
+      icon: 'fa-search',
+      title: 'No matching assets',
+      text: 'Try a different asset search term.'
+    });
+    return;
+  }
+  recordArea.appendChild(ul);
 };
 
 exports.createRecord = (params) => createEditRecord(params);
@@ -205,6 +244,18 @@ const createEditRecord = (params) => {
   ]);
 };
 
+function persistRecordUpdate(params, updates, button) {
+  if (params.saving.state) return alert('Please wait for processing to complete');
+  Object.assign(params.record, updates || {});
+  params.record.modified = Date();
+  const records = params.vaultData.groups[params.vaultData.groupSelected].records;
+  records[params.vaultData.recordSelected] = params.record;
+  params.saving.state = true;
+  if (button) button.disabled = true;
+  statusMgr.loadStatus();
+  ipc.send('process-record', { action: 'modify', vaultData: params.vaultData });
+}
+
 exports.showRecordDetail = (params) => renderRecordDetail(params);
 
 const renderRecordDetail = (params) => {
@@ -267,6 +318,12 @@ const renderRecordDetail = (params) => {
 
   const printIncludesSensitive = !!String(params.record.privateAddress || '').trim() || !!String(params.record.manualBalance || '').trim() || customFields.hasSensitive(params.record.customFields);
   detailActions.set([
+    {
+      icon: params.record.pinned === true ? 'fa-star' : 'fa-star-o',
+      title: params.record.pinned === true ? 'Unpin asset' : 'Pin asset',
+      className: 'detail-action-pin',
+      onClick: (_event, button) => persistRecordUpdate(params, { pinned: params.record.pinned !== true }, button)
+    },
     { icon: 'fa-pencil', title: 'Edit coin', onClick: () => createEditRecord(params) },
     {
       icon: 'fa-print', title: 'Print coin sheet', className: 'detail-action-print',
@@ -312,3 +369,5 @@ const confirmDelete = (params) => {
     }
   ]);
 };
+
+exports._test = { assetSort, getUserCoinNotes, formatEasternDate };

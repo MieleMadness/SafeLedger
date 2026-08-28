@@ -15,6 +15,7 @@ const recoveryDrillUi = require('./recovery-drill-ui');
 const walletMetadata = require('./wallet-metadata');
 const customFields = require('./custom-fields');
 const customFieldsUi = require('./custom-fields-ui');
+const emptyState = require('./empty-state-ui');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
@@ -156,65 +157,104 @@ function renderReadinessCard(area, params) {
   area.appendChild(card);
 }
 
+function walletSort(a, b) {
+  const aPinned = a.group && a.group.pinned === true;
+  const bPinned = b.group && b.group.pinned === true;
+  if (aPinned !== bPinned) return aPinned ? -1 : 1;
+  return normalize(displayWalletName(a.group && a.group.name)).localeCompare(normalize(displayWalletName(b.group && b.group.name)));
+}
+
 exports.listGroups = (params) => renderGroups(params);
 
 const renderGroups = (params) => {
   const groupSearch = document.getElementById('groupSearch');
   const groupArea = document.getElementById('groupArea');
   groupArea.innerHTML = '';
+
+  if (!params.vaultData || !Array.isArray(params.vaultData.groups)) {
+    emptyState.renderColumn(groupArea, {
+      icon: 'fa-credit-card',
+      title: 'Select a profile',
+      text: 'Wallets appear after a Profile is selected.'
+    });
+    return;
+  }
+
+  const groupsArray = params.vaultData.groups;
+  if (!groupsArray.length) {
+    emptyState.renderColumn(groupArea, {
+      icon: 'fa-credit-card',
+      title: 'No wallets yet',
+      text: 'Add a Wallet to build this Profile recovery plan.'
+    });
+    return;
+  }
+
   const ul = document.createElement('UL');
   ul.className = 'nav';
+  const displayGroups = groupsArray.map((group, index) => ({ group, index })).sort(walletSort);
+  const query = groupSearch && groupSearch.value ? groupSearch.value.toLowerCase() : '';
+  let visibleCount = 0;
 
-  if (params.vaultData && params.vaultData.groups) {
-    const groupsArray = params.vaultData.groups;
-    const displayGroups = groupsArray
-      .map((group, index) => ({ group, index }))
-      .sort((a, b) => normalize(displayWalletName(a.group.name)).localeCompare(normalize(displayWalletName(b.group.name))));
-    const query = groupSearch && groupSearch.value ? groupSearch.value.toLowerCase() : '';
+  for (const entry of displayGroups) {
+    const i = entry.index;
+    const current = entry.group;
+    const category = getWalletCategory(current);
+    const visibleName = displayWalletName(current.name) || 'Unnamed Wallet';
+    const searchable = [visibleName, category, current.tags, ...walletMetadata.searchableValues(current), ...customFields.searchableValues(current.customFields), getUserWalletNotes(current)]
+      .map((v) => String(v || '').toLowerCase()).join(' ');
+    if (query && !searchable.includes(query)) continue;
+    visibleCount++;
 
-    for (const entry of displayGroups) {
-      const i = entry.index;
-      const current = entry.group;
-      const category = getWalletCategory(current);
-      const visibleName = displayWalletName(current.name) || 'Unnamed Wallet';
-      const searchable = [visibleName, category, current.tags, ...walletMetadata.searchableValues(current), ...customFields.searchableValues(current.customFields), getUserWalletNotes(current)]
-        .map((v) => String(v || '').toLowerCase()).join(' ');
-      if (query && !searchable.includes(query)) continue;
+    const li = document.createElement('LI');
+    const href = document.createElement('A');
+    href.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (params.saving.state) return alert('Please wait for processing to complete');
+      params.vaultData.groupSelected = i;
+      params.vaultData.recordSelected = null;
+      renderGroupDetail({ vaultData: params.vaultData, group: current, saving: params.saving });
+      renderGroups({ vaultData: params.vaultData, saving: params.saving });
+      record.listRecords({ vaultData: params.vaultData, saving: params.saving });
+    });
+    if (params.vaultData.groupSelected == i) href.className = 'item-selected';
 
-      const li = document.createElement('LI');
-      const href = document.createElement('A');
-      href.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (params.saving.state) return alert('Please wait for processing to complete');
-        params.vaultData.groupSelected = i;
-        params.vaultData.recordSelected = null;
-        renderGroupDetail({ vaultData: params.vaultData, group: current, saving: params.saving });
-        renderGroups({ vaultData: params.vaultData, saving: params.saving });
-        record.listRecords({ vaultData: params.vaultData, saving: params.saving });
-      });
-      if (params.vaultData.groupSelected == i) href.className = 'item-selected';
-
-      const icon = document.createElement('span');
-      icon.className = 'glyphicon glyphicon-piggy-bank wallet-list-icon';
-      href.appendChild(icon);
-      const text = document.createElement('span');
-      text.className = 'wallet-list-text';
-      const name = document.createElement('span');
-      name.className = 'wallet-list-name';
-      name.textContent = visibleName;
-      text.appendChild(name);
-      if (category) {
-        const sub = document.createElement('span');
-        sub.className = 'wallet-list-category';
-        sub.textContent = category;
-        text.appendChild(sub);
-      }
-      href.appendChild(text);
-      li.appendChild(href);
-      ul.appendChild(li);
+    const icon = document.createElement('span');
+    icon.className = 'glyphicon glyphicon-piggy-bank wallet-list-icon';
+    href.appendChild(icon);
+    const text = document.createElement('span');
+    text.className = 'wallet-list-text';
+    const name = document.createElement('span');
+    name.className = 'wallet-list-name';
+    name.textContent = visibleName;
+    text.appendChild(name);
+    if (category) {
+      const sub = document.createElement('span');
+      sub.className = 'wallet-list-category';
+      sub.textContent = category;
+      text.appendChild(sub);
     }
-    groupArea.appendChild(ul);
-  } else groupArea.textContent = 'No items';
+    href.appendChild(text);
+    if (current.pinned === true) {
+      const pin = document.createElement('i');
+      pin.className = 'fa fa-star wallet-pin-indicator';
+      pin.setAttribute('title', 'Pinned');
+      pin.setAttribute('aria-label', 'Pinned');
+      href.appendChild(pin);
+    }
+    li.appendChild(href);
+    ul.appendChild(li);
+  }
+
+  if (!visibleCount) {
+    emptyState.renderColumn(groupArea, {
+      icon: 'fa-search',
+      title: 'No matching wallets',
+      text: 'Try a different wallet search term.'
+    });
+    return;
+  }
+  groupArea.appendChild(ul);
 };
 
 exports.createGroup = (params) => createEditGroup(params);
@@ -346,6 +386,12 @@ const renderGroupDetail = (params) => {
   appendDetailLine(area, 'Modified', params.group.modified, formatEasternDate);
 
   detailActions.set([
+    {
+      icon: params.group.pinned === true ? 'fa-star' : 'fa-star-o',
+      title: params.group.pinned === true ? 'Unpin wallet' : 'Pin wallet',
+      className: 'detail-action-pin',
+      onClick: (_event, button) => persistWalletUpdate(params, { pinned: params.group.pinned !== true }, button)
+    },
     { icon: 'fa-pencil', title: 'Edit wallet', onClick: () => createEditGroup(params) },
     {
       icon: 'fa-print', title: 'Print recovery sheet', className: 'detail-action-print',
@@ -395,3 +441,5 @@ const confirmDelete = (params) => {
     }
   ]);
 };
+
+exports._test = { walletSort, displayWalletName };

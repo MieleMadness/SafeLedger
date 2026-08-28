@@ -1,7 +1,8 @@
 'use strict';
 
-// SafeLedger trusted UI module. This file is loaded by preload.js in the
-// isolated preload world; the HTML page itself does not receive Node.js APIs.
+// SafeLedger trusted UI module. This file is loaded by the browser renderer
+// bundle; Electron/Node capabilities are provided only through the narrow
+// safeLedgerApi preload bridge.
 
 const { ipcRenderer: ipc } = require('electron');
 const profile = require('./profile');
@@ -10,12 +11,14 @@ const record = require('./record');
 const status = require('./status');
 const settingsUi = require('./settings-ui');
 const detailActions = require('./detail-actions');
+const globalSearchUi = require('./global-search-ui');
 
 let vaultData;
 let vaultList;
 let sessionUnlocked = false;
 const saving = { state: false };
 let settings;
+let pendingGlobalTarget = null;
 
 function requireUnlocked(action) {
   if (!sessionUnlocked) {
@@ -42,6 +45,25 @@ function clearUtilitySelections() {
   document.getElementById('groupArea').innerHTML = '';
   document.getElementById('recordArea').innerHTML = '';
 }
+
+function navigateGlobalResult(target = {}) {
+  if (!sessionUnlocked || !vaultList || !Array.isArray(vaultList.vaults)) return;
+  const profileIndex = vaultList.vaults.findIndex((item) => String(item && item.file || '') === String(target.profileFile || ''));
+  if (profileIndex < 0) return status.showStatus({ status: 'ERROR', statusMsg: 'That search result is no longer available.' });
+  const selectedProfile = vaultList.vaults[profileIndex];
+  pendingGlobalTarget = target;
+  vaultList.vaultSelected = profileIndex;
+  profile.listProfiles(profileParams());
+  profile.showProfileDetail(profileParams({ profile: selectedProfile }));
+  saving.state = true;
+  status.loadStatus();
+  ipc.send('read', { type: 'vault-read', file: selectedProfile.file });
+}
+
+globalSearchUi.configure({
+  isUnlocked: () => sessionUnlocked,
+  onSelect: navigateGlobalResult
+});
 
 window.addEventListener('DOMContentLoaded', () => {
   const addVault = document.getElementById('addVault');
@@ -100,7 +122,11 @@ ipc.on('result', (_event, params) => {
   saving.state = false;
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
   if (params.sessionUnlocked === true) sessionUnlocked = true;
-  if (params.type === 'session-locked') sessionUnlocked = false;
+  if (params.type === 'session-locked') {
+    sessionUnlocked = false;
+    pendingGlobalTarget = null;
+    globalSearchUi.close();
+  }
 
   if (params.settings) {
     settings = params.settings;
@@ -151,6 +177,28 @@ ipc.on('result', (_event, params) => {
       recordArea.innerHTML = '';
     }
     group.listGroups({ vaultData, saving });
+
+    if (params.type === 'vault-read' && pendingGlobalTarget) {
+      const target = pendingGlobalTarget;
+      pendingGlobalTarget = null;
+      if (target.type === 'wallet' || target.type === 'asset') {
+        const groupIndex = Number(target.walletIndex);
+        if (Number.isInteger(groupIndex) && vaultData.groups && vaultData.groups[groupIndex]) {
+          vaultData.groupSelected = groupIndex;
+          const selectedGroup = vaultData.groups[groupIndex];
+          group.listGroups({ vaultData, saving });
+          record.listRecords({ vaultData, saving });
+          if (target.type === 'asset') {
+            const recordIndex = Number(target.recordIndex);
+            if (Number.isInteger(recordIndex) && selectedGroup.records && selectedGroup.records[recordIndex]) {
+              vaultData.recordSelected = recordIndex;
+              record.listRecords({ vaultData, saving });
+              record.showRecordDetail({ vaultData, record: selectedGroup.records[recordIndex], saving });
+            } else group.showGroupDetail({ vaultData, group: selectedGroup, saving });
+          } else group.showGroupDetail({ vaultData, group: selectedGroup, saving });
+        }
+      }
+    }
 
     if (params.type === 'group-create' || params.type === 'group-modify') {
       if (params.type === 'group-create') recordArea.innerHTML = '';
@@ -220,6 +268,8 @@ const showAfterLogin = () => {
 
 const showLogin = () => {
   sessionUnlocked = false;
+  pendingGlobalTarget = null;
+  globalSearchUi.close();
   detailActions.clear();
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -279,6 +329,8 @@ ipc.on('result-save-settings', (_event, params) => {
 
 const showLockScreen = () => {
   sessionUnlocked = false;
+  pendingGlobalTarget = null;
+  globalSearchUi.close();
   detailActions.clear();
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -308,6 +360,8 @@ const showLockScreen = () => {
 ipc.on('result-lockout-destroy', (_event, params) => {
   saving.state = false;
   sessionUnlocked = false;
+  pendingGlobalTarget = null;
+  globalSearchUi.close();
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
   if (params.settings) settings = params.settings;
   showLockoutDestroy();
@@ -337,3 +391,5 @@ const showLockoutDestroy = () => {
   });
   area.appendChild(button);
 };
+
+exports._test = { navigateGlobalResult };

@@ -36,6 +36,13 @@ function appendDateLine(area, label, value) {
   area.appendChild(p);
 }
 
+function pinnedSort(a, b) {
+  const aPinned = a.item && a.item.pinned === true;
+  const bPinned = b.item && b.item.pinned === true;
+  if (aPinned !== bPinned) return aPinned ? -1 : 1;
+  return normalize(a.item && a.item.name).localeCompare(normalize(b.item && b.item.name));
+}
+
 function listProfiles(params) {
   const area = document.getElementById('vaultArea');
   const search = document.getElementById('profileSearch');
@@ -58,7 +65,7 @@ function listProfiles(params) {
   ul.className = 'nav';
   let visibleCount = 0;
 
-  vaults.forEach((item, index) => {
+  vaults.map((item, index) => ({ item, index })).sort(pinnedSort).forEach(({ item, index }) => {
     if (query && !normalize(item && item.name).includes(query)) return;
     visibleCount++;
 
@@ -89,6 +96,13 @@ function listProfiles(params) {
     label.className = 'profile-list-name';
     label.textContent = item.name || 'Unnamed Profile';
     row.appendChild(label);
+    if (item.pinned === true) {
+      const pin = document.createElement('i');
+      pin.className = 'fa fa-star pin-indicator';
+      pin.setAttribute('title', 'Pinned');
+      pin.setAttribute('aria-label', 'Pinned');
+      row.appendChild(pin);
+    }
     link.appendChild(row);
     li.appendChild(link);
     ul.appendChild(li);
@@ -154,6 +168,20 @@ function createEditProfile(params) {
   ]);
 }
 
+function togglePinned(params, button) {
+  if (params.saving.state) return alert('Please wait for processing to complete');
+  params.profile.pinned = params.profile.pinned !== true;
+  params.profile.modified = Date();
+  params.saving.state = true;
+  if (button) button.disabled = true;
+  status.loadStatus();
+  ipc.send('process-vault-list', {
+    action: 'modify',
+    vault: params.profile,
+    vaultList: params.vaultList
+  });
+}
+
 function showProfileDetail(params) {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -176,6 +204,12 @@ function showProfileDetail(params) {
   }
 
   detailActions.set([
+    {
+      icon: profile.pinned === true ? 'fa-star' : 'fa-star-o',
+      title: profile.pinned === true ? 'Unpin profile' : 'Pin profile',
+      className: 'detail-action-pin',
+      onClick: (_event, button) => togglePinned(params, button)
+    },
     { icon: 'fa-pencil', title: 'Edit profile', onClick: () => createEditProfile(params) },
     {
       icon: 'fa-print', title: 'Print profile', className: 'detail-action-print',
@@ -238,4 +272,4 @@ function confirmDelete(params) {
 exports.listProfiles = listProfiles;
 exports.createProfile = (params) => createEditProfile(params);
 exports.showProfileDetail = showProfileDetail;
-exports._test = { normalize, appendDateLine, formatDate };
+exports._test = { normalize, appendDateLine, formatDate, pinnedSort };

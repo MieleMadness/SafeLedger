@@ -10,9 +10,12 @@ const main = read('src/main/main.js');
 const securityMain = read('src/main/security-main.js');
 const preload = read('src/main/preload.js');
 const entry = read('src/main/renderer-entry.js');
+const renderer = read('src/main/renderer.js');
 const dashboardUi = read('src/main/dashboard-ui.js');
 const activityHistory = read('src/main/activity-history.js');
 const activityUi = read('src/main/activity-history-ui.js');
+const globalSearch = read('src/main/global-search.js');
+const globalSearchUi = read('src/main/global-search-ui.js');
 const index = read('src/main/index.html');
 const profile = read('src/main/profile.js');
 const group = read('src/main/group.js');
@@ -29,11 +32,12 @@ const settingsManager = read('src/main/installManager/installManager/settingsMan
 const appearance = read('src/main/app-appearance.js');
 const emptyState = read('src/main/empty-state-ui.js');
 const themeCss = read('src/main/css/app-theme.css');
+const globalCss = read('src/main/css/global-search.css');
 const css = read('src/main/css/product-features.css');
 const binderCss = read('src/main/css/recovery-binder.css');
 const activityCss = read('src/main/css/activity-history.css');
 
-assert.strictEqual(pkg.version, '2.0.66');
+assert.strictEqual(pkg.version, '2.0.67');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -127,6 +131,38 @@ assert(themeCss.includes('.workspace-empty-card'));
 assert(emptyState.includes('renderColumn'));
 assert(profile.includes("title: 'No profiles yet'"));
 assert(!profile.includes("area.textContent = 'No items'"));
+
+assert(securityMain.includes("const globalSearch = require('./global-search')"));
+assert(securityMain.includes("ipc.handle('global-search'"));
+assert(securityMain.includes('buildGlobalSearch'));
+assert(preload.includes("globalSearch: (query) => ipcRenderer.invoke('global-search', query)"));
+assert(index.includes('id="globalSearchButton"'));
+assert(index.includes('./css/global-search.css'));
+assert(renderer.includes("const globalSearchUi = require('./global-search-ui')"));
+assert(renderer.includes('pendingGlobalTarget'));
+assert(renderer.includes('navigateGlobalResult'));
+assert(globalSearch.includes("wallet && wallet.recoveryFormat"));
+assert(globalSearch.includes("asset && asset.publicAddress"));
+assert(!globalSearch.includes('wallet.password'));
+assert(!globalSearch.includes('wallet.seedPhrase'));
+assert(!globalSearch.includes('wallet.recoveryLocation'));
+assert(!globalSearch.includes('wallet.recoveryInstructions'));
+assert(!globalSearch.includes('asset.privateAddress'));
+assert(!globalSearch.includes('asset.manualBalance'));
+assert(globalSearchUi.includes('Ctrl+K') || globalSearchUi.includes("event.ctrlKey"));
+assert(globalSearchUi.includes('Not indexed: balances, notes, recovery locations/instructions'));
+assert(globalCss.includes('.global-search-overlay'));
+assert(profile.includes("title: profile.pinned === true ? 'Unpin profile' : 'Pin profile'"));
+assert(group.includes("title: params.group.pinned === true ? 'Unpin wallet' : 'Pin wallet'"));
+assert(record.includes("title: params.record.pinned === true ? 'Unpin asset' : 'Pin asset'"));
+assert(profile.includes('sort(pinnedSort)'));
+assert(group.includes('sort(walletSort)'));
+assert(record.includes('sort(assetSort)'));
+assert(group.includes("title: 'No wallets yet'"));
+assert(record.includes("title: 'No assets yet'"));
+assert(!group.includes("groupArea.textContent = 'No items'"));
+assert(!record.includes("recordArea.innerHTML = 'No items'"));
+
 assert(css.includes('.custom-field-edit-row'));
 assert(css.includes('.recovery-drill-step'));
 assert(binderCss.includes('.recovery-binder-option'));
@@ -136,10 +172,13 @@ for (const relative of [
   'src/main/dashboard-ui.js',
   'src/main/activity-history.js',
   'src/main/activity-history-ui.js',
+  'src/main/global-search.js',
+  'src/main/global-search-ui.js',
   'src/main/main.js',
   'src/main/security-main.js',
   'src/main/preload.js',
   'src/main/renderer-entry.js',
+  'src/main/renderer.js',
   'src/main/profile.js',
   'src/main/settings-ui.js',
   'src/main/settings-schema.js',
@@ -158,6 +197,7 @@ for (const relative of [
   'scripts/recovery-drill-tests.js',
   'scripts/recovery-binder-tests.js',
   'scripts/activity-history-tests.js',
-  'scripts/appearance-tests.js'
+  'scripts/appearance-tests.js',
+  'scripts/global-search-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.66 preserves recovery/security features and adds persisted Light/Dark/System appearance with a shared modern visual system.');
+console.log('PASS roadmap 2.0.67 preserves recovery/security/appearance features and adds privacy-filtered Global Search, encrypted pinning, and consistent column empty states.');
