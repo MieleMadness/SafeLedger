@@ -39,12 +39,14 @@ assert(preload.includes("const { contextBridge, ipcRenderer } = require('electro
 assert(preload.includes("contextBridge.exposeInMainWorld('safeLedgerApi'"));
 assert(!preload.includes("require('./"));
 assert(index.includes('./renderer.bundle.js'));
-assert(index.includes('bootstrap.min.css'));
+assert(!index.includes('bootstrap.min.css'));
+assert(!index.includes('font-awesome.min.css'));
 assert(!index.includes('jquery.min.js'));
 assert(!index.includes('bootstrap.min.js'));
 assert(entry.includes("dataset.safeLedgerRendererReady = 'true'"));
 assert(build.includes("platform: 'browser'"));
-assert(build.includes('safeledger-electron-shim'));
+assert(!build.includes('safeledger-electron-shim'));
+assert(!build.includes('renderer-electron-shim'));
 assert(build.includes('forbidden runtime dependency'));
 assert(!security.includes("require('fs')"));
 assert(!security.includes("require('path')"));
@@ -64,10 +66,10 @@ assert(pkg.scripts['test:gui-smoke'].includes('run-gui-smoke.js'));
 
 for (const relative of [
   'src/main/main.js', 'src/main/preload.js', 'src/main/security-main.js',
-  'src/main/security-enhancements.js', 'src/main/renderer-electron-shim.js',
+  'src/main/security-enhancements.js', 'src/main/renderer-bridge.js',
   'src/main/renderer-entry.js', 'src/main/atomic-file.js', 'src/main/vault-schema.js',
   'src/main/legacy-import.js', 'scripts/continuity-hardening-tests.js',
   'scripts/build-renderer.js', 'scripts/run-gui-smoke.js', 'scripts/version-bump-check.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger sandbox, Emergency Lock login reset, real GUI smoke hooks, reduced runtime dependencies, and main-process security operations.');
+console.log('PASS SafeLedger sandbox, Emergency Lock login reset, explicit renderer bridge, real GUI smoke hooks, and main-process security operations.');
