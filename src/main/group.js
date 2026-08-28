@@ -2,7 +2,7 @@
   Author: Edward Seufert - Cborgtech, LLC
 */
 
-const { ipcRenderer: ipc } = require('electron');
+const { ipcRenderer: ipc } = require('./renderer-bridge');
 const statusMgr = require('./status');
 const record = require('./record');
 const utils = require('./utils');
@@ -47,18 +47,18 @@ function getUserWalletNotes(group) {
   return notes === generated ? '' : notes;
 }
 
-function formatEasternDate(value) {
+function formatLocalDate(value) {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   try {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
       weekday: 'short', month: 'short', day: '2-digit', year: 'numeric',
       hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
-      timeZone: 'America/New_York', timeZoneName: 'short'
+      timeZoneName: 'short'
     }).format(date);
   } catch (_) {
-    return String(value).replace('Eastern Daylight Time', 'EDT').replace('Eastern Standard Time', 'EST');
+    return String(value);
   }
 }
 
@@ -117,14 +117,14 @@ function renderReadinessCard(area, params) {
   const meta = document.createElement('p');
   meta.className = 'recovery-readiness-meta';
   meta.textContent = params.group.lastVerified
-    ? `Last verified: ${formatEasternDate(params.group.lastVerified)}`
+    ? `Last verified: ${formatLocalDate(params.group.lastVerified)}`
     : 'Last verified: Never';
   card.appendChild(meta);
 
   const drillMeta = document.createElement('p');
   drillMeta.className = 'recovery-readiness-meta';
   drillMeta.textContent = params.group.lastRecoveryDrill
-    ? `Last recovery drill: ${formatEasternDate(params.group.lastRecoveryDrill)}`
+    ? `Last recovery drill: ${formatLocalDate(params.group.lastRecoveryDrill)}`
     : 'Last recovery drill: Never';
   card.appendChild(drillMeta);
 
@@ -390,8 +390,8 @@ const renderGroupDetail = (params) => {
   notesWrap.appendChild(notesValue);
   area.appendChild(notesWrap);
 
-  appendDetailLine(area, 'Created', params.group.created, formatEasternDate);
-  appendDetailLine(area, 'Modified', params.group.modified, formatEasternDate);
+  appendDetailLine(area, 'Created', params.group.created, formatLocalDate);
+  appendDetailLine(area, 'Modified', params.group.modified, formatLocalDate);
 
   detailActions.set([
     {
@@ -413,8 +413,8 @@ const renderGroupDetail = (params) => {
         { label: 'Recovery link', value: params.group.recoveryLink },
         { label: 'Seed phrase', value: params.group.seedPhrase },
         ...customFields.printFields(params.group.customFields),
-        { label: 'Last verified', value: params.group.lastVerified ? formatEasternDate(params.group.lastVerified) : 'Never' },
-        { label: 'Last recovery drill', value: params.group.lastRecoveryDrill ? formatEasternDate(params.group.lastRecoveryDrill) : 'Never' },
+        { label: 'Last verified', value: params.group.lastVerified ? formatLocalDate(params.group.lastVerified) : 'Never' },
+        { label: 'Last recovery drill', value: params.group.lastRecoveryDrill ? formatLocalDate(params.group.lastRecoveryDrill) : 'Never' },
         { label: 'Notes', value: getUserWalletNotes(params.group) }
       ], true)
     },
@@ -450,4 +450,4 @@ const confirmDelete = (params) => {
   ]);
 };
 
-exports._test = { walletSort, displayWalletName };
+exports._test = { walletSort, displayWalletName, formatLocalDate };
