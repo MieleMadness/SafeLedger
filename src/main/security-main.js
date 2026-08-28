@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 const { atomicWriteJson } = require('./atomic-file');
+const robustVault = require('./robust-vault');
+const dashboardSummary = require('./dashboard-summary');
 
 const BACKUP_FORMAT = 'safeledger-complete-data-backup';
 const BACKUP_VERSION = 2;
@@ -118,10 +120,38 @@ async function stageRestore(dataRoot, payload) {
   }
 }
 
+async function buildDashboard(dataRoot, cryptoSession) {
+  const key = cryptoSession.getSessionKey();
+  if (!Buffer.isBuffer(key) || key.length !== 32) throw new Error('SafeLedger is locked. Please log in again.');
+  const vaultDir = path.join(dataRoot, 'vaults');
+  const list = await robustVault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
+  const entries = [];
+  for (const profile of list.vaults || []) {
+    try {
+      const vaultData = await robustVault.readVault(path.join(vaultDir, profile.file), key);
+      entries.push({ profileName: String(profile.name || 'Profile'), vaultData });
+    } catch (_) {
+      entries.push({ profileName: String(profile.name || 'Profile'), vaultData: { groups: [] }, readError: true });
+    }
+  }
+  return dashboardSummary.summarize(entries);
+}
+
 function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWindow, getDataRoot }) {
   const marker = '__safeLedgerSecurityMainIpcRegistered';
   if (global[marker]) return;
   global[marker] = true;
+
+  ipc.handle('dashboard-summary', async (event) => {
+    assertTrustedEvent(event, getMainWindow);
+    assertUnlocked(cryptoSession);
+    try {
+      const summary = await buildDashboard(getDataRoot(), cryptoSession);
+      return { ok: true, summary };
+    } catch (err) {
+      return { ok: false, message: err && err.message ? err.message : 'Unable to build recovery dashboard.' };
+    }
+  });
 
   ipc.handle('security-backup-all', async (event) => {
     assertTrustedEvent(event, getMainWindow);
@@ -201,6 +231,7 @@ module.exports = {
     validateBackupPayload,
     stageRestore,
     sanitizeAuditEvent,
-    writeBackupFile
+    writeBackupFile,
+    buildDashboard
   }
 };

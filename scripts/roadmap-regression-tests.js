@@ -1,32 +1,23 @@
 'use strict';
-
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
-
 const pkg = JSON.parse(read('package.json'));
-const group = read('src/main/group.js');
+const securityMain = read('src/main/security-main.js');
+const preload = read('src/main/preload.js');
+const entry = read('src/main/renderer-entry.js');
+const dashboardUi = read('src/main/dashboard-ui.js');
 const index = read('src/main/index.html');
-const css = read('src/main/css/product-features.css');
-
-assert.strictEqual(pkg.version, '2.0.59');
-assert(index.includes('./css/product-features.css'));
-assert(group.includes("const recoveryReadiness = require('./recovery-readiness')"));
-assert(group.includes("title.textContent = 'Recovery Readiness'"));
-assert(group.includes("verify.innerHTML = '<i class=\"fa fa-check-circle\"></i> Verify now'"));
-assert(group.includes('params.group.lastVerified = new Date().toISOString()'));
-assert(css.includes('.recovery-readiness-card'));
-
-for (const relative of ['src/main/recovery-readiness.js', 'src/main/group.js', 'scripts/recovery-readiness-tests.js']) {
-  execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-}
-
-assert(group.includes("const walletMetadata = require('./wallet-metadata')"));
-assert(group.includes('walletMetadata.addEditFields'));
-assert(group.includes('walletMetadata.appendDetail'));
-assert(read('src/main/wallet-metadata.js').includes("label: 'Recovery material location'"));
-assert(read('src/main/wallet-metadata.js').includes("label: 'Beneficiary / recovery contact'"));
-console.log('PASS roadmap 2.0.59 adds optional wallet metadata and external recovery planning without requiring digital seed storage.');
+assert.strictEqual(pkg.version, '2.0.60');
+assert(securityMain.includes("ipc.handle('dashboard-summary'"));
+assert(securityMain.includes('dashboardSummary.summarize(entries)'));
+assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
+assert(entry.includes("require('./dashboard-ui.js')"));
+assert(index.includes('id="dashboardButton"'));
+assert(dashboardUi.includes("heading.textContent = 'Recovery Dashboard'"));
+assert(dashboardUi.includes("attentionTitle.textContent = 'Needs Attention'"));
+for (const relative of ['src/main/dashboard-summary.js','src/main/dashboard-ui.js','src/main/security-main.js','src/main/preload.js','src/main/renderer-entry.js','scripts/dashboard-summary-tests.js']) execFileSync(process.execPath,['--check',path.join(root,relative)],{stdio:'pipe'});
+console.log('PASS roadmap 2.0.60 adds a sanitized main-process Recovery Dashboard and Needs Attention view.');
