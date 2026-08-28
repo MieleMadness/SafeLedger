@@ -5,34 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
     <title>SafeLedger</title>
-    <link rel="stylesheet" href="./../../node_modules/font-awesome/css/font-awesome.min.css">
-    <link rel="stylesheet" href="./../../node_modules/bootstrap/dist/css/bootstrap.min.css">
     <link id="styleSheet" href="./css/site.css" rel="stylesheet">
     <link href="./css/token-icons.css" rel="stylesheet">
     <link href="./css/product-features.css" rel="stylesheet">
     <link href="./css/activity-history.css" rel="stylesheet">
     <link href="./css/global-search.css" rel="stylesheet">
     <link href="./css/app-theme.css" rel="stylesheet">
+    <link href="./css/foundation.css" rel="stylesheet">
+    <link href="./css/local-icons.css" rel="stylesheet">
   </head>
   <body>
-    <div class="container-fluid app-shell">
-      <div id="searchArea" class="row app-search-row">
-        <div class="col-xs-2 dark1bg content-search"><div class="search-field-wrap"><input id="profileSearch" class="form-control" placeholder="Search profiles..."><button type="button" id="profileSearchClear" class="search-clear" title="Clear profile search" aria-label="Clear profile search"><i class="fa fa-times"></i></button></div></div>
-        <div class="col-xs-2 dark2bg content-search"><div class="search-field-wrap"><input id="groupSearch" class="form-control" placeholder="Search wallets..."><button type="button" id="groupSearchClear" class="search-clear" title="Clear wallet search" aria-label="Clear wallet search"><i class="fa fa-times"></i></button></div></div>
-        <div class="col-xs-3 dark3bg content-search"><div class="search-field-wrap"><input id="recordSearch" class="form-control" placeholder="Search coins..."><button type="button" id="recordSearchClear" class="search-clear" title="Clear coin search" aria-label="Clear coin search"><i class="fa fa-times"></i></button></div></div>
-        <div class="col-xs-5 dark4bg top-utility-cell"><div class="top-utility-actions" aria-label="Application shortcuts"><button id="globalSearchButton" class="global-search-inline" type="button" title="Global Search (Ctrl+K)" aria-label="Open Global Search"><i class="fa fa-search"></i></button><button id="dashboardButton" class="dashboard-inline" type="button" title="Recovery Dashboard" aria-label="Open Recovery Dashboard"><i class="fa fa-home"></i></button><button id="activityButton" class="activity-inline" type="button" title="Activity History" aria-label="Open Activity History"><i class="fa fa-history"></i></button></div><div id="statusArea">&nbsp;</div></div>
+    <div class="app-shell">
+      <div id="searchArea" class="app-grid app-search-row">
+        <div class="app-cell dark1bg content-search"><div class="search-field-wrap"><input id="profileSearch" class="form-control" placeholder="Search profiles..."><button type="button" id="profileSearchClear" class="search-clear" title="Clear profile search" aria-label="Clear profile search"><i class="fa fa-times"></i></button></div></div>
+        <div class="app-cell dark2bg content-search"><div class="search-field-wrap"><input id="groupSearch" class="form-control" placeholder="Search wallets..."><button type="button" id="groupSearchClear" class="search-clear" title="Clear wallet search" aria-label="Clear wallet search"><i class="fa fa-times"></i></button></div></div>
+        <div class="app-cell dark3bg content-search"><div class="search-field-wrap"><input id="recordSearch" class="form-control" placeholder="Search assets..."><button type="button" id="recordSearchClear" class="search-clear" title="Clear asset search" aria-label="Clear asset search"><i class="fa fa-times"></i></button></div></div>
+        <div class="app-cell dark4bg top-utility-cell"><div class="top-utility-actions" aria-label="Application shortcuts"><button id="globalSearchButton" class="global-search-inline" type="button" title="Global Search (Ctrl+K)" aria-label="Open Global Search"><i class="fa fa-search"></i></button><button id="dashboardButton" class="dashboard-inline" type="button" title="Recovery Dashboard" aria-label="Open Recovery Dashboard"><i class="fa fa-home"></i></button><button id="activityButton" class="activity-inline" type="button" title="Activity History" aria-label="Open Activity History"><i class="fa fa-history"></i></button></div><div id="statusArea">&nbsp;</div></div>
       </div>
-      <div id="mainArea" class="row app-main-row">
-        <div class="col-xs-2 dark1bg content-middle"><div id="vaultArea"></div></div>
-        <div class="col-xs-2 dark2bg content-middle"><div id="groupArea"></div></div>
-        <div class="col-xs-3 dark3bg content-middle"><div id="recordArea"></div></div>
-        <div class="col-xs-5 dark4bg content-middle detail-column"><div id="detailArea"><h1 class="page-header">Welcome to SafeLedger!</h1><hr><p>Loading <i class="fa fa-refresh fa-spin" style="font-size:24px"></i></p></div></div>
+      <div id="mainArea" class="app-grid app-main-row">
+        <div class="app-cell dark1bg content-middle"><div id="vaultArea"></div></div>
+        <div class="app-cell dark2bg content-middle"><div id="groupArea"></div></div>
+        <div class="app-cell dark3bg content-middle"><div id="recordArea"></div></div>
+        <div class="app-cell dark4bg content-middle detail-column"><div id="detailArea"><h1 class="page-header">Welcome to SafeLedger!</h1><hr><p>Loading <i class="fa fa-refresh fa-spin" style="font-size:24px"></i></p></div></div>
       </div>
-      <div id="buttonArea" class="row app-button-row">
-        <div class="col-xs-2 dark1bg text-center"><button type="button" id="addVault" class="btn btn-default bottom-space"><span class="glyphicon glyphicon-plus"></span> Add Profile</button></div>
-        <div class="col-xs-2 dark2bg text-center"><button type="button" id="addGroup" class="btn btn-default bottom-space"><span class="glyphicon glyphicon-plus"></span> Add Wallet</button></div>
-        <div class="col-xs-3 dark3bg text-center"><button type="button" id="addRecord" class="btn btn-default bottom-space"><span class="glyphicon glyphicon-plus"></span> Add Coin</button></div>
-        <div class="col-xs-5 dark4bg emergency-lock-cell"><div id="detailActionArea" class="detail-action-area" aria-label="Detail actions"></div><button id="panicLockButton" class="panic-lock-inline" type="button" title="Emergency Lock & Minimize" aria-label="Emergency Lock and Minimize SafeLedger"><img src="./../../sl.png" alt="SafeLedger emergency lock"></button></div>
+      <div id="buttonArea" class="app-grid app-button-row">
+        <div class="app-cell dark1bg text-center"><button type="button" id="addVault" class="btn btn-default bottom-space"><span class="fa fa-plus"></span> Add Profile</button></div>
+        <div class="app-cell dark2bg text-center"><button type="button" id="addGroup" class="btn btn-default bottom-space"><span class="fa fa-plus"></span> Add Wallet</button></div>
+        <div class="app-cell dark3bg text-center"><button type="button" id="addRecord" class="btn btn-default bottom-space"><span class="fa fa-plus"></span> Add Asset</button></div>
+        <div class="app-cell dark4bg emergency-lock-cell"><div id="detailActionArea" class="detail-action-area" aria-label="Detail actions"></div><button id="panicLockButton" class="panic-lock-inline" type="button" title="Emergency Lock & Minimize" aria-label="Emergency Lock and Minimize SafeLedger"><img src="./../../sl.png" alt="SafeLedger emergency lock"></button></div>
       </div>
     </div>
     <script src="./renderer.bundle.js"></script>
