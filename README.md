@@ -1,19 +1,150 @@
 # SafeLedger
 
-SafeLedger is a free, local-first encrypted information vault for organizing cryptocurrency wallet and asset recovery information. It stores Profiles, Wallets, public addresses, recovery information, private keys, balances, notes, and other details in encrypted files on your own computer.
+SafeLedger is a **free, local-first, offline encrypted information vault** for organizing cryptocurrency wallet and asset recovery information. It stores Profiles, Wallets, public addresses, recovery information, private keys, balances, notes, and related details in encrypted files that remain under your control.
 
-SafeLedger does not require a cloud account. Your working data lives in a folder named `SafeLedgerData` beside the packaged SafeLedger application.
+SafeLedger does not require a cloud account, subscription, license server, or network connection for normal vault operation.
 
-## SafeLedger 2.1
+## Release status
 
-SafeLedger 2.1 focuses on **continuity and hardening**. It adds a read-only SafeLedger 1.x importer, versioned vault data schemas, backup integrity verification, safer Self-Destruct defaults, and tighter Electron/IPC security boundaries.
+### Current stable release: SafeLedger 2.1.0
+
+SafeLedger 2.1 is the version currently merged into `master`.
+
+It includes:
+
+- Portable `SafeLedgerData` storage beside the packaged application
+- AES-256-GCM authenticated vault encryption
+- Argon2id master-password protection
+- A random 256-bit Data Encryption Key (DEK) protected by a key envelope
+- Main-process-only DEK handling
+- Versioned vault `schemaVersion` support
+- Read-only SafeLedger 1.x import into new 2.x encrypted vaults
+- Complete backup format v3 with SHA-256 file integrity manifests
+- Non-destructive **Verify Backup**
+- Version-2 complete-backup restore compatibility
+- Staged restore with a pre-restore safety copy
+- Brute-force lockout protection
+- Self-Destruct Protection disabled by default for new settings
+- Hardened Electron sandbox / IPC boundaries
+- Global Search, Recovery Dashboard, Activity History, recovery sheets, recovery drills, custom fields, and wallet metadata
+- Emergency Lock that clears the active encryption session, minimizes SafeLedger, resets the renderer, and returns the application to a fresh login state
 
 > [!IMPORTANT]
-> SafeLedger 2.1 can **import** SafeLedger 1.x data, but it does not open 1.x vault files directly as active 2.x data.
->
-> Keep the original 1.x `safeledgerdata` folder untouched. Initialize and unlock SafeLedger 2.1 separately, then use **SafeLedger → Settings → Import SafeLedger 1.x Data**. The importer reads the old files, creates new 2.x encrypted vaults, and leaves the original files unchanged.
+> **SafeLedger 2.2, 2.3, 2.4, and 2.5 are development release tracks. They are not part of the current stable `master` release until their implementation, Windows CI, Linux CI, crypto smoke, GUI smoke, and packaging gates pass and their pull requests are merged.**
 
-## How saving and the SafeLedgerData folder work
+## Release roadmap
+
+### SafeLedger 2.2 — Runtime Modernization
+
+Development target: **2.2.0**
+
+Focus:
+
+- Remove the remaining renderer Electron compatibility layer
+- Move renderer code to an explicit SafeLedger preload/renderer boundary
+- Replace Bootstrap 3 application-shell dependency with SafeLedger-owned CSS Grid/Flexbox
+- Replace Font Awesome 4 / Glyphicons with local bundled icons
+- Standardize visible terminology on **Profile → Wallet → Asset**
+- Use the host operating-system timezone for display timestamps
+- Add runtime-modernization regression gates
+
+2.2 must preserve the 2.1 encryption format, backup formats, 1.x importer, portable data layout, and Emergency Lock behavior.
+
+### SafeLedger 2.3 — Device Security & Recovery Health
+
+Development target: **2.3.0**
+
+Focus:
+
+- Centralized main-process session locking
+- OS lock and suspend/resume protection where supported
+- Removable-storage / `SafeLedgerData` availability monitoring
+- Local storage identity checks so a different device at the same path is not silently trusted
+- Storage-health reporting
+- Backup-age and verification-age awareness
+- Generic privacy-safe device-security audit events
+
+Storage removal, suspend, resume, or OS-lock handling must **lock only**. These events must never trigger Self-Destruct.
+
+### SafeLedger 2.4 — Recovery Intelligence & Validation
+
+Development target: **2.4.0**
+
+Focus:
+
+- Explainable Wallet-level Recovery Health scoring
+- Guided non-destructive Test Recovery workflow
+- Offline BIP39 mnemonic validation
+- Offline Bitcoin and EVM address-format validation
+- Privacy-preserving duplicate detection
+- Privacy Mode for masked-by-default sensitive information
+
+Recovery-intelligence features remain offline and must not send seeds, private keys, passwords, PINs, addresses, or recovery material to external APIs.
+
+### SafeLedger 2.5 — Distribution, Trust & Open Source Readiness
+
+Development target: **2.5.0**
+
+Focus:
+
+- Tag-only official release publishing
+- SHA-256 checksums for official binaries
+- Machine-readable SBOM generation
+- Build provenance / artifact attestation where supported
+- Complete Apache 2.0 licensing and attribution files
+- Contributor and security documentation
+- Issue / pull-request templates
+- Fail-closed release checklist
+- Windows code-signing integration readiness
+- Download-verification instructions
+
+Actual Windows signing remains optional until a trusted signing certificate is configured. Signing secrets and private keys must never be committed to the repository.
+
+## How SafeLedger is organized
+
+```text
+Profile
+└─ Wallet
+   └─ Asset
+```
+
+### Profile
+
+A Profile is the top-level container. Profiles can separate people, purposes, businesses, storage strategies, or any other grouping you choose. Each Profile has its own encrypted vault file.
+
+### Wallet
+
+Wallets can store information such as:
+
+- Name and wallet category
+- Tags and notes
+- Password
+- PIN code
+- Recovery link
+- Seed phrase
+- Wallet metadata
+- Custom fields
+- Assets associated with the Wallet
+- Recovery verification and recovery-drill information
+
+Sensitive Wallet values are collapsed in normal View mode and can be revealed or copied locally when needed.
+
+### Asset
+
+Assets can store information such as:
+
+- Name
+- Symbol
+- Public address
+- Tags
+- Balance
+- Private key, when you choose to store one
+- Notes
+- Custom fields
+
+SafeLedger does not require private keys or seed phrases to be stored. Decide which secrets you are comfortable keeping digitally.
+
+## Portable data layout
 
 For packaged builds, SafeLedger creates and uses `SafeLedgerData` in the same folder as the SafeLedger application you launch.
 
@@ -37,163 +168,21 @@ D:\My SafeLedger\
    └─ vaults/
 ```
 
-The application and its `SafeLedgerData` folder should stay together.
+The application and its `SafeLedgerData` folder should stay together. This allows SafeLedger to run from a local folder or removable drive without requiring a license or cloud account.
 
-### If you move SafeLedger
+### Moving SafeLedger
 
-Close SafeLedger first, then move both the application and the entire `SafeLedgerData` folder. Moving only the application may cause SafeLedger to create a new empty data folder in the new location, which can make existing Profiles appear to be missing.
+Close SafeLedger first, then move **both** the application and the complete `SafeLedgerData` folder.
 
-If that happens, close SafeLedger, locate the original `SafeLedgerData` folder, make a backup copy, and place the correct folder beside the SafeLedger application you intend to use.
+Moving only the executable/AppImage can cause SafeLedger to create a new empty data folder at the new location, making existing Profiles appear to be missing.
 
 Do not manually merge two different `SafeLedgerData` folders. Use SafeLedger Backup, Restore, or the 1.x importer when appropriate.
 
-## When changes are saved
-
-SafeLedger does not continuously save while you type. After choosing Add or Edit/Modify, use the green Save action in the bottom action area to commit the change.
-
-If you leave a Modify screen without saving, those form changes are not written to the encrypted vault.
-
-Deleting a Profile, Wallet, or Asset also requires confirmation.
-
-## How SafeLedger is organized
-
-```text
-Profile
-└─ Wallet
-   └─ Asset
-```
-
-### Profile
-
-A Profile is the top-level container. Profiles can separate people, purposes, businesses, storage strategies, or any other grouping you choose. Each Profile has its own encrypted vault file.
-
-### Wallet
-
-Wallets can store information such as:
-
-- Name
-- Wallet category
-- Tags
-- Password
-- PIN code
-- Recovery link
-- Seed phrase
-- Notes
-- Assets associated with the Wallet
-
-Sensitive Wallet values are collapsed in View mode. Sensitive fields provide local Copy controls in View mode. In Add/Modify mode, sensitive values use an eye control to reveal or hide the field.
-
-### Asset
-
-Assets can store information such as:
-
-- Name
-- Symbol
-- Public address
-- Tags
-- Balance
-- Private key, when you choose to store one
-- Notes
-- Custom fields
-
-If no private key is saved, the Private Key field is omitted from the normal View screen. Public addresses and private keys can use local QR controls where supported. Balance is treated as sensitive and is Copy-only in View mode.
-
-## Main application areas
-
-From left to right, SafeLedger displays:
-
-1. **Profiles**
-2. **Wallets** inside the selected Profile
-3. **Assets** inside the selected Wallet
-4. **Detail View** for the selected item
-
-Profile, Wallet, and Asset search boxes are available at the top of their columns. Global Search, Recovery Dashboard, and Activity History shortcuts are available from the top utility area. The SafeLedger shield in the bottom-right is the Emergency Lock.
-
-## View, Edit, Print, and Delete
-
-Selecting a Profile, Wallet, or Asset opens its View screen. Detail actions include Edit, Print where appropriate, and Delete.
-
-Recovery sheets are generated locally. SafeLedger 2.1 prepares printing inside the existing application window rather than opening an unrestricted browser-style popup. Printed recovery sheets can contain highly sensitive information, so use a trusted local printer and store printed copies securely.
-
-## Backup, Verify, and Restore
-
-Open:
-
-**SafeLedger → Settings → Backup & Recovery**
-
-### Backup
-
-Backup creates a `.slgbak` file containing a complete copy of the current `SafeLedgerData` folder. Vault contents inside the backup remain encrypted, and the backup includes the settings and encryption metadata needed for a complete restore.
-
-SafeLedger 2.1 creates **backup format version 3**. Version-3 backups include a SHA-256 integrity digest for every included file.
-
-Store backups separately from the working SafeLedger folder so a single drive failure does not destroy both the live data and its backup.
-
-### Verify Backup
-
-**Verify Backup** checks a `.slgbak` file without changing the active SafeLedger data.
-
-Verification checks:
-
-- Backup structure and safe file paths
-- Version-3 SHA-256 integrity manifest
-- Key-envelope structure
-- Authentication of the encrypted vault list
-- Authentication of every Profile vault
-- Profile, Wallet, Asset, and file counts
-
-Verification uses the currently unlocked SafeLedger data key. A backup from a different SafeLedger key lineage may therefore fail **Verify Backup** even though it can still be selected for Restore and authenticated after SafeLedger reloads into the restored data set.
-
-### Restore
-
-Restore accepts supported complete SafeLedger backups. SafeLedger 2.1 continues to accept version-2 complete backups for restore compatibility.
-
-Before replacing active data, SafeLedger creates a safety copy named similarly to:
-
-```text
-SafeLedgerData-pre-restore-2026-08-28T...
-```
-
-Restore is staged first. If replacement fails, SafeLedger attempts to preserve or return to the current data. After a successful restore, SafeLedger clears the active session and reloads so the restored data is opened through a new authenticated session.
-
-## Import SafeLedger 1.x Data
-
-Open:
-
-**SafeLedger → Settings → Import SafeLedger 1.x Data**
-
-The importer accepts the original SafeLedger 1.x `safeledgerdata` folder or its parent folder.
-
-The import process:
-
-1. Select the original SafeLedger 1.x data folder.
-2. Enter the SafeLedger 1.x master password.
-3. SafeLedger reads the old encrypted vault list and Profile vaults.
-4. The old data is decrypted only for migration.
-5. New Profile files are created using the current SafeLedger 2.x encryption system.
-6. Duplicate Profile names receive a numeric suffix rather than overwriting current data.
-7. SafeLedger reports imported Profile, Wallet, and Asset counts.
-8. SafeLedger locks and reloads after a successful import.
-
-The original 1.x files are not renamed, rewritten, deleted, or converted in place. Keep a complete untouched copy of them even after a successful import.
-
-The 1.x compatibility code exists only inside the migration path. Active SafeLedger 2.x vaults continue to use the current authenticated encryption format.
-
-## Versioned vault data schema
-
-SafeLedger 2.1 introduces a separate `schemaVersion` for vault contents. This is independent of the encryption version and wallet catalog version.
-
-When SafeLedger reads an older supported vault schema, it can migrate that structure forward in memory before saving. If a vault declares a schema version newer than the installed application supports, SafeLedger refuses to rewrite it and reports that a newer SafeLedger version is required.
-
-This provides a controlled upgrade path for future data-model changes instead of requiring another incompatible rewrite.
-
 ## SafeLedger 2.x encryption
-
-A new SafeLedger installation creates the current encryption format directly.
 
 ### Argon2id master-password protection
 
-SafeLedger derives the password-protection key with **Argon2id** and a random salt.
+SafeLedger derives the master-password protection key with **Argon2id** and a random salt.
 
 Current defaults:
 
@@ -204,98 +193,180 @@ Current defaults:
 
 ### Random Data Encryption Key
 
-SafeLedger generates a random 256-bit Data Encryption Key (DEK). The master password protects the DEK through a key envelope rather than being used directly as the vault encryption key.
+SafeLedger generates a random 256-bit Data Encryption Key (DEK). The master password protects the DEK through a key envelope rather than serving directly as the vault encryption key.
 
-Changing the master password re-wraps the existing DEK. SafeLedger does not need to decrypt and re-encrypt every vault file merely to change the password.
+Changing the master password re-wraps the DEK instead of re-encrypting every vault solely because the password changed.
 
 ### AES-256-GCM authenticated encryption
 
-Current vault files use **AES-256-GCM** authenticated encryption and the `SLG2` encrypted payload format.
+Current 2.x vault files use **AES-256-GCM** authenticated encryption and the `SLG2` encrypted payload format.
 
-Authenticated encryption helps detect modified, damaged, or unauthenticated ciphertext instead of silently accepting it.
+Authenticated encryption helps SafeLedger detect modified, damaged, or unauthenticated ciphertext instead of silently accepting it.
 
-The SafeLedger 1.x importer contains isolated compatibility code for the original AES-256-CBC format so legacy information can be moved into current authenticated vaults.
+The raw DEK remains in the trusted main process and is not exposed to the renderer.
 
-### Password requirements
+## SafeLedger 1.x import
 
-The master password requires at least:
-
-- 8 characters
-- 1 lowercase letter
-- 1 uppercase letter
-- 1 number
-
-Passwords may be up to 128 characters. A longer unique password or passphrase is recommended; the interface recommends 15 or more characters.
-
-## Brute Force Protection
-
-SafeLedger tracks failed login attempts and can temporarily lock login after too many failures.
-
-The configurable brute-force values are limited to whole numbers from **1 through 99**:
-
-- Failed login attempts before lockout
-- Lockouts allowed before Self-Destruct, when Self-Destruct is enabled
-- Lockout duration in minutes
+SafeLedger 2.1+ can import the original SafeLedger 1.x data format through an isolated, read-only migration path.
 
 Open:
 
-**SafeLedger → Settings → Brute Force Protection**
+**SafeLedger → Settings → Import SafeLedger 1.x Data**
 
-Closing and reopening the application during an active lockout does not bypass it.
+The importer:
 
-## Self-Destruct Protection
+1. Reads the selected original 1.x data folder.
+2. Authenticates it using the supplied 1.x master password.
+3. Reads the original encrypted vault list and Profile vaults.
+4. Creates new current-format Profile files protected by the active 2.x DEK.
+5. Leaves the original 1.x files unchanged.
+
+Keep an untouched backup of the original 1.x data even after a successful import.
+
+## Backup, Verify, and Restore
+
+Open:
+
+**SafeLedger → Settings → Backup & Recovery**
+
+### Backup
+
+SafeLedger creates a `.slgbak` file containing a complete encrypted backup of the current SafeLedger data set and the metadata required for restore.
+
+Backup format v3 includes a SHA-256 integrity digest for every included file.
+
+Store backups separately from the working SafeLedger folder so a single drive failure does not destroy both the live vault and its backup.
+
+### Verify Backup
+
+**Verify Backup** checks a backup without modifying active SafeLedger data.
+
+Verification checks include:
+
+- Backup structure and safe file paths
+- SHA-256 file integrity manifest
+- Key-envelope structure
+- Encrypted vault-list authentication
+- Authentication of every Profile vault
+- Profile, Wallet, Asset, and file counts
+
+### Restore
+
+SafeLedger 2.1 supports current version-3 complete backups and retains version-2 restore compatibility.
+
+Before replacing active data, SafeLedger creates a pre-restore safety copy. Restore is staged before replacement, and SafeLedger clears the active session and reloads after a successful restore.
+
+## Emergency Lock and automatic lock
+
+After SafeLedger is unlocked, inactivity can trigger an automatic security lock.
+
+The SafeLedger shield button in the bottom-right provides **Emergency Lock**. The current 2.1 implementation:
+
+1. Clears visible sensitive fields.
+2. Clears the active encryption session / DEK.
+3. Records the security event in the local audit log.
+4. Minimizes SafeLedger.
+5. Reloads the renderer from the trusted main process.
+6. Returns SafeLedger to a fresh login state before the application can be unlocked again.
+
+The renderer reset is intentional: a lock should not leave decrypted application state sitting in the old renderer session.
+
+## Brute Force and Self-Destruct Protection
+
+SafeLedger tracks failed login attempts and can temporarily lock login after too many failures.
+
+Self-Destruct Protection is **off by default for new settings**. Existing settings that explicitly enabled it remain enabled.
 
 > [!CAUTION]
-> Self-Destruct Protection is intentionally destructive. Maintain verified backups before enabling it.
+> Self-Destruct Protection is intentionally destructive. Keep verified backups before enabling it.
 
-Self-Destruct Protection is **off by default for new SafeLedger 2.1 settings**. Brute-force lockouts remain active when Self-Destruct is disabled.
+When enabled, exhausting the configured failed-login and lockout limits can destroy files in the active `SafeLedgerData/vaults` folder.
 
-Existing settings that explicitly enabled Self-Destruct remain enabled.
+Storage removal, system sleep, OS locking, Emergency Lock, and future device-security events are conceptually separate from password-failure Self-Destruct behavior and must never be treated as failed password attempts.
 
-Control it from:
+## Clipboard, QR, and printing safety
 
-**SafeLedger → Self-Destruct Protection**
+Sensitive Copy actions automatically clear the clipboard after a short period when the clipboard still contains the copied SafeLedger value.
 
-Enabling it requires a destructive-action warning. When enabled, exhausting the configured failed-login and lockout limits causes SafeLedger to destroy files in the active `SafeLedgerData/vaults` folder.
+QR generation is local and does not require an online QR service.
 
-SafeLedger overwrites files before deleting them during secure-delete operations, but no application can guarantee physical erasure on every storage device. SSD wear-leveling, snapshots, cloud-sync history, backups, and operating-system caching may preserve older blocks or copies outside SafeLedger's control.
-
-For higher assurance, use SafeLedger with full-disk encryption and appropriate device security.
-
-## Automatic and Emergency Lock
-
-After SafeLedger is unlocked, approximately five minutes of inactivity triggers an automatic security lock.
-
-The SafeLedger shield button in the bottom-right provides Emergency Lock. It clears visible sensitive fields, records the security event in the local audit log, minimizes the window, and reloads SafeLedger back to the locked/login state.
-
-## Clipboard and QR safety
-
-Sensitive Copy actions automatically clear the clipboard after approximately 30 seconds if the clipboard still contains the copied value.
-
-QR generation is local and does not use an online QR service. Treat a QR code containing a private key or other secret exactly like the original secret.
-
-## Local audit log
-
-SafeLedger maintains `audit.log` under the settings portion of `SafeLedgerData`. It records security-related event names and timestamps such as application opens, emergency locks, auto-locks, backups, backup verification, restores, and legacy imports.
-
-The audit log is not intended to contain passwords, seed phrases, private keys, or other vault secrets.
+Recovery sheets are generated locally. Printed recovery information may contain highly sensitive material, so use a trusted local printer and protect printed copies appropriately.
 
 ## Desktop security boundary
 
-SafeLedger uses an Electron renderer sandbox with Node integration disabled and context isolation enabled. Sensitive filesystem and cryptographic operations stay in the main process behind a narrow preload bridge.
+SafeLedger uses an Electron renderer sandbox with:
 
-SafeLedger 2.1 additionally:
+- `nodeIntegration: false`
+- `contextIsolation: true`
+- `sandbox: true`
+- denied unexpected renderer navigation
+- denied unexpected new windows
+- disabled webviews
+- denied renderer permission requests
+- disabled insecure mixed content
+- restrictive Content Security Policy
 
-- Validates IPC senders for legacy and crypto operations
-- Validates vault filenames and renderer payloads before persistence
-- Denies unexpected renderer navigation
-- Denies new renderer windows
-- Disables webviews
-- Denies renderer permission requests
-- Disables insecure mixed content
-- Applies a restrictive Content Security Policy
+Sensitive filesystem and cryptographic operations stay in the trusted main process behind a narrow preload bridge.
 
-SafeLedger is designed as an offline application and does not require network access for normal vault operation.
+## Local audit log
+
+SafeLedger maintains a local `audit.log` under the settings portion of `SafeLedgerData`.
+
+The audit log records generic security/application events and timestamps. It is not intended to contain passwords, seed phrases, private keys, or other vault secrets.
+
+## Development
+
+Install locked dependencies:
+
+```bash
+npm ci --no-audit --no-fund
+```
+
+Start SafeLedger:
+
+```bash
+npm start
+```
+
+Run the regression suite:
+
+```bash
+npm run test:regression
+```
+
+Run the Electron crypto smoke test:
+
+```bash
+npm run test:electron-crypto
+```
+
+Run the real GUI smoke test:
+
+```bash
+npm run test:gui-smoke
+```
+
+Build Windows portable:
+
+```bash
+npm run dist:win
+```
+
+Build Linux AppImage:
+
+```bash
+npm run dist:linux
+```
+
+Pull requests are expected to pass regression, crypto, GUI, and packaging checks before a release branch is merged into `master`.
+
+## Release documents
+
+- `RELEASE-2.1.md` — released continuity and hardening foundation
+- PR #3 — SafeLedger 2.2 Runtime Modernization development
+- PR #4 — SafeLedger 2.3 Device Security & Recovery Health development
+- PR #5 — SafeLedger 2.4 Recovery Intelligence & Validation development
+- PR #6 — SafeLedger 2.5 Distribution, Trust & Open Source Readiness development
 
 ## Recommended operating practices
 
@@ -307,25 +378,14 @@ SafeLedger is designed as an offline application and does not require network ac
 - Use a long, unique master password or passphrase.
 - Treat seed phrases and private keys as highly sensitive secrets.
 - Use full-disk encryption on the computer or removable drive containing SafeLedger.
-- Lock SafeLedger when stepping away.
+- Use Emergency Lock when stepping away.
 - Keep Self-Destruct disabled unless its destructive behavior is specifically required and understood.
-- Do not assume secure deletion can erase cloud-sync copies, snapshots, backups, or SSD-remapped blocks.
-
-## If Profiles appear missing
-
-First confirm that you launched the intended SafeLedger executable/AppImage and that the expected `SafeLedgerData` folder is beside that exact application file.
-
-Check whether an older copy of `SafeLedgerData` remains beside a previous SafeLedger executable. Before moving, deleting, merging, restoring, or replacing anything, make a backup copy of the data you are trying to recover.
 
 ## What SafeLedger is not
 
 SafeLedger is an encrypted information organizer. It is not a cryptocurrency exchange, blockchain node, hardware wallet, or transaction-signing device.
 
-Storing a seed phrase or private key in any software creates risk. Decide which secrets you are comfortable storing digitally and maintain appropriate offline recovery backups for critical assets.
-
-## Release planning
-
-See `RELEASE-2.1.md` for the SafeLedger 2.1 release scope, acceptance gates, and deferred modernization work.
+Storing a seed phrase or private key in any software creates risk. Maintain appropriate offline recovery backups for critical assets.
 
 ## License
 
