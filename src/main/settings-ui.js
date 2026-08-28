@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('electron');
+const { ipcRenderer: ipc } = require('./renderer-bridge');
 const status = require('./status');
 const detailActions = require('./detail-actions');
 const passwordSettingsUi = require('./password-settings-ui');
