@@ -26,11 +26,10 @@ function decryptLegacyPayload(key, encrypted) {
   if (!legacyPayloadLooksValid(encrypted)) throw new Error('SafeLedger 1.x data is damaged or unsupported.');
   const [ivHex, dataHex] = encrypted.trim().split(':');
   const decipher = crypto.createDecipheriv('aes-256-cbc', key, Buffer.from(ivHex, 'hex'));
-  const clear = Buffer.concat([
+  return Buffer.concat([
     decipher.update(Buffer.from(dataHex, 'hex')),
     decipher.final()
   ]).toString('utf8');
-  return clear;
 }
 
 function parseLegacyJson(encrypted, key, label) {
@@ -45,6 +44,15 @@ function parseLegacyJson(encrypted, key, label) {
 
 function safeLegacyFileName(value) {
   return typeof value === 'string' && /^zvault-\d+\.json$/i.test(value);
+}
+
+function resolveLegacySourceDir(selectedDir) {
+  const selected = path.resolve(String(selectedDir || ''));
+  const candidates = [selected, path.join(selected, 'safeledgerdata'), path.join(selected, 'SafeLedgerData')];
+  for (const candidate of candidates) {
+    if (fs.existsSync(path.join(candidate, 'vaultlist.json'))) return candidate;
+  }
+  throw new Error('The selected folder does not contain SafeLedger 1.x data. Choose the old safeledgerdata folder or its parent folder.');
 }
 
 function countVaultData(vaultData) {
@@ -64,11 +72,11 @@ function uniqueProfileName(existing, requested) {
 }
 
 async function readLegacyBundle(sourceDir, password) {
-  const root = path.resolve(String(sourceDir || ''));
+  const root = resolveLegacySourceDir(sourceDir);
   const listPath = path.join(root, 'vaultlist.json');
   let encryptedList;
   try { encryptedList = await fs.promises.readFile(listPath, 'utf8'); }
-  catch (_) { throw new Error('The selected folder does not contain a SafeLedger 1.x vaultlist.json file.'); }
+  catch (_) { throw new Error('Unable to read the SafeLedger 1.x vault list.'); }
 
   const key = deriveLegacyKey(password);
   try {
@@ -93,9 +101,9 @@ async function readLegacyBundle(sourceDir, password) {
 
 async function importIntoCurrent({ sourceDir, password, targetVaultDir, targetKey }) {
   if (!Buffer.isBuffer(targetKey) || targetKey.length !== 32) throw new Error('SafeLedger is locked. Please log in again.');
-  const sourceRoot = path.resolve(String(sourceDir || ''));
+  const sourceRoot = resolveLegacySourceDir(sourceDir);
   const targetRoot = path.resolve(String(targetVaultDir || ''));
-  if (!sourceRoot || sourceRoot === targetRoot) throw new Error('Choose the original SafeLedger 1.x vault folder, not the active SafeLedger 2.x vault folder.');
+  if (sourceRoot === targetRoot) throw new Error('Choose the original SafeLedger 1.x vault folder, not the active SafeLedger 2.x vault folder.');
 
   const legacy = await readLegacyBundle(sourceRoot, password);
   const currentListPath = path.join(targetRoot, 'vaultlist.json');
@@ -115,10 +123,7 @@ async function importIntoCurrent({ sourceDir, password, targetVaultDir, targetKe
       importedData.file = idInfo.fileName;
       importedData.groupSelected = null;
       importedData.recordSelected = null;
-      importedData.migration = {
-        source: 'safeledger-1.x',
-        importedAt
-      };
+      importedData.migration = { source: 'safeledger-1.x', importedAt };
 
       const counts = countVaultData(importedData);
       walletCount += counts.wallets;
@@ -161,6 +166,7 @@ module.exports = {
   decryptLegacyPayload,
   parseLegacyJson,
   safeLegacyFileName,
+  resolveLegacySourceDir,
   countVaultData,
   uniqueProfileName,
   readLegacyBundle,
