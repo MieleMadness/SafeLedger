@@ -11,6 +11,7 @@ const index = read('src/main/index.html');
 const theme = read('src/main/css/app-theme.css');
 const group = read('src/main/group.js');
 const record = read('src/main/record.js');
+const foundation = read('src/main/css/foundation.css');
 
 function cssVar(block, name) {
   const match = block.match(new RegExp(`${name}\\s*:\\s*(#[0-9a-fA-F]{6})`));
@@ -33,7 +34,8 @@ function contrast(a, b) {
 }
 
 assert(/^2\.\d+\.\d+$/.test(pkg.version));
-assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/global-search.css'), 'theme stylesheet must load last');
+assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/local-icons.css'), 'theme stylesheet must load last');
+assert(foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 5fr)'));
 
 const mainArea = index.indexOf('id="mainArea"');
 const buttonArea = index.indexOf('id="buttonArea"');
@@ -41,7 +43,7 @@ const globalSearchButton = index.indexOf('id="globalSearchButton"');
 const dashboardButton = index.indexOf('id="dashboardButton"');
 const activityButton = index.indexOf('id="activityButton"');
 const panicButton = index.indexOf('id="panicLockButton"');
-assert(index.includes('class="col-xs-5 dark4bg top-utility-cell"'));
+assert(index.includes('class="app-cell dark4bg top-utility-cell"'));
 assert(index.includes('class="top-utility-actions"'));
 assert(globalSearchButton > 0 && globalSearchButton < mainArea, 'Global Search belongs in the top utility row');
 assert(dashboardButton > globalSearchButton && dashboardButton < mainArea, 'Dashboard belongs beside Global Search in the top utility row');
@@ -65,7 +67,7 @@ assert(theme.includes('overflow-x: auto'));
 
 assert(group.includes("title: 'Cancel edit wallet'"));
 assert(group.includes("onClick: () => renderGroupDetail(params)"));
-assert(record.includes("title: 'Cancel edit coin'"));
+assert(record.includes("title: 'Cancel edit asset'"));
 assert(record.includes("onClick: () => renderRecordDetail(params)"));
 
 assert(theme.includes('.custom-fields-editor'));
@@ -87,4 +89,4 @@ assert(theme.includes('html[data-theme="dark"] .search-field-wrap .form-control'
 assert(theme.includes('.wallet-list-category { color: rgba(255,255,255,.84) !important;'));
 assert(theme.includes('.column-empty-text { max-width: 180px; font-size: 12px;'));
 
-console.log(`PASS UI polish ${pkg.version} keeps Search/Home/History in a search-height top utility bar, Emergency Lock fixed bottom-right, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
+console.log(`PASS UI polish ${pkg.version} keeps Search/Home/History in the top utility bar, Emergency Lock fixed bottom-right, native 2/2/3/5 layout, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
