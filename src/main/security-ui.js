@@ -149,6 +149,19 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
   out.className = 'outData sensitive-value';
   out.textContent = value || '';
   content.appendChild(out);
+
+  if (options.meta && options.meta.label && options.meta.value) {
+    const meta = document.createElement('div');
+    meta.className = 'sensitive-field-meta';
+    const metaLabel = document.createElement('b');
+    metaLabel.textContent = `${options.meta.label}: `;
+    meta.appendChild(metaLabel);
+    const metaValue = document.createElement('span');
+    metaValue.textContent = String(options.meta.value);
+    meta.appendChild(metaValue);
+    content.appendChild(meta);
+  }
+
   if (allowQr) content.appendChild(qrArea);
 
   details.addEventListener('toggle', () => {

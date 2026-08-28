@@ -72,9 +72,10 @@ a .highlight { color: yellow; }
 
 .wallet-list-text { display: inline-flex; flex-direction: column; vertical-align: middle; margin-left: 6px; line-height: 1.05; }
 .wallet-list-name { display: block; }
-.wallet-list-category { display: block; margin-top: 2px; font-size: 10px; opacity: .72; font-weight: 400; }
+.wallet-list-category { display: block; margin-top: 2px; font-size: 12px; line-height: 1.25; opacity: .78; font-weight: 400; }
 .wallet-list-icon { vertical-align: middle; }
-.wallet-detail-category { margin: -2px 0 8px; color: #666; font-size: 12px; font-weight: 500; }
+.wallet-detail-title { margin: 0 !important; font-size: 30px; font-weight: 700; line-height: 1.05; }
+.wallet-detail-category { margin: 4px 0 8px; color: #5f6672; font-size: 13px; line-height: 1.35; font-weight: 500; }
 
 .bottom-space { margin-top: 8px; margin-bottom: 8px; min-height: 38px; }
 .bottom-align-text { position: absolute; bottom: 0; left: 50%; -webkit-transform: translateX(-50%); transform: translateX(-50%); }
@@ -84,7 +85,7 @@ a { color: white; }
 .badge-circle { width: 3em; height: 3em; border-radius: 50px; background-color: #000; }
 .badge-selected { border: 2px solid #fff; }
 .item-selected { border: 2px solid #fff; background-color: #000; }
-.dates { font-size: 11px; }
+.dates { font-size: 13px; line-height: 1.4; color: #6b7280; }
 .outData { padding-left: 10px; word-break: break-word; }
 .checkBox { padding: 10px !important; }
 
@@ -95,16 +96,19 @@ a { color: white; }
 .search-clear:focus { background: rgba(0,0,0,.08); color: #111; outline: none; }
 
 .detail-column { padding-top: 0; }
-#detailArea { padding-top: 2px; }
+#detailArea { padding-top: 2px; font-size: 14px; line-height: 1.45; }
+#detailArea p { line-height: 1.45; }
 #detailArea h1,
 #detailArea .page-header { margin-top: 0; margin-bottom: 6px; padding-top: 0; padding-bottom: 2px; line-height: 1.05; }
 #detailArea hr { margin-top: 6px; margin-bottom: 10px; }
+.detail-info-line { margin: 0 0 10px; font-size: 14px; line-height: 1.45; }
 
 .sensitive-field { margin: 10px 0; border: 1px solid #d8d8d8; background: #fff; border-radius: 6px; overflow: hidden; }
-.sensitive-field summary { cursor: pointer; padding: 10px 12px; font-weight: 600; user-select: none; }
+.sensitive-field summary { cursor: pointer; padding: 10px 12px; font-size: 14px; line-height: 1.4; font-weight: 600; user-select: none; }
 .sensitive-field-content { padding: 0 12px 12px; }
 .sensitive-value,
 .public-address-value { flex: 1 1 auto; min-width: 0; padding: 10px; margin: 0; background: #f5f5f5; font-family: monospace; white-space: pre-wrap; border-radius: 6px; }
+.sensitive-field-meta { margin: 8px 0 0; color: #5f6672; font-size: 13px; line-height: 1.4; }
 .field-value-row,
 .secure-input-row { display: flex; align-items: stretch; gap: 6px; margin: 6px 0 10px; }
 .secure-input-row .form-control { flex: 1 1 auto; min-width: 0; }
@@ -129,9 +133,9 @@ a { color: white; }
 .qr-toggle-button { margin: 0 0 8px 42px; }
 .qr-area { width: 100%; margin-top: 10px; padding: 12px; background: #fff; border: 1px solid #ddd; border-radius: 6px; text-align: center; }
 .address-qr { width: 240px; height: 240px; max-width: 100%; image-rendering: pixelated; }
-.qr-caption { margin-top: 8px; font-size: 11px; color: #555; }
-.coin-notes-section { margin: 12px 0; }
-.coin-notes-value { margin-top: 5px; padding: 9px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; }
+.qr-caption { margin-top: 8px; font-size: 12px; line-height: 1.4; color: #555; }
+.detail-notes-section { margin: 12px 0; }
+.detail-notes-value { margin-top: 5px; padding: 9px 10px; background: #fff; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
 
 .password-strength { margin: 8px 0 12px; height: 24px; background: #ddd; position: relative; overflow: hidden; border-radius: 6px; }
 .password-strength-bar { height: 100%; width: 0; background: currentColor; opacity: .22; transition: width .15s ease; }
@@ -198,8 +202,8 @@ a { color: white; }
 .compact-qr-area { margin: 6px 0 10px; }
 .sensitive-field-content .compact-qr-area { margin-bottom: 0; }
 
-.coin-notes-input { height: 86px !important; min-height: 86px !important; max-height: 86px !important; resize: none; line-height: 1.45; }
-.coin-notes-value { height: 86px; min-height: 86px; max-height: 86px; overflow-y: auto; white-space: pre-wrap; line-height: 1.45; }
+.detail-notes-input { height: 86px !important; min-height: 86px !important; max-height: 86px !important; resize: none; line-height: 1.45; }
+.detail-notes-value { height: 86px; min-height: 86px; max-height: 86px; overflow-y: auto; white-space: pre-wrap; line-height: 1.45; }
 .coin-print-button { color: #1565C0 !important; }
 .coin-print-button:hover,
 .coin-print-button:focus { color: #0D47A1 !important; }
@@ -211,7 +215,8 @@ a { color: white; }
   .content-middle .nav > li > a { padding-left: 6px; padding-right: 6px; font-size: 12px; }
   .content-search { padding-left: 7px; padding-right: 7px; }
   .btn { font-size: 12px; padding-left: 8px; padding-right: 8px; }
-  .coin-detail-title-wrap h1 { font-size: 25px; }
+  .coin-detail-title-wrap h1,
+  .wallet-detail-title { font-size: 25px; }
   .coin-brand-icon { width: 46px; height: 46px; flex-basis: 46px; font-size: 23px; }
 }
 

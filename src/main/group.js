@@ -41,6 +41,34 @@ function getUserWalletNotes(group) {
   return notes === generated ? '' : notes;
 }
 
+function formatEasternDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      weekday: 'short', month: 'short', day: '2-digit', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
+      timeZone: 'America/New_York', timeZoneName: 'short'
+    }).format(date);
+  } catch (_) {
+    return String(value).replace('Eastern Daylight Time', 'EDT').replace('Eastern Standard Time', 'EST');
+  }
+}
+
+function appendDetailLine(area, label, value, formatter) {
+  if (value == null || value === '') return;
+  const p = document.createElement('p');
+  p.className = 'detail-info-line';
+  const b = document.createElement('b');
+  b.textContent = `${label}: `;
+  p.appendChild(b);
+  const span = document.createElement('span');
+  span.textContent = formatter ? formatter(value) : value;
+  p.appendChild(span);
+  area.appendChild(p);
+}
+
 exports.listGroups = (params) => renderGroups(params);
 
 const renderGroups = (params) => {
@@ -140,7 +168,8 @@ const createEditGroup = (params) => {
     sensitive: true, revealLabel: 'seed phrase'
   });
   const inputNotes = editFormUi.addTextarea(grid, {
-    id: 'inputNotes', label: 'Notes', value: getUserWalletNotes(params.group), rows: 5, maxLength: 500, full: true
+    id: 'inputNotes', label: 'Notes', value: getUserWalletNotes(params.group),
+    rows: 4, maxLength: 500, className: 'detail-notes-input', full: true
   });
 
   const saveGroup = (button) => {
@@ -189,6 +218,7 @@ const renderGroupDetail = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
+  header.className = 'wallet-detail-title';
   header.textContent = displayWalletName(params.group.name) || 'Wallet';
   area.appendChild(header);
   const category = getWalletCategory(params.group);
@@ -200,38 +230,26 @@ const renderGroupDetail = (params) => {
   }
   area.appendChild(document.createElement('hr'));
 
-  if (params.group.tags) {
-    const tags = document.createElement('p');
-    tags.innerHTML = '<b>Tags:</b> ';
-    const span = document.createElement('span');
-    span.textContent = params.group.tags;
-    tags.appendChild(span);
-    area.appendChild(tags);
-  }
+  appendDetailLine(area, 'Tags', params.group.tags);
 
   securityUi.appendSensitiveField(area, 'Password', params.group.password || '', { allowQr: false });
   securityUi.appendSensitiveField(area, 'PIN code', params.group.pin || '', { allowQr: false });
   securityUi.appendSensitiveField(area, 'Recovery link', params.group.recoveryLink || '', { allowQr: false });
   securityUi.appendSensitiveField(area, 'Seed phrase', params.group.seedPhrase || '', { allowQr: false });
 
-  const notes = document.createElement('p');
-  notes.innerHTML = '<b>Notes:</b>';
-  area.appendChild(notes);
-  const notesDetail = document.createElement('div');
-  notesDetail.className = 'outData';
-  notesDetail.textContent = getUserWalletNotes(params.group);
-  area.appendChild(notesDetail);
+  const notesWrap = document.createElement('div');
+  notesWrap.className = 'detail-notes-section';
+  const notesLabel = document.createElement('b');
+  notesLabel.textContent = 'Notes:';
+  notesWrap.appendChild(notesLabel);
+  const notesValue = document.createElement('div');
+  notesValue.className = 'outData detail-notes-value';
+  notesValue.textContent = getUserWalletNotes(params.group);
+  notesWrap.appendChild(notesValue);
+  area.appendChild(notesWrap);
 
-  const created = document.createElement('p');
-  created.className = 'dates';
-  created.innerHTML = `<b>Created:</b> ${params.group.created || ''}`;
-  area.appendChild(created);
-  if (params.group.modified) {
-    const modified = document.createElement('p');
-    modified.className = 'dates';
-    modified.innerHTML = `<b>Modified:</b> ${params.group.modified}`;
-    area.appendChild(modified);
-  }
+  appendDetailLine(area, 'Created', params.group.created, formatEasternDate);
+  appendDetailLine(area, 'Modified', params.group.modified, formatEasternDate);
 
   detailActions.set([
     { icon: 'fa-pencil', title: 'Edit wallet', onClick: () => createEditGroup(params) },

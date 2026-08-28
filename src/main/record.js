@@ -156,7 +156,7 @@ const createEditRecord = (params) => {
   });
   const inputNotes = editFormUi.addTextarea(grid, {
     id: 'inputNotes', label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record),
-    rows: 4, maxLength: 500, className: 'coin-notes-input', full: true
+    rows: 4, maxLength: 500, className: 'detail-notes-input', full: true
   });
 
   const saveRecord = (button) => {
@@ -212,6 +212,7 @@ const renderRecordDetail = (params) => {
   const addLine = (label, value, formatter) => {
     if (value == null || value === '') return;
     const p = document.createElement('p');
+    p.className = 'detail-info-line';
     const b = document.createElement('b');
     b.textContent = `${label}: `;
     p.appendChild(b);
@@ -224,9 +225,14 @@ const renderRecordDetail = (params) => {
   addLine('Symbol', params.record.symbol);
   addLine('Tags', params.record.tags);
   if (String(params.record.manualBalance || '').trim()) {
-    securityUi.appendSensitiveField(area, 'Balance', params.record.manualBalance, { allowQr: false });
+    securityUi.appendSensitiveField(area, 'Balance', params.record.manualBalance, {
+      allowQr: false,
+      meta: params.record.balanceUpdated ? {
+        label: 'Balance updated',
+        value: formatEasternDate(params.record.balanceUpdated)
+      } : null
+    });
   }
-  addLine('Balance updated', params.record.balanceUpdated, formatEasternDate);
 
   securityUi.appendPublicAddressField(area, params.record.publicAddress || '', params.record.symbol || '');
   if (!params.record.publicAddress) {
@@ -241,12 +247,12 @@ const renderRecordDetail = (params) => {
   }
 
   const notesWrap = document.createElement('div');
-  notesWrap.className = 'coin-notes-section';
+  notesWrap.className = 'detail-notes-section';
   const notesLabel = document.createElement('b');
   notesLabel.textContent = 'Notes:';
   notesWrap.appendChild(notesLabel);
   const notesValue = document.createElement('div');
-  notesValue.className = 'outData coin-notes-value';
+  notesValue.className = 'outData detail-notes-value';
   notesValue.textContent = getUserCoinNotes(params.vaultData, params.record);
   notesWrap.appendChild(notesValue);
   area.appendChild(notesWrap);
