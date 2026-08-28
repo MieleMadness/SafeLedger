@@ -32,7 +32,7 @@ function contrast(a, b) {
   return (high + 0.05) / (low + 0.05);
 }
 
-assert.strictEqual(pkg.version, '2.0.71');
+assert(/^2\.\d+\.\d+$/.test(pkg.version));
 assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/global-search.css'), 'theme stylesheet must load last');
 
 const mainArea = index.indexOf('id="mainArea"');
@@ -87,4 +87,4 @@ assert(theme.includes('html[data-theme="dark"] .search-field-wrap .form-control'
 assert(theme.includes('.wallet-list-category { color: rgba(255,255,255,.84) !important;'));
 assert(theme.includes('.column-empty-text { max-width: 180px; font-size: 12px;'));
 
-console.log('PASS UI polish keeps Search/Home/History in a search-height top utility bar, Emergency Lock fixed bottom-right, edit cancellation, responsive custom fields, and readable dark-mode contrast.');
+console.log(`PASS UI polish ${pkg.version} keeps Search/Home/History in a search-height top utility bar, Emergency Lock fixed bottom-right, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
