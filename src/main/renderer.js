@@ -4,7 +4,7 @@
 // bundle; Electron/Node capabilities are provided only through the narrow
 // safeLedgerApi preload bridge.
 
-const { ipcRenderer: ipc } = require('electron');
+const { ipcRenderer: ipc } = require('./renderer-bridge');
 const profile = require('./profile');
 const group = require('./group');
 const record = require('./record');
