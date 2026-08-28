@@ -32,6 +32,9 @@ assert(main.includes("const securityMain = require('./security-main')"));
 assert(main.includes('securityMain.registerIpcHandlers'));
 assert(main.includes("process.env.SAFELEDGER_GUI_SMOKE === '1'"));
 assert(main.includes('installGuiSmokeProbe'));
+const panicLockBlock = main.slice(main.indexOf("ipc.on('panic-lock'"), main.indexOf("ipc.on('record-password-failure'"));
+assert(panicLockBlock.includes('cryptoSession.clearSession()'), 'Emergency Lock must clear the active encryption session');
+assert(panicLockBlock.includes('mainWindow.webContents.reload()'), 'Emergency Lock must reset the renderer to the login screen');
 assert(preload.includes("const { contextBridge, ipcRenderer } = require('electron')"));
 assert(preload.includes("contextBridge.exposeInMainWorld('safeLedgerApi'"));
 assert(!preload.includes("require('./"));
@@ -67,4 +70,4 @@ for (const relative of [
   'scripts/build-renderer.js', 'scripts/run-gui-smoke.js', 'scripts/version-bump-check.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger sandbox, real GUI smoke hooks, reduced runtime dependencies, and main-process security operations.');
+console.log('PASS SafeLedger sandbox, Emergency Lock login reset, real GUI smoke hooks, reduced runtime dependencies, and main-process security operations.');
