@@ -51,7 +51,7 @@ function createController(vaultDir) {
       return {
         ok: false,
         type: 'unsupported-legacy-data',
-        message: 'This SafeLedgerData folder uses an older unsupported format. SafeLedger 2.x does not migrate version 1 data.'
+        message: 'This SafeLedgerData folder contains data without the current key envelope. Keep it untouched and use the SafeLedger 1.x importer from a separate SafeLedger 2.x data folder.'
       };
     }
     const created = await keyEnvelope.createEnvelope(password);
@@ -146,16 +146,33 @@ exports.createController = createController;
 exports.ENVELOPE_FILE = ENVELOPE_FILE;
 exports._test = { atomicWriteJson };
 
-function registerIpcHandlers() {
+function registerIpcHandlers(options = {}) {
   const { ipcMain } = require('electron');
   const marker = '__safeLedgerCryptoV3IpcRegistered';
   if (global[marker]) return;
   global[marker] = true;
-  ipcMain.handle('crypto-v3-has-envelope', () => getDefaultController().hasEnvelope());
-  ipcMain.handle('crypto-v3-initialize', (_event, password) => getDefaultController().initializeSession(password));
-  ipcMain.handle('crypto-v3-login', (_event, password) => getDefaultController().loginWithEnvelope(password));
-  ipcMain.handle('crypto-v3-change-password', (_event, oldPassword, newPassword) =>
-    getDefaultController().changePassword(oldPassword, newPassword));
+
+  const assertTrusted = (event) => {
+    const win = typeof options.getMainWindow === 'function' ? options.getMainWindow() : null;
+    if (win && (!event || event.sender !== win.webContents)) throw new Error('Untrusted SafeLedger IPC request.');
+  };
+
+  ipcMain.handle('crypto-v3-has-envelope', (event) => {
+    assertTrusted(event);
+    return getDefaultController().hasEnvelope();
+  });
+  ipcMain.handle('crypto-v3-initialize', (event, password) => {
+    assertTrusted(event);
+    return getDefaultController().initializeSession(password);
+  });
+  ipcMain.handle('crypto-v3-login', (event, password) => {
+    assertTrusted(event);
+    return getDefaultController().loginWithEnvelope(password);
+  });
+  ipcMain.handle('crypto-v3-change-password', (event, oldPassword, newPassword) => {
+    assertTrusted(event);
+    return getDefaultController().changePassword(oldPassword, newPassword);
+  });
 }
 
 exports.registerIpcHandlers = registerIpcHandlers;
