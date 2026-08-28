@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('electron');
+const { ipcRenderer: ipc } = require('./renderer-bridge');
 const lockoutState = require('./lockout-state');
 
 let countdownTimer = null;
