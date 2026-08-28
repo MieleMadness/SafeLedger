@@ -3,10 +3,9 @@
 const { ipcRenderer: ipc } = require('electron');
 const status = require('./status');
 const detailActions = require('./detail-actions');
-const encryption = require('./encryption');
+const passwordSettingsUi = require('./password-settings-ui');
 const securityEnhancements = require('./security-enhancements');
 const settingsSchema = require('./settings-schema');
-
 const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue } = settingsSchema;
 
 function makeSection(title) {
@@ -18,14 +17,12 @@ function makeSection(title) {
   section.appendChild(heading);
   return section;
 }
-
 function addNote(section, text, extraClass = '') {
   const note = document.createElement('p');
   note.className = `settings-section-note settings-section-intro ${extraClass}`.trim();
   note.textContent = text;
   section.appendChild(note);
 }
-
 function configureNumberInput(input) {
   input.type = 'number';
   input.className = 'form-control';
@@ -39,11 +36,8 @@ function configureNumberInput(input) {
   };
   input.addEventListener('input', clampCurrent);
   input.addEventListener('change', clampCurrent);
-  input.addEventListener('blur', () => {
-    input.value = String(clampBruteForceValue(input.value));
-  });
+  input.addEventListener('blur', () => { input.value = String(clampBruteForceValue(input.value)); });
 }
-
 function addNumberField(section, id, labelText, value) {
   const field = document.createElement('div');
   field.className = 'settings-field';
@@ -60,7 +54,6 @@ function addNumberField(section, id, labelText, value) {
   section.appendChild(field);
   return input;
 }
-
 function addModified(section, value) {
   if (!value) return;
   const p = document.createElement('p');
@@ -71,12 +64,10 @@ function addModified(section, value) {
   p.appendChild(document.createTextNode(String(value)));
   section.appendChild(p);
 }
-
 function showSettings(params) {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   detailActions.clear();
-
   const header = document.createElement('h1');
   header.textContent = 'Settings';
   area.appendChild(header);
@@ -88,12 +79,12 @@ function showSettings(params) {
   changePassword.type = 'button';
   changePassword.className = 'btn btn-default';
   changePassword.innerHTML = '<i class="fa fa-lock" aria-hidden="true"></i> Change Password';
-  changePassword.addEventListener('click', () => encryption.showEncrptionDetail());
+  changePassword.addEventListener('click', () => passwordSettingsUi.show());
   passwordSection.appendChild(changePassword);
   area.appendChild(passwordSection);
 
   const backupSection = makeSection('Backup & Recovery');
-  addNote(backupSection, 'Create a complete backup of SafeLedgerData or restore a previous backup. Backups include every profile and local setting, while encrypted vault files remain encrypted.');
+  addNote(backupSection, 'Create a complete backup of SafeLedgerData or restore a previous backup. Backup and restore filesystem access is handled only by the sandbox-exempt main process; encrypted vault files remain encrypted.');
   const backupActions = document.createElement('div');
   backupActions.className = 'settings-section-actions';
   const backup = document.createElement('button');
@@ -112,40 +103,26 @@ function showSettings(params) {
   area.appendChild(backupSection);
 
   const bruteSection = makeSection('Brute Force Protection');
-  addNote(
-    bruteSection,
-    `Configure how SafeLedger responds to repeated failed login attempts. All brute-force values are limited to whole numbers from ${BRUTE_FORCE_MIN} to ${BRUTE_FORCE_MAX}. Self-destruct protection can permanently destroy encrypted vault data after all configured lockouts are exhausted.`,
-    'settings-protection-intro'
-  );
-
+  addNote(bruteSection, `Configure how SafeLedger responds to repeated failed login attempts. All brute-force values are limited to whole numbers from ${BRUTE_FORCE_MIN} to ${BRUTE_FORCE_MAX}. Self-destruct protection can permanently destroy encrypted vault data after all configured lockouts are exhausted.`, 'settings-protection-intro');
   const inputFailAttempts = addNumberField(bruteSection, 'inputFailAttempts', 'Failed login attempts before lockout', params.settings.numFailAttempts);
   const inputLockoutRetry = addNumberField(bruteSection, 'inputLockoutRetry', 'Lockouts allowed before self-destruct', params.settings.numLockoutRetries);
   const inputBetweenLockout = addNumberField(bruteSection, 'inputBetweenLockout', 'Lockout duration in minutes', params.settings.minutesToWaitBetweenLockout);
-
   const save = document.createElement('button');
   save.type = 'button';
   save.className = 'btn btn-default settings-section-save';
   save.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save Brute Force Settings';
   save.addEventListener('click', () => {
     if (params.saving.state) return alert('Please wait for processing to complete');
-
     const numFailAttempts = clampBruteForceValue(inputFailAttempts.value, params.settings.numFailAttempts || 5);
     const numLockoutRetries = clampBruteForceValue(inputLockoutRetry.value, params.settings.numLockoutRetries || 5);
     const minutesToWaitBetweenLockout = clampBruteForceValue(inputBetweenLockout.value, params.settings.minutesToWaitBetweenLockout || 15);
-
     inputFailAttempts.value = String(numFailAttempts);
     inputLockoutRetry.value = String(numLockoutRetries);
     inputBetweenLockout.value = String(minutesToWaitBetweenLockout);
     save.disabled = true;
     params.saving.state = true;
     status.loadStatus();
-    ipc.send('save-settings', {
-      newSettings: Object.assign({}, params.settings, {
-        numFailAttempts,
-        numLockoutRetries,
-        minutesToWaitBetweenLockout
-      })
-    });
+    ipc.send('save-settings', { newSettings: Object.assign({}, params.settings, { numFailAttempts, numLockoutRetries, minutesToWaitBetweenLockout }) });
   });
   bruteSection.appendChild(save);
   addModified(bruteSection, params.settings.modified);

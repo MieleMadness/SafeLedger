@@ -1,18 +1,34 @@
 'use strict';
 
-const { contextBridge } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('safeLedgerRuntime', Object.freeze({
-  isolatedRenderer: true
+function subscribe(channel, callback) {
+  if (typeof callback !== 'function') return;
+  ipcRenderer.on(channel, (_event, payload) => callback(payload));
+}
+
+contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
+  initSystem: () => ipcRenderer.send('init-system'),
+  readVault: (params) => ipcRenderer.send('read', params),
+  readVaultListInit: () => ipcRenderer.send('read-vaultlist-init'),
+  processVaultList: (params) => ipcRenderer.send('process-vault-list', params),
+  deleteVault: (params) => ipcRenderer.send('vault-list-delete', params),
+  processGroup: (params) => ipcRenderer.send('process-group', params),
+  processRecord: (params) => ipcRenderer.send('process-record', params),
+  saveSettings: (params) => ipcRenderer.send('save-settings', params),
+  recordPasswordFailure: () => ipcRenderer.send('record-password-failure'),
+  panicLock: (params) => ipcRenderer.send('panic-lock', params),
+  cryptoHasEnvelope: () => ipcRenderer.invoke('crypto-v3-has-envelope'),
+  cryptoInitialize: (password) => ipcRenderer.invoke('crypto-v3-initialize', password),
+  cryptoLogin: (password) => ipcRenderer.invoke('crypto-v3-login', password),
+  cryptoChangePassword: (oldPassword, newPassword) => ipcRenderer.invoke('crypto-v3-change-password', oldPassword, newPassword),
+  backupAllData: () => ipcRenderer.invoke('security-backup-all'),
+  restoreAllData: () => ipcRenderer.invoke('security-restore-all'),
+  clipboardWrite: (text) => ipcRenderer.invoke('security-clipboard-write', text),
+  clipboardClearIfMatches: (expected) => ipcRenderer.invoke('security-clipboard-clear-if-matches', expected),
+  onResult: (callback) => subscribe('result', callback),
+  onInitSystem: (callback) => subscribe('result-init-system', callback),
+  onSaveSettings: (callback) => subscribe('result-save-settings', callback),
+  onLockoutDestroy: (callback) => subscribe('result-lockout-destroy', callback),
+  onShowSettings: (callback) => subscribe('show-settings', callback)
 }));
-
-// SafeLedger's trusted CommonJS UI still uses local Node helpers for encrypted
-// backup/audit work. Run those modules in this isolated preload world so the
-// HTML page itself receives no Node.js or Electron require() capability.
-require('./startup-ui.js');
-require('./renderer.js');
-require('./lockout-ui-enhancements.js');
-require('./security-enhancements.js');
-require('./crypto-ui-bridge.js');
-require('./login-retry-guard.js');
-require('./search-enhancements.js');
