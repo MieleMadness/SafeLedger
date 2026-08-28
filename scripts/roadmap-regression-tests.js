@@ -37,7 +37,7 @@ const css = read('src/main/css/product-features.css');
 const binderCss = read('src/main/css/recovery-binder.css');
 const activityCss = read('src/main/css/activity-history.css');
 
-assert.strictEqual(pkg.version, '2.0.69');
+assert.strictEqual(pkg.version, '2.0.70');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -69,7 +69,6 @@ assert(!recoveryDrillUi.includes('group.seedPhrase'));
 assert(!recoveryDrillUi.includes('group.password'));
 assert(!recoveryDrillUi.includes('group.pin'));
 assert(!recoveryDrillUi.includes('group.customFields'));
-
 assert(securityMain.includes("ipc.handle('recovery-binder-model'"));
 assert(securityMain.includes('path.basename(requested) !== requested'));
 assert(securityMain.includes("find((entry) => String(entry && entry.file || '') === requested)"));
@@ -88,7 +87,6 @@ assert(recoveryBinderUi.includes('td.textContent = String(field.value)'));
 assert(!recoveryBinderUi.includes('document.write'));
 assert(recoveryBinderUi.includes('Nothing in this list is included unless you check it.'));
 assert(recoveryBinderUi.includes("link.href = 'css/recovery-binder.css'"));
-
 assert(securityMain.includes("ipc.handle('activity-history'"));
 assert(securityMain.includes("const activityHistory = require('./activity-history')"));
 assert(securityMain.includes('activityHistory.compactLog(raw)'));
@@ -112,7 +110,6 @@ assert(main.includes("securityMain.audit(getDataRoot(), 'settings-updated')"));
 assert(group.includes("'recovery-verified'"));
 assert(group.includes("'recovery-drill-completed'"));
 assert(activityCss.includes('.activity-row'));
-
 assert(index.includes('./css/app-theme.css'));
 assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/global-search.css'));
 assert(entry.includes("require('./app-appearance.js')"));
@@ -140,7 +137,6 @@ assert(themeCss.includes('overflow-x: auto'));
 assert(emptyState.includes('renderColumn'));
 assert(profile.includes("title: 'No profiles yet'"));
 assert(!profile.includes("area.textContent = 'No items'"));
-
 assert(securityMain.includes("const globalSearch = require('./global-search')"));
 assert(securityMain.includes("ipc.handle('global-search'"));
 assert(securityMain.includes('buildGlobalSearch'));
@@ -173,43 +169,19 @@ assert(!group.includes("groupArea.textContent = 'No items'"));
 assert(!record.includes("recordArea.innerHTML = 'No items'"));
 assert(group.includes("title: 'Cancel edit wallet'"));
 assert(record.includes("title: 'Cancel edit coin'"));
-
 assert(css.includes('.custom-field-edit-row'));
 assert(css.includes('.recovery-drill-step'));
 assert(binderCss.includes('.recovery-binder-option'));
-
 for (const relative of [
-  'src/main/dashboard-summary.js',
-  'src/main/dashboard-ui.js',
-  'src/main/activity-history.js',
-  'src/main/activity-history-ui.js',
-  'src/main/global-search.js',
-  'src/main/global-search-ui.js',
-  'src/main/main.js',
-  'src/main/security-main.js',
-  'src/main/preload.js',
-  'src/main/renderer-entry.js',
-  'src/main/renderer.js',
-  'src/main/profile.js',
-  'src/main/settings-ui.js',
-  'src/main/settings-schema.js',
-  'src/main/app-appearance.js',
-  'src/main/empty-state-ui.js',
-  'src/main/custom-fields.js',
-  'src/main/custom-fields-ui.js',
-  'src/main/recovery-drill.js',
-  'src/main/recovery-drill-ui.js',
-  'src/main/recovery-binder.js',
-  'src/main/recovery-binder-ui.js',
-  'src/main/group.js',
-  'src/main/record.js',
-  'scripts/dashboard-summary-tests.js',
-  'scripts/custom-fields-tests.js',
-  'scripts/recovery-drill-tests.js',
-  'scripts/recovery-binder-tests.js',
-  'scripts/activity-history-tests.js',
-  'scripts/appearance-tests.js',
-  'scripts/global-search-tests.js',
-  'scripts/ui-polish-tests.js'
+  'src/main/dashboard-summary.js', 'src/main/dashboard-ui.js', 'src/main/activity-history.js',
+  'src/main/activity-history-ui.js', 'src/main/global-search.js', 'src/main/global-search-ui.js',
+  'src/main/main.js', 'src/main/security-main.js', 'src/main/preload.js', 'src/main/renderer-entry.js',
+  'src/main/renderer.js', 'src/main/profile.js', 'src/main/settings-ui.js', 'src/main/settings-schema.js',
+  'src/main/app-appearance.js', 'src/main/empty-state-ui.js', 'src/main/custom-fields.js',
+  'src/main/custom-fields-ui.js', 'src/main/recovery-drill.js', 'src/main/recovery-drill-ui.js',
+  'src/main/recovery-binder.js', 'src/main/recovery-binder-ui.js', 'src/main/group.js', 'src/main/record.js',
+  'scripts/dashboard-summary-tests.js', 'scripts/custom-fields-tests.js', 'scripts/recovery-drill-tests.js',
+  'scripts/recovery-binder-tests.js', 'scripts/activity-history-tests.js', 'scripts/appearance-tests.js',
+  'scripts/global-search-tests.js', 'scripts/ui-polish-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.69 preserves recovery/security/search features and improves action-dock visibility plus Wallet/Coin edit cancellation.');
+console.log('PASS roadmap 2.0.70 preserves recovery/security/search features and improves action-dock visibility plus Wallet/Coin edit cancellation.');

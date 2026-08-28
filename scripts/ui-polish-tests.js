@@ -32,12 +32,12 @@ function contrast(a, b) {
   return (high + 0.05) / (low + 0.05);
 }
 
-assert.strictEqual(pkg.version, '2.0.69');
+assert.strictEqual(pkg.version, '2.0.70');
 assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/global-search.css'), 'theme stylesheet must load last');
 
 assert(theme.includes('--sl-action-size: 42px'));
 assert(theme.includes('.panic-lock-inline {') || theme.includes('.panic-lock-inline,'));
-assert(theme.includes('.detail-action-button,\n.global-search-inline,\n.dashboard-inline,\n.activity-inline,\n.panic-lock-inline'));
+assert(/\.detail-action-button,\s*\.global-search-inline,\s*\.dashboard-inline,\s*\.activity-inline,\s*\.panic-lock-inline/.test(theme));
 assert(theme.includes('width: var(--sl-action-size) !important'));
 assert(theme.includes('height: var(--sl-action-size) !important'));
 assert(!theme.includes('width: 54px !important'));
