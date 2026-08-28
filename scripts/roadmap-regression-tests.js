@@ -37,7 +37,7 @@ const css = read('src/main/css/product-features.css');
 const binderCss = read('src/main/css/recovery-binder.css');
 const activityCss = read('src/main/css/activity-history.css');
 
-assert.strictEqual(pkg.version, '2.0.68');
+assert.strictEqual(pkg.version, '2.0.69');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -133,6 +133,10 @@ assert(themeCss.includes('container-type: inline-size'));
 assert(themeCss.includes('@container (max-width: 560px)'));
 assert(themeCss.includes('--sl-muted: #b9c6d8'));
 assert(themeCss.includes('.workspace-empty-card'));
+assert(themeCss.includes('.panic-lock-inline'));
+assert(!themeCss.includes('width: 54px !important'));
+assert(themeCss.includes('flex: 1 1 0'));
+assert(themeCss.includes('overflow-x: auto'));
 assert(emptyState.includes('renderColumn'));
 assert(profile.includes("title: 'No profiles yet'"));
 assert(!profile.includes("area.textContent = 'No items'"));
@@ -167,6 +171,8 @@ assert(group.includes("title: 'No wallets yet'"));
 assert(record.includes("title: 'No assets yet'"));
 assert(!group.includes("groupArea.textContent = 'No items'"));
 assert(!record.includes("recordArea.innerHTML = 'No items'"));
+assert(group.includes("title: 'Cancel edit wallet'"));
+assert(record.includes("title: 'Cancel edit coin'"));
 
 assert(css.includes('.custom-field-edit-row'));
 assert(css.includes('.recovery-drill-step'));
@@ -206,4 +212,4 @@ for (const relative of [
   'scripts/global-search-tests.js',
   'scripts/ui-polish-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.68 preserves recovery/security/search features and polishes responsive spacing, aligned action controls, and theme readability.');
+console.log('PASS roadmap 2.0.69 preserves recovery/security/search features and improves action-dock visibility plus Wallet/Coin edit cancellation.');

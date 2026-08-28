@@ -338,9 +338,17 @@ const createEditGroup = (params) => {
     e.preventDefault();
     saveGroup(null);
   });
-  detailActions.set([
-    { icon: 'fa-save', title: 'Save wallet', className: 'detail-action-save', onClick: (_event, button) => saveGroup(button) }
-  ]);
+  const actions = [];
+  if (params.group) {
+    actions.push({
+      icon: 'fa-times',
+      title: 'Cancel edit wallet',
+      className: 'detail-action-cancel',
+      onClick: () => renderGroupDetail(params)
+    });
+  }
+  actions.push({ icon: 'fa-save', title: 'Save wallet', className: 'detail-action-save', onClick: (_event, button) => saveGroup(button) });
+  detailActions.set(actions);
 };
 
 exports.showGroupDetail = (params) => renderGroupDetail(params);

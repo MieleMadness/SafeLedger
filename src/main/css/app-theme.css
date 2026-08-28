@@ -1,4 +1,4 @@
-/* SafeLedger 2.0.68 visual system. Loaded last so every feature inherits one theme contract. */
+/* SafeLedger 2.0.69 visual system. Loaded last so every feature inherits one theme contract. */
 :root {
   color-scheme: light;
   --sl-bg: #eef2f7;
@@ -102,7 +102,7 @@ html, body {
 }
 .form-control::placeholder { color: var(--sl-muted); opacity: .82; }
 
-.btn-default, .detail-action-button, .dashboard-inline, .activity-inline, .global-search-inline {
+.btn-default, .detail-action-button, .dashboard-inline, .activity-inline, .global-search-inline, .panic-lock-inline {
   background: var(--sl-surface) !important;
   color: var(--sl-text) !important;
   border-color: var(--sl-border-strong) !important;
@@ -112,7 +112,8 @@ html, body {
 .detail-action-button:hover, .detail-action-button:focus,
 .dashboard-inline:hover, .dashboard-inline:focus,
 .activity-inline:hover, .activity-inline:focus,
-.global-search-inline:hover, .global-search-inline:focus {
+.global-search-inline:hover, .global-search-inline:focus,
+.panic-lock-inline:hover, .panic-lock-inline:focus {
   background: var(--sl-primary-soft) !important;
   border-color: var(--sl-primary) !important;
   color: var(--sl-primary-strong) !important;
@@ -213,7 +214,7 @@ html[data-theme="dark"] .search-clear:focus { background: rgba(255,255,255,.14);
 .password-strength { background: var(--sl-border) !important; }
 .public-address-placeholder { color: var(--sl-muted) !important; }
 
-/* Bottom action dock: one baseline, one sizing rhythm. */
+/* Bottom action dock: utility controls stay visible while detail actions flex inside available space. */
 .app-button-row { min-height: var(--sl-dock-height) !important; }
 .app-button-row > [class*="col-"] {
   min-height: var(--sl-dock-height);
@@ -235,24 +236,34 @@ html[data-theme="dark"] .search-clear:focus { background: rgba(255,255,255,.14);
   background: var(--sl-bg) !important;
   border-top: 1px solid var(--sl-border);
   align-items: flex-end !important;
-  gap: 8px !important;
-  padding: 0 16px var(--sl-dock-pad) 15px !important;
+  gap: 4px !important;
+  padding: 0 6px var(--sl-dock-pad) 6px !important;
+  overflow: hidden;
 }
 .detail-action-area {
-  min-height: 54px !important;
+  min-height: var(--sl-action-size) !important;
+  min-width: 0;
+  flex: 1 1 0;
   display: flex;
   align-items: flex-end !important;
-  gap: 8px !important;
+  gap: 4px !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
+.detail-action-area::-webkit-scrollbar { display: none; }
 .detail-action-button,
 .global-search-inline,
 .dashboard-inline,
-.activity-inline {
+.activity-inline,
+.panic-lock-inline {
   width: var(--sl-action-size) !important;
   min-width: var(--sl-action-size) !important;
   height: var(--sl-action-size) !important;
+  min-height: var(--sl-action-size) !important;
   margin: 0 !important;
   padding: 0 !important;
+  flex: 0 0 var(--sl-action-size);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -260,12 +271,14 @@ html[data-theme="dark"] .search-clear:focus { background: rgba(255,255,255,.14);
   line-height: 1;
 }
 .panic-lock-inline {
-  width: 54px !important;
-  height: 54px !important;
-  margin: 0 0 0 auto !important;
-  background: var(--sl-surface) !important;
-  border-color: var(--sl-primary) !important;
+  border-width: 1px !important;
   box-shadow: var(--sl-shadow-soft);
+}
+.panic-lock-inline img {
+  width: 100%;
+  height: 100%;
+  padding: 4px;
+  object-fit: contain;
 }
 
 /* Custom Fields respond to their actual panel width, not the window width. */
@@ -375,5 +388,6 @@ html[data-theme="dark"] .search-clear:focus { background: rgba(255,255,255,.14);
   .workspace-empty-card { margin-top: 24px; padding: 24px 20px; }
   .appearance-options { grid-template-columns: 1fr; }
   .app-button-row > [class*="col-"] { padding-left: 6px; padding-right: 6px; }
-  .emergency-lock-cell { padding-left: 10px !important; padding-right: 10px !important; gap: 6px !important; }
+  .emergency-lock-cell { padding-left: 4px !important; padding-right: 4px !important; gap: 3px !important; }
+  .detail-action-area { gap: 3px !important; }
 }

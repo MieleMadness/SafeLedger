@@ -9,6 +9,8 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const index = read('src/main/index.html');
 const theme = read('src/main/css/app-theme.css');
+const group = read('src/main/group.js');
+const record = read('src/main/record.js');
 
 function cssVar(block, name) {
   const match = block.match(new RegExp(`${name}\\s*:\\s*(#[0-9a-fA-F]{6})`));
@@ -30,18 +32,27 @@ function contrast(a, b) {
   return (high + 0.05) / (low + 0.05);
 }
 
-assert.strictEqual(pkg.version, '2.0.68');
+assert.strictEqual(pkg.version, '2.0.69');
 assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/global-search.css'), 'theme stylesheet must load last');
 
 assert(theme.includes('--sl-action-size: 42px'));
-assert(theme.includes('.app-button-row > [class*="col-"]'));
-assert(theme.includes('align-items: flex-end'));
-assert(theme.includes('.detail-action-button,'));
-assert(theme.includes('.global-search-inline,'));
-assert(theme.includes('.dashboard-inline,'));
-assert(theme.includes('.activity-inline'));
+assert(theme.includes('.panic-lock-inline {') || theme.includes('.panic-lock-inline,'));
+assert(theme.includes('.detail-action-button,\n.global-search-inline,\n.dashboard-inline,\n.activity-inline,\n.panic-lock-inline'));
+assert(theme.includes('width: var(--sl-action-size) !important'));
 assert(theme.includes('height: var(--sl-action-size) !important'));
-assert(theme.includes('margin: 0 !important'));
+assert(!theme.includes('width: 54px !important'));
+assert(!theme.includes('height: 54px !important'));
+assert(theme.includes('.detail-action-area {'));
+assert(theme.includes('flex: 1 1 0'));
+assert(theme.includes('overflow-x: auto'));
+assert(theme.includes('scrollbar-width: none'));
+assert(theme.includes('.emergency-lock-cell {'));
+assert(theme.includes('overflow: hidden'));
+
+assert(group.includes("title: 'Cancel edit wallet'"));
+assert(group.includes("onClick: () => renderGroupDetail(params)"));
+assert(record.includes("title: 'Cancel edit coin'"));
+assert(record.includes("onClick: () => renderRecordDetail(params)"));
 
 assert(theme.includes('.custom-fields-editor'));
 assert(theme.includes('container-type: inline-size'));
@@ -62,4 +73,4 @@ assert(theme.includes('html[data-theme="dark"] .search-field-wrap .form-control'
 assert(theme.includes('.wallet-list-category { color: rgba(255,255,255,.84) !important;'));
 assert(theme.includes('.column-empty-text { max-width: 180px; font-size: 12px;'));
 
-console.log('PASS UI polish keeps bottom actions aligned, custom fields panel-responsive, and dark-mode text at readable contrast levels.');
+console.log('PASS UI polish keeps Emergency Lock visible and action-sized, adds Wallet/Coin edit cancel actions, preserves responsive custom fields, and maintains readable dark-mode contrast.');

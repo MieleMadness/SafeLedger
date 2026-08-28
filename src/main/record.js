@@ -239,9 +239,17 @@ const createEditRecord = (params) => {
     e.preventDefault();
     saveRecord(null);
   });
-  detailActions.set([
-    { icon: 'fa-save', title: 'Save coin', className: 'detail-action-save', onClick: (_event, button) => saveRecord(button) }
-  ]);
+  const actions = [];
+  if (params.record) {
+    actions.push({
+      icon: 'fa-times',
+      title: 'Cancel edit coin',
+      className: 'detail-action-cancel',
+      onClick: () => renderRecordDetail(params)
+    });
+  }
+  actions.push({ icon: 'fa-save', title: 'Save coin', className: 'detail-action-save', onClick: (_event, button) => saveRecord(button) });
+  detailActions.set(actions);
 };
 
 function persistRecordUpdate(params, updates, button) {
