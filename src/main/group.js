@@ -74,7 +74,7 @@ function appendDetailLine(area, label, value, formatter) {
   area.appendChild(p);
 }
 
-function persistWalletUpdate(params, updates, button) {
+function persistWalletUpdate(params, updates, button, activityEvent) {
   if (params.saving.state) return alert('Please wait for processing to complete');
   Object.assign(params.group, updates || {});
   params.group.modified = Date();
@@ -82,7 +82,7 @@ function persistWalletUpdate(params, updates, button) {
   params.saving.state = true;
   if (button) button.disabled = true;
   statusMgr.loadStatus();
-  ipc.send('process-group', { type: 'group-modify', vaultData: params.vaultData });
+  ipc.send('process-group', { type: 'group-modify', vaultData: params.vaultData, activityEvent });
 }
 
 function renderReadinessCard(area, params) {
@@ -134,7 +134,7 @@ function renderReadinessCard(area, params) {
   verify.className = 'btn btn-default btn-sm';
   verify.innerHTML = '<i class="fa fa-check-circle"></i> Verify now';
   verify.addEventListener('click', () => {
-    persistWalletUpdate(params, { lastVerified: new Date().toISOString() }, verify);
+    persistWalletUpdate(params, { lastVerified: new Date().toISOString() }, verify, 'recovery-verified');
   });
   actions.appendChild(verify);
 
@@ -148,7 +148,7 @@ function renderReadinessCard(area, params) {
       group: params.group,
       walletName: displayWalletName(params.group.name) || 'Wallet',
       onCancel: () => renderGroupDetail(params),
-      onComplete: (patch, button) => persistWalletUpdate(params, patch, button)
+      onComplete: (patch, button) => persistWalletUpdate(params, patch, button, 'recovery-drill-completed')
     });
   });
   actions.appendChild(drill);

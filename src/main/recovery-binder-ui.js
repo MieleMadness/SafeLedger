@@ -153,9 +153,9 @@ function printBinder(binder) {
   doc.body.appendChild(actions);
 }
 
-async function fetchBinder(profile, options) {
+async function fetchBinder(profile, options, recordActivity = false) {
   if (!window.safeLedgerApi || typeof window.safeLedgerApi.getRecoveryBinder !== 'function') throw new Error('SafeLedger Recovery Binder bridge is unavailable.');
-  const result = await window.safeLedgerApi.getRecoveryBinder(profile.file, options);
+  const result = await window.safeLedgerApi.getRecoveryBinder(profile.file, options, recordActivity === true);
   if (!result || result.ok !== true || !result.binder) throw new Error(result && result.message ? result.message : 'Unable to prepare the Recovery Binder.');
   return result.binder;
 }
@@ -193,7 +193,7 @@ async function show(params = {}) {
   area.appendChild(summary);
 
   try {
-    const safeBinder = await fetchBinder(params.profile, recoveryBinder.DEFAULT_OPTIONS);
+    const safeBinder = await fetchBinder(params.profile, recoveryBinder.DEFAULT_OPTIONS, false);
     summary.innerHTML = '';
     appendText(summary, 'strong', '', `${safeBinder.walletCount} wallet${safeBinder.walletCount === 1 ? '' : 's'}`);
     appendText(summary, 'span', '', `${safeBinder.assetCount} asset${safeBinder.assetCount === 1 ? '' : 's'}`);
@@ -228,7 +228,7 @@ async function show(params = {}) {
     }
     if (button) button.disabled = true;
     try {
-      const binder = await fetchBinder(params.profile, options);
+      const binder = await fetchBinder(params.profile, options, true);
       printBinder(binder);
     } catch (err) {
       alert(err && err.message ? err.message : 'Unable to prepare the Recovery Binder.');

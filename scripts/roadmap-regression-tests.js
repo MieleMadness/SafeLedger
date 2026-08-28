@@ -6,10 +6,13 @@ const { execFileSync } = require('child_process');
 const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const main = read('src/main/main.js');
 const securityMain = read('src/main/security-main.js');
 const preload = read('src/main/preload.js');
 const entry = read('src/main/renderer-entry.js');
 const dashboardUi = read('src/main/dashboard-ui.js');
+const activityHistory = read('src/main/activity-history.js');
+const activityUi = read('src/main/activity-history-ui.js');
 const index = read('src/main/index.html');
 const profile = read('src/main/profile.js');
 const group = read('src/main/group.js');
@@ -22,8 +25,9 @@ const recoveryBinder = read('src/main/recovery-binder.js');
 const recoveryBinderUi = read('src/main/recovery-binder-ui.js');
 const css = read('src/main/css/product-features.css');
 const binderCss = read('src/main/css/recovery-binder.css');
+const activityCss = read('src/main/css/activity-history.css');
 
-assert.strictEqual(pkg.version, '2.0.64');
+assert.strictEqual(pkg.version, '2.0.65');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -59,7 +63,7 @@ assert(!recoveryDrillUi.includes('group.customFields'));
 assert(securityMain.includes("ipc.handle('recovery-binder-model'"));
 assert(securityMain.includes('path.basename(requested) !== requested'));
 assert(securityMain.includes("find((entry) => String(entry && entry.file || '') === requested)"));
-assert(preload.includes("getRecoveryBinder: (file, options) => ipcRenderer.invoke('recovery-binder-model', { file, options })"));
+assert(preload.includes('getRecoveryBinder: (file, options, recordActivity = false)'));
 assert(profile.includes("const recoveryBinderUi = require('./recovery-binder-ui')"));
 assert(profile.includes("title: 'Recovery binder'"));
 assert(profile.includes('recoveryBinderUi.show({'));
@@ -68,11 +72,36 @@ assert(recoveryBinder.includes('includePasswordsPins: false'));
 assert(recoveryBinder.includes('includeSensitiveCustomFields: false'));
 assert(recoveryBinder.includes('if (options.includeSeedPrivateKeys)'));
 assert(recoveryBinderUi.includes("checkbox.type = 'checkbox'"));
-assert(recoveryBinderUi.includes("window.safeLedgerApi.getRecoveryBinder(profile.file, options)"));
+assert(recoveryBinderUi.includes('window.safeLedgerApi.getRecoveryBinder(profile.file, options, recordActivity === true)'));
+assert(recoveryBinderUi.includes('fetchBinder(params.profile, options, true)'));
 assert(recoveryBinderUi.includes('td.textContent = String(field.value)'));
 assert(!recoveryBinderUi.includes('document.write'));
 assert(recoveryBinderUi.includes('Nothing in this list is included unless you check it.'));
 assert(recoveryBinderUi.includes("link.href = 'css/recovery-binder.css'"));
+
+assert(securityMain.includes("ipc.handle('activity-history'"));
+assert(securityMain.includes("const activityHistory = require('./activity-history')"));
+assert(securityMain.includes('activityHistory.compactLog(raw)'));
+assert(securityMain.includes('readActivityHistory'));
+assert(preload.includes("getActivityHistory: (limit) => ipcRenderer.invoke('activity-history', limit)"));
+assert(entry.includes("require('./activity-history-ui.js')"));
+assert(index.includes('id="activityButton"'));
+assert(index.includes('./css/activity-history.css'));
+assert(activityHistory.includes('MAX_STORED_ENTRIES = 500'));
+assert(activityHistory.includes("'recovery-drill-completed'"));
+assert(activityHistory.includes("'wallet-updated'"));
+assert(activityHistory.includes("return { timestamp: date.toISOString(), event: parts[1] }"));
+assert(activityUi.includes("'Activity History'"));
+assert(activityUi.includes('History stores only a timestamp and generic event type.'));
+assert(activityUi.includes("window.safeLedgerApi.getActivityHistory(activityHistory.DEFAULT_READ_LIMIT)"));
+assert(main.includes("securityMain.audit(getDataRoot(), 'vault-unlocked')"));
+assert(main.includes("securityMain.audit(getDataRoot(), 'profile-created')"));
+assert(main.includes("securityMain.audit(getDataRoot(), groupActivityEvent(params))"));
+assert(main.includes("securityMain.audit(getDataRoot(), recordActivityEvent(params))"));
+assert(main.includes("securityMain.audit(getDataRoot(), 'settings-updated')"));
+assert(group.includes("'recovery-verified'"));
+assert(group.includes("'recovery-drill-completed'"));
+assert(activityCss.includes('.activity-row'));
 assert(css.includes('.custom-field-edit-row'));
 assert(css.includes('.recovery-drill-step'));
 assert(binderCss.includes('.recovery-binder-option'));
@@ -80,6 +109,9 @@ assert(binderCss.includes('.recovery-binder-option'));
 for (const relative of [
   'src/main/dashboard-summary.js',
   'src/main/dashboard-ui.js',
+  'src/main/activity-history.js',
+  'src/main/activity-history-ui.js',
+  'src/main/main.js',
   'src/main/security-main.js',
   'src/main/preload.js',
   'src/main/renderer-entry.js',
@@ -95,6 +127,7 @@ for (const relative of [
   'scripts/dashboard-summary-tests.js',
   'scripts/custom-fields-tests.js',
   'scripts/recovery-drill-tests.js',
-  'scripts/recovery-binder-tests.js'
+  'scripts/recovery-binder-tests.js',
+  'scripts/activity-history-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.64 preserves dashboard/custom fields/recovery drill and adds a safe-default Profile Recovery Binder with main-process model generation.');
+console.log('PASS roadmap 2.0.65 preserves recovery features and adds privacy-preserving local Activity History with bounded generic-event retention.');

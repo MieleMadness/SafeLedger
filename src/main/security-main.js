@@ -2,10 +2,11 @@
 
 const fs = require('fs');
 const path = require('path');
-const { atomicWriteJson } = require('./atomic-file');
+const { atomicWriteFile, atomicWriteJson } = require('./atomic-file');
 const robustVault = require('./robust-vault');
 const dashboardSummary = require('./dashboard-summary');
 const recoveryBinder = require('./recovery-binder');
+const activityHistory = require('./activity-history');
 
 const BACKUP_FORMAT = 'safeledger-complete-data-backup';
 const BACKUP_VERSION = 2;
@@ -15,25 +16,31 @@ function timestampToken() {
 }
 
 function sanitizeAuditEvent(value) {
-  const eventName = String(value || '').trim();
-  const allowed = new Set([
-    'app-opened',
-    'emergency-lock',
-    'inactivity-auto-lock',
-    'post-restore-lock',
-    'complete-data-backup-exported',
-    'complete-data-backup-restored'
-  ]);
-  return allowed.has(eventName) ? eventName : 'security-event';
+  return activityHistory.normalizeEvent(value);
 }
 
 async function audit(dataRoot, eventName) {
   try {
     const settingsDir = path.join(dataRoot, 'settings');
     await fs.promises.mkdir(settingsDir, { recursive: true });
-    const line = `${new Date().toISOString()}\t${sanitizeAuditEvent(eventName)}\n`;
-    await fs.promises.appendFile(path.join(settingsDir, 'audit.log'), line, 'utf8');
+    const auditPath = path.join(settingsDir, 'audit.log');
+    await fs.promises.appendFile(auditPath, activityHistory.serialize(new Date(), eventName), { encoding: 'utf8', mode: 0o600 });
+    await fs.promises.chmod(auditPath, 0o600).catch(() => {});
+    const raw = await fs.promises.readFile(auditPath, 'utf8');
+    const compacted = activityHistory.compactLog(raw);
+    if (compacted !== raw) await atomicWriteFile(auditPath, compacted, { mode: 0o600 });
   } catch (_) {}
+}
+
+async function readActivityHistory(dataRoot, limit) {
+  const auditPath = path.join(dataRoot, 'settings', 'audit.log');
+  try {
+    const raw = await fs.promises.readFile(auditPath, 'utf8');
+    return activityHistory.parseLog(raw, limit);
+  } catch (err) {
+    if (err && err.code === 'ENOENT') return [];
+    throw err;
+  }
 }
 
 async function collectFiles(root, current = root, files = {}) {
@@ -171,11 +178,24 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     }
   });
 
+  ipc.handle('activity-history', async (event, limit) => {
+    assertTrustedEvent(event, getMainWindow);
+    assertUnlocked(cryptoSession);
+    try {
+      const entries = await readActivityHistory(getDataRoot(), limit);
+      return { ok: true, entries, maxStored: activityHistory.MAX_STORED_ENTRIES };
+    } catch (err) {
+      return { ok: false, message: err && err.message ? err.message : 'Unable to read activity history.' };
+    }
+  });
+
   ipc.handle('recovery-binder-model', async (event, request = {}) => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
     try {
-      const binder = await buildRecoveryBinder(getDataRoot(), cryptoSession, request.file, request.options);
+      const dataRoot = getDataRoot();
+      const binder = await buildRecoveryBinder(dataRoot, cryptoSession, request.file, request.options);
+      if (request.recordActivity === true) await audit(dataRoot, 'recovery-binder-prepared');
       return { ok: true, binder };
     } catch (err) {
       return { ok: false, message: err && err.message ? err.message : 'Unable to prepare the Recovery Binder.' };
@@ -251,6 +271,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
 
 module.exports = {
   audit,
+  readActivityHistory,
   registerIpcHandlers,
   _test: {
     BACKUP_FORMAT,
@@ -262,6 +283,7 @@ module.exports = {
     sanitizeAuditEvent,
     writeBackupFile,
     buildDashboard,
-    buildRecoveryBinder
+    buildRecoveryBinder,
+    readActivityHistory
   }
 };

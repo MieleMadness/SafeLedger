@@ -99,6 +99,7 @@ async function setSelfDestructProtection(enabled) {
   currentSettings = Object.assign({}, existing, { scrubContentAfterRetries: enabled });
   const saved = await settingsManager.saveSettings(settingsDir, currentSettings);
   currentSettings = saved.settings;
+  await securityMain.audit(getDataRoot(), 'self-destruct-protection-changed');
   buildMenu();
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('result-save-settings', {
@@ -133,6 +134,23 @@ function sendLocked() {
   sendResult({ status: 'ERROR', statusMsg: 'SafeLedger is locked. Please log in again.', type: 'session-locked' });
 }
 
+function groupActivityEvent(params = {}) {
+  if (params.activityEvent === 'recovery-verified' || params.activityEvent === 'recovery-drill-completed') return params.activityEvent;
+  return ({
+    'group-create': 'wallet-created',
+    'group-modify': 'wallet-updated',
+    'group-delete': 'wallet-deleted'
+  })[params.type] || 'wallet-updated';
+}
+
+function recordActivityEvent(params = {}) {
+  return ({
+    create: 'asset-created',
+    modify: 'asset-updated',
+    delete: 'asset-deleted'
+  })[params.action] || 'asset-updated';
+}
+
 async function ensureCurrentSettings() {
   if (currentSettings) return currentSettings;
   const loaded = await settingsManager.loadSettings(settingsDir);
@@ -153,6 +171,7 @@ async function enforceRetryExhaustion() {
       settings.lockLoginTime = 0;
       currentSettings = settings;
       await settingsManager.saveSettings(settingsDir, settings);
+      await securityMain.audit(getDataRoot(), 'self-destruct-triggered');
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('result-lockout-destroy', {
           status: 'ERROR',
@@ -315,6 +334,7 @@ ipc.on('read-vaultlist-init', async () => {
     currentSettings = settings;
     const saved = await settingsManager.saveSettings(settingsDir, settings);
     currentSettings = saved.settings;
+    await securityMain.audit(getDataRoot(), 'vault-unlocked');
     sendResult({
       status: 'SUCCESS',
       statusMsg: 'Loaded Successfully',
@@ -349,12 +369,15 @@ ipc.on('process-vault-list', (_event, params) => {
     params.vaultList.vaultSelected = params.vaultList.vaults.indexOf(params.vault);
   }
   vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), key)
-    .then((val) => {
+    .then(async (val) => {
       if (params.action === 'create' && val === 'SUCCESS') {
-        return initializeModernVault(idInfo.fileName, key).then((data) => sendResult({
+        const data = await initializeModernVault(idInfo.fileName, key);
+        await securityMain.audit(getDataRoot(), 'profile-created');
+        return sendResult({
           status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: params.vaultList, vaultData: data
-        }));
+        });
       }
+      await securityMain.audit(getDataRoot(), 'profile-updated');
       sendResult({ type: 'vault-modify', vaultList: params.vaultList, status: 'SUCCESS', statusMsg: 'Save successful' });
     })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
@@ -365,7 +388,10 @@ ipc.on('vault-list-delete', (_event, params) => {
   if (!key) return sendLocked();
   vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), key)
     .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
-    .then(() => sendResult({ type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' }))
+    .then(async () => {
+      await securityMain.audit(getDataRoot(), 'profile-deleted');
+      sendResult({ type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' });
+    })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Delete failed' }));
 });
 
@@ -373,7 +399,10 @@ ipc.on('process-group', (_event, params) => {
   const key = getSessionKey();
   if (!key) return sendLocked();
   vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), key)
-    .then(() => sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: params.vaultData }))
+    .then(async () => {
+      await securityMain.audit(getDataRoot(), groupActivityEvent(params));
+      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: params.vaultData });
+    })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
@@ -381,7 +410,10 @@ ipc.on('process-record', (_event, params) => {
   const key = getSessionKey();
   if (!key) return sendLocked();
   vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), key)
-    .then(() => sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: params.vaultData }))
+    .then(async () => {
+      await securityMain.audit(getDataRoot(), recordActivityEvent(params));
+      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: params.vaultData });
+    })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
@@ -398,8 +430,9 @@ ipc.on('init-system', () => {
 
 ipc.on('save-settings', (_event, params) => {
   settingsManager.saveSettings(settingsDir, params.newSettings)
-    .then((val) => {
+    .then(async (val) => {
       currentSettings = val.settings;
+      await securityMain.audit(getDataRoot(), 'settings-updated');
       buildMenu();
       mainWindow.webContents.send('result-save-settings', { status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings });
     })
