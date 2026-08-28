@@ -37,7 +37,7 @@ const css = read('src/main/css/product-features.css');
 const binderCss = read('src/main/css/recovery-binder.css');
 const activityCss = read('src/main/css/activity-history.css');
 
-assert.strictEqual(pkg.version, '2.0.70');
+assert.strictEqual(pkg.version, '2.0.71');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -126,12 +126,14 @@ assert(appearance.includes("document.documentElement.dataset.theme = theme"));
 assert(themeCss.includes('html[data-theme="dark"]'));
 assert(themeCss.includes('--sl-surface'));
 assert(themeCss.includes('--sl-action-size: 42px'));
+assert(themeCss.includes('--sl-top-action-size: 34px'));
 assert(themeCss.includes('container-type: inline-size'));
 assert(themeCss.includes('@container (max-width: 560px)'));
 assert(themeCss.includes('--sl-muted: #b9c6d8'));
 assert(themeCss.includes('.workspace-empty-card'));
 assert(themeCss.includes('.panic-lock-inline'));
-assert(!themeCss.includes('width: 54px !important'));
+assert(themeCss.includes('.top-utility-cell'));
+assert(themeCss.includes('.top-utility-actions'));
 assert(themeCss.includes('flex: 1 1 0'));
 assert(themeCss.includes('overflow-x: auto'));
 assert(emptyState.includes('renderColumn'));
@@ -142,6 +144,10 @@ assert(securityMain.includes("ipc.handle('global-search'"));
 assert(securityMain.includes('buildGlobalSearch'));
 assert(preload.includes("globalSearch: (query) => ipcRenderer.invoke('global-search', query)"));
 assert(index.includes('id="globalSearchButton"'));
+assert(index.indexOf('id="globalSearchButton"') < index.indexOf('id="mainArea"'));
+assert(index.indexOf('id="dashboardButton"') < index.indexOf('id="mainArea"'));
+assert(index.indexOf('id="activityButton"') < index.indexOf('id="mainArea"'));
+assert(index.indexOf('id="panicLockButton"') > index.indexOf('id="buttonArea"'));
 assert(index.includes('./css/global-search.css'));
 assert(renderer.includes("const globalSearchUi = require('./global-search-ui')"));
 assert(renderer.includes('pendingGlobalTarget'));
@@ -184,4 +190,4 @@ for (const relative of [
   'scripts/recovery-binder-tests.js', 'scripts/activity-history-tests.js', 'scripts/appearance-tests.js',
   'scripts/global-search-tests.js', 'scripts/ui-polish-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.70 preserves recovery/security/search features and improves action-dock visibility plus Wallet/Coin edit cancellation.');
+console.log('PASS roadmap 2.0.71 preserves recovery/security/search features and moves Search/Home/History into the top utility bar while Emergency Lock remains bottom-right.');

@@ -32,22 +32,36 @@ function contrast(a, b) {
   return (high + 0.05) / (low + 0.05);
 }
 
-assert.strictEqual(pkg.version, '2.0.70');
+assert.strictEqual(pkg.version, '2.0.71');
 assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/global-search.css'), 'theme stylesheet must load last');
 
+const mainArea = index.indexOf('id="mainArea"');
+const buttonArea = index.indexOf('id="buttonArea"');
+const globalSearchButton = index.indexOf('id="globalSearchButton"');
+const dashboardButton = index.indexOf('id="dashboardButton"');
+const activityButton = index.indexOf('id="activityButton"');
+const panicButton = index.indexOf('id="panicLockButton"');
+assert(index.includes('class="col-xs-5 dark4bg top-utility-cell"'));
+assert(index.includes('class="top-utility-actions"'));
+assert(globalSearchButton > 0 && globalSearchButton < mainArea, 'Global Search belongs in the top utility row');
+assert(dashboardButton > globalSearchButton && dashboardButton < mainArea, 'Dashboard belongs beside Global Search in the top utility row');
+assert(activityButton > dashboardButton && activityButton < mainArea, 'Activity History belongs beside Dashboard in the top utility row');
+assert(panicButton > buttonArea, 'Emergency Lock must remain in the bottom action row');
+assert(index.indexOf('id="detailActionArea"') > buttonArea && index.indexOf('id="detailActionArea"') < panicButton);
+
 assert(theme.includes('--sl-action-size: 42px'));
-assert(theme.includes('.panic-lock-inline {') || theme.includes('.panic-lock-inline,'));
-assert(/\.detail-action-button,\s*\.global-search-inline,\s*\.dashboard-inline,\s*\.activity-inline,\s*\.panic-lock-inline/.test(theme));
+assert(theme.includes('--sl-top-action-size: 34px'));
+assert(theme.includes('.top-utility-cell {'));
+assert(theme.includes('.top-utility-actions {'));
+assert(theme.includes('width: var(--sl-top-action-size) !important'));
+assert(theme.includes('.detail-action-button,\n.panic-lock-inline') || /\.detail-action-button,\s*\.panic-lock-inline/.test(theme));
 assert(theme.includes('width: var(--sl-action-size) !important'));
 assert(theme.includes('height: var(--sl-action-size) !important'));
-assert(!theme.includes('width: 54px !important'));
-assert(!theme.includes('height: 54px !important'));
+assert(theme.includes('.panic-lock-inline {'));
+assert(theme.includes('margin-left: auto !important'));
 assert(theme.includes('.detail-action-area {'));
 assert(theme.includes('flex: 1 1 0'));
 assert(theme.includes('overflow-x: auto'));
-assert(theme.includes('scrollbar-width: none'));
-assert(theme.includes('.emergency-lock-cell {'));
-assert(theme.includes('overflow: hidden'));
 
 assert(group.includes("title: 'Cancel edit wallet'"));
 assert(group.includes("onClick: () => renderGroupDetail(params)"));
@@ -73,4 +87,4 @@ assert(theme.includes('html[data-theme="dark"] .search-field-wrap .form-control'
 assert(theme.includes('.wallet-list-category { color: rgba(255,255,255,.84) !important;'));
 assert(theme.includes('.column-empty-text { max-width: 180px; font-size: 12px;'));
 
-console.log('PASS UI polish keeps Emergency Lock visible and action-sized, adds Wallet/Coin edit cancel actions, preserves responsive custom fields, and maintains readable dark-mode contrast.');
+console.log('PASS UI polish keeps Search/Home/History in a search-height top utility bar, Emergency Lock fixed bottom-right, edit cancellation, responsive custom fields, and readable dark-mode contrast.');
