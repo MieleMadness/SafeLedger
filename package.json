@@ -1,14 +1,15 @@
 {
   "name": "safe-ledger",
   "productName": "SafeLedger",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Free, offline and portable encrypted information vault",
   "main": "src/main/main.js",
   "scripts": {
     "prepare:icons": "node scripts/prepare-token-assets.js",
     "prepare:renderer": "node scripts/build-renderer.js",
     "start": "npm run prepare:icons && npm run prepare:renderer && electron .",
-    "test:regression": "npm run prepare:renderer && node scripts/regression-tests.js && node scripts/crypto-v3-tests.js && node scripts/v2-only-crypto-regression-tests.js && node scripts/ui-regression-tests.js && node scripts/edit-grid-regression-tests.js && node scripts/brute-force-regression-tests.js && node scripts/lockout-regression-tests.js && node scripts/style-consolidation-regression-tests.js && node scripts/runtime-hardening-regression-tests.js && node scripts/cleanup-regression-tests.js && node scripts/sandbox-regression-tests.js && node scripts/atomic-file-regression-tests.js && node scripts/dependency-policy-regression.js && node scripts/continuity-hardening-tests.js && node scripts/recovery-readiness-tests.js && node scripts/roadmap-regression-tests.js && node scripts/dashboard-summary-tests.js && node scripts/custom-fields-tests.js && node scripts/recovery-drill-tests.js && node scripts/recovery-binder-tests.js && node scripts/activity-history-tests.js && node scripts/appearance-tests.js && node scripts/global-search-tests.js && node scripts/ui-polish-tests.js",
+    "test:regression": "npm run prepare:renderer && node scripts/regression-tests.js && node scripts/crypto-v3-tests.js && node scripts/v2-only-crypto-regression-tests.js && node scripts/ui-regression-tests.js && node scripts/edit-grid-regression-tests.js && node scripts/brute-force-regression-tests.js && node scripts/lockout-regression-tests.js && node scripts/style-consolidation-regression-tests.js && node scripts/runtime-hardening-regression-tests.js && node scripts/cleanup-regression-tests.js && node scripts/sandbox-regression-tests.js && node scripts/atomic-file-regression-tests.js && node scripts/dependency-policy-regression.js && node scripts/continuity-hardening-tests.js && node scripts/recovery-readiness-tests.js && node scripts/roadmap-regression-tests.js && node scripts/dashboard-summary-tests.js && node scripts/custom-fields-tests.js && node scripts/recovery-drill-tests.js && node scripts/recovery-binder-tests.js && node scripts/activity-history-tests.js && node scripts/appearance-tests.js && node scripts/global-search-tests.js && node scripts/ui-polish-tests.js && node scripts/runtime-modernization-tests.js",
+    "test:runtime-modernization": "node scripts/runtime-modernization-tests.js",
     "test:electron-crypto": "node scripts/run-electron-crypto-smoke.js",
     "test:gui-smoke": "npm run prepare:renderer && node scripts/run-gui-smoke.js",
     "docs:pdf": "electron scripts/readme-to-pdf.js",
@@ -28,8 +29,6 @@
     "marked": "12.0.2"
   },
   "dependencies": {
-    "bootstrap": "3.4.1",
-    "font-awesome": "4.7.0",
     "hash-wasm": "4.12.0",
     "qrcode": "1.5.4"
   },
