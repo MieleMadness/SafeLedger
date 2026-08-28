@@ -18,7 +18,7 @@ const security = read('src/main/security-enhancements.js');
 const securityMain = read('src/main/security-main.js');
 const build = read('scripts/build-renderer.js');
 
-assert(/^2\.0\.\d+$/.test(pkg.version));
+assert(/^2\.\d+\.\d+$/.test(pkg.version));
 assert.strictEqual(pkg.devDependencies.esbuild, '0.28.2');
 assert.strictEqual(pkg.dependencies.jquery, undefined);
 assert.strictEqual(pkg.dependencies['@electron/remote'], undefined);
@@ -47,8 +47,10 @@ assert(!security.includes("require('fs')"));
 assert(!security.includes("require('path')"));
 assert(!security.includes('MutationObserver'));
 assert(security.includes("ipc.invoke('security-backup-all')"));
+assert(security.includes("ipc.invoke('security-verify-backup')"));
 assert(security.includes("ipc.invoke('security-restore-all')"));
 assert(securityMain.includes("ipc.handle('security-backup-all'"));
+assert(securityMain.includes("ipc.handle('security-verify-backup'"));
 assert(securityMain.includes("ipc.handle('security-restore-all'"));
 assert(securityMain.includes('assertTrustedEvent'));
 assert(securityMain.includes('assertUnlocked'));
@@ -60,7 +62,8 @@ assert(pkg.scripts['test:gui-smoke'].includes('run-gui-smoke.js'));
 for (const relative of [
   'src/main/main.js', 'src/main/preload.js', 'src/main/security-main.js',
   'src/main/security-enhancements.js', 'src/main/renderer-electron-shim.js',
-  'src/main/renderer-entry.js', 'src/main/atomic-file.js',
+  'src/main/renderer-entry.js', 'src/main/atomic-file.js', 'src/main/vault-schema.js',
+  'src/main/legacy-import.js', 'scripts/continuity-hardening-tests.js',
   'scripts/build-renderer.js', 'scripts/run-gui-smoke.js', 'scripts/version-bump-check.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
