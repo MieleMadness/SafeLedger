@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const encryption = require('./encryption');
+const vaultSchema = require('./vault-schema');
 const { atomicWriteFile } = require('./atomic-file');
 
 function encryptedPayloadLooksValid(value) {
@@ -110,9 +111,12 @@ exports.readVault = async (vaultFile, myCryptKey) => {
     };
   }
   try {
-    return JSON.parse(clearText);
-  } catch (_) {
-    throw { status: 'ERROR', statusMsg: 'This vault decrypted but its contents are damaged.', type: 'vault-corrupt' };
+    return vaultSchema.migrateVaultData(JSON.parse(clearText));
+  } catch (err) {
+    if (err && /newer SafeLedger data schema/.test(err.message || '')) {
+      throw { status: 'ERROR', statusMsg: err.message, type: 'vault-schema-newer' };
+    }
+    throw { status: 'ERROR', statusMsg: 'This vault decrypted but its contents are damaged or unsupported.', type: 'vault-corrupt' };
   }
 };
 
@@ -123,16 +127,13 @@ exports.makeDir = async (vaultPath) => {
 
 exports.initVaultList = async (vaultPath, myCryptKey) => {
   const vaultList = {
+    formatVersion: 2,
     vaults: [{
       name: 'SafeLedger',
       path: vaultPath,
-      created: Date(),
+      created: new Date().toISOString(),
       id: 0,
-      file: 'zvault-0.json',
-      password: '',
-      usePass: false,
-      encryptkey: '',
-      encrypted: false
+      file: 'zvault-0.json'
     }]
   };
   await exports.saveVault(path.join(vaultPath, 'vaultlist.json'), JSON.stringify(vaultList), myCryptKey);
@@ -140,7 +141,7 @@ exports.initVaultList = async (vaultPath, myCryptKey) => {
 };
 
 exports.initVaultData = async (vaultPath, vaultName, myCryptKey) => {
-  const initData = { file: vaultName, groups: [] };
+  const initData = vaultSchema.prepareForSave({ file: vaultName, groups: [] });
   await exports.saveVault(path.join(vaultPath, vaultName), JSON.stringify(initData), myCryptKey);
   return initData;
 };
@@ -167,6 +168,8 @@ exports.scrubContent = async (vaultPath) => {
   }
 };
 
+exports.safeVaultFileName = safeVaultFileName;
+exports.validVaultListStructure = validVaultListStructure;
 exports._test = {
   encryptedPayloadLooksValid,
   atomicWriteFile,

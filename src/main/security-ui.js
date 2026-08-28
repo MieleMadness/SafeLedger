@@ -213,16 +213,45 @@ const escapeHtml = (value) => String(value || '')
   .replace(/"/g, '&quot;')
   .replace(/'/g, '&#039;');
 
+function createPrintFrame() {
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.setAttribute('tabindex', '-1');
+  frame.style.position = 'fixed';
+  frame.style.width = '1px';
+  frame.style.height = '1px';
+  frame.style.right = '0';
+  frame.style.bottom = '0';
+  frame.style.border = '0';
+  frame.style.opacity = '0';
+  document.body.appendChild(frame);
+  return frame;
+}
+
 exports.printRecoverySheet = (title, fields, includesSensitive) => {
   if (includesSensitive) {
     const approved = confirm('This printout contains sensitive recovery information. Anyone who sees it may gain access to your crypto. Print only to a trusted local printer and store the paper securely. Continue?');
     if (!approved) return;
   }
   const rows = fields.filter((field) => field && field.value).map((field) => `<tr><th>${escapeHtml(field.label)}</th><td>${escapeHtml(field.value)}</td></tr>`).join('');
-  const popup = window.open('', '_blank', 'width=760,height=800');
-  if (!popup) return alert('Unable to open print window.');
-  popup.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#111}h1{font-size:24px}p.warn{border:2px solid #000;padding:10px;font-weight:bold}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #999;padding:10px;text-align:left;vertical-align:top;word-break:break-all}th{width:180px;background:#eee}@media print{button{display:none}}</style></head><body><h1>${escapeHtml(title)}</h1>${includesSensitive ? '<p class="warn">CONFIDENTIAL RECOVERY INFORMATION — KEEP SECURE</p>' : ''}<table>${rows}</table><p>Generated offline by SafeLedger on ${escapeHtml(new Date().toString())}</p><button onclick="window.print()">Print</button></body></html>`);
-  popup.document.close();
+  const frame = createPrintFrame();
+  const printWindow = frame.contentWindow;
+  const printDocument = frame.contentDocument || (printWindow && printWindow.document);
+  if (!printWindow || !printDocument) {
+    frame.remove();
+    return alert('Unable to prepare print sheet.');
+  }
+  printDocument.open();
+  printDocument.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Arial,sans-serif;padding:28px;color:#111}h1{font-size:24px}p.warn{border:2px solid #000;padding:10px;font-weight:bold}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{border:1px solid #999;padding:10px;text-align:left;vertical-align:top;word-break:break-all}th{width:180px;background:#eee}</style></head><body><h1>${escapeHtml(title)}</h1>${includesSensitive ? '<p class="warn">CONFIDENTIAL RECOVERY INFORMATION — KEEP SECURE</p>' : ''}<table>${rows}</table><p>Generated offline by SafeLedger on ${escapeHtml(new Date().toString())}</p></body></html>`);
+  printDocument.close();
+  setTimeout(() => {
+    try {
+      printWindow.focus();
+      printWindow.print();
+    } finally {
+      setTimeout(() => frame.remove(), 0);
+    }
+  }, 50);
 };
 
-exports._test = { makeIconButton, makeEditRevealButton, makeInlineActions };
+exports._test = { makeIconButton, makeEditRevealButton, makeInlineActions, createPrintFrame };

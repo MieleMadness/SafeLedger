@@ -28,11 +28,16 @@ try {
     stdio: ['ignore', 'pipe', 'pipe']
   })).version;
 } catch (err) {
-  console.log(`SKIP version bump check: parent package.json is unavailable (${err.message}).`);
+  console.log(`SKIP version continuity check: parent package.json is unavailable (${err.message}).`);
   process.exit(0);
 }
 
-if (compare(parse(current), parse(parent)) <= 0) {
-  throw new Error(`SafeLedger version must increase on every push. Parent=${parent}, current=${current}`);
+const result = compare(parse(current), parse(parent));
+if (result < 0) {
+  throw new Error(`SafeLedger version may not move backward. Parent=${parent}, current=${current}`);
 }
-console.log(`PASS SafeLedger version increased for this push: ${parent} -> ${current}`);
+if (result === 0) {
+  console.log(`PASS SafeLedger version unchanged for a non-release change: ${current}`);
+} else {
+  console.log(`PASS SafeLedger version increased: ${parent} -> ${current}`);
+}

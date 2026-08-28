@@ -3,13 +3,12 @@
 const { app, BrowserWindow, Menu, ipcMain: ipc, dialog, clipboard } = require('electron');
 const path = require('path');
 const vault = require('./robust-vault');
+const vaultSchema = require('./vault-schema');
 const runtimeUtils = require('./runtime-utils');
 const utils = require('./utils');
 const settingsManager = require('./installManager/installManager/settingsManager');
 const cryptoSession = require('./crypto-session-main');
 const securityMain = require('./security-main');
-
-cryptoSession.registerIpcHandlers();
 
 let mainWindow;
 let vaultDir;
@@ -37,6 +36,32 @@ function getDataRoot() {
   return path.join(getPortableRoot(), 'SafeLedgerData');
 }
 
+function assertTrustedEvent(event) {
+  if (!mainWindow || mainWindow.isDestroyed() || !event || event.sender !== mainWindow.webContents) {
+    throw new Error('Untrusted SafeLedger IPC request.');
+  }
+}
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function safeActivityReason(value) {
+  const reason = String(value || 'security-event').trim().slice(0, 80);
+  return /^[a-z0-9-]+$/i.test(reason) ? reason : 'security-event';
+}
+
+function validateVaultList(list) {
+  if (!vault.validVaultListStructure(list)) throw new Error('Invalid SafeLedger profile list.');
+  return list;
+}
+
+function validateVaultData(data) {
+  if (!isPlainObject(data) || !vault.safeVaultFileName(data.file)) throw new Error('Invalid SafeLedger vault data.');
+  return vaultSchema.prepareForSave(data);
+}
+
+cryptoSession.registerIpcHandlers({ getMainWindow: () => mainWindow });
 securityMain.registerIpcHandlers({
   ipc,
   dialog,
@@ -53,7 +78,7 @@ function configureStorage() {
 }
 
 function buildMenu() {
-  const selfDestructEnabled = !currentSettings || currentSettings.scrubContentAfterRetries !== false;
+  const selfDestructEnabled = !!(currentSettings && currentSettings.scrubContentAfterRetries === true);
   const template = [{
     label: 'SafeLedger',
     submenu: [
@@ -89,14 +114,14 @@ async function setSelfDestructProtection(enabled) {
       noLink: true,
       title: 'Enable Self-Destruct Protection',
       message: 'Enable Self-Destruct Protection?',
-      detail: 'After the configured failed-login and lockout limits are exhausted, SafeLedger will permanently destroy the encrypted vault files. This action cannot be undone.'
+      detail: 'After the configured failed-login and lockout limits are exhausted, SafeLedger will permanently destroy the encrypted vault files. This action cannot be undone. Keep a verified backup on separate storage before enabling this protection.'
     });
     if (response.response !== 0) {
       buildMenu();
       return;
     }
   }
-  currentSettings = Object.assign({}, existing, { scrubContentAfterRetries: enabled });
+  currentSettings = Object.assign({}, existing, { scrubContentAfterRetries: enabled === true });
   const saved = await settingsManager.saveSettings(settingsDir, currentSettings);
   currentSettings = saved.settings;
   await securityMain.audit(getDataRoot(), 'self-destruct-protection-changed');
@@ -113,9 +138,9 @@ async function setSelfDestructProtection(enabled) {
 }
 
 async function initializeModernVault(vaultName, cryptoKey) {
-  const today = Date();
+  const today = new Date().toISOString();
   const groups = getWalletCatalog().buildDefaultGroups(today).filter((group) => !isExcludedDefaultWallet(group));
-  const data = { file: vaultName, catalogVersion: '2026-08-20.3', groups };
+  const data = vaultSchema.prepareForSave({ file: vaultName, catalogVersion: '2026-08-20.3', groups });
   await vault.saveVault(path.join(vaultDir, vaultName), JSON.stringify(data), cryptoKey);
   return data;
 }
@@ -162,7 +187,7 @@ async function enforceRetryExhaustion() {
   const settings = await ensureCurrentSettings();
   if (settings.lockOutCount < settings.numLockoutRetries) return false;
   cryptoSession.clearSession();
-  if (settings.scrubContentAfterRetries !== false) {
+  if (settings.scrubContentAfterRetries === true) {
     try {
       await vault.scrubContent(vaultDir);
       settings.failAttemptCount = 0;
@@ -269,9 +294,16 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
+      webviewTag: false,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
       preload: path.join(__dirname, 'preload.js')
     }
   });
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
+  mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
+  mainWindow.webContents.session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
   installGuiSmokeProbe(mainWindow);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.on('closed', () => {
@@ -288,26 +320,41 @@ app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 app.on('before-quit', () => cryptoSession.clearSession());
 
-ipc.on('panic-lock', (_event, params = {}) => {
+ipc.on('panic-lock', (event, params = {}) => {
+  try { assertTrustedEvent(event); } catch (_) { return; }
   cryptoSession.clearSession();
-  securityMain.audit(getDataRoot(), params.reason || 'security-event');
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
+  securityMain.audit(getDataRoot(), safeActivityReason(params && params.reason));
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // Discard decrypted renderer state as well as the main-process DEK. A
+    // trusted main-process reload is not blocked by the renderer navigation
+    // policy and rebuilds SafeLedger at the login screen.
+    mainWindow.minimize();
+    mainWindow.webContents.reload();
+  }
 });
 
-ipc.on('record-password-failure', () => {
+ipc.on('record-password-failure', (event) => {
+  try { assertTrustedEvent(event); } catch (_) { return; }
   recordPasswordFailure().catch(() => sendResult({ status: 'ERROR', statusMsg: 'Unable to update login security state.' }));
 });
 
-ipc.on('read', (_event, params) => {
+ipc.on('read', (event, params = {}) => {
+  try {
+    assertTrustedEvent(event);
+    if (!isPlainObject(params) || !vault.safeVaultFileName(params.file)) throw new Error('Invalid profile selection.');
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile selection.' });
+  }
   const key = getSessionKey();
   if (!key) return sendLocked();
   vault.readVault(path.join(vaultDir, params.file), key)
-    .then((val) => sendResult({ status: 'SUCCESS', statusMsg: 'Load successful.', type: params.type, vaultData: val }))
+    .then((val) => sendResult({ status: 'SUCCESS', statusMsg: 'Load successful.', type: String(params.type || '').slice(0, 40), vaultData: val }))
     .catch((val) => sendResult(val));
 });
 
-ipc.on('read-vaultlist-init', async () => {
+ipc.on('read-vaultlist-init', async (event) => {
   try {
+    assertTrustedEvent(event);
     if (await enforceRetryExhaustion()) return;
     const key = getSessionKey();
     if (!key) return sendLocked();
@@ -343,50 +390,79 @@ ipc.on('read-vaultlist-init', async () => {
       sessionUnlocked: true,
       settings: currentSettings
     });
-  } catch (_) {
-    sendResult({ status: 'ERROR', statusMsg: 'Unable to access vault list' });
+  } catch (err) {
+    sendResult({ status: 'ERROR', statusMsg: err && err.message ? err.message : 'Unable to access vault list' });
   }
 });
 
-ipc.on('process-vault-list', (_event, params) => {
+ipc.on('process-vault-list', (event, params = {}) => {
+  let nextList;
+  let nextProfile;
+  let idInfo = null;
+  try {
+    assertTrustedEvent(event);
+    if (!isPlainObject(params) || !['create', 'modify'].includes(params.action) || !isPlainObject(params.vault) || !isPlainObject(params.vaultList)) {
+      throw new Error('Invalid profile update.');
+    }
+    validateVaultList(params.vaultList);
+    nextList = JSON.parse(JSON.stringify(params.vaultList));
+    nextProfile = JSON.parse(JSON.stringify(params.vault));
+    nextProfile.name = String(nextProfile.name || '').trim().slice(0, 100);
+    if (!nextProfile.name) throw new Error('Profile name is required.');
+
+    if (params.action === 'create') {
+      idInfo = vault.nextVaultFileName(nextList);
+      nextProfile.id = idInfo.id;
+      nextProfile.file = idInfo.fileName;
+      nextProfile.path = vaultDir;
+      nextProfile.created = nextProfile.created || new Date().toISOString();
+      nextList.vaults.push(nextProfile);
+    } else {
+      const index = nextList.vaults.findIndex((item) => Number(item && item.id) === Number(nextProfile.id));
+      if (index < 0) throw new Error('Profile was not found.');
+      const existing = nextList.vaults[index];
+      nextProfile.id = existing.id;
+      nextProfile.file = existing.file;
+      nextProfile.path = vaultDir;
+      nextProfile.created = existing.created || nextProfile.created || new Date().toISOString();
+      nextList.vaults[index] = nextProfile;
+    }
+    nextList.vaults.sort(utils.compareIgnoreCase);
+    nextList.vaultSelected = nextList.vaults.indexOf(nextProfile);
+    validateVaultList(nextList);
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile update.' });
+  }
+
   const key = getSessionKey();
   if (!key) return sendLocked();
-  let idInfo = null;
-  if (params.action === 'create') {
-    idInfo = vault.nextVaultFileName(params.vaultList);
-    params.vault.id = idInfo.id;
-    params.vault.file = idInfo.fileName;
-    params.vault.path = vaultDir;
-    params.vaultList.vaults.push(params.vault);
-    params.vaultList.vaults.sort(utils.compareIgnoreCase);
-    params.vaultList.vaultSelected = params.vaultList.vaults.indexOf(params.vault);
-  } else if (params.action === 'modify') {
-    const vaults = params.vaultList.vaults;
-    for (let i = 0; i < vaults.length; i++) {
-      if (vaults[i].id == params.vault.id) { params.vaultList.vaults[i] = params.vault; break; }
-    }
-    params.vaultList.vaults.sort(utils.compareIgnoreCase);
-    params.vaultList.vaultSelected = params.vaultList.vaults.indexOf(params.vault);
-  }
-  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), key)
+  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key)
     .then(async (val) => {
       if (params.action === 'create' && val === 'SUCCESS') {
         const data = await initializeModernVault(idInfo.fileName, key);
         await securityMain.audit(getDataRoot(), 'profile-created');
-        return sendResult({
-          status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: params.vaultList, vaultData: data
-        });
+        return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: nextList, vaultData: data });
       }
       await securityMain.audit(getDataRoot(), 'profile-updated');
-      sendResult({ type: 'vault-modify', vaultList: params.vaultList, status: 'SUCCESS', statusMsg: 'Save successful' });
+      sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
     })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
-ipc.on('vault-list-delete', (_event, params) => {
+ipc.on('vault-list-delete', (event, params = {}) => {
+  let nextList;
+  try {
+    assertTrustedEvent(event);
+    if (!isPlainObject(params) || !vault.safeVaultFileName(params.fileName) || !isPlainObject(params.vaultList)) throw new Error('Invalid profile deletion.');
+    nextList = JSON.parse(JSON.stringify(params.vaultList));
+    validateVaultList(nextList);
+    if (nextList.vaults.some((item) => item.file === params.fileName)) throw new Error('Profile list still references the file being deleted.');
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile deletion.' });
+  }
   const key = getSessionKey();
   if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(params.vaultList), key)
+  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key)
     .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
     .then(async () => {
       await securityMain.audit(getDataRoot(), 'profile-deleted');
@@ -395,29 +471,44 @@ ipc.on('vault-list-delete', (_event, params) => {
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Delete failed' }));
 });
 
-ipc.on('process-group', (_event, params) => {
+ipc.on('process-group', (event, params = {}) => {
+  let data;
+  try {
+    assertTrustedEvent(event);
+    data = validateVaultData(params.vaultData);
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid wallet update.' });
+  }
   const key = getSessionKey();
   if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), key)
+  vault.saveVault(path.join(vaultDir, data.file), JSON.stringify(data), key)
     .then(async () => {
       await securityMain.audit(getDataRoot(), groupActivityEvent(params));
-      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: params.vaultData });
+      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: data });
     })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
-ipc.on('process-record', (_event, params) => {
+ipc.on('process-record', (event, params = {}) => {
+  let data;
+  try {
+    assertTrustedEvent(event);
+    data = validateVaultData(params.vaultData);
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
+  }
   const key = getSessionKey();
   if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, params.vaultData.file), JSON.stringify(params.vaultData), key)
+  vault.saveVault(path.join(vaultDir, data.file), JSON.stringify(data), key)
     .then(async () => {
       await securityMain.audit(getDataRoot(), recordActivityEvent(params));
-      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: params.vaultData });
+      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: data });
     })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
 
-ipc.on('init-system', () => {
+ipc.on('init-system', (event) => {
+  try { assertTrustedEvent(event); } catch (_) { return; }
   securityMain.audit(getDataRoot(), 'app-opened');
   settingsManager.loadSettings(settingsDir)
     .then((valSettings) => {
@@ -428,7 +519,14 @@ ipc.on('init-system', () => {
     .catch(() => mainWindow.webContents.send('result-init-system', { status: 'ERROR', statusMsg: 'Not able to load settings file' }));
 });
 
-ipc.on('save-settings', (_event, params) => {
+ipc.on('save-settings', (event, params = {}) => {
+  try {
+    assertTrustedEvent(event);
+    if (!isPlainObject(params.newSettings)) throw new Error('Invalid settings update.');
+  } catch (err) {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Invalid settings update.' });
+    return;
+  }
   settingsManager.saveSettings(settingsDir, params.newSettings)
     .then(async (val) => {
       currentSettings = val.settings;

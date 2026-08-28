@@ -37,7 +37,7 @@ const css = read('src/main/css/product-features.css');
 const binderCss = read('src/main/css/recovery-binder.css');
 const activityCss = read('src/main/css/activity-history.css');
 
-assert.strictEqual(pkg.version, '2.0.71');
+assert(/^2\.\d+\.\d+$/.test(pkg.version));
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -190,4 +190,4 @@ for (const relative of [
   'scripts/recovery-binder-tests.js', 'scripts/activity-history-tests.js', 'scripts/appearance-tests.js',
   'scripts/global-search-tests.js', 'scripts/ui-polish-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.71 preserves recovery/security/search features and moves Search/Home/History into the top utility bar while Emergency Lock remains bottom-right.');
+console.log(`PASS roadmap ${pkg.version} preserves recovery/security/search features and keeps the current utility and Emergency Lock placement checks.`);

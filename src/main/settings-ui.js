@@ -127,7 +127,7 @@ function showSettings(params) {
   area.appendChild(passwordSection);
 
   const backupSection = makeSection('Backup & Recovery');
-  addNote(backupSection, 'Create a complete backup of SafeLedgerData or restore a previous backup. Backup and restore filesystem access is handled only by the sandbox-exempt main process; encrypted vault files remain encrypted.');
+  addNote(backupSection, 'Create a complete encrypted backup, verify a backup without changing your data, or restore a previous backup. New backups include SHA-256 integrity hashes for every file.');
   const backupActions = document.createElement('div');
   backupActions.className = 'settings-section-actions';
   const backup = document.createElement('button');
@@ -136,6 +136,12 @@ function showSettings(params) {
   backup.innerHTML = '<i class="fa fa-download" aria-hidden="true"></i> Backup';
   backup.addEventListener('click', () => securityEnhancements.exportEncryptedBackup());
   backupActions.appendChild(backup);
+  const verifyBackup = document.createElement('button');
+  verifyBackup.type = 'button';
+  verifyBackup.className = 'btn btn-default';
+  verifyBackup.innerHTML = '<i class="fa fa-check-circle" aria-hidden="true"></i> Verify Backup';
+  verifyBackup.addEventListener('click', () => securityEnhancements.verifyEncryptedBackup());
+  backupActions.appendChild(verifyBackup);
   const restore = document.createElement('button');
   restore.type = 'button';
   restore.className = 'btn btn-default';
@@ -145,8 +151,80 @@ function showSettings(params) {
   backupSection.appendChild(backupActions);
   area.appendChild(backupSection);
 
+  const legacySection = makeSection('Import SafeLedger 1.x Data');
+  addNote(legacySection, 'Import profiles from an original SafeLedger 1.x safeledgerdata folder. The importer reads the old files only, creates new 2.x encrypted vault files, verifies the imported structure, and never modifies the original 1.x data.');
+  const sourceStatus = document.createElement('p');
+  sourceStatus.className = 'settings-section-note';
+  sourceStatus.textContent = 'No SafeLedger 1.x folder selected.';
+  legacySection.appendChild(sourceStatus);
+  const legacyActions = document.createElement('div');
+  legacyActions.className = 'settings-section-actions';
+  const chooseLegacy = document.createElement('button');
+  chooseLegacy.type = 'button';
+  chooseLegacy.className = 'btn btn-default';
+  chooseLegacy.innerHTML = '<i class="fa fa-folder-open" aria-hidden="true"></i> Choose 1.x Folder';
+  legacyActions.appendChild(chooseLegacy);
+  legacySection.appendChild(legacyActions);
+
+  const passwordField = document.createElement('div');
+  passwordField.className = 'settings-field';
+  const legacyPasswordLabel = document.createElement('label');
+  legacyPasswordLabel.className = 'settings-field-label';
+  legacyPasswordLabel.htmlFor = 'legacyImportPassword';
+  legacyPasswordLabel.textContent = 'SafeLedger 1.x master password';
+  passwordField.appendChild(legacyPasswordLabel);
+  const legacyPassword = document.createElement('input');
+  legacyPassword.id = 'legacyImportPassword';
+  legacyPassword.type = 'password';
+  legacyPassword.className = 'form-control';
+  legacyPassword.autocomplete = 'off';
+  legacyPassword.maxLength = 512;
+  legacyPassword.disabled = true;
+  passwordField.appendChild(legacyPassword);
+  legacySection.appendChild(passwordField);
+
+  const runLegacyImport = document.createElement('button');
+  runLegacyImport.type = 'button';
+  runLegacyImport.className = 'btn btn-default settings-section-save';
+  runLegacyImport.innerHTML = '<i class="fa fa-exchange" aria-hidden="true"></i> Import 1.x Data';
+  runLegacyImport.disabled = true;
+  legacySection.appendChild(runLegacyImport);
+
+  chooseLegacy.addEventListener('click', async () => {
+    chooseLegacy.disabled = true;
+    const result = await securityEnhancements.selectLegacyImportSource();
+    chooseLegacy.disabled = false;
+    if (!result || result.canceled) return;
+    if (!result.ok) return alert(result.message || 'Unable to select SafeLedger 1.x data.');
+    sourceStatus.textContent = `Selected: ${result.sourcePath || result.sourceFolder}`;
+    legacyPassword.disabled = false;
+    runLegacyImport.disabled = !legacyPassword.value;
+    legacyPassword.focus();
+  });
+  legacyPassword.addEventListener('input', () => {
+    runLegacyImport.disabled = legacyPassword.disabled || legacyPassword.value.length === 0;
+  });
+  runLegacyImport.addEventListener('click', async () => {
+    if (!legacyPassword.value) return;
+    const confirmed = window.confirm('Import the selected SafeLedger 1.x data into this SafeLedger vault? The original 1.x files will remain unchanged.');
+    if (!confirmed) return;
+    runLegacyImport.disabled = true;
+    chooseLegacy.disabled = true;
+    legacyPassword.disabled = true;
+    const password = legacyPassword.value;
+    legacyPassword.value = '';
+    const result = await securityEnhancements.importLegacyData(password);
+    if (!result || !result.ok) {
+      alert(result && result.message ? result.message : 'SafeLedger 1.x import failed.');
+      chooseLegacy.disabled = false;
+      legacyPassword.disabled = false;
+      runLegacyImport.disabled = true;
+    }
+  });
+  area.appendChild(legacySection);
+
   const bruteSection = makeSection('Brute Force Protection');
-  addNote(bruteSection, `Configure how SafeLedger responds to repeated failed login attempts. All brute-force values are limited to whole numbers from ${BRUTE_FORCE_MIN} to ${BRUTE_FORCE_MAX}. Self-destruct protection can permanently destroy encrypted vault data after all configured lockouts are exhausted.`, 'settings-protection-intro');
+  addNote(bruteSection, `Configure how SafeLedger responds to repeated failed login attempts. All brute-force values are limited to whole numbers from ${BRUTE_FORCE_MIN} to ${BRUTE_FORCE_MAX}. Self-destruct protection is optional and can permanently destroy encrypted vault data after all configured lockouts are exhausted.`, 'settings-protection-intro');
   const inputFailAttempts = addNumberField(bruteSection, 'inputFailAttempts', 'Failed login attempts before lockout', params.settings.numFailAttempts);
   const inputLockoutRetry = addNumberField(bruteSection, 'inputLockoutRetry', 'Lockouts allowed before self-destruct', params.settings.numLockoutRetries);
   const inputBetweenLockout = addNumberField(bruteSection, 'inputBetweenLockout', 'Lockout duration in minutes', params.settings.minutesToWaitBetweenLockout);

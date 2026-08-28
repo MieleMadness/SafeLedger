@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - master
 
 permissions:
   contents: read
@@ -19,7 +22,7 @@ jobs:
           submodules: false
           fetch-depth: 2
 
-      - name: Verify version bump
+      - name: Verify version continuity
         shell: pwsh
         run: node scripts/version-bump-check.js
 

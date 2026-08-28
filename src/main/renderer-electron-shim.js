@@ -41,7 +41,10 @@ const invokes = {
   'crypto-v3-login': 'cryptoLogin',
   'crypto-v3-change-password': 'cryptoChangePassword',
   'security-backup-all': 'backupAllData',
-  'security-restore-all': 'restoreAllData'
+  'security-verify-backup': 'verifyBackup',
+  'security-restore-all': 'restoreAllData',
+  'legacy-import-select-source': 'selectLegacyImportSource',
+  'legacy-import-run': 'importLegacyData'
 };
 
 const ipcRenderer = {

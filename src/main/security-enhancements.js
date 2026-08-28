@@ -78,6 +78,16 @@ async function exportEncryptedBackup() {
   } catch (err) { alert(`Backup failed: ${err.message || err}`); }
 }
 
+async function verifyEncryptedBackup() {
+  try {
+    const result = await ipc.invoke('security-verify-backup');
+    if (!result || result.canceled) return;
+    if (!result.ok) return alert(result.message || 'Backup verification failed.');
+    const report = result.report || {};
+    alert(`Backup verified.\n\nProfiles: ${report.profileCount || 0}\nWallets: ${report.walletCount || 0}\nAssets: ${report.assetCount || 0}\nFiles: ${report.fileCount || 0}${report.created ? `\nCreated: ${report.created}` : ''}`);
+  } catch (err) { alert(`Backup verification failed: ${err.message || err}`); }
+}
+
 async function restoreEncryptedBackup() {
   try {
     const result = await ipc.invoke('security-restore-all');
@@ -88,7 +98,31 @@ async function restoreEncryptedBackup() {
   } catch (err) { alert(`Restore failed: ${err.message || err}`); }
 }
 
+async function selectLegacyImportSource() {
+  try {
+    return await ipc.invoke('legacy-import-select-source');
+  } catch (err) {
+    return { ok: false, message: err.message || String(err) };
+  }
+}
+
+async function importLegacyData(password) {
+  try {
+    const result = await ipc.invoke('legacy-import-run', String(password || ''));
+    if (!result || !result.ok) return result || { ok: false, message: 'SafeLedger 1.x import failed.' };
+    const report = result.report || {};
+    alert(`SafeLedger 1.x import completed.\n\nProfiles: ${report.profileCount || 0}\nWallets: ${report.walletCount || 0}\nAssets: ${report.assetCount || 0}\n\nThe original 1.x files were not changed. SafeLedger will lock and reload the imported data.`);
+    panicLock('post-legacy-import-lock');
+    return result;
+  } catch (err) {
+    return { ok: false, message: err.message || String(err) };
+  }
+}
+
 exports.panicLock = panicLock;
 exports.exportEncryptedBackup = exportEncryptedBackup;
+exports.verifyEncryptedBackup = verifyEncryptedBackup;
 exports.restoreEncryptedBackup = restoreEncryptedBackup;
+exports.selectLegacyImportSource = selectLegacyImportSource;
+exports.importLegacyData = importLegacyData;
 exports._test = { AUTO_LOCK_MINUTES, clearVisibleSensitiveFields };
