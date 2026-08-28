@@ -1,9 +1,31 @@
 /* SafeLedger product-feature UI. Kept separate from the legacy layout stylesheet. */
-.recovery-readiness-card { margin: 12px 0 16px; padding: 14px 16px; background: #fff; border: 1px solid #d8dee8; border-radius: 8px; box-shadow: 0 1px 2px rgba(15, 23, 42, .04); }
-.recovery-readiness-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.recovery-readiness-card {
+  margin: 12px 0 16px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+.recovery-readiness-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
 .recovery-readiness-title { font-size: 16px; line-height: 1.3; font-weight: 700; color: #172033; }
 .recovery-readiness-score { font-size: 13px; font-weight: 700; color: #526071; }
-.recovery-readiness-status { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 9px; font-size: 12px; line-height: 1.2; font-weight: 700; margin-bottom: 8px; }
+.recovery-readiness-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
 .recovery-readiness-status.is-ready { background: #e8f5ec; color: #216e39; }
 .recovery-readiness-status.is-review { background: #fff4d6; color: #875d00; }
 .recovery-readiness-status.is-incomplete { background: #fbe9e7; color: #9d2a22; }
@@ -11,3 +33,5 @@
 .recovery-readiness-meta { margin: 0; color: #667085; font-size: 12px; line-height: 1.45; }
 .recovery-readiness-actions { margin-top: 10px; }
 .recovery-readiness-actions .btn { margin-right: 6px; }
+
+.product-section-title { margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #e2e7ee; font-size: 17px; line-height: 1.3; font-weight: 700; color: #253047; }
