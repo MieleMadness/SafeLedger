@@ -54,7 +54,9 @@ for (const token of coinOrder) {
 }
 assert(record.includes("sensitive: true, revealLabel: 'private key'"));
 assert(record.includes("sensitive: true, revealLabel: 'balance'"));
-assert(record.includes("{ allowQr: false }"));
+assert(record.includes("appendSensitiveField(area, 'Balance', params.record.manualBalance, {"));
+assert(record.includes('allowQr: false'));
+assert(record.includes("label: 'Balance updated'"));
 assert(record.includes("appendSensitiveField(area, 'Private key', params.record.privateAddress)"));
 assert(record.includes('printIncludesSensitive'));
 
