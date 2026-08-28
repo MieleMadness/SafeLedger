@@ -18,12 +18,15 @@
 .fa-history::before { content: "↶"; }
 .fa-refresh::before { content: "↻"; }
 .fa-unlock::before { content: "▢"; }
-.fa-folder-open-o::before { content: "▣"; }
+.fa-folder-open-o::before,
+.fa-folder-open::before { content: "▣"; }
 .fa-star::before { content: "★"; }
 .fa-star-o::before { content: "☆"; }
 .fa-save::before,
-.fa-check-circle::before { content: "✓"; }
+.fa-check-circle::before,
+.glyphicon-save::before { content: "✓"; }
 .fa-pencil::before { content: "✎"; }
+.fa-paint-brush::before { content: "✦"; }
 .fa-print::before { content: "▤"; }
 .fa-book::before { content: "▥"; }
 .fa-trash::before { content: "×"; }
@@ -48,6 +51,7 @@
 .fa-cog::before { content: "⚙"; }
 .fa-download::before { content: "⇩"; }
 .fa-upload::before { content: "⇧"; }
+.fa-exchange::before { content: "⇄"; }
 .fa-lock::before { content: "■"; }
 .fa-key::before { content: "◆"; }
 .fa-file-text-o::before { content: "▤"; }
