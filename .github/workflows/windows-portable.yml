@@ -28,9 +28,9 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Install dependencies
+      - name: Install locked dependencies
         shell: pwsh
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Run regression tests
         shell: pwsh

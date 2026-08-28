@@ -7,7 +7,7 @@ on:
       - modernize-safeledger-2
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-linux:
@@ -27,8 +27,8 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Install dependencies and generate lockfile
-        run: npm install --no-audit --no-fund
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
 
       - name: Run regression tests
         run: npm run test:regression
@@ -44,37 +44,10 @@ jobs:
       - name: Launch real SafeLedger GUI smoke test
         run: xvfb-run -a npm run test:gui-smoke
 
-      - name: Commit generated dependency lock as next version
-        id: lock_bootstrap
-        shell: bash
-        run: |
-          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
-            echo "created=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          node <<'NODE'
-          const fs = require('fs');
-          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'));
-          pkg.version = '2.0.56';
-          lock.version = '2.0.56';
-          if (lock.packages && lock.packages['']) lock.packages[''].version = '2.0.56';
-          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
-          fs.writeFileSync('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
-          NODE
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          git commit -m "Commit reproducible dependency lock for 2.0.56"
-          git push origin HEAD:modernize-safeledger-2
-          echo "created=true" >> "$GITHUB_OUTPUT"
-
       - name: Build AppImage
-        if: steps.lock_bootstrap.outputs.created != 'true'
         run: npm run dist:linux
 
       - name: Upload AppImage
-        if: steps.lock_bootstrap.outputs.created != 'true'
         uses: actions/upload-artifact@v6
         with:
           name: SafeLedger-Linux-AppImage
