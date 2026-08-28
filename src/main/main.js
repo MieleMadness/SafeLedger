@@ -324,7 +324,13 @@ ipc.on('panic-lock', (event, params = {}) => {
   try { assertTrustedEvent(event); } catch (_) { return; }
   cryptoSession.clearSession();
   securityMain.audit(getDataRoot(), safeActivityReason(params && params.reason));
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // Discard decrypted renderer state as well as the main-process DEK. A
+    // trusted main-process reload is not blocked by the renderer navigation
+    // policy and rebuilds SafeLedger at the login screen.
+    mainWindow.minimize();
+    mainWindow.webContents.reload();
+  }
 });
 
 ipc.on('record-password-failure', (event) => {
