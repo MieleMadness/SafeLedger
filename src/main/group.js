@@ -11,6 +11,7 @@ const walletCatalog = require('./wallet-catalog');
 const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const recoveryReadiness = require('./recovery-readiness');
+const recoveryDrillUi = require('./recovery-drill-ui');
 const walletMetadata = require('./wallet-metadata');
 const customFields = require('./custom-fields');
 const customFieldsUi = require('./custom-fields-ui');
@@ -73,6 +74,17 @@ function appendDetailLine(area, label, value, formatter) {
   area.appendChild(p);
 }
 
+function persistWalletUpdate(params, updates, button) {
+  if (params.saving.state) return alert('Please wait for processing to complete');
+  Object.assign(params.group, updates || {});
+  params.group.modified = Date();
+  params.vaultData.groups[params.vaultData.groupSelected] = params.group;
+  params.saving.state = true;
+  if (button) button.disabled = true;
+  statusMgr.loadStatus();
+  ipc.send('process-group', { type: 'group-modify', vaultData: params.vaultData });
+}
+
 function renderReadinessCard(area, params) {
   const readiness = recoveryReadiness.calculateWalletReadiness(params.group);
   const card = document.createElement('section');
@@ -108,6 +120,13 @@ function renderReadinessCard(area, params) {
     : 'Last verified: Never';
   card.appendChild(meta);
 
+  const drillMeta = document.createElement('p');
+  drillMeta.className = 'recovery-readiness-meta';
+  drillMeta.textContent = params.group.lastRecoveryDrill
+    ? `Last recovery drill: ${formatEasternDate(params.group.lastRecoveryDrill)}`
+    : 'Last recovery drill: Never';
+  card.appendChild(drillMeta);
+
   const actions = document.createElement('div');
   actions.className = 'recovery-readiness-actions';
   const verify = document.createElement('button');
@@ -115,16 +134,24 @@ function renderReadinessCard(area, params) {
   verify.className = 'btn btn-default btn-sm';
   verify.innerHTML = '<i class="fa fa-check-circle"></i> Verify now';
   verify.addEventListener('click', () => {
-    if (params.saving.state) return alert('Please wait for processing to complete');
-    params.group.lastVerified = new Date().toISOString();
-    params.group.modified = Date();
-    params.vaultData.groups[params.vaultData.groupSelected] = params.group;
-    params.saving.state = true;
-    verify.disabled = true;
-    statusMgr.loadStatus();
-    ipc.send('process-group', { type: 'group-modify', vaultData: params.vaultData });
+    persistWalletUpdate(params, { lastVerified: new Date().toISOString() }, verify);
   });
   actions.appendChild(verify);
+
+  const drill = document.createElement('button');
+  drill.type = 'button';
+  drill.className = 'btn btn-default btn-sm';
+  drill.innerHTML = '<i class="fa fa-shield"></i> Run recovery drill';
+  drill.addEventListener('click', () => {
+    if (params.saving.state) return alert('Please wait for processing to complete');
+    recoveryDrillUi.render({
+      group: params.group,
+      walletName: displayWalletName(params.group.name) || 'Wallet',
+      onCancel: () => renderGroupDetail(params),
+      onComplete: (patch, button) => persistWalletUpdate(params, patch, button)
+    });
+  });
+  actions.appendChild(drill);
   card.appendChild(actions);
   area.appendChild(card);
 }
@@ -333,6 +360,7 @@ const renderGroupDetail = (params) => {
         { label: 'Seed phrase', value: params.group.seedPhrase },
         ...customFields.printFields(params.group.customFields),
         { label: 'Last verified', value: params.group.lastVerified ? formatEasternDate(params.group.lastVerified) : 'Never' },
+        { label: 'Last recovery drill', value: params.group.lastRecoveryDrill ? formatEasternDate(params.group.lastRecoveryDrill) : 'Never' },
         { label: 'Notes', value: getUserWalletNotes(params.group) }
       ], true)
     },

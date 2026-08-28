@@ -15,9 +15,11 @@ const group = read('src/main/group.js');
 const record = read('src/main/record.js');
 const customFields = read('src/main/custom-fields.js');
 const customFieldsUi = read('src/main/custom-fields-ui.js');
+const recoveryDrill = read('src/main/recovery-drill.js');
+const recoveryDrillUi = read('src/main/recovery-drill-ui.js');
 const css = read('src/main/css/product-features.css');
 
-assert.strictEqual(pkg.version, '2.0.62');
+assert.strictEqual(pkg.version, '2.0.63');
 assert(securityMain.includes("ipc.handle('dashboard-summary'"));
 assert(securityMain.includes('dashboardSummary.summarize(entries)'));
 assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"));
@@ -36,7 +38,21 @@ assert(!record.includes('coin.tags, coin.manualBalance'));
 assert(customFields.includes("field.type !== 'sensitive'"));
 assert(customFieldsUi.includes("heading.textContent = 'Custom Fields'"));
 assert(customFieldsUi.includes("securityUi.appendSensitiveField(parent, field.label, field.value, { allowQr: false })"));
+assert(group.includes("const recoveryDrillUi = require('./recovery-drill-ui')"));
+assert(group.includes('Run recovery drill'));
+assert(group.includes('Last recovery drill'));
+assert(group.includes('recoveryDrillUi.render({'));
+assert(group.includes("{ label: 'Last recovery drill'"));
+assert(recoveryDrill.includes("lastRecoveryDrill: completedAt"));
+assert(recoveryDrill.includes("lastVerified: completedAt"));
+assert(recoveryDrillUi.includes("title: 'Complete recovery drill'"));
+assert(recoveryDrillUi.includes('Individual checklist answers are not stored.'));
+assert(!recoveryDrillUi.includes('group.seedPhrase'));
+assert(!recoveryDrillUi.includes('group.password'));
+assert(!recoveryDrillUi.includes('group.pin'));
+assert(!recoveryDrillUi.includes('group.customFields'));
 assert(css.includes('.custom-field-edit-row'));
+assert(css.includes('.recovery-drill-step'));
 for (const relative of [
   'src/main/dashboard-summary.js',
   'src/main/dashboard-ui.js',
@@ -45,9 +61,12 @@ for (const relative of [
   'src/main/renderer-entry.js',
   'src/main/custom-fields.js',
   'src/main/custom-fields-ui.js',
+  'src/main/recovery-drill.js',
+  'src/main/recovery-drill-ui.js',
   'src/main/group.js',
   'src/main/record.js',
   'scripts/dashboard-summary-tests.js',
-  'scripts/custom-fields-tests.js'
+  'scripts/custom-fields-tests.js',
+  'scripts/recovery-drill-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
-console.log('PASS roadmap 2.0.62 preserves the Recovery Dashboard and adds typed Wallet/Coin custom fields with sensitive values excluded from search.');
+console.log('PASS roadmap 2.0.63 preserves dashboard/custom fields and adds a no-secret Recovery Drill that stores only completion timestamps.');
