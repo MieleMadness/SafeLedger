@@ -4,28 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const keyEnvelope = require('./key-envelope');
 const runtimeUtils = require('./runtime-utils');
+const { atomicWriteJson } = require('./atomic-file');
 
 const ENVELOPE_FILE = 'key-envelope.json';
-
-async function atomicWriteJson(file, value) {
-  await fs.promises.mkdir(path.dirname(file), { recursive: true });
-  const temp = path.join(path.dirname(file), `.${path.basename(file)}.${process.pid}.${Date.now()}.tmp`);
-  let handle;
-  try {
-    handle = await fs.promises.open(temp, 'w', 0o600);
-    await handle.writeFile(JSON.stringify(value, null, 2), 'utf8');
-    await handle.sync();
-    await handle.close();
-    handle = null;
-    await fs.promises.rename(temp, file);
-  } catch (err) {
-    if (handle) {
-      try { await handle.close(); } catch (_) {}
-    }
-    try { await fs.promises.unlink(temp); } catch (_) {}
-    throw err;
-  }
-}
 
 function createController(vaultDir) {
   const envelopePath = path.join(vaultDir, ENVELOPE_FILE);

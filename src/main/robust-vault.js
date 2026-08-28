@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const encryption = require('./encryption');
+const { atomicWriteFile } = require('./atomic-file');
 
 function encryptedPayloadLooksValid(value) {
   return encryption.isAuthenticatedEncryptedPayload(value);
@@ -16,30 +17,6 @@ function safeVaultFileName(value) {
 function validVaultListStructure(parsed) {
   if (!parsed || !Array.isArray(parsed.vaults)) return false;
   return parsed.vaults.every((item) => item && safeVaultFileName(item.file));
-}
-
-async function atomicWriteFile(file, data, encoding = 'utf8') {
-  await fs.promises.mkdir(path.dirname(file), { recursive: true });
-  const temp = path.join(
-    path.dirname(file),
-    `.${path.basename(file)}.${process.pid}.${Date.now()}.${crypto.randomBytes(4).toString('hex')}.tmp`
-  );
-  let handle = null;
-  try {
-    handle = await fs.promises.open(temp, 'w', 0o600);
-    if (Buffer.isBuffer(data)) await handle.writeFile(data);
-    else await handle.writeFile(data, encoding);
-    await handle.sync();
-    await handle.close();
-    handle = null;
-    await fs.promises.rename(temp, file);
-  } catch (err) {
-    if (handle) {
-      try { await handle.close(); } catch (_) {}
-    }
-    try { await fs.promises.unlink(temp); } catch (_) {}
-    throw err;
-  }
 }
 
 async function secureDeleteFile(file) {
@@ -70,7 +47,7 @@ async function secureDeleteFile(file) {
 
 exports.saveVault = async (vaultFile, jsonString, myCryptKey) => {
   const result = encryption.encrypt(myCryptKey, jsonString);
-  await atomicWriteFile(vaultFile, result, 'utf8');
+  await atomicWriteFile(vaultFile, result, { encoding: 'utf8' });
   return 'SUCCESS';
 };
 

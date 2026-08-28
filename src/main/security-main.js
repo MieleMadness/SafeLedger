@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { atomicWriteJson } = require('./atomic-file');
 
 const BACKUP_FORMAT = 'safeledger-complete-data-backup';
 const BACKUP_VERSION = 2;
@@ -79,14 +80,7 @@ function assertUnlocked(cryptoSession) {
 }
 
 async function writeBackupFile(filePath, payload) {
-  const temp = `${filePath}.tmp`;
-  try {
-    await fs.promises.writeFile(temp, JSON.stringify(payload), { encoding: 'utf8', mode: 0o600 });
-    await fs.promises.rename(temp, filePath);
-  } catch (err) {
-    try { await fs.promises.unlink(temp); } catch (_) {}
-    throw err;
-  }
+  await atomicWriteJson(filePath, payload, { pretty: false });
 }
 
 async function stageRestore(dataRoot, payload) {
@@ -199,5 +193,14 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
 module.exports = {
   audit,
   registerIpcHandlers,
-  _test: { BACKUP_FORMAT, BACKUP_VERSION, collectFiles, safeBackupPath, validateBackupPayload, stageRestore, sanitizeAuditEvent }
+  _test: {
+    BACKUP_FORMAT,
+    BACKUP_VERSION,
+    collectFiles,
+    safeBackupPath,
+    validateBackupPayload,
+    stageRestore,
+    sanitizeAuditEvent,
+    writeBackupFile
+  }
 };

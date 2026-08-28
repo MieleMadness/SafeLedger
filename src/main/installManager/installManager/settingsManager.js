@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const lockoutState = require('../../lockout-state');
 const settingsSchema = require('../../settings-schema');
+const { atomicWriteJson } = require('../../atomic-file');
 
 const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue } = settingsSchema;
 
@@ -77,13 +78,10 @@ exports.loadSettings = async (dir) => {
 };
 
 exports.saveSettings = async (dir, settings) => {
-  await fs.promises.mkdir(dir, { recursive: true });
   const next = normalizeSettings(settings);
   next.modified = new Date().toISOString();
   const file = settingsPath(dir);
-  const temp = `${file}.tmp`;
-  await fs.promises.writeFile(temp, JSON.stringify(next, null, 2), 'utf8');
-  await fs.promises.rename(temp, file);
+  await atomicWriteJson(file, next);
   return { status: 'SUCCESS', settings: next };
 };
 

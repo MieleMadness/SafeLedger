@@ -17,20 +17,35 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: false
+          fetch-depth: 2
+
+      - name: Verify version bump
+        run: node scripts/version-bump-check.js
 
       - name: Set up Node.js
         uses: actions/setup-node@v5
         with:
           node-version: '24'
 
-      - name: Install dependencies
+      - name: Install dependencies and generate lockfile
         run: npm install --no-audit --no-fund
+
+      - name: Upload generated package lock
+        uses: actions/upload-artifact@v6
+        with:
+          name: SafeLedger-package-lock-2.0.54
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Run regression tests
         run: npm run test:regression
 
       - name: Run Electron crypto smoke test
         run: npm run test:electron-crypto
+
+      - name: Launch real SafeLedger GUI smoke test
+        run: xvfb-run -a npm run test:gui-smoke
 
       - name: Build AppImage
         run: npm run dist:linux

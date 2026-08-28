@@ -17,6 +17,7 @@ let settingsDir;
 let currentSettings;
 let walletCatalog = null;
 const currentVault = 'zvault-0.json';
+const GUI_SMOKE = process.env.SAFELEDGER_GUI_SMOKE === '1';
 const excludedDefaultWallets = new Set(['bitbox02 multi', 'coldcard', 'keystone', 'rabby wallet']);
 
 function getWalletCatalog() {
@@ -194,6 +195,47 @@ async function recordPasswordFailure() {
   sendResult({ status: 'ERROR', statusMsg: 'Invalid Password', type: 'password-failed', settings });
 }
 
+function installGuiSmokeProbe(win) {
+  if (!GUI_SMOKE) return;
+  let finished = false;
+  const finish = (ok, message) => {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timeout);
+    const method = ok ? 'log' : 'error';
+    console[method](`${ok ? 'PASS' : 'FAIL'} SafeLedger GUI startup smoke: ${message}`);
+    cryptoSession.clearSession();
+    setTimeout(() => app.exit(ok ? 0 : 1), 25);
+  };
+  const timeout = setTimeout(() => finish(false, 'timed out waiting for the real application window'), 15000);
+
+  win.webContents.on('preload-error', (_event, preloadPath, error) =>
+    finish(false, `preload failed (${preloadPath}): ${error && error.message ? error.message : error}`));
+  win.webContents.on('render-process-gone', (_event, details) =>
+    finish(false, `renderer exited unexpectedly: ${details && details.reason ? details.reason : 'unknown reason'}`));
+  win.webContents.once('did-finish-load', () => {
+    setTimeout(async () => {
+      try {
+        const state = await win.webContents.executeJavaScript(`(() => ({
+          title: document.title,
+          rendererReady: document.documentElement.dataset.safeLedgerRendererReady === 'true',
+          hasApi: !!window.safeLedgerApi,
+          hasInitSystem: !!window.safeLedgerApi && typeof window.safeLedgerApi.initSystem === 'function',
+          hasDetailArea: !!document.getElementById('detailArea'),
+          hasPanicButton: !!document.getElementById('panicLockButton')
+        }))()`, true);
+        if (state.title !== 'SafeLedger') throw new Error(`unexpected title: ${state.title}`);
+        if (!state.rendererReady) throw new Error('renderer bundle did not report ready');
+        if (!state.hasApi || !state.hasInitSystem) throw new Error('sandbox preload bridge is unavailable');
+        if (!state.hasDetailArea || !state.hasPanicButton) throw new Error('core SafeLedger UI did not render');
+        finish(true, 'real sandboxed window, preload bridge, renderer bundle, and core UI loaded');
+      } catch (err) {
+        finish(false, err && err.message ? err.message : String(err));
+      }
+    }, 500);
+  });
+}
+
 function createWindow() {
   configureStorage();
   mainWindow = new BrowserWindow({
@@ -203,6 +245,7 @@ function createWindow() {
     minHeight: 600,
     backgroundColor: '#0D47A1',
     icon: path.join(app.getAppPath(), 'sl.png'),
+    show: !GUI_SMOKE,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -210,6 +253,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js')
     }
   });
+  installGuiSmokeProbe(mainWindow);
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.on('closed', () => {
     cryptoSession.clearSession();
