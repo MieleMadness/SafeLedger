@@ -1,0 +1,55 @@
+name: Build SafeLedger Linux AppImage
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - modernize-safeledger-2
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+        with:
+          submodules: false
+          fetch-depth: 2
+
+      - name: Verify version bump
+        run: node scripts/version-bump-check.js
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run regression tests
+        run: npm run test:regression
+
+      - name: Run Electron crypto smoke test
+        run: npm run test:electron-crypto
+
+      - name: Configure Electron sandbox helper for GUI smoke
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+
+      - name: Launch real SafeLedger GUI smoke test
+        run: xvfb-run -a npm run test:gui-smoke
+
+      - name: Build AppImage
+        run: npm run dist:linux
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v6
+        with:
+          name: SafeLedger-Linux-AppImage
+          path: dist/*.AppImage
+          if-no-files-found: error

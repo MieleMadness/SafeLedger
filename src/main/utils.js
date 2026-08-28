@@ -11,7 +11,3 @@ exports.compareIgnoreCase = (a,b) => {
     return 0;
   }
 }
-
-exports.testSleep = (millis) => {
-    return new Promise(resolve => setTimeout(resolve, millis));
-}

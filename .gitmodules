@@ -1,4 +1,0 @@
-[submodule "src/main/installManager"]
-	path = src/main/installManager
-	url = ssh://cborghome.ddns.net/opt/gitcborg/cborgtech-license.git
-	branch = master

@@ -1,0 +1,69 @@
+/* SafeLedger 2.0.14 bundled branded token artwork */
+.coin-brand-image {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  display: block;
+  object-fit: contain;
+  border-radius: 50%;
+}
+
+.coin-list-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.coin-list-brand-image,
+.coin-list-generic-icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 50%;
+}
+
+.coin-list-brand-image {
+  display: block;
+  object-fit: contain;
+}
+
+.coin-list-generic-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.18);
+  border: 1px solid rgba(255,255,255,.35);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.item-selected .coin-list-generic-icon {
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.55);
+}
+
+.coin-list-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 1000px) {
+  .coin-brand-image {
+    width: 46px;
+    height: 46px;
+    flex-basis: 46px;
+  }
+
+  .coin-list-brand-image,
+  .coin-list-generic-icon {
+    width: 19px;
+    height: 19px;
+    flex-basis: 19px;
+  }
+}

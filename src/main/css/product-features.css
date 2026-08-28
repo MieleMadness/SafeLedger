@@ -1,0 +1,149 @@
+/* SafeLedger product-feature UI. Kept separate from the legacy layout stylesheet. */
+.recovery-readiness-card {
+  margin: 12px 0 16px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+.recovery-readiness-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.recovery-readiness-title { font-size: 16px; line-height: 1.3; font-weight: 700; color: #172033; }
+.recovery-readiness-score { font-size: 13px; font-weight: 700; color: #526071; }
+.recovery-readiness-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.recovery-readiness-status.is-ready { background: #e8f5ec; color: #216e39; }
+.recovery-readiness-status.is-review { background: #fff4d6; color: #875d00; }
+.recovery-readiness-status.is-incomplete { background: #fbe9e7; color: #9d2a22; }
+.recovery-readiness-message { margin: 0 0 8px; color: #4d5968; font-size: 13px; line-height: 1.45; }
+.recovery-readiness-meta { margin: 0; color: #667085; font-size: 12px; line-height: 1.45; }
+.recovery-readiness-actions { margin-top: 10px; }
+.recovery-readiness-actions .btn { margin-right: 6px; }
+
+.product-section-title { margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #e2e7ee; font-size: 17px; line-height: 1.3; font-weight: 700; color: #253047; }
+
+.dashboard-inline { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #b9c4d3; background: #fff; color: #0D47A1; margin-right: 8px; font-size: 18px; }
+.dashboard-inline:hover, .dashboard-inline:focus { background: #eef5ff; outline: 2px solid #1976D2; }
+.dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; margin-bottom: 14px; }
+.dashboard-header h1 { margin: 0 0 5px !important; }
+.dashboard-header p { margin: 0; color: #5f6672; font-size: 13px; line-height: 1.45; max-width: 520px; }
+.dashboard-readiness { flex: 0 0 auto; min-width: 118px; padding: 10px 12px; border-radius: 8px; background: #eaf2ff; color: #0D47A1; text-align: center; }
+.dashboard-readiness strong { display: block; font-size: 25px; line-height: 1.1; }
+.dashboard-readiness span { font-size: 12px; }
+.dashboard-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 12px 0 18px; }
+.dashboard-stat { background: #fff; border: 1px solid #d8dee8; border-radius: 8px; padding: 12px; }
+.dashboard-stat-value { font-size: 24px; line-height: 1.1; font-weight: 700; color: #172033; }
+.dashboard-stat-label { margin-top: 4px; font-size: 12px; color: #667085; }
+.dashboard-section { margin: 18px 0; }
+.dashboard-section h2 { margin: 0 0 9px; font-size: 17px; font-weight: 700; }
+.dashboard-list { border: 1px solid #d8dee8; border-radius: 8px; overflow: hidden; background: #fff; }
+.dashboard-list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-bottom: 1px solid #edf0f4; }
+.dashboard-list-row:last-child { border-bottom: 0; }
+.dashboard-list-main { min-width: 0; }
+.dashboard-list-title { font-size: 14px; font-weight: 600; color: #172033; }
+.dashboard-list-meta { margin-top: 2px; font-size: 12px; color: #667085; }
+.dashboard-status { flex: 0 0 auto; border-radius: 999px; padding: 4px 8px; font-size: 11px; font-weight: 700; }
+.dashboard-status.is-ready { background: #e8f5ec; color: #216e39; }
+.dashboard-status.is-review { background: #fff4d6; color: #875d00; }
+.dashboard-status.is-incomplete { background: #fbe9e7; color: #9d2a22; }
+.dashboard-empty, .dashboard-loading { color: #667085; font-size: 13px; }
+.dashboard-warning { margin-top: 10px; }
+
+.custom-fields-editor { margin-top: 8px; }
+.custom-fields-note { margin: -2px 0 12px; color: #667085; font-size: 12px; line-height: 1.45; }
+.custom-fields-rows { display: grid; gap: 10px; margin-bottom: 10px; }
+.custom-field-edit-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 150px minmax(200px, 2fr) 40px;
+  gap: 10px;
+  align-items: end;
+  padding: 10px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.custom-field-edit-row label { display: block; margin-bottom: 5px; font-size: 12px; color: #526071; }
+.custom-field-value-control .secure-input-shell { margin: 0; }
+.custom-field-remove { width: 40px; height: 34px; padding: 6px; }
+.custom-field-add { margin-bottom: 4px; }
+.custom-field-checkbox { min-height: 34px; display: flex !important; align-items: center; gap: 6px; margin: 0 !important; font-size: 14px !important; color: #253047 !important; }
+.custom-field-multiline { margin-top: 10px; }
+
+.recovery-drill-header { margin-bottom: 14px; }
+.recovery-drill-header h1 { margin-bottom: 4px !important; }
+.recovery-drill-wallet { margin: 0; color: #667085; font-size: 13px; }
+.recovery-drill-privacy {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid #bfd4f2;
+  border-radius: 8px;
+  background: #eef5ff;
+  color: #274766;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.recovery-drill-privacy .fa { color: #0D47A1; font-size: 17px; margin-top: 1px; }
+.recovery-drill-warning {
+  margin: 12px 0;
+  padding: 11px 13px;
+  border: 1px solid #e7c769;
+  border-radius: 8px;
+  background: #fff8e5;
+  color: #72530b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.recovery-drill-intro { margin: 16px 0 10px; color: #4d5968; font-size: 14px; line-height: 1.5; }
+.recovery-drill-list { display: grid; gap: 10px; margin-bottom: 14px; }
+.recovery-drill-step {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin: 0 !important;
+  padding: 12px 14px;
+  border: 1px solid #d8dee8;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-weight: 400 !important;
+}
+.recovery-drill-step:hover { border-color: #aebed3; background: #fbfcfe; }
+.recovery-drill-step input { width: 17px; height: 17px; margin: 3px 0 0; }
+.recovery-drill-step-body { display: grid; gap: 3px; min-width: 0; }
+.recovery-drill-step-number { color: #0D47A1; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.recovery-drill-step-title { color: #172033; font-size: 14px; line-height: 1.35; }
+.recovery-drill-step-text { color: #596579; font-size: 13px; line-height: 1.5; }
+.recovery-drill-storage-note {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-left: 3px solid #93a8c2;
+  background: #f8fafc;
+  color: #596579;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1000px) {
+  .dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-header { flex-direction: column; }
+  .custom-field-edit-row { grid-template-columns: 1fr 1fr; }
+  .custom-field-value-control { grid-column: 1 / -1; }
+}

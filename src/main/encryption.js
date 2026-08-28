@@ -1,119 +1,101 @@
-/*
-  Author: Edward Seufert - Cborgtech, LLC
-*/
+'use strict';
 
-const electron = require('electron')
-const {ipcRenderer : ipc } = electron;
 const crypto = require('crypto');
-const statusMgr = require('./status');
+const runtimeUtils = require('./runtime-utils');
 
-exports.showEncrptionDetail = (params) => {
-  renderEncryptionDetail(params);
-};
+const MAX_MASTER_PASSWORD_LENGTH = runtimeUtils.MAX_MASTER_PASSWORD_LENGTH;
+const AUTHENTICATED_PREFIX = 'SLG2';
+const AUTHENTICATED_IV_BYTES = 12;
+const AUTHENTICATED_TAG_BYTES = 16;
+const AUTHENTICATED_AAD = Buffer.from('SafeLedger authenticated vault format SLG2', 'utf8');
 
-const renderEncryptionDetail = (params) => {
+exports.showEncrptionDetail = () => {
   const area = document.getElementById('detailArea');
-  area.innerHTML = "";
+  area.innerHTML = '';
   const header = document.createElement('h1');
-  header.innerHTML = "Encryption Settings";
+  header.innerHTML = 'Encryption Settings';
   area.appendChild(header);
-  const divider = document.createElement('hr');
-  area.appendChild(divider);
+  area.appendChild(document.createElement('hr'));
   const created = document.createElement('p');
-  created.innerHTML = "Change Password";
+  created.innerHTML = 'Change Password';
   area.appendChild(created);
 
   const form = document.createElement('form');
   area.appendChild(form);
-
   const formgroup = document.createElement('div');
-  formgroup.className = "form-group";
+  formgroup.className = 'form-group';
   form.appendChild(formgroup);
-  // old password
+
   const labelOldPassword = document.createElement('label');
-  labelOldPassword.for = "inputOldPassword";
-  labelOldPassword.innerHTML = "Old Password";
+  labelOldPassword.htmlFor = 'inputOldPassword';
+  labelOldPassword.innerHTML = 'Old Password';
   formgroup.appendChild(labelOldPassword);
   const inputOldPassword = document.createElement('input');
-  inputOldPassword.type = "text";
-  inputOldPassword.className = "form-control";
-  inputOldPassword.id = "inputOldPassword";
-  inputOldPassword.setAttribute('maxlength','60');
+  inputOldPassword.type = 'password';
+  inputOldPassword.className = 'form-control';
+  inputOldPassword.id = 'inputOldPassword';
+  inputOldPassword.setAttribute('maxlength', String(MAX_MASTER_PASSWORD_LENGTH));
   formgroup.appendChild(inputOldPassword);
 
-  // new password
   const labelNewPassword = document.createElement('label');
-  labelNewPassword.for = "inputNewPassword";
-  labelNewPassword.innerHTML = "New Password";
+  labelNewPassword.htmlFor = 'inputNewPassword';
+  labelNewPassword.innerHTML = 'New Password';
   formgroup.appendChild(labelNewPassword);
   const inputNewPassword = document.createElement('input');
-  inputNewPassword.type = "text";
-  inputNewPassword.className = "form-control";
-  inputNewPassword.id = "inputNewPassword";
-  inputNewPassword.setAttribute('maxlength','60');
+  inputNewPassword.type = 'password';
+  inputNewPassword.className = 'form-control';
+  inputNewPassword.id = 'inputNewPassword';
+  inputNewPassword.setAttribute('maxlength', String(MAX_MASTER_PASSWORD_LENGTH));
   formgroup.appendChild(inputNewPassword);
 
   const editBtn = document.createElement('button');
-  editBtn.type = "submit";
-  editBtn.id = "encryptionEditBtn";
-  editBtn.className = "btn btn-default bottom-space pull-right";
+  editBtn.type = 'submit';
+  editBtn.id = 'encryptionEditBtn';
+  editBtn.className = 'btn btn-default bottom-space pull-right';
   editBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
-  editBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    if (params.saving.state == true) {
-      alert("Please wait for processing to complete");
-    } else {
-      editBtn.disabled = true;
-      let statusCode = true;
-      let statusMsg = "";
-      let rx = new RegExp(/[a-z]/);
-      if (!(rx.test(inputNewPassword.value))) { statusCode = false; statusMsg='Password must contain at least 1 alpha character' };
-      rx = new RegExp(/[0-9]/);
-      if (!(rx.test(inputNewPassword.value))) { statusCode = false; statusMsg='Password must contain at least 1 number' };
-      rx = new RegExp(/[A-Z]/);
-      if (!(rx.test(inputNewPassword.value))) { statusCode = false; statusMsg='Password must contain at least 1 Uppercase letter' };
-      if (inputOldPassword.value == inputNewPassword.value) { statusCode = false; statusMsg='Old password can not match new password' };
-      if (!(inputNewPassword.value.length >= 8)) { statusCode = false; statusMsg='Password must be at least 8 character' };
-      if (statusCode == false){
-        editBtn.disabled = false;
-        statusMgr.showStatus({status:'ERROR',statusMsg});
-      } else {
-        params.saving.state = true;
-        statusMgr.loadStatus();
-        const oldCrypto = crypto.createHmac('sha256',inputOldPassword.value.split("").reverse().join("")).update(inputOldPassword.value).digest();
-        const newCrypto= crypto.createHmac('sha256',inputNewPassword.value.split("").reverse().join("")).update(inputNewPassword.value).digest();
-        inputOldPassword.value = "********************";
-        inputNewPassword.value = "********************";
-        ipc.send('process-rotate-crypto', {oldCryptoKey:oldCrypto,newCryptoKey:newCrypto,vaultList:params.vaultList});
-      }
-    }
-  });
   form.appendChild(editBtn);
 };
 
-exports.encrypt = (cryptoKey, clearData) => {
-  const randomIV = crypto.randomBytes(16);
-  //console.log("random string " + randomIV);
-  //console.log("crytokey " + cryptoKey);
-  let encipher = crypto.createCipheriv('aes-256-cbc', cryptoKey, randomIV);
-  let encryptedData = encipher.update(clearData,'utf8');
-  //encryptData += encipher.final("base64");
-  const finalBuffer = Buffer.concat([encryptedData, encipher.final()]);
-  const encryptedHex = randomIV.toString('hex') + ':' + finalBuffer.toString('hex');
-  //console.log("encrypt data "  + encryptedHex);
-  return encryptedHex;
+function isHex(value, exactLength) {
+  if (typeof value !== 'string') return false;
+  if (exactLength != null && value.length !== exactLength) return false;
+  return value.length % 2 === 0 && /^[0-9a-fA-F]*$/.test(value);
 }
 
-exports.decrypt = (cryptoKey, encryptedHex) => {
-  //console.log("decrypt " + encryptedHex);
-  //console.log("crytokey " + cryptoKey);
-  const encryptedArray = encryptedHex.split(':');
-  const randomIV = new Buffer(encryptedArray[0], 'hex');
-  //console.log("random iv " + randomIV);
-  const encryptedData = new Buffer(encryptedArray[1], 'hex');
-  let decipher = crypto.createDecipheriv('aes-256-cbc', cryptoKey, randomIV);
-  let decrypted = decipher.update(encryptedData,'utf8');
-  const clearText = Buffer.concat([decrypted, decipher.final()]).toString();
-  //console.log("clear text " + clearText);
-  return clearText;
+function isAuthenticatedEncryptedPayload(value) {
+  if (typeof value !== 'string') return false;
+  const parts = value.split(':');
+  if (parts.length !== 4 || parts[0] !== AUTHENTICATED_PREFIX) return false;
+  return isHex(parts[1], AUTHENTICATED_IV_BYTES * 2)
+    && isHex(parts[2], AUTHENTICATED_TAG_BYTES * 2)
+    && isHex(parts[3]);
 }
+
+exports.encrypt = (cryptoKey, clearData) => {
+  const randomIV = crypto.randomBytes(AUTHENTICATED_IV_BYTES);
+  const cipher = crypto.createCipheriv('aes-256-gcm', cryptoKey, randomIV, { authTagLength: AUTHENTICATED_TAG_BYTES });
+  cipher.setAAD(AUTHENTICATED_AAD);
+  const encryptedData = Buffer.concat([cipher.update(String(clearData), 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return [AUTHENTICATED_PREFIX, randomIV.toString('hex'), authTag.toString('hex'), encryptedData.toString('hex')].join(':');
+};
+
+exports.decrypt = (cryptoKey, encryptedValue) => {
+  if (!isAuthenticatedEncryptedPayload(encryptedValue)) {
+    throw new Error('Unsupported or damaged SafeLedger encrypted payload');
+  }
+  const parts = encryptedValue.split(':');
+  const decipher = crypto.createDecipheriv('aes-256-gcm', cryptoKey, Buffer.from(parts[1], 'hex'), {
+    authTagLength: AUTHENTICATED_TAG_BYTES
+  });
+  decipher.setAAD(AUTHENTICATED_AAD);
+  decipher.setAuthTag(Buffer.from(parts[2], 'hex'));
+  return Buffer.concat([
+    decipher.update(Buffer.from(parts[3], 'hex')),
+    decipher.final()
+  ]).toString('utf8');
+};
+
+exports.isAuthenticatedEncryptedPayload = isAuthenticatedEncryptedPayload;
+exports.encryptedPayloadLooksValid = isAuthenticatedEncryptedPayload;
+exports.AUTHENTICATED_PREFIX = AUTHENTICATED_PREFIX;

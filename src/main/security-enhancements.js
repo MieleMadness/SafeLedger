@@ -1,0 +1,94 @@
+'use strict';
+
+const { ipcRenderer: ipc } = require('electron');
+const passwordControls = require('./password-controls');
+
+const AUTO_LOCK_MINUTES = 5;
+let idleTimer = null;
+let panicRunning = false;
+let unlockedSession = false;
+
+function clearVisibleSensitiveFields() {
+  document.querySelectorAll('input[type="text"], input[type="password"], textarea').forEach((el) => {
+    if (/password|private|seed|pin|recovery/i.test(`${el.id} ${el.name} ${el.getAttribute('aria-label') || ''}`)) el.value = '';
+  });
+  document.querySelectorAll('.sensitive-value').forEach((el) => { el.textContent = ''; });
+  document.querySelectorAll('details[open]').forEach((details) => details.removeAttribute('open'));
+}
+
+function panicLock(reason = 'panic-lock') {
+  if (panicRunning) return;
+  panicRunning = true;
+  unlockedSession = false;
+  clearTimeout(idleTimer);
+  try { clearVisibleSensitiveFields(); } catch (_) {}
+  try { ipc.send('panic-lock', { reason }); } catch (_) {}
+  setTimeout(() => window.location.reload(), 100);
+}
+
+function resetIdleTimer() {
+  clearTimeout(idleTimer);
+  const loginVisible = !!document.getElementById('masterCryptoInput');
+  if (!unlockedSession || loginVisible) return;
+  idleTimer = setTimeout(() => panicLock('inactivity-auto-lock'), AUTO_LOCK_MINUTES * 60 * 1000);
+}
+
+['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach((eventName) => {
+  window.addEventListener(eventName, resetIdleTimer, { passive: true });
+});
+
+function enhanceLoginPassword() {
+  const input = document.getElementById('masterCryptoInput');
+  if (!input || input.dataset.safeledgerEnhanced === '1') return;
+  input.dataset.safeledgerEnhanced = '1';
+  passwordControls.configure(input, { autocomplete: 'off', strength: true });
+}
+
+ipc.on('result-init-system', () => setTimeout(enhanceLoginPassword, 0));
+ipc.on('result', (_evt, params) => {
+  if (params && params.status === 'SUCCESS' && params.type === 'vaultlist-init') {
+    unlockedSession = true;
+    setTimeout(resetIdleTimer, 0);
+  }
+  if (params && params.type === 'session-locked') {
+    unlockedSession = false;
+    clearTimeout(idleTimer);
+  }
+  setTimeout(enhanceLoginPassword, 0);
+});
+ipc.on('result-lockout-destroy', () => {
+  unlockedSession = false;
+  clearTimeout(idleTimer);
+});
+
+window.addEventListener('DOMContentLoaded', () => {
+  enhanceLoginPassword();
+  resetIdleTimer();
+  const panic = document.getElementById('panicLockButton');
+  if (panic) panic.addEventListener('click', () => panicLock('emergency-lock'));
+});
+window.addEventListener('beforeunload', () => clearTimeout(idleTimer));
+
+async function exportEncryptedBackup() {
+  try {
+    const result = await ipc.invoke('security-backup-all');
+    if (!result || result.canceled) return;
+    if (!result.ok) return alert(result.message || 'Backup failed.');
+    alert(`Complete SafeLedger backup created with ${result.fileCount} file(s).`);
+  } catch (err) { alert(`Backup failed: ${err.message || err}`); }
+}
+
+async function restoreEncryptedBackup() {
+  try {
+    const result = await ipc.invoke('security-restore-all');
+    if (!result || result.canceled) return;
+    if (!result.ok) return alert(result.message || 'Restore failed.');
+    alert(`Complete SafeLedger backup restored.${result.safetyDir ? ` Safety copy: ${result.safetyDir}` : ''}\n\nSafeLedger will now lock and reload.`);
+    panicLock('post-restore-lock');
+  } catch (err) { alert(`Restore failed: ${err.message || err}`); }
+}
+
+exports.panicLock = panicLock;
+exports.exportEncryptedBackup = exportEncryptedBackup;
+exports.restoreEncryptedBackup = restoreEncryptedBackup;
+exports._test = { AUTO_LOCK_MINUTES, clearVisibleSensitiveFields };
