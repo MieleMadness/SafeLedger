@@ -20,9 +20,8 @@ const defaults = () => ({
   lockLogin: false,
   lockLoginTime: 0,
   minutesToWaitBetweenLockout: 15,
-  // Preserve SafeLedger's historical brute-force protection by default.
-  // Users can explicitly disable this in Security Settings.
-  scrubContentAfterRetries: true
+  // Destructive cleanup is opt-in. Lockouts remain enabled when this is false.
+  scrubContentAfterRetries: false
 });
 
 function normalizeCounter(value, fallback = 0) {
@@ -51,6 +50,7 @@ function normalizeSettings(settings, now = Date.now()) {
   next.failAttemptCount = normalizeCounter(next.failAttemptCount, baseDefaults.failAttemptCount);
   next.lockOutCount = normalizeCounter(next.lockOutCount, baseDefaults.lockOutCount);
   next.lockLogin = next.lockLogin === true || next.lockLogin === 1 || next.lockLogin === 'true';
+  next.scrubContentAfterRetries = next.scrubContentAfterRetries === true || next.scrubContentAfterRetries === 1 || next.scrubContentAfterRetries === 'true';
 
   const lockTime = Number(next.lockLoginTime);
   next.lockLoginTime = Number.isFinite(lockTime) && lockTime > 0 ? Math.floor(lockTime) : 0;
