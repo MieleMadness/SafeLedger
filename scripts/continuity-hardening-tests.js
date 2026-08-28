@@ -132,6 +132,7 @@ async function testSaferDefaultsAndStaticHardening() {
   const main = fs.readFileSync(path.join(root, 'src/main/main.js'), 'utf8');
   const preload = fs.readFileSync(path.join(root, 'src/main/preload.js'), 'utf8');
   const html = fs.readFileSync(path.join(root, 'src/main/index.html'), 'utf8');
+  const securityUi = fs.readFileSync(path.join(root, 'src/main/security-ui.js'), 'utf8');
   assert(main.includes("settings.scrubContentAfterRetries === true"));
   assert(main.includes('setWindowOpenHandler'));
   assert(main.includes("on('will-navigate'"));
@@ -142,6 +143,8 @@ async function testSaferDefaultsAndStaticHardening() {
   assert(preload.includes('importLegacyData'));
   assert(html.includes('Content-Security-Policy'));
   assert(html.includes("connect-src 'none'"));
+  assert(securityUi.includes('createPrintFrame'));
+  assert(!securityUi.includes("window.open('', '_blank'"), 'recovery printing must not bypass the deny-new-window policy');
 }
 
 (async () => {
@@ -149,7 +152,7 @@ async function testSaferDefaultsAndStaticHardening() {
   await testLegacyImporter();
   await testBackupIntegrityManifest();
   await testSaferDefaultsAndStaticHardening();
-  console.log('PASS SafeLedger 2.1 continuity, legacy import, backup integrity, and security hardening tests.');
+  console.log('PASS SafeLedger 2.1 continuity, legacy import, backup integrity, security hardening, and secure-print continuity tests.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
