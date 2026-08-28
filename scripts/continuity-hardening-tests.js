@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const encryption = require('../src/main/encryption');
 const vaultSchema = require('../src/main/vault-schema');
 const legacyImport = require('../src/main/legacy-import');
 const robustVault = require('../src/main/robust-vault');
@@ -21,6 +22,30 @@ function encryptLegacy(password, value, ivHex = '00112233445566778899aabbccddeef
   } finally {
     key.fill(0);
   }
+}
+
+function validEnvelopeFixture() {
+  return {
+    format: 'safeledger-key-envelope',
+    version: 3,
+    created: new Date().toISOString(),
+    modified: new Date().toISOString(),
+    kdf: {
+      algorithm: 'argon2id',
+      salt: '00112233445566778899aabbccddeeff',
+      memory: 65536,
+      passes: 3,
+      parallelism: 1,
+      keyBytes: 32
+    },
+    kekVerifier: 'a'.repeat(64),
+    wrappedKey: {
+      algorithm: 'aes-256-gcm',
+      iv: 'b'.repeat(24),
+      tag: 'c'.repeat(32),
+      ciphertext: 'd'.repeat(64)
+    }
+  };
 }
 
 async function testVaultSchema() {
@@ -121,6 +146,54 @@ async function testBackupIntegrityManifest() {
   traversal.files['../escape.txt'] = Buffer.from('x').toString('base64');
   traversal.manifest = securityMain._test.buildBackupManifest(traversal.files);
   assert.throws(() => securityMain._test.validateBackupPayload(traversal), /invalid path/);
+
+  const v2 = {
+    format: securityMain._test.BACKUP_FORMAT,
+    version: 2,
+    created: new Date().toISOString(),
+    files: { 'vaults/vaultlist.json': Buffer.from('legacy-v2-backup').toString('base64') }
+  };
+  assert.strictEqual(securityMain._test.validateBackupPayload(v2).version, 2, 'version-2 complete backups must remain accepted for restore');
+}
+
+async function testAuthenticatedBackupVerification() {
+  const dataKey = crypto.randomBytes(32);
+  try {
+    const list = {
+      vaults: [{ name: 'Primary', id: 0, file: 'zvault-0.json', created: new Date().toISOString() }]
+    };
+    const profile = vaultSchema.prepareForSave({
+      file: 'zvault-0.json',
+      groups: [
+        { name: 'Hardware Wallet', records: [{ name: 'Bitcoin' }, { name: 'Ethereum' }] },
+        { name: 'Mobile Wallet', records: [{ name: 'Litecoin' }] }
+      ]
+    });
+    const files = {
+      'vaults/key-envelope.json': Buffer.from(JSON.stringify(validEnvelopeFixture()), 'utf8').toString('base64'),
+      'vaults/vaultlist.json': Buffer.from(encryption.encrypt(dataKey, JSON.stringify(list)), 'utf8').toString('base64'),
+      'vaults/zvault-0.json': Buffer.from(encryption.encrypt(dataKey, JSON.stringify(profile)), 'utf8').toString('base64')
+    };
+    const payload = {
+      format: securityMain._test.BACKUP_FORMAT,
+      version: 3,
+      created: '2026-08-28T12:00:00.000Z',
+      files,
+      manifest: securityMain._test.buildBackupManifest(files)
+    };
+    const report = securityMain._test.verifyBackupPayload(payload, dataKey);
+    assert.strictEqual(report.profileCount, 1);
+    assert.strictEqual(report.walletCount, 2);
+    assert.strictEqual(report.assetCount, 3);
+    assert.strictEqual(report.fileCount, 3);
+
+    const malicious = JSON.parse(JSON.stringify(payload));
+    malicious.files['vaults/zvault-0.json'] = Buffer.from(encryption.encrypt(crypto.randomBytes(32), JSON.stringify(profile)), 'utf8').toString('base64');
+    malicious.manifest = securityMain._test.buildBackupManifest(malicious.files);
+    assert.throws(() => securityMain._test.verifyBackupPayload(malicious, dataKey), /could not be authenticated/);
+  } finally {
+    dataKey.fill(0);
+  }
 }
 
 async function testSaferDefaultsAndStaticHardening() {
@@ -151,8 +224,9 @@ async function testSaferDefaultsAndStaticHardening() {
   await testVaultSchema();
   await testLegacyImporter();
   await testBackupIntegrityManifest();
+  await testAuthenticatedBackupVerification();
   await testSaferDefaultsAndStaticHardening();
-  console.log('PASS SafeLedger 2.1 continuity, legacy import, backup integrity, security hardening, and secure-print continuity tests.');
+  console.log('PASS SafeLedger 2.1 continuity, legacy import, authenticated backup verification, security hardening, and secure-print continuity tests.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
