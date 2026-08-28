@@ -4,7 +4,7 @@
 
 SafeLedger 2.1 focuses on protecting long-lived user data and consolidating the security architecture introduced in SafeLedger 2.x. The release deliberately prioritizes migration safety, backup confidence, IPC boundaries, and future schema compatibility over visual-framework changes.
 
-Target release version: **2.1.0**
+Release version: **2.1.0**
 
 ## Primary outcomes
 
@@ -31,9 +31,9 @@ SafeLedger vault data now carries a `schemaVersion` independent of the wallet ca
 
 The schema layer:
 
-- migrates older/missing schema versions forward in memory;
+- migrates older or missing schema versions forward in memory;
 - rejects vault data created by a newer unsupported schema;
-- gives future releases a deterministic `v1 -> v2 -> v3` migration path;
+- provides a deterministic migration chain for future releases;
 - prevents another data-compatibility cliff as the application evolves.
 
 ### 3. Backup verification and integrity manifests
@@ -52,7 +52,7 @@ Verification checks the backup manifest and cryptographically authenticates the 
 
 ### 4. Safer Self-Destruct behavior
 
-Self-Destruct Protection is now **off by default for new settings**. Brute-force lockouts remain enabled.
+Self-Destruct Protection is **off by default for new settings**. Brute-force lockouts remain enabled.
 
 Existing settings that explicitly enabled Self-Destruct remain enabled. Enabling it continues to require a destructive-action warning, now with stronger guidance to maintain a verified backup on separate storage.
 
@@ -70,13 +70,14 @@ SafeLedger 2.1 continues the migration toward a strict main-process security bou
 - webviews are disabled;
 - renderer permission requests are denied;
 - insecure mixed content is disabled;
-- the application document has a restrictive Content Security Policy.
+- the application document has a restrictive Content Security Policy;
+- recovery-sheet printing remains available through an isolated in-page print frame rather than a new renderer window.
 
 ### 6. Pull-request CI
 
 Windows and Linux workflows run on pull requests targeting `master`, before changes are merged.
 
-The version-continuity check no longer requires a product-version bump for every development commit. It prevents version rollback while allowing normal documentation, test, and implementation commits to retain the current package version until release preparation.
+The version-continuity check no longer requires a product-version bump for every development commit. It prevents version rollback while allowing ordinary development commits to retain the current package version until release preparation.
 
 ## Regression coverage added
 
@@ -92,8 +93,12 @@ SafeLedger 2.1 adds continuity-focused tests for:
 - SHA-256 backup manifest validation;
 - tamper detection;
 - backup path traversal rejection;
+- version-2 backup restore compatibility;
+- cryptographic authentication of every version-3 Profile vault;
+- failure when a Profile is re-encrypted with a different key even if the SHA manifest is recomputed;
 - Self-Destruct opt-in defaults;
-- CSP, navigation, permission, and trusted-IPC hardening.
+- CSP, navigation, permission, and trusted-IPC hardening;
+- secure print continuity under the deny-new-window policy.
 
 ## Release acceptance gates
 
@@ -105,21 +110,27 @@ SafeLedger 2.1 is ready to merge when all of the following are true:
 4. Windows portable executable builds successfully.
 5. Linux AppImage builds successfully.
 6. A legacy 1.x fixture imports without modifying its source files.
-7. A tampered version-3 backup fails integrity validation.
+7. A tampered version-3 backup fails integrity or encrypted-profile authentication.
 8. Existing version-2 complete backups remain structurally accepted for restore.
 9. No renderer receives a raw Data Encryption Key.
-10. `master` remains unchanged until the release pull request passes its gates.
+10. Recovery-sheet printing remains functional without relaxing the new-window security policy.
+11. Public README documentation matches 2.1 behavior.
+12. `master` remains unchanged until the release pull request passes its gates.
 
-## Release preparation after CI
+## Release-candidate status
 
-After the implementation pull request passes CI:
+- `package.json` is set to **2.1.0**.
+- No direct dependency versions were changed as part of 2.1.
+- The public README documents the 1.x importer, backup verification, schema migration, and safer Self-Destruct behavior.
+- Pull request CI is the final merge gate.
 
-1. Set `package.json` and lockfile release metadata to `2.1.0`.
-2. Update final README release wording.
-3. Run both platform workflows again from the release candidate.
-4. Merge to `master`.
-5. Tag the release as `v2.1.0`.
-6. Publish Windows portable and Linux AppImage artifacts with SHA-256 release checksums.
+## After CI passes
+
+1. Review the final PR diff and CI results.
+2. Merge the release pull request into `master`.
+3. Tag the merged release as `v2.1.0`.
+4. Publish the Windows portable and Linux AppImage artifacts.
+5. Publish SHA-256 checksums for release artifacts.
 
 ## Deferred to later releases
 
