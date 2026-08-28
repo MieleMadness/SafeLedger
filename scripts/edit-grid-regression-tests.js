@@ -37,8 +37,8 @@ assert(siteCss.includes('grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)'))
 assert(siteCss.includes('column-gap: 16px'));
 assert(siteCss.includes('row-gap: 18px'));
 
-const coinOrder = [
-  "id: 'inputName', label: 'Coin'",
+const assetOrder = [
+  "id: 'inputName', label: 'Asset'",
   "id: 'inputSymbol', label: 'Symbol'",
   "id: 'inputPublicAddress', label: 'Public address'",
   "id: 'inputPrivateAddress', label: 'Private key'",
@@ -47,9 +47,9 @@ const coinOrder = [
   "id: 'inputNotes', label: 'Notes'"
 ];
 let last = -1;
-for (const token of coinOrder) {
+for (const token of assetOrder) {
   const current = record.indexOf(token);
-  assert(current > last, `Expected ${token} in direct Coin form order`);
+  assert(current > last, `Expected ${token} in direct Asset form order`);
   last = current;
 }
 assert(record.includes("sensitive: true, revealLabel: 'private key'"));
@@ -91,4 +91,4 @@ assert(!securityUi.includes('addSensitiveInputControls'));
 assert(siteCss.includes('.edit-sensitive-shell'));
 assert(!siteCss.includes('.edit-public-shell'));
 
-console.log('PASS direct Coin/Wallet form rendering and security controls.');
+console.log('PASS direct Asset/Wallet form rendering and security controls.');
