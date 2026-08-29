@@ -23,6 +23,7 @@ function createSessionLockController(options = {}) {
   const getMainWindow = options.getMainWindow;
   const audit = options.audit;
   const getDataRoot = options.getDataRoot;
+  const onLock = options.onLock;
 
   if (!cryptoSession || typeof cryptoSession.clearSession !== 'function') {
     throw new Error('SafeLedger session lock controller requires cryptoSession.clearSession().');
@@ -53,14 +54,20 @@ function createSessionLockController(options = {}) {
     } catch (_) {}
   }
 
+  function clearSessionOnlyState() {
+    if (typeof onLock !== 'function') return;
+    try { onLock(); } catch (_) {}
+  }
+
   function lockSession(reason, lockOptions = {}) {
     const eventName = normalizeReason(reason);
     const wasUnlocked = isUnlocked();
 
     // Security invariant: destroy the in-memory DEK before any UI, audit, I/O,
-    // minimize, or reload operation. No later failure is allowed to keep the
-    // previous session key alive.
+    // minimize, reload, or other session-local cleanup operation. No later
+    // failure is allowed to keep the previous session key alive.
     cryptoSession.clearSession();
+    clearSessionOnlyState();
 
     // Repeated lock calls are intentionally harmless and do not produce a
     // second audit transition after the session is already locked.
