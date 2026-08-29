@@ -10,6 +10,7 @@ const group = require('./group');
 const record = require('./record');
 const status = require('./status');
 const settingsUi = require('./settings-ui');
+const securityUi = require('./security-ui');
 const detailActions = require('./detail-actions');
 const globalSearchUi = require('./global-search-ui');
 
@@ -19,6 +20,11 @@ let sessionUnlocked = false;
 const saving = { state: false };
 let settings;
 let pendingGlobalTarget = null;
+
+function applySettings(nextSettings) {
+  settings = nextSettings;
+  securityUi.setPrivacyMode(!settings || settings.privacyMode !== false);
+}
 
 function requireUnlocked(action) {
   if (!sessionUnlocked) {
@@ -129,7 +135,7 @@ ipc.on('result', (_event, params) => {
   }
 
   if (params.settings) {
-    settings = params.settings;
+    applySettings(params.settings);
     if (settings.lockLogin) {
       const unlockAt = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
       if (unlockAt > Date.now()) {
@@ -227,7 +233,7 @@ ipc.on('result-init-system', (_event, params) => {
   saving.state = false;
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
   if (params.settings) {
-    settings = params.settings;
+    applySettings(params.settings);
     if (settings.lockLogin) {
       const unlockAt = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
       if (unlockAt > Date.now()) {
@@ -323,7 +329,7 @@ ipc.on('show-settings', () => {
 ipc.on('result-save-settings', (_event, params) => {
   saving.state = false;
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
-  if (params.settings) settings = params.settings;
+  if (params.settings) applySettings(params.settings);
   if (settings && sessionUnlocked) settingsUi.show({ settings, saving });
 });
 
@@ -363,7 +369,7 @@ ipc.on('result-lockout-destroy', (_event, params) => {
   pendingGlobalTarget = null;
   globalSearchUi.close();
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
-  if (params.settings) settings = params.settings;
+  if (params.settings) applySettings(params.settings);
   showLockoutDestroy();
 });
 
@@ -392,4 +398,4 @@ const showLockoutDestroy = () => {
   area.appendChild(button);
 };
 
-exports._test = { navigateGlobalResult };
+exports._test = { navigateGlobalResult, applySettings };
