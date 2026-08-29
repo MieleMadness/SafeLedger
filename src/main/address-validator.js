@@ -142,21 +142,27 @@ function validateBitcoinSegwit(value) {
   });
 }
 
-function validateEvm(value) {
-  const input = String(value || '').trim();
-  const raw = input.startsWith('0x') || input.startsWith('0X') ? input.slice(2) : input;
-  if (!/^[0-9a-fA-F]{40}$/.test(raw)) return result('invalid', 'evm', { reason: 'format' });
-  if (raw === raw.toLowerCase() || raw === raw.toUpperCase()) {
-    return result('valid', 'evm', { checksum: 'not-applied' });
-  }
+function hasValidEip55Casing(raw) {
   const lower = raw.toLowerCase();
   const hash = keccak256Hex(lower);
   for (let i = 0; i < raw.length; i++) {
     const char = raw[i];
     if (!/[a-fA-F]/.test(char)) continue;
     const shouldUpper = Number.parseInt(hash[i], 16) >= 8;
-    if (shouldUpper !== (char === char.toUpperCase())) return result('invalid', 'evm', { reason: 'checksum', checksum: 'invalid' });
+    if (shouldUpper !== (char === char.toUpperCase())) return false;
   }
+  return true;
+}
+
+function validateEvm(value) {
+  const input = String(value || '').trim();
+  const raw = input.startsWith('0x') || input.startsWith('0X') ? input.slice(2) : input;
+  if (!/^[0-9a-fA-F]{40}$/.test(raw)) return result('invalid', 'evm', { reason: 'format' });
+  const checksumValid = hasValidEip55Casing(raw);
+  if (raw === raw.toLowerCase() || raw === raw.toUpperCase()) {
+    return result('valid', 'evm', { checksum: checksumValid ? 'valid' : 'not-applied' });
+  }
+  if (!checksumValid) return result('invalid', 'evm', { reason: 'checksum', checksum: 'invalid' });
   return result('valid', 'evm', { checksum: 'valid' });
 }
 
@@ -182,5 +188,5 @@ module.exports = {
   validateBitcoinSegwit,
   validateEvm,
   detectFamily,
-  _test: { decodeBase58, bech32Polymod, bech32HrpExpand, convertBits, decodeBech32 }
+  _test: { decodeBase58, bech32Polymod, bech32HrpExpand, convertBits, decodeBech32, hasValidEip55Casing }
 };
