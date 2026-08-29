@@ -6,6 +6,7 @@ const detailActions = require('./detail-actions');
 const passwordSettingsUi = require('./password-settings-ui');
 const securityEnhancements = require('./security-enhancements');
 const settingsSchema = require('./settings-schema');
+const backupHealth = require('./backup-health');
 const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance } = settingsSchema;
 
 function makeSection(title) {
@@ -82,6 +83,93 @@ function addAppearanceOption(host, value, title, description, selected) {
   host.appendChild(label);
   return input;
 }
+function addStatusLine(section, labelText, initial = 'Checking…') {
+  const p = document.createElement('p');
+  p.className = 'detail-info-line device-security-status-line';
+  const strong = document.createElement('b');
+  strong.textContent = `${labelText}: `;
+  p.appendChild(strong);
+  const value = document.createElement('span');
+  value.textContent = initial;
+  p.appendChild(value);
+  section.appendChild(p);
+  return value;
+}
+function formatBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return 'Unavailable';
+  if (bytes >= 1024 ** 3) return `${(bytes / (1024 ** 3)).toFixed(1)} GB`;
+  if (bytes >= 1024 ** 2) return `${(bytes / (1024 ** 2)).toFixed(0)} MB`;
+  return `${Math.round(bytes / 1024)} KB`;
+}
+function formatAge(entry) {
+  if (!entry || entry.state === 'never') return 'Never';
+  const age = Number(entry.ageDays || 0);
+  const suffix = entry.state === 'due' ? ' — due' : '';
+  return age === 0 ? `Today${suffix}` : `${age} day${age === 1 ? '' : 's'} ago${suffix}`;
+}
+async function populateDeviceSecurityStatus(section, params) {
+  const storageValue = addStatusLine(section, 'Storage');
+  const writableValue = addStatusLine(section, 'SafeLedgerData');
+  const freeValue = addStatusLine(section, 'Free space');
+  const backupValue = addStatusLine(section, 'Last backup');
+  const verifiedValue = addStatusLine(section, 'Last verified backup');
+
+  try {
+    const [storage, backupResult] = await Promise.all([
+      ipc.invoke('device-storage-health'),
+      ipc.invoke('device-backup-health')
+    ]);
+    storageValue.textContent = storage && storage.connected ? 'Connected' : `Unavailable${storage && storage.reason ? ` (${storage.reason})` : ''}`;
+    writableValue.textContent = storage && storage.writable ? 'Writable' : 'Not writable';
+    freeValue.textContent = storage ? formatBytes(storage.freeBytes) : 'Unavailable';
+    const health = backupResult && backupResult.health ? backupResult.health : backupHealth.summarize(params.settings || {});
+    backupValue.textContent = formatAge(health.backup);
+    verifiedValue.textContent = formatAge(health.verified);
+  } catch (_) {
+    storageValue.textContent = 'Status unavailable';
+    writableValue.textContent = 'Status unavailable';
+    freeValue.textContent = 'Status unavailable';
+    const health = backupHealth.summarize(params.settings || {});
+    backupValue.textContent = formatAge(health.backup);
+    verifiedValue.textContent = formatAge(health.verified);
+  }
+}
+function addBackupReminderControl(section, params) {
+  const field = document.createElement('div');
+  field.className = 'settings-field';
+  const label = document.createElement('label');
+  label.className = 'settings-field-label';
+  label.htmlFor = 'backupReminderDays';
+  label.textContent = 'Backup reminder';
+  field.appendChild(label);
+  const select = document.createElement('select');
+  select.id = 'backupReminderDays';
+  select.className = 'form-control';
+  const current = backupHealth.normalizeReminderDays(params.settings && params.settings.backupReminderDays);
+  for (const [value, text] of [[0, 'Off'], [30, '30 days'], [60, '60 days'], [90, '90 days']]) {
+    const option = document.createElement('option');
+    option.value = String(value);
+    option.textContent = text;
+    option.selected = current === value;
+    select.appendChild(option);
+  }
+  field.appendChild(select);
+  section.appendChild(field);
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'btn btn-default settings-section-save';
+  save.textContent = 'Save Backup Reminder';
+  save.addEventListener('click', () => {
+    if (params.saving.state) return alert('Please wait for processing to complete');
+    const backupReminderDays = backupHealth.normalizeReminderDays(select.value);
+    save.disabled = true;
+    params.saving.state = true;
+    status.loadStatus();
+    ipc.send('save-settings', { newSettings: Object.assign({}, params.settings, { backupReminderDays }) });
+  });
+  section.appendChild(save);
+}
 function showSettings(params) {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -125,6 +213,12 @@ function showSettings(params) {
   changePassword.addEventListener('click', () => passwordSettingsUi.show());
   passwordSection.appendChild(changePassword);
   area.appendChild(passwordSection);
+
+  const deviceSection = makeSection('Device & Storage Security');
+  addNote(deviceSection, 'SafeLedger automatically locks on supported operating-system security events and if the active SafeLedgerData storage disappears or changes. Device identifiers and backup paths are not stored here.');
+  populateDeviceSecurityStatus(deviceSection, params);
+  addBackupReminderControl(deviceSection, params);
+  area.appendChild(deviceSection);
 
   const backupSection = makeSection('Backup & Recovery');
   addNote(backupSection, 'Create a complete encrypted backup, verify a backup without changing your data, or restore a previous backup. New backups include SHA-256 integrity hashes for every file.');
@@ -251,4 +345,13 @@ function showSettings(params) {
 }
 
 exports.show = showSettings;
-exports._test = { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, configureNumberInput, addAppearanceOption };
+exports._test = {
+  BRUTE_FORCE_MIN,
+  BRUTE_FORCE_MAX,
+  clampBruteForceValue,
+  configureNumberInput,
+  addAppearanceOption,
+  formatBytes,
+  formatAge,
+  addBackupReminderControl
+};
