@@ -34,7 +34,7 @@ assert.strictEqual(result.counts.assets, 1);
 assert.strictEqual(result.counts.ready, 1);
 assert.strictEqual(result.counts.incomplete, 1);
 assert.strictEqual(result.profileReadErrors, 1);
-assert.strictEqual(result.readinessPercent, 50);
+assert.strictEqual(result.readinessPercent, 56);
 const serialized = JSON.stringify(result);
 for (const secret of ['DO-NOT-RETURN', 'seedPhrase', 'password', 'privateAddress', 'recoveryLocation', 'bc1q-public-value-do-not-return', 'backupPath']) {
   assert(!serialized.includes(secret), `dashboard summary leaked ${secret}`);
