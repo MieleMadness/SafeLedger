@@ -112,6 +112,7 @@ async function exportEncryptedBackup() {
     const result = await ipc.invoke('security-backup-all');
     if (!result || result.canceled) return;
     if (!result.ok) return alert(result.message || 'Backup failed.');
+    try { await ipc.invoke('device-record-backup-success'); } catch (_) {}
     alert(`Complete SafeLedger backup created with ${result.fileCount} file(s).`);
   } catch (err) { alert(`Backup failed: ${err.message || err}`); }
 }
@@ -122,6 +123,7 @@ async function verifyEncryptedBackup() {
     if (!result || result.canceled) return;
     if (!result.ok) return alert(result.message || 'Backup verification failed.');
     const report = result.report || {};
+    try { await ipc.invoke('device-record-backup-verified', report.created || null); } catch (_) {}
     alert(`Backup verified.\n\nProfiles: ${report.profileCount || 0}\nWallets: ${report.walletCount || 0}\nAssets: ${report.assetCount || 0}\nFiles: ${report.fileCount || 0}${report.created ? `\nCreated: ${report.created}` : ''}`);
   } catch (err) { alert(`Backup verification failed: ${err.message || err}`); }
 }
