@@ -136,7 +136,7 @@ function render(params = {}) {
   const storageNote = document.createElement('div');
   storageNote.className = 'recovery-drill-storage-note';
   appendText(storageNote, 'strong', '', 'What SafeLedger records: ');
-  storageNote.appendChild(document.createTextNode('only the successful Test Recovery completion time and the refreshed Last Verified time. Checklist answers and optional BIP39 input/results are not stored.'));
+  storageNote.appendChild(document.createTextNode('only the successful Test Recovery completion time and the refreshed Last Verified time. Individual checklist answers are not stored. Optional BIP39 input and results are also not stored.'));
   area.appendChild(storageNote);
 
   const allConfirmed = () => checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
@@ -156,7 +156,7 @@ function render(params = {}) {
     },
     {
       icon: 'fa-check-circle',
-      title: 'Complete Test Recovery',
+      title: 'Complete recovery drill',
       className: 'recovery-drill-complete-action',
       onClick: complete
     }
@@ -164,7 +164,7 @@ function render(params = {}) {
   detailActions.setDetailMode('view');
 
   const dock = document.getElementById('detailActionArea');
-  const completeButton = dock && dock.querySelector('[aria-label="Complete Test Recovery"]');
+  const completeButton = dock && dock.querySelector('[aria-label="Complete recovery drill"]');
   const syncCompleteState = () => {
     if (completeButton) completeButton.disabled = !eligible || !allConfirmed();
   };
