@@ -33,7 +33,12 @@ function validStorageIdDocument(value) {
 
 async function readStorageIdentity(dataRoot) {
   const raw = await fs.promises.readFile(storageIdPath(dataRoot), 'utf8');
-  const parsed = JSON.parse(raw);
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw Object.assign(new Error('SafeLedger storage identity is invalid.'), { code: 'EIDENTITY', cause: err });
+  }
   if (!validStorageIdDocument(parsed)) throw Object.assign(new Error('SafeLedger storage identity is invalid.'), { code: 'EIDENTITY' });
   return parsed;
 }
@@ -50,7 +55,11 @@ async function ensureStorageIdentity(dataRoot) {
   try {
     return await readStorageIdentity(dataRoot);
   } catch (err) {
-    if (err && err.code !== 'ENOENT') throw err;
+    // At process startup there is no trusted in-memory identity yet. A missing
+    // or malformed non-secret marker can be repaired safely. Once unlocked,
+    // probeStorageIdentity compares against the in-memory baseline and fails
+    // closed on any disappearance, corruption, or mismatch.
+    if (!err || (err.code !== 'ENOENT' && err.code !== 'EIDENTITY')) throw err;
   }
   return writeNewStorageIdentity(dataRoot);
 }
