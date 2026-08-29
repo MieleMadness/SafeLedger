@@ -16,7 +16,9 @@ const preload = read('src/main/preload.js');
 const build = read('scripts/build-renderer.js');
 const bridge = read('src/main/renderer-bridge.js');
 
-assert.strictEqual(pkg.version, '2.2.0');
+const versionParts = String(pkg.version || '').split('.').map(Number);
+assert.strictEqual(versionParts[0], 2, 'runtime-modernization gates apply to SafeLedger 2.x');
+assert(versionParts[1] >= 2, 'runtime-modernization gates require SafeLedger 2.2+');
 assert.strictEqual(pkg.dependencies.bootstrap, undefined);
 assert.strictEqual(pkg.dependencies['font-awesome'], undefined);
 assert.strictEqual(exists('src/main/renderer-electron-shim.js'), false);
@@ -65,4 +67,4 @@ for (const relative of [
   'scripts/build-renderer.js', 'scripts/runtime-modernization-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger 2.2 renderer boundary, native shell, terminology, and local-time modernization gates.');
+console.log('PASS SafeLedger 2.2+ renderer boundary, native shell, terminology, and local-time modernization gates.');

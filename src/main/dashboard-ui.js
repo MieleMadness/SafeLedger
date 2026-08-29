@@ -59,7 +59,80 @@ function appendWalletList(section, items, emptyText, showDate) {
   section.appendChild(list);
 }
 
-function render(summary) {
+function formatBytes(value) {
+  const bytes = Number(value);
+  if (!Number.isFinite(bytes) || bytes < 0) return 'Unavailable';
+  if (bytes >= 1024 ** 3) return `${(bytes / (1024 ** 3)).toFixed(1)} GB free`;
+  if (bytes >= 1024 ** 2) return `${(bytes / (1024 ** 2)).toFixed(0)} MB free`;
+  return `${Math.round(bytes / 1024)} KB free`;
+}
+
+function backupAgeLabel(entry) {
+  if (!entry || entry.state === 'never') return 'Never';
+  const days = Number(entry.ageDays || 0);
+  if (days === 0) return 'Today';
+  return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function appendHealthRow(section, titleText, metaText, statusText, statusKind) {
+  const row = document.createElement('div');
+  row.className = 'dashboard-list-row device-health-row';
+  const main = document.createElement('div');
+  main.className = 'dashboard-list-main';
+  const title = document.createElement('div');
+  title.className = 'dashboard-list-title';
+  title.textContent = titleText;
+  const meta = document.createElement('div');
+  meta.className = 'dashboard-list-meta';
+  meta.textContent = metaText;
+  main.appendChild(title);
+  main.appendChild(meta);
+  row.appendChild(main);
+  row.appendChild(makeStatus(statusKind || statusText));
+  const badge = row.lastChild;
+  badge.textContent = statusText;
+  section.appendChild(row);
+}
+
+function renderDeviceHealth(area, device = {}) {
+  const section = document.createElement('section');
+  section.className = 'dashboard-section device-health-section';
+  const title = document.createElement('h2');
+  title.textContent = 'Device & Backup Health';
+  section.appendChild(title);
+
+  const storage = device.storage;
+  if (storage) {
+    const storageReady = storage.connected === true && storage.writable === true;
+    const status = storageReady ? 'Ready' : storage.connected ? 'Needs Review' : 'Incomplete';
+    const label = storageReady ? 'Healthy' : storage.connected ? 'Review' : 'Unavailable';
+    const meta = storage.connected
+      ? `${storage.writable ? 'SafeLedgerData writable' : 'SafeLedgerData not writable'} • ${formatBytes(storage.freeBytes)}`
+      : `SafeLedgerData ${storage.reason || 'unavailable'}`;
+    appendHealthRow(section, 'Portable storage', meta, label, status);
+  } else {
+    appendHealthRow(section, 'Portable storage', 'Storage status unavailable.', 'Review', 'Needs Review');
+  }
+
+  const backupHealth = device.backupHealth;
+  if (backupHealth) {
+    const backupDue = !backupHealth.backup || backupHealth.backup.state === 'never' || backupHealth.backup.state === 'due';
+    const verifyDue = !backupHealth.verified || backupHealth.verified.state === 'never' || backupHealth.verified.state === 'due';
+    appendHealthRow(
+      section,
+      'Encrypted backup',
+      `Last backup: ${backupAgeLabel(backupHealth.backup)} • Last verified: ${backupAgeLabel(backupHealth.verified)}`,
+      backupDue || verifyDue ? 'Review' : 'Current',
+      backupDue || verifyDue ? 'Needs Review' : 'Ready'
+    );
+  } else {
+    appendHealthRow(section, 'Encrypted backup', 'Backup health status unavailable.', 'Review', 'Needs Review');
+  }
+
+  area.appendChild(section);
+}
+
+function render(summary, device = {}) {
   const area = clearArea();
   if (!area) return;
   const header = document.createElement('div');
@@ -98,6 +171,8 @@ function render(summary) {
     area.appendChild(warning);
   }
 
+  renderDeviceHealth(area, device);
+
   const attention = document.createElement('section');
   attention.className = 'dashboard-section';
   const attentionTitle = document.createElement('h2');
@@ -123,9 +198,16 @@ async function showDashboard() {
   loading.textContent = 'Reviewing encrypted recovery records locally…';
   area.appendChild(loading);
   try {
-    const result = await window.safeLedgerApi.getDashboardSummary();
+    const [result, storage, backupResult] = await Promise.all([
+      window.safeLedgerApi.getDashboardSummary(),
+      typeof window.safeLedgerApi.getStorageHealth === 'function' ? window.safeLedgerApi.getStorageHealth().catch(() => null) : Promise.resolve(null),
+      typeof window.safeLedgerApi.getBackupHealth === 'function' ? window.safeLedgerApi.getBackupHealth().catch(() => null) : Promise.resolve(null)
+    ]);
     if (!result || !result.ok) throw new Error(result && result.message ? result.message : 'Unable to build dashboard.');
-    render(result.summary);
+    render(result.summary, {
+      storage,
+      backupHealth: backupResult && backupResult.health ? backupResult.health : null
+    });
   } catch (err) {
     area.innerHTML = '';
     const message = document.createElement('p');
@@ -147,3 +229,4 @@ window.addEventListener('DOMContentLoaded', () => {
 
 exports.show = showDashboard;
 exports.render = render;
+exports._test = { formatBytes, backupAgeLabel, renderDeviceHealth };

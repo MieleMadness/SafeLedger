@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   getActivityHistory: (limit) => ipcRenderer.invoke('activity-history', limit),
   globalSearch: (query) => ipcRenderer.invoke('global-search', query),
   getRecoveryBinder: (file, options, recordActivity = false) => ipcRenderer.invoke('recovery-binder-model', { file, options, recordActivity: recordActivity === true }),
+  getStorageHealth: () => ipcRenderer.invoke('device-storage-health'),
+  resetStorageIdentity: () => ipcRenderer.invoke('device-reset-storage-identity'),
+  getBackupHealth: () => ipcRenderer.invoke('device-backup-health'),
+  recordBackupSuccess: () => ipcRenderer.invoke('device-record-backup-success'),
+  recordBackupVerified: (createdAt) => ipcRenderer.invoke('device-record-backup-verified', createdAt),
   backupAllData: () => ipcRenderer.invoke('security-backup-all'),
   verifyBackup: () => ipcRenderer.invoke('security-verify-backup'),
   restoreAllData: () => ipcRenderer.invoke('security-restore-all'),
@@ -37,5 +42,6 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   onInitSystem: (callback) => subscribe('result-init-system', callback),
   onSaveSettings: (callback) => subscribe('result-save-settings', callback),
   onLockoutDestroy: (callback) => subscribe('result-lockout-destroy', callback),
+  onSecuritySessionLocked: (callback) => subscribe('security-session-locked', callback),
   onShowSettings: (callback) => subscribe('show-settings', callback)
 }));

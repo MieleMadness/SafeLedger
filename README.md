@@ -6,11 +6,11 @@ SafeLedger does not require a cloud account, subscription, license server, or ne
 
 ## Release status
 
-### Current stable release: SafeLedger 2.2.0
+### Current release candidate: SafeLedger 2.3.0
 
-SafeLedger 2.2 is the version currently merged into `master`.
+SafeLedger 2.3 is the release candidate currently being validated for merge into `master`.
 
-It includes the SafeLedger 2.1 continuity/security foundation plus the 2.2 runtime modernization work:
+It includes the SafeLedger 2.1 continuity/security foundation, the 2.2 runtime modernization work, and the new 2.3 device-security layer:
 
 - Portable `SafeLedgerData` storage beside the packaged application
 - AES-256-GCM authenticated vault encryption
@@ -32,18 +32,24 @@ It includes the SafeLedger 2.1 continuity/security foundation plus the 2.2 runti
 - User-facing hierarchy standardized on **Profile → Wallet → Asset**
 - Host operating-system locale/timezone for displayed timestamps
 - Global Search, Recovery Dashboard, Activity History, recovery sheets, recovery drills, custom fields, and wallet metadata
+- Centralized main-process locking for Emergency Lock and device-security events
+- OS lock, suspend/resume, and idle-state session protection where supported
+- Portable-storage availability and local storage-identity monitoring while unlocked
+- Sanitized Storage Health in Settings and the Recovery Dashboard
+- Backup-age and verified-backup-age awareness with configurable reminders
+- Privacy-safe device-security Activity History events
 - Emergency Lock that clears the active encryption session, minimizes SafeLedger, resets the renderer, and returns the application to a fresh login state
 
 > [!IMPORTANT]
-> **SafeLedger 2.3, 2.4, and 2.5 are development release tracks. They are not part of the current stable `master` release until their implementation, regression, Windows/Linux CI, crypto smoke, GUI smoke, and packaging gates pass and their pull requests are merged.**
+> **SafeLedger 2.4 and 2.5 remain development release tracks. They are not part of the current release candidate until their implementation, regression, Windows/Linux CI, crypto smoke, GUI smoke, and packaging gates pass and their pull requests are merged.**
 
 ## Release roadmap
 
 ### SafeLedger 2.3 — Device Security & Recovery Health
 
-Development target: **2.3.0**
+Release candidate: **2.3.0**
 
-Focus:
+Included:
 
 - One centralized main-process session-lock path
 - OS lock and suspend/resume protection where supported
@@ -52,8 +58,9 @@ Focus:
 - Sanitized Storage Health reporting
 - Backup-age and verification-age awareness
 - Generic privacy-safe device-security activity events
+- Dashboard and Settings health presentation
 
-Storage removal, suspend, resume, or OS-lock handling must **lock only**. These events must never trigger Self-Destruct.
+Storage removal, suspend, resume, OS-lock, or idle-state handling **locks only**. These events never trigger Self-Destruct.
 
 ### SafeLedger 2.4 — Recovery Intelligence & Validation
 
@@ -140,7 +147,7 @@ For packaged builds, SafeLedger creates and uses `SafeLedgerData` in the same fo
 
 ```text
 D:\My SafeLedger\
-├─ SafeLedger-2.2.0-Portable.exe
+├─ SafeLedger-2.3.0-Portable.exe
 └─ SafeLedgerData\
    ├─ settings\
    └─ vaults\
@@ -150,7 +157,7 @@ D:\My SafeLedger\
 
 ```text
 /home/user/Apps/SafeLedger/
-├─ SafeLedger-2.2.0-x86_64.AppImage
+├─ SafeLedger-2.3.0-x86_64.AppImage
 └─ SafeLedgerData/
    ├─ settings/
    └─ vaults/
@@ -165,6 +172,8 @@ Close SafeLedger first, then move **both** the application and the complete `Saf
 Moving only the executable/AppImage can cause SafeLedger to create a new empty data folder at the new location, making existing Profiles appear to be missing.
 
 Do not manually merge two different `SafeLedgerData` folders. Use SafeLedger Backup, Restore, or the 1.x importer when appropriate.
+
+SafeLedger 2.3 stores a random non-secret `storage-id.json` marker inside `SafeLedgerData`. It is used only to detect storage changes during an unlocked session. A valid restore receives a fresh local storage identity rather than inheriting an identity from the backup.
 
 ## Encryption and desktop security
 
@@ -182,7 +191,9 @@ The Electron renderer uses:
 - denied renderer permission requests
 - no direct renderer filesystem or Node access
 
-SafeLedger 2.2 also removes the old renderer Electron compatibility shim. Renderer modules use the explicit preload bridge instead.
+SafeLedger 2.2 removed the old renderer Electron compatibility shim. Renderer modules use the explicit preload bridge instead.
+
+SafeLedger 2.3 routes non-password device locks through one main-process controller. The DEK is cleared before window/minimize/reload work, and repeated lock signals do not recreate an unlocked session.
 
 ## SafeLedger 1.x import
 
@@ -208,28 +219,44 @@ SafeLedger creates a `.slgbak` file containing a complete encrypted backup of th
 
 Store backups separately from the working SafeLedger folder so a single drive failure does not destroy both the live vault and its backup.
 
+SafeLedger 2.3 records only the successful backup timestamp for backup-age awareness. The selected backup path is not persisted in Settings.
+
 ### Verify Backup
 
 **Verify Backup** checks a backup without modifying active SafeLedger data. Verification includes backup structure, safe paths, integrity hashes, key-envelope structure, encrypted vault authentication, and Profile/Wallet/Asset counts.
+
+SafeLedger 2.3 records the verification timestamp and the verified backup's creation timestamp. It does not persist the backup path.
 
 ### Restore
 
 SafeLedger supports current version-3 complete backups and retains version-2 restore compatibility. Before replacing active data, SafeLedger creates a pre-restore safety copy. A successful restore clears the active session and reloads SafeLedger.
 
+Device-local storage identity metadata is not included in the backup payload. A successful restore creates a fresh local storage identity.
+
 ## Emergency Lock and automatic lock
 
 After SafeLedger is unlocked, inactivity can trigger an automatic security lock.
 
-The SafeLedger shield button in the bottom-right provides **Emergency Lock**. In SafeLedger 2.2 it:
+The SafeLedger shield button in the bottom-right provides **Emergency Lock**. In SafeLedger 2.3 it:
 
 1. Clears visible sensitive fields.
 2. Clears the active encryption session / DEK.
-3. Records a generic local security event.
+3. Records a generic local security event when storage is available.
 4. Minimizes SafeLedger.
 5. Reloads the renderer from the trusted main process.
 6. Returns SafeLedger to a fresh login state before the application can be unlocked again.
 
 The renderer reset is intentional: a lock should not leave decrypted application state sitting in the old renderer session.
+
+SafeLedger 2.3 can also lock an unlocked session when the operating system locks or suspends, on resume as a fail-safe, when the OS reports a locked idle state, or when the expected SafeLedger storage becomes unavailable or changes identity. These paths never auto-unlock.
+
+## Storage Health and backup reminders
+
+SafeLedger 2.3 adds sanitized storage and backup status to Settings and the Recovery Dashboard.
+
+Storage Health may report whether the current data root is connected and writable, available free space when the operating system provides it, the portable data-root path, last check time, and a short status/reason. SafeLedger does not expose disk serial numbers, hardware IDs, volume UUIDs, or unrelated mounts through this feature.
+
+Backup reminders can be set to Off, 30, 60, or 90 days. Reminder calculations use successful backup/verification timestamps only.
 
 ## Brute Force and Self-Destruct Protection
 
@@ -248,7 +275,7 @@ Sensitive Copy actions automatically clear the clipboard after a short period wh
 
 QR generation and recovery-sheet generation are local and do not require online services.
 
-SafeLedger maintains a local `audit.log` under `SafeLedgerData/settings`. Activity entries are intended to contain generic event types and timestamps rather than passwords, seed phrases, private keys, or other vault secrets.
+SafeLedger maintains a local `audit.log` under `SafeLedgerData/settings`. Activity entries contain generic event types and timestamps rather than passwords, seed phrases, private keys, wallet names, storage identifiers, recovery locations, or backup paths.
 
 ## Development
 
@@ -268,6 +295,12 @@ Run the full regression suite:
 
 ```bash
 npm run test:regression
+```
+
+Run the SafeLedger 2.3 device-security regressions:
+
+```bash
+npm run test:device-security
 ```
 
 Run the Electron crypto smoke test:
@@ -300,7 +333,7 @@ Pull requests are expected to pass regression, crypto, GUI, and packaging checks
 
 - `RELEASE-2.1.md` — continuity and hardening foundation
 - `RELEASE-2.2.md` — released runtime modernization
-- PR #4 / `RELEASE-2.3.md` — Device Security & Recovery Health development
+- PR #4 / `RELEASE-2.3.md` — Device Security & Recovery Health release candidate
 - PR #5 / `RELEASE-2.4.md` — Recovery Intelligence & Validation development
 - PR #6 / `RELEASE-2.5.md` — Distribution, Trust & Open Source Readiness development
 
