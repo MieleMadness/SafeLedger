@@ -3,6 +3,7 @@
 require('./app-appearance.js');
 require('./startup-ui.js');
 require('./renderer.js');
+require('./privacy-mode-ui.js');
 require('./dashboard-ui.js');
 require('./activity-history-ui.js');
 require('./lockout-ui-enhancements.js');
