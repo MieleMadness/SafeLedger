@@ -48,7 +48,10 @@ const invokes = {
   'security-restore-all': 'restoreAllData',
   'legacy-import-select-source': 'selectLegacyImportSource',
   'legacy-import-run': 'importLegacyData',
-  'device-storage-health': 'getStorageHealth'
+  'device-storage-health': 'getStorageHealth',
+  'device-backup-health': 'getBackupHealth',
+  'device-record-backup-success': 'recordBackupSuccess',
+  'device-record-backup-verified': 'recordBackupVerified'
 };
 
 const ipcRenderer = {
