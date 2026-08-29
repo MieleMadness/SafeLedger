@@ -52,7 +52,8 @@ const invokes = {
   'device-reset-storage-identity': 'resetStorageIdentity',
   'device-backup-health': 'getBackupHealth',
   'device-record-backup-success': 'recordBackupSuccess',
-  'device-record-backup-verified': 'recordBackupVerified'
+  'device-record-backup-verified': 'recordBackupVerified',
+  'recovery-intelligence-summary': 'getRecoveryIntelligence'
 };
 
 const ipcRenderer = {
