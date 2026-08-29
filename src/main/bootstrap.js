@@ -92,7 +92,8 @@ ipc.handle('device-record-backup-success', async (event) => {
   const saved = await settingsManager.saveSettings(getSettingsDir(), Object.assign({}, loaded.settings, {
     lastBackupAt: new Date().toISOString()
   }));
-  await securityMain.audit(getDataRoot(), 'backup-created');
+  // The underlying backup operation already writes the generic backup audit
+  // event. This endpoint records only non-secret reminder metadata.
   syncRendererSettings(saved.settings);
   return { ok: true, settings: saved.settings, health: backupHealth.summarize(saved.settings) };
 });
@@ -104,7 +105,7 @@ ipc.handle('device-record-backup-verified', async (event, createdAt) => {
     lastVerifiedBackupAt: new Date().toISOString(),
     lastVerifiedBackupCreatedAt: backupHealth.normalizeTimestamp(createdAt)
   }));
-  await securityMain.audit(getDataRoot(), 'backup-verified');
+  // Backup verification itself owns its Activity History entry.
   syncRendererSettings(saved.settings);
   return { ok: true, settings: saved.settings, health: backupHealth.summarize(saved.settings) };
 });
