@@ -3,6 +3,7 @@
 const assert = require('assert');
 const recoveryHealth = require('../src/main/recovery-health');
 const addressValidator = require('../src/main/address-validator');
+const bip39 = require('../src/main/bip39-validator');
 const { keccak256Hex } = require('../src/main/keccak256');
 
 function byId(result, id) {
@@ -126,6 +127,29 @@ function testVerifiedBackupAffectsScoreWithoutPaths() {
   assert(!JSON.stringify(result).includes('X:/secret/location'));
 }
 
+function testBip39WordlistAndChecksum() {
+  assert.strictEqual(bip39.WORD_COUNT, 2048);
+  assert.strictEqual(bip39._test.wordIndex('abandon'), 0);
+  assert.strictEqual(bip39._test.wordIndex('dolphin'), 518);
+  assert.strictEqual(bip39._test.wordIndex('domain'), 519);
+  assert.strictEqual(bip39._test.wordIndex('limb'), 1038);
+  assert.strictEqual(bip39._test.wordIndex('limit'), 1039);
+  assert.strictEqual(bip39._test.wordIndex('security'), 1558);
+  assert.strictEqual(bip39._test.wordIndex('seed'), 1559);
+  assert.strictEqual(bip39._test.wordIndex('zoo'), 2047);
+
+  const valid = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const invalidChecksum = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon ability';
+  const unknownWord = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon notaword';
+  assert.deepStrictEqual(bip39.validateMnemonic(valid), {
+    supported: true, valid: true, wordCount: 12, wordsKnown: true, checksumValid: true, reason: 'valid'
+  });
+  assert.strictEqual(bip39.validateMnemonic(invalidChecksum).reason, 'checksum');
+  assert.strictEqual(bip39.validateMnemonic(unknownWord).reason, 'unknown-word');
+  assert.strictEqual(bip39.validateMnemonic('abandon ability').reason, 'word-count');
+  assert(!JSON.stringify(bip39.validateMnemonic(valid)).includes('abandon'), 'BIP39 results must never echo mnemonic words');
+}
+
 function testKeccakAndEip55() {
   assert.strictEqual(
     keccak256Hex(''),
@@ -172,10 +196,11 @@ function run() {
   testMissingMeansIncompleteNotUnsafe();
   testAddressCoverageAndOptionalBackupContext();
   testVerifiedBackupAffectsScoreWithoutPaths();
+  testBip39WordlistAndChecksum();
   testKeccakAndEip55();
   testBitcoinAddressValidation();
   testValidatorOutputsNeverEchoInput();
-  console.log('PASS SafeLedger 2.4 Recovery Health and offline address validators are deterministic and secret-free.');
+  console.log('PASS SafeLedger 2.4 Recovery Health, BIP39, Bitcoin and EVM validators are deterministic and secret-free.');
 }
 
 run();
