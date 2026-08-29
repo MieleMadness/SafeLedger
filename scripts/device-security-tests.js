@@ -81,6 +81,12 @@ async function testStorageIdentityAndHealth() {
     assert.notStrictEqual(rotated.id, first.id, 'restore must rotate device-local storage identity');
     assert.strictEqual((await deviceSecurity.probeStorageIdentity(temp, rotated.id)).ok, true);
     assert.strictEqual((await deviceSecurity.probeStorageIdentity(temp, first.id)).reason, 'identity-mismatch');
+
+    await fs.promises.writeFile(path.join(temp, deviceSecurity.STORAGE_ID_FILE), '{malformed', 'utf8');
+    assert.strictEqual((await deviceSecurity.probeStorageIdentity(temp, rotated.id)).reason, 'identity-mismatch', 'malformed marker must fail closed during an unlocked session');
+    const repaired = await deviceSecurity.ensureStorageIdentity(temp);
+    assert(deviceSecurity.validStorageIdDocument(repaired), 'startup baseline may repair a malformed non-secret marker');
+    assert.notStrictEqual(repaired.id, rotated.id);
   } finally {
     await fs.promises.rm(temp, { recursive: true, force: true });
   }
@@ -223,7 +229,7 @@ function testStaticBootstrapBoundary() {
   await testDeviceSecurityEvents();
   await testBackupAgeSettings();
   testStaticBootstrapBoundary();
-  console.log('PASS SafeLedger 2.3 centralized locks, OS events, storage protection/health, restore identity rotation, and backup-age metadata.');
+  console.log('PASS SafeLedger 2.3 centralized locks, OS events, storage protection/health, restore identity rotation, startup marker repair, and backup-age metadata.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
