@@ -4,6 +4,7 @@ const assert = require('assert');
 const recoveryHealth = require('../src/main/recovery-health');
 const addressValidator = require('../src/main/address-validator');
 const bip39 = require('../src/main/bip39-validator');
+const recoveryDuplicates = require('../src/main/recovery-duplicates');
 const { keccak256Hex } = require('../src/main/keccak256');
 
 function byId(result, id) {
@@ -184,6 +185,58 @@ function testBitcoinAddressValidation() {
   assert.strictEqual(addressValidator.validateAddress('not-a-supported-address').status, 'unsupported');
 }
 
+function testPublicDuplicateDetectionIsValueFree() {
+  const address = '0x52908400098527886E0F7030069857D2E4169EE7';
+  const entries = [
+    { profileName: 'Family', vaultData: { groups: [{ name: 'Cold', recoveryFormat: 'BIP39', records: [{ name: 'ETH', publicAddress: address }] }] } },
+    { profileName: 'Estate', vaultData: { groups: [{ name: 'Cold', recoveryFormat: 'BIP39', records: [{ name: 'Ethereum', publicAddress: address.toLowerCase() }] }] } }
+  ];
+  const matches = recoveryDuplicates.publicAddressDuplicates(entries);
+  assert.strictEqual(matches.length, 1);
+  assert.strictEqual(matches[0].count, 2);
+  assert.strictEqual(matches[0].occurrences[0].profileName, 'Family');
+  assert.strictEqual(matches[0].occurrences[1].profileName, 'Estate');
+  const serialized = JSON.stringify(matches);
+  assert(!serialized.toLowerCase().includes(address.toLowerCase().replace(/^0x/, '')), 'duplicate results must not return the public-address value');
+
+  const metadataMatches = recoveryDuplicates.walletMetadataDuplicates(entries);
+  assert.strictEqual(metadataMatches.length, 1);
+  assert.strictEqual(metadataMatches[0].kind, 'wallet-method');
+}
+
+function testSensitiveFingerprintsAreSessionLocalAndSecretFree() {
+  let keyGeneration = 0;
+  const randomBytes = (size) => Buffer.alloc(size, ++keyGeneration);
+  const session = new recoveryDuplicates.SensitiveFingerprintSession(randomBytes);
+  const secret = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const sameNormalized = `  ${secret.toUpperCase()}  `;
+
+  const first = session.fingerprint(secret);
+  const same = session.fingerprint(sameNormalized);
+  assert.strictEqual(first, same, 'same normalized secret must match only within the current session');
+  assert.strictEqual(session.hasSessionKey(), true);
+
+  const duplicateResults = session.findDuplicates([
+    { profileName: 'Family', walletName: 'Cold', kind: 'seed', value: secret },
+    { profileName: 'Estate', walletName: 'Backup', kind: 'seed', value: sameNormalized }
+  ]);
+  assert.strictEqual(duplicateResults.length, 1);
+  assert.strictEqual(duplicateResults[0].count, 2);
+  const serialized = JSON.stringify(duplicateResults);
+  assert(!serialized.includes(secret));
+  assert(!serialized.includes(first), 'session fingerprint itself must never be returned');
+
+  session.clear();
+  assert.strictEqual(session.hasSessionKey(), false, 'lock cleanup must discard the keyed fingerprint session');
+  const nextSessionFingerprint = session.fingerprint(secret);
+  assert.notStrictEqual(nextSessionFingerprint, first, 'the same secret must fingerprint differently after session-key rotation');
+  session.clear();
+
+  const separateSession = new recoveryDuplicates.SensitiveFingerprintSession(() => Buffer.alloc(32, 99));
+  assert.notStrictEqual(separateSession.fingerprint(secret), first, 'deterministic reusable hashes are forbidden across sessions');
+  separateSession.clear();
+}
+
 function testValidatorOutputsNeverEchoInput() {
   const sensitiveLooking = '0x52908400098527886E0F7030069857D2E4169EE7';
   const serialized = JSON.stringify(addressValidator.validateAddress(sensitiveLooking));
@@ -199,8 +252,10 @@ function run() {
   testBip39WordlistAndChecksum();
   testKeccakAndEip55();
   testBitcoinAddressValidation();
+  testPublicDuplicateDetectionIsValueFree();
+  testSensitiveFingerprintsAreSessionLocalAndSecretFree();
   testValidatorOutputsNeverEchoInput();
-  console.log('PASS SafeLedger 2.4 Recovery Health, BIP39, Bitcoin and EVM validators are deterministic and secret-free.');
+  console.log('PASS SafeLedger 2.4 Recovery Health, BIP39, address validation, and privacy-preserving duplicate detection are deterministic and secret-free.');
 }
 
 run();
