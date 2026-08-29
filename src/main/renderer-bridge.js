@@ -23,6 +23,7 @@ const subscriptions = {
   'result-init-system': 'onInitSystem',
   'result-save-settings': 'onSaveSettings',
   'result-lockout-destroy': 'onLockoutDestroy',
+  'security-session-locked': 'onSecuritySessionLocked',
   'show-settings': 'onShowSettings'
 };
 const sends = {
@@ -46,7 +47,8 @@ const invokes = {
   'security-verify-backup': 'verifyBackup',
   'security-restore-all': 'restoreAllData',
   'legacy-import-select-source': 'selectLegacyImportSource',
-  'legacy-import-run': 'importLegacyData'
+  'legacy-import-run': 'importLegacyData',
+  'device-storage-health': 'getStorageHealth'
 };
 
 const ipcRenderer = {
