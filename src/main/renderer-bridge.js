@@ -49,6 +49,7 @@ const invokes = {
   'legacy-import-select-source': 'selectLegacyImportSource',
   'legacy-import-run': 'importLegacyData',
   'device-storage-health': 'getStorageHealth',
+  'device-reset-storage-identity': 'resetStorageIdentity',
   'device-backup-health': 'getBackupHealth',
   'device-record-backup-success': 'recordBackupSuccess',
   'device-record-backup-verified': 'recordBackupVerified'
