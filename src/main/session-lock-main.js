@@ -66,11 +66,15 @@ function createSessionLockController(options = {}) {
     // second audit transition after the session is already locked.
     if (wasUnlocked) recordAudit(eventName);
 
-    const win = safeWindow();
+    const shouldTouchUi = wasUnlocked || lockOptions.forceUi === true;
+    const win = shouldTouchUi ? safeWindow() : null;
     if (win) {
       try {
         if (win.webContents && typeof win.webContents.send === 'function') {
-          win.webContents.send('security-session-locked', { reason: eventName });
+          win.webContents.send('security-session-locked', {
+            reason: eventName,
+            requiresRestart: lockOptions.reload === false
+          });
         }
       } catch (_) {}
 
