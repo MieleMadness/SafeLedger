@@ -30,13 +30,16 @@ async function testCentralLockController() {
     cryptoSession,
     getMainWindow: () => win,
     getDataRoot: () => '/safeledger-test',
-    audit: async (_root, eventName) => { audits++; sequence.push(`audit:${eventName}`); }
+    audit: async (_root, eventName) => { audits++; sequence.push(`audit:${eventName}`); },
+    onLock: () => sequence.push('session-only-clear')
   });
 
   const first = controller.lockSession('emergency-lock', { minimize: true, reload: true });
   assert.strictEqual(first.wasUnlocked, true);
   assert.strictEqual(first.reason, 'session-locked-manual');
-  assert.strictEqual(sequence[0], 'clear', 'DEK must be cleared before any UI/audit work');
+  assert.strictEqual(sequence[0], 'clear', 'DEK must be cleared before any UI/audit/session-only cleanup work');
+  assert.strictEqual(sequence[1], 'session-only-clear', 'session-only secret state must clear immediately after the DEK');
+  assert(sequence.indexOf('session-only-clear') < sequence.indexOf('minimize'));
   assert(sequence.includes('minimize'));
   assert(sequence.includes('reload'));
   await new Promise((resolve) => setImmediate(resolve));
@@ -47,10 +50,32 @@ async function testCentralLockController() {
   await new Promise((resolve) => setImmediate(resolve));
   assert.strictEqual(second.wasUnlocked, false);
   assert.strictEqual(audits, 1, 'repeated lock must not create a duplicate transition audit');
-  assert.strictEqual(sequence.length, before + 1, 'repeated lock should only clear an already-empty session');
+  assert.strictEqual(sequence.length, before + 2, 'repeated lock must clear the already-empty DEK and any session-only secret state');
+  assert.deepStrictEqual(sequence.slice(before), ['clear', 'session-only-clear']);
 
   controller.lockSession('storage-unavailable', { reload: false, forceUi: true });
   assert(sequence.some((entry) => entry.includes('session-locked-storage-unavailable')));
+
+  const failureSequence = [];
+  let failureUnlocked = true;
+  const failureController = sessionLock.createSessionLockController({
+    cryptoSession: {
+      isUnlocked: () => failureUnlocked,
+      clearSession: () => { failureSequence.push('clear'); failureUnlocked = false; }
+    },
+    getMainWindow: () => ({
+      isDestroyed: () => false,
+      webContents: {
+        send: () => failureSequence.push('send'),
+        reload: () => failureSequence.push('reload')
+      }
+    }),
+    onLock: () => { failureSequence.push('cleanup-error'); throw new Error('simulated cleanup failure'); }
+  });
+  failureController.lockSession('emergency-lock');
+  assert.deepStrictEqual(failureSequence.slice(0, 2), ['clear', 'cleanup-error']);
+  assert(failureSequence.includes('send'), 'session-only cleanup failure must not block locked UI state');
+  assert(failureSequence.includes('reload'), 'session-only cleanup failure must not block renderer reset');
 }
 
 async function testStorageIdentityAndHealth() {
@@ -198,6 +223,8 @@ function testStaticBootstrapBoundary() {
   assert.strictEqual(pkg.main, 'src/main/bootstrap.js');
   assert(bootstrap.includes("ipc.removeAllListeners('panic-lock')"));
   assert(bootstrap.includes('lockController.lockSession'));
+  assert(bootstrap.includes('new SensitiveFingerprintSession()'));
+  assert(bootstrap.includes('onLock: () => sensitiveFingerprints.clear()'));
   assert(bootstrap.includes("ipc.handle('device-storage-health'"));
   assert(bootstrap.includes("ipc.handle('device-reset-storage-identity'"));
   assert(bootstrap.includes("ipc.handle('device-record-backup-success'"));
@@ -229,7 +256,7 @@ function testStaticBootstrapBoundary() {
   await testDeviceSecurityEvents();
   await testBackupAgeSettings();
   testStaticBootstrapBoundary();
-  console.log('PASS SafeLedger 2.3 centralized locks, OS events, storage protection/health, restore identity rotation, startup marker repair, and backup-age metadata.');
+  console.log('PASS SafeLedger 2.3+ centralized locks, OS events, storage protection/health, restore identity rotation, session-only cleanup, startup marker repair, and backup-age metadata.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
