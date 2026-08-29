@@ -35,6 +35,14 @@ function assertTrustedEvent(event) {
   if (!win || !event || event.sender !== win.webContents) throw new Error('Untrusted SafeLedger IPC request.');
 }
 
+function syncRendererSettings(settings) {
+  const win = getMainWindow();
+  if (!win) return;
+  try {
+    win.webContents.send('result-save-settings', { settings });
+  } catch (_) {}
+}
+
 const lockController = createSessionLockController({
   cryptoSession,
   getMainWindow,
@@ -79,6 +87,7 @@ ipc.handle('device-record-backup-success', async (event) => {
     lastBackupAt: new Date().toISOString()
   }));
   await securityMain.audit(getDataRoot(), 'backup-created');
+  syncRendererSettings(saved.settings);
   return { ok: true, settings: saved.settings, health: backupHealth.summarize(saved.settings) };
 });
 
@@ -90,6 +99,7 @@ ipc.handle('device-record-backup-verified', async (event, createdAt) => {
     lastVerifiedBackupCreatedAt: backupHealth.normalizeTimestamp(createdAt)
   }));
   await securityMain.audit(getDataRoot(), 'backup-verified');
+  syncRendererSettings(saved.settings);
   return { ok: true, settings: saved.settings, health: backupHealth.summarize(saved.settings) };
 });
 
