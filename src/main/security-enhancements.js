@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('electron');
+const { ipcRenderer: ipc } = require('./renderer-bridge');
 const passwordControls = require('./password-controls');
 
 const AUTO_LOCK_MINUTES = 5;
@@ -23,7 +23,7 @@ function panicLock(reason = 'panic-lock') {
   clearTimeout(idleTimer);
   try { clearVisibleSensitiveFields(); } catch (_) {}
   try { ipc.send('panic-lock', { reason }); } catch (_) {}
-  setTimeout(() => window.location.reload(), 100);
+  // The trusted main process clears the DEK, minimizes, and reloads the renderer.
 }
 
 function resetIdleTimer() {

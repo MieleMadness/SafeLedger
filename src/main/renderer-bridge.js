@@ -1,5 +1,7 @@
 'use strict';
 
+// Renderer-only adapter for SafeLedger's narrow preload API.
+// This module exposes no Electron or Node capability.
 function bridge() {
   if (!window.safeLedgerApi) throw new Error('SafeLedger bridge is unavailable.');
   return window.safeLedgerApi;
@@ -50,12 +52,12 @@ const invokes = {
 const ipcRenderer = {
   send(channel, ...args) {
     const method = sends[channel];
-    if (!method || typeof bridge()[method] !== 'function') throw new Error(`Blocked SafeLedger IPC send: ${channel}`);
+    if (!method || typeof bridge()[method] !== 'function') throw new Error(`Blocked SafeLedger bridge send: ${channel}`);
     return bridge()[method](...args);
   },
   invoke(channel, ...args) {
     const method = invokes[channel];
-    if (!method || typeof bridge()[method] !== 'function') return Promise.reject(new Error(`Blocked SafeLedger IPC invoke: ${channel}`));
+    if (!method || typeof bridge()[method] !== 'function') return Promise.reject(new Error(`Blocked SafeLedger bridge invoke: ${channel}`));
     return bridge()[method](...args);
   },
   on(channel, listener) {

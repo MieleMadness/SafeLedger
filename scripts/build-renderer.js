@@ -6,7 +6,6 @@ const esbuild = require('esbuild');
 
 const root = path.join(__dirname, '..');
 const output = path.join(root, 'src', 'main', 'renderer.bundle.js');
-const electronShim = path.join(root, 'src', 'main', 'renderer-electron-shim.js');
 
 async function run() {
   await esbuild.build({
@@ -18,13 +17,7 @@ async function run() {
     target: ['chrome150'],
     sourcemap: false,
     minify: false,
-    legalComments: 'none',
-    plugins: [{
-      name: 'safeledger-electron-shim',
-      setup(build) {
-        build.onResolve({ filter: /^electron$/ }, () => ({ path: electronShim }));
-      }
-    }]
+    legalComments: 'none'
   });
 
   const bundled = fs.readFileSync(output, 'utf8');
@@ -37,7 +30,7 @@ async function run() {
   ]) {
     if (bundled.includes(forbidden)) throw new Error(`Sandbox renderer bundle contains forbidden runtime dependency: ${forbidden}`);
   }
-  console.log('Prepared sandbox-compatible SafeLedger renderer bundle.');
+  console.log('Prepared SafeLedger renderer bundle with explicit preload bridge boundary.');
 }
 
 run().catch((err) => {

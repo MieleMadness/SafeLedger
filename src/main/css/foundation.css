@@ -1,0 +1,126 @@
+/* SafeLedger-owned runtime foundation. Replaces Bootstrap layout/form/button primitives. */
+
+.app-shell {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 5fr);
+  width: 100%;
+  margin: 0 !important;
+}
+
+.app-main-row {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.app-search-row,
+.app-button-row {
+  flex: 0 0 auto;
+}
+
+.app-grid > .app-cell {
+  width: 100% !important;
+  min-width: 0;
+  float: none !important;
+  flex: none !important;
+  position: relative;
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.form-group { margin-bottom: 15px; }
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 12px;
+  font: inherit;
+  line-height: 1.42857143;
+  color: #333;
+  background-color: #fff;
+  background-image: none;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+  transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+.form-control:focus {
+  border-color: #66afe9;
+  outline: 0;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+}
+
+.btn {
+  display: inline-block;
+  margin-bottom: 0;
+  padding: 6px 12px;
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.42857143;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  touch-action: manipulation;
+  cursor: pointer;
+  user-select: none;
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.btn:focus { outline: 2px solid rgba(25,118,210,.35); outline-offset: 1px; }
+.btn:disabled { cursor: not-allowed; opacity: .65; }
+.btn-default { color: #333; background-color: #fff; border-color: #ccc; }
+.btn-default:hover,
+.btn-default:focus { color: #333; background-color: #e6e6e6; border-color: #adadad; }
+.btn-sm { padding: 5px 10px; font-size: 12px; line-height: 1.5; }
+
+.nav { padding-left: 0; margin: 0; list-style: none; }
+.nav > li { position: relative; display: block; }
+.nav > li > a { position: relative; display: block; text-decoration: none; }
+
+.text-center { text-align: center; }
+.pull-right { float: right !important; }
+
+.badge {
+  display: inline-block;
+  min-width: 10px;
+  padding: 3px 7px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  background-color: #777;
+  border-radius: 10px;
+}
+
+.alert {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.alert-success { color: #2f5f32; background: #e8f5e9; border-color: #c8e6c9; }
+.alert-info { color: #245269; background: #e8f4fb; border-color: #bce8f1; }
+.alert-warning { color: #7a5b13; background: #fff8e1; border-color: #ffe0a3; }
+.alert-danger { color: #843534; background: #fdecea; border-color: #ebccd1; }
+
+.table { width: 100%; max-width: 100%; border-collapse: collapse; }
+.table > thead > tr > th,
+.table > tbody > tr > th,
+.table > tbody > tr > td { padding: 8px; border-top: 1px solid #ddd; text-align: left; }
+
+@media (max-width: 899px) {
+  .app-shell { min-width: 900px; overflow-x: auto; }
+}

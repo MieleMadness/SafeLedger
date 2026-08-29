@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('electron');
+const { ipcRenderer: ipc } = require('./renderer-bridge');
 const status = require('./status');
 const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
@@ -15,10 +15,10 @@ function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   try {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
       weekday: 'short', month: 'short', day: '2-digit', year: 'numeric',
       hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
-      timeZone: 'America/New_York', timeZoneName: 'short'
+      timeZoneName: 'short'
     }).format(date);
   } catch (_) {
     return String(value);

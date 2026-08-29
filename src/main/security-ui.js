@@ -1,6 +1,6 @@
 'use strict';
 
-const { clipboard } = require('electron');
+const { clipboard } = require('./renderer-bridge');
 const QRCode = require('qrcode');
 
 const CLIPBOARD_CLEAR_MS = 30000;
@@ -196,7 +196,7 @@ exports.appendPublicAddressField = (parent, address, symbol) => {
       () => clipboard.writeText(String(address)),
       () => address,
       qrArea,
-      `Generated locally from the ${symbol || 'coin'} public address. No network connection is used.`
+      `Generated locally from the ${symbol || 'asset'} public address. No network connection is used.`
     ));
   }
   wrapper.appendChild(shell);

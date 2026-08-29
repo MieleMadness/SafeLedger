@@ -2,7 +2,7 @@
   Author: Edward Seufert - Cborgtech, LLC
 */
 
-const { ipcRenderer: ipc } = require('electron');
+const { ipcRenderer: ipc } = require('./renderer-bridge');
 const statusMgr = require('./status');
 const utils = require('./utils');
 const securityUi = require('./security-ui');
@@ -26,18 +26,18 @@ const getUserCoinNotes = (vaultData, rec) => {
   return catalogRecord && catalogRecord[2] === rec.notes ? '' : (rec && rec.notes || '');
 };
 
-const formatEasternDate = (value) => {
+const formatLocalDate = (value) => {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   try {
-    return new Intl.DateTimeFormat('en-US', {
+    return new Intl.DateTimeFormat(undefined, {
       weekday: 'short', month: 'short', day: '2-digit', year: 'numeric',
       hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true,
-      timeZone: 'America/New_York', timeZoneName: 'short'
+      timeZoneName: 'short'
     }).format(date);
   } catch (_) {
-    return String(value).replace('Eastern Daylight Time', 'EDT').replace('Eastern Standard Time', 'EST');
+    return String(value);
   }
 };
 
@@ -56,7 +56,7 @@ const appendCoinHeader = (area, record) => {
   const titleWrap = document.createElement('div');
   titleWrap.className = 'coin-detail-title-wrap';
   const title = document.createElement('h1');
-  title.textContent = record.name || 'Coin';
+  title.textContent = record.name || 'Asset';
   titleWrap.appendChild(title);
   if (symbol) {
     const symbolLine = document.createElement('div');
@@ -170,13 +170,13 @@ const createEditRecord = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
-  header.textContent = params.record ? 'Modify Coin' : 'Add Coin';
+  header.textContent = params.record ? 'Modify Asset' : 'Add Asset';
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
 
   const { form, grid } = editFormUi.createForm(area);
   const inputName = editFormUi.addTextInput(grid, {
-    id: 'inputName', label: 'Coin', value: params.record && params.record.name, maxLength: 25
+    id: 'inputName', label: 'Asset', value: params.record && params.record.name, maxLength: 25
   });
   const inputSymbol = editFormUi.addTextInput(grid, {
     id: 'inputSymbol', label: 'Symbol', value: params.record && params.record.symbol, maxLength: 30
@@ -243,12 +243,12 @@ const createEditRecord = (params) => {
   if (params.record) {
     actions.push({
       icon: 'fa-times',
-      title: 'Cancel edit coin',
+      title: 'Cancel edit asset',
       className: 'detail-action-cancel',
       onClick: () => renderRecordDetail(params)
     });
   }
-  actions.push({ icon: 'fa-save', title: 'Save coin', className: 'detail-action-save', onClick: (_event, button) => saveRecord(button) });
+  actions.push({ icon: 'fa-save', title: 'Save asset', className: 'detail-action-save', onClick: (_event, button) => saveRecord(button) });
   detailActions.set(actions);
 };
 
@@ -292,7 +292,7 @@ const renderRecordDetail = (params) => {
       allowQr: false,
       meta: params.record.balanceUpdated ? {
         label: 'Balance updated',
-        value: formatEasternDate(params.record.balanceUpdated)
+        value: formatLocalDate(params.record.balanceUpdated)
       } : null
     });
   }
@@ -321,8 +321,8 @@ const renderRecordDetail = (params) => {
   notesWrap.appendChild(notesValue);
   area.appendChild(notesWrap);
 
-  addLine('Created', params.record.created, formatEasternDate);
-  addLine('Modified', params.record.modified, formatEasternDate);
+  addLine('Created', params.record.created, formatLocalDate);
+  addLine('Modified', params.record.modified, formatLocalDate);
 
   const printIncludesSensitive = !!String(params.record.privateAddress || '').trim() || !!String(params.record.manualBalance || '').trim() || customFields.hasSensitive(params.record.customFields);
   detailActions.set([
@@ -332,22 +332,22 @@ const renderRecordDetail = (params) => {
       className: 'detail-action-pin',
       onClick: (_event, button) => persistRecordUpdate(params, { pinned: params.record.pinned !== true }, button)
     },
-    { icon: 'fa-pencil', title: 'Edit coin', onClick: () => createEditRecord(params) },
+    { icon: 'fa-pencil', title: 'Edit asset', onClick: () => createEditRecord(params) },
     {
-      icon: 'fa-print', title: 'Print coin sheet', className: 'detail-action-print',
-      onClick: () => securityUi.printRecoverySheet(`${params.record.name || 'Coin'} Recovery Sheet`, [
-        { label: 'Coin', value: params.record.name },
+      icon: 'fa-print', title: 'Print asset sheet', className: 'detail-action-print',
+      onClick: () => securityUi.printRecoverySheet(`${params.record.name || 'Asset'} Recovery Sheet`, [
+        { label: 'Asset', value: params.record.name },
         { label: 'Symbol', value: params.record.symbol },
         { label: 'Tags', value: params.record.tags },
         { label: 'Public address', value: params.record.publicAddress },
         { label: 'Private key', value: params.record.privateAddress },
         { label: 'Balance', value: params.record.manualBalance },
-        { label: 'Balance updated', value: params.record.balanceUpdated },
+        { label: 'Balance updated', value: params.record.balanceUpdated ? formatLocalDate(params.record.balanceUpdated) : '' },
         ...customFields.printFields(params.record.customFields),
         { label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record) }
       ], printIncludesSensitive)
     },
-    { icon: 'fa-trash', title: 'Delete coin', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
+    { icon: 'fa-trash', title: 'Delete asset', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
   ]);
 };
 
@@ -355,16 +355,16 @@ const confirmDelete = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
-  header.textContent = `Confirm Delete of coin: ${params.record.name}`;
+  header.textContent = `Confirm Delete of asset: ${params.record.name}`;
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
   const note = document.createElement('p');
-  note.textContent = 'Use the red trash icon below to permanently delete this coin from the wallet.';
+  note.textContent = 'Use the red trash icon below to permanently delete this asset from the wallet.';
   area.appendChild(note);
   detailActions.set([
-    { icon: 'fa-times', title: 'Cancel delete coin', className: 'detail-action-cancel', onClick: () => renderRecordDetail(params) },
+    { icon: 'fa-times', title: 'Cancel delete asset', className: 'detail-action-cancel', onClick: () => renderRecordDetail(params) },
     {
-      icon: 'fa-trash', title: 'Confirm delete coin', className: 'detail-action-delete',
+      icon: 'fa-trash', title: 'Confirm delete asset', className: 'detail-action-delete',
       onClick: () => {
         params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected, 1);
         params.vaultData.recordSelected = null;
@@ -378,4 +378,4 @@ const confirmDelete = (params) => {
   ]);
 };
 
-exports._test = { assetSort, getUserCoinNotes, formatEasternDate };
+exports._test = { assetSort, getUserCoinNotes, formatLocalDate };
