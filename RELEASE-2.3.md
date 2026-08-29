@@ -2,11 +2,11 @@
 
 ## Release status
 
-**Release candidate: 2.3.0**
+**Released: 2.3.0**
 
 SafeLedger 2.3 strengthens the boundary between an unlocked vault and the physical device running it. The implementation adds centralized automatic session locking, removable-storage failure handling, storage-health visibility, and backup-age awareness while preserving the crypto, vault schema, migration behavior, and offline/portable model established in SafeLedger 2.1 and modernized in 2.2.
 
-The release candidate is ready for final Windows/Linux validation. It must not merge unless regression, Electron crypto smoke, real GUI smoke, and packaging all pass on the exact 2.3.0 head.
+SafeLedger 2.3.0 was merged into `master` after the exact release-candidate head passed Windows and Linux regression, Electron crypto smoke, real GUI smoke, packaging, and artifact-upload gates.
 
 ## Preserved invariants
 
@@ -27,7 +27,7 @@ The release candidate is ready for final Windows/Linux validation. It must not m
 
 ### 1. Centralized session-lock path
 
-SafeLedger now routes non-password security locks through a main-process lock controller. It clears the active DEK before UI/minimize/reload work, can reset the renderer to a login state, records only generic privacy-safe activity when possible, and is safe to invoke repeatedly.
+SafeLedger routes non-password security locks through a main-process lock controller. It clears the active DEK before UI/minimize/reload work, can reset the renderer to a login state, records only generic privacy-safe activity when possible, and is safe to invoke repeatedly.
 
 Recognized privacy-safe lock events include manual Emergency Lock, OS screen lock, suspend, resume fail-safe, storage unavailable, storage identity mismatch, and locked idle-state detection.
 
@@ -108,16 +108,17 @@ Activity History records only generic event names and timestamps for device-secu
 ### Phase F — Release hardening
 - Dedicated device-security regression tests added.
 - Dashboard device-health regression test added to the mandatory suite.
-- Full regression suite passed on the pre-version-bump implementation head on Windows and Linux.
+- Full regression suite passed on Windows and Linux.
 - Electron crypto smoke passed on Windows and Linux.
 - Real GUI smoke passed on Windows and Linux.
-- Windows portable and Linux AppImage packaging passed on the pre-version-bump implementation head.
-- SafeLedger 1.x import and v2/v3 backup compatibility remain part of the mandatory regression suite.
-- Package version moved to 2.3.0 for the final release-candidate validation.
+- Windows portable EXE packaging and artifact upload passed.
+- Linux AppImage packaging and artifact upload passed.
+- SafeLedger 1.x import and v2/v3 backup compatibility remained in the mandatory regression suite.
+- Package version moved to 2.3.0 and the exact release-candidate head was revalidated.
 
-## Release acceptance gates
+## Release acceptance gates — completed
 
-SafeLedger 2.3 may merge only when the exact **2.3.0** release-candidate head passes:
+The exact **2.3.0** release-candidate head passed:
 
 1. Full regression suite on Windows and Linux.
 2. Electron crypto smoke on Windows and Linux.
@@ -135,6 +136,6 @@ SafeLedger 2.3 may merge only when the exact **2.3.0** release-candidate head pa
 
 ## Package/version strategy
 
-The application package version is **2.3.0** for the final release candidate. The dependency graph is unchanged from the tested implementation; the existing dependency lock remains the install source of truth for `npm ci`.
+The released application package version is **2.3.0**. The dependency graph is unchanged from the tested implementation; the existing dependency lock remains the install source of truth for `npm ci`.
 
-After the exact release-candidate head passes both platform workflows, PR #4 can be merged into `master`. Release tagging/publishing remains separate from the merge and is handled by the later distribution/trust release work.
+SafeLedger 2.3.0 was merged through replacement PR #8 because the GitHub connector's draft-to-ready mutation was unavailable. The replacement PR used the identical tested branch and commit. Release tagging/publishing remains separate from the merge and is handled by the later distribution/trust release work.
