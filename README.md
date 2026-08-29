@@ -6,11 +6,11 @@ SafeLedger does not require a cloud account, subscription, license server, or ne
 
 ## Release status
 
-### Current release candidate: SafeLedger 2.3.0
+### Current stable release: SafeLedger 2.3.0
 
-SafeLedger 2.3 is the release candidate currently being validated for merge into `master`.
+SafeLedger 2.3 is the version currently merged into `master`.
 
-It includes the SafeLedger 2.1 continuity/security foundation, the 2.2 runtime modernization work, and the new 2.3 device-security layer:
+It includes the SafeLedger 2.1 continuity/security foundation, the 2.2 runtime modernization work, and the 2.3 device-security layer:
 
 - Portable `SafeLedgerData` storage beside the packaged application
 - AES-256-GCM authenticated vault encryption
@@ -41,13 +41,13 @@ It includes the SafeLedger 2.1 continuity/security foundation, the 2.2 runtime m
 - Emergency Lock that clears the active encryption session, minimizes SafeLedger, resets the renderer, and returns the application to a fresh login state
 
 > [!IMPORTANT]
-> **SafeLedger 2.4 and 2.5 remain development release tracks. They are not part of the current release candidate until their implementation, regression, Windows/Linux CI, crypto smoke, GUI smoke, and packaging gates pass and their pull requests are merged.**
+> **SafeLedger 2.4 and 2.5 remain development release tracks. They are not part of the current stable release until their implementation, regression, Windows/Linux CI, crypto smoke, GUI smoke, and packaging gates pass and their pull requests are merged.**
 
 ## Release roadmap
 
 ### SafeLedger 2.3 — Device Security & Recovery Health
 
-Release candidate: **2.3.0**
+Released: **2.3.0**
 
 Included:
 
@@ -333,7 +333,7 @@ Pull requests are expected to pass regression, crypto, GUI, and packaging checks
 
 - `RELEASE-2.1.md` — continuity and hardening foundation
 - `RELEASE-2.2.md` — released runtime modernization
-- PR #4 / `RELEASE-2.3.md` — Device Security & Recovery Health release candidate
+- `RELEASE-2.3.md` — released Device Security & Recovery Health
 - PR #5 / `RELEASE-2.4.md` — Recovery Intelligence & Validation development
 - PR #6 / `RELEASE-2.5.md` — Distribution, Trust & Open Source Readiness development
 
