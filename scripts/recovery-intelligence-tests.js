@@ -2,6 +2,8 @@
 
 const assert = require('assert');
 const recoveryHealth = require('../src/main/recovery-health');
+const addressValidator = require('../src/main/address-validator');
+const { keccak256Hex } = require('../src/main/keccak256');
 
 function byId(result, id) {
   return result.checks.find((item) => item.id === id);
@@ -124,13 +126,56 @@ function testVerifiedBackupAffectsScoreWithoutPaths() {
   assert(!JSON.stringify(result).includes('X:/secret/location'));
 }
 
+function testKeccakAndEip55() {
+  assert.strictEqual(
+    keccak256Hex(''),
+    'c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470',
+    'Keccak-256 must not be confused with SHA3-256'
+  );
+  const checked = addressValidator.validateEvm('0x52908400098527886E0F7030069857D2E4169EE7');
+  assert.strictEqual(checked.status, 'valid');
+  assert.strictEqual(checked.checksum, 'valid');
+  assert.strictEqual(addressValidator.validateEvm('0xde709f2102306220921060314715629080e2fb77').status, 'valid');
+  assert.strictEqual(addressValidator.validateEvm('0x52908400098527886E0F7030069857D2E4169Ee7').status, 'invalid');
+}
+
+function testBitcoinAddressValidation() {
+  const base58 = addressValidator.validateBase58Check('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa');
+  assert.strictEqual(base58.status, 'valid');
+  assert.strictEqual(base58.network, 'mainnet');
+  assert.strictEqual(base58.addressType, 'p2pkh');
+  assert.strictEqual(addressValidator.validateBase58Check('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb').status, 'invalid');
+
+  const v0 = addressValidator.validateBitcoinSegwit('BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4');
+  assert.strictEqual(v0.status, 'valid');
+  assert.strictEqual(v0.witnessVersion, 0);
+  assert.strictEqual(v0.encoding, 'bech32');
+
+  const v1 = addressValidator.validateBitcoinSegwit('bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0');
+  assert.strictEqual(v1.status, 'valid');
+  assert.strictEqual(v1.witnessVersion, 1);
+  assert.strictEqual(v1.encoding, 'bech32m');
+
+  assert.strictEqual(addressValidator.validateBitcoinSegwit('bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqh2y7hd').status, 'invalid');
+  assert.strictEqual(addressValidator.validateAddress('not-a-supported-address').status, 'unsupported');
+}
+
+function testValidatorOutputsNeverEchoInput() {
+  const sensitiveLooking = '0x52908400098527886E0F7030069857D2E4169EE7';
+  const serialized = JSON.stringify(addressValidator.validateAddress(sensitiveLooking));
+  assert(!serialized.includes(sensitiveLooking));
+}
+
 function run() {
   testRecoveryHealthIsExplainableAndSecretFree();
   testDeterministicDateBoundaries();
   testMissingMeansIncompleteNotUnsafe();
   testAddressCoverageAndOptionalBackupContext();
   testVerifiedBackupAffectsScoreWithoutPaths();
-  console.log('PASS SafeLedger 2.4 Recovery Health is deterministic, explainable, and secret-free.');
+  testKeccakAndEip55();
+  testBitcoinAddressValidation();
+  testValidatorOutputsNeverEchoInput();
+  console.log('PASS SafeLedger 2.4 Recovery Health and offline address validators are deterministic and secret-free.');
 }
 
 run();
