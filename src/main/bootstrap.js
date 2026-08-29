@@ -74,6 +74,12 @@ ipc.handle('device-storage-health', async (event) => {
   return deviceSecurity.storageHealth();
 });
 
+ipc.handle('device-reset-storage-identity', async (event) => {
+  assertTrustedEvent(event);
+  const id = await deviceSecurity.rotateStorageIdentity();
+  return { ok: true, reset: true, idPresent: typeof id === 'string' && id.length > 0 };
+});
+
 ipc.handle('device-backup-health', async (event) => {
   assertTrustedEvent(event);
   const loaded = await settingsManager.loadSettings(getSettingsDir());
