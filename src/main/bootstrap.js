@@ -5,6 +5,8 @@ const path = require('path');
 const runtimeUtils = require('./runtime-utils');
 const cryptoSession = require('./crypto-session-main');
 const securityMain = require('./security-main');
+const settingsManager = require('./installManager/installManager/settingsManager');
+const backupHealth = require('./backup-health');
 const { createSessionLockController } = require('./session-lock-main');
 const { createDeviceSecurityService } = require('./device-security-main');
 
@@ -22,6 +24,10 @@ function getPortableRoot() {
 
 function getDataRoot() {
   return path.join(getPortableRoot(), 'SafeLedgerData');
+}
+
+function getSettingsDir() {
+  return path.join(getDataRoot(), 'settings');
 }
 
 function assertTrustedEvent(event) {
@@ -58,6 +64,33 @@ ipc.on('panic-lock', (event, params = {}) => {
 ipc.handle('device-storage-health', async (event) => {
   assertTrustedEvent(event);
   return deviceSecurity.storageHealth();
+});
+
+ipc.handle('device-backup-health', async (event) => {
+  assertTrustedEvent(event);
+  const loaded = await settingsManager.loadSettings(getSettingsDir());
+  return { ok: true, health: backupHealth.summarize(loaded.settings), settings: loaded.settings };
+});
+
+ipc.handle('device-record-backup-success', async (event) => {
+  assertTrustedEvent(event);
+  const loaded = await settingsManager.loadSettings(getSettingsDir());
+  const saved = await settingsManager.saveSettings(getSettingsDir(), Object.assign({}, loaded.settings, {
+    lastBackupAt: new Date().toISOString()
+  }));
+  await securityMain.audit(getDataRoot(), 'backup-created');
+  return { ok: true, settings: saved.settings, health: backupHealth.summarize(saved.settings) };
+});
+
+ipc.handle('device-record-backup-verified', async (event, createdAt) => {
+  assertTrustedEvent(event);
+  const loaded = await settingsManager.loadSettings(getSettingsDir());
+  const saved = await settingsManager.saveSettings(getSettingsDir(), Object.assign({}, loaded.settings, {
+    lastVerifiedBackupAt: new Date().toISOString(),
+    lastVerifiedBackupCreatedAt: backupHealth.normalizeTimestamp(createdAt)
+  }));
+  await securityMain.audit(getDataRoot(), 'backup-verified');
+  return { ok: true, settings: saved.settings, health: backupHealth.summarize(saved.settings) };
 });
 
 app.whenReady().then(() => deviceSecurity.start().catch(() => {
