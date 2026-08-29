@@ -17,6 +17,15 @@ function storageIdPath(dataRoot) {
   return path.join(dataRoot, STORAGE_ID_FILE);
 }
 
+function newStorageIdentity() {
+  return {
+    format: STORAGE_ID_FORMAT,
+    version: STORAGE_ID_VERSION,
+    id: crypto.randomUUID(),
+    created: new Date().toISOString()
+  };
+}
+
 function validStorageIdDocument(value) {
   return !!value && value.format === STORAGE_ID_FORMAT && value.version === STORAGE_ID_VERSION &&
     typeof value.id === 'string' && /^[0-9a-f-]{32,64}$/i.test(value.id);
@@ -29,6 +38,13 @@ async function readStorageIdentity(dataRoot) {
   return parsed;
 }
 
+async function writeNewStorageIdentity(dataRoot) {
+  await fs.promises.mkdir(dataRoot, { recursive: true });
+  const created = newStorageIdentity();
+  await atomicWriteJson(storageIdPath(dataRoot), created);
+  return created;
+}
+
 async function ensureStorageIdentity(dataRoot) {
   await fs.promises.mkdir(dataRoot, { recursive: true });
   try {
@@ -36,14 +52,7 @@ async function ensureStorageIdentity(dataRoot) {
   } catch (err) {
     if (err && err.code !== 'ENOENT') throw err;
   }
-  const created = {
-    format: STORAGE_ID_FORMAT,
-    version: STORAGE_ID_VERSION,
-    id: crypto.randomUUID(),
-    created: new Date().toISOString()
-  };
-  await atomicWriteJson(storageIdPath(dataRoot), created);
-  return created;
+  return writeNewStorageIdentity(dataRoot);
 }
 
 async function probeStorageIdentity(dataRoot, expectedId) {
@@ -140,6 +149,12 @@ function createDeviceSecurityService(options = {}) {
     return expectedStorageId;
   }
 
+  async function rotateStorageIdentity() {
+    const identity = await writeNewStorageIdentity(getDataRoot());
+    expectedStorageId = identity.id;
+    return expectedStorageId;
+  }
+
   async function checkStorage() {
     if (stopping || !lockController.isUnlocked()) return { ok: true, skipped: true };
     const probe = await probeStorageIdentity(getDataRoot(), expectedStorageId);
@@ -205,6 +220,7 @@ function createDeviceSecurityService(options = {}) {
     checkIdleState,
     storageHealth,
     initializeStorageIdentity,
+    rotateStorageIdentity,
     getExpectedStorageId: () => expectedStorageId
   };
 }
@@ -212,6 +228,7 @@ function createDeviceSecurityService(options = {}) {
 module.exports = {
   createDeviceSecurityService,
   ensureStorageIdentity,
+  writeNewStorageIdentity,
   readStorageIdentity,
   probeStorageIdentity,
   getStorageHealth,
