@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   globalSearch: (query) => ipcRenderer.invoke('global-search', query),
   getRecoveryBinder: (file, options, recordActivity = false) => ipcRenderer.invoke('recovery-binder-model', { file, options, recordActivity: recordActivity === true }),
   getStorageHealth: () => ipcRenderer.invoke('device-storage-health'),
+  resetStorageIdentity: () => ipcRenderer.invoke('device-reset-storage-identity'),
   getBackupHealth: () => ipcRenderer.invoke('device-backup-health'),
   recordBackupSuccess: () => ipcRenderer.invoke('device-record-backup-success'),
   recordBackupVerified: (createdAt) => ipcRenderer.invoke('device-record-backup-verified', createdAt),
