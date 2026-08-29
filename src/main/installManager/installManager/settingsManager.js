@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const lockoutState = require('../../lockout-state');
 const settingsSchema = require('../../settings-schema');
+const backupHealth = require('../../backup-health');
 const { atomicWriteJson } = require('../../atomic-file');
 
 const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance } = settingsSchema;
@@ -21,7 +22,11 @@ const defaults = () => ({
   lockLoginTime: 0,
   minutesToWaitBetweenLockout: 15,
   // Destructive cleanup is opt-in. Lockouts remain enabled when this is false.
-  scrubContentAfterRetries: false
+  scrubContentAfterRetries: false,
+  lastBackupAt: null,
+  lastVerifiedBackupAt: null,
+  lastVerifiedBackupCreatedAt: null,
+  backupReminderDays: backupHealth.DEFAULT_REMINDER_DAYS
 });
 
 function normalizeCounter(value, fallback = 0) {
@@ -51,6 +56,10 @@ function normalizeSettings(settings, now = Date.now()) {
   next.lockOutCount = normalizeCounter(next.lockOutCount, baseDefaults.lockOutCount);
   next.lockLogin = next.lockLogin === true || next.lockLogin === 1 || next.lockLogin === 'true';
   next.scrubContentAfterRetries = next.scrubContentAfterRetries === true || next.scrubContentAfterRetries === 1 || next.scrubContentAfterRetries === 'true';
+  next.lastBackupAt = backupHealth.normalizeTimestamp(next.lastBackupAt);
+  next.lastVerifiedBackupAt = backupHealth.normalizeTimestamp(next.lastVerifiedBackupAt);
+  next.lastVerifiedBackupCreatedAt = backupHealth.normalizeTimestamp(next.lastVerifiedBackupCreatedAt);
+  next.backupReminderDays = backupHealth.normalizeReminderDays(next.backupReminderDays);
 
   const lockTime = Number(next.lockLoginTime);
   next.lockLoginTime = Number.isFinite(lockTime) && lockTime > 0 ? Math.floor(lockTime) : 0;
