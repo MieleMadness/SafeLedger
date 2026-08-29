@@ -133,6 +133,11 @@ async function restoreEncryptedBackup() {
     const result = await ipc.invoke('security-restore-all');
     if (!result || result.canceled) return;
     if (!result.ok) return alert(result.message || 'Restore failed.');
+    // A backup can originate from another SafeLedgerData location. Rotate the
+    // restored storage identity so the current physical storage becomes the
+    // trusted identity for the next session instead of inheriting another
+    // drive's local marker.
+    try { await ipc.invoke('device-reset-storage-identity'); } catch (_) {}
     alert(`Complete SafeLedger backup restored.${result.safetyDir ? ` Safety copy: ${result.safetyDir}` : ''}\n\nSafeLedger will now lock and reload.`);
     panicLock('post-restore-lock');
   } catch (err) { alert(`Restore failed: ${err.message || err}`); }
