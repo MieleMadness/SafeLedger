@@ -1,113 +1,140 @@
 # SafeLedger 2.3 — Device Security & Recovery Health
 
-## Release goal
+## Release status
 
-SafeLedger 2.3 strengthens the boundary between an unlocked vault and the physical device running it. The release focuses on automatic session locking, removable-storage failure handling, storage-health visibility, and backup-age awareness while preserving the crypto, vault schema, migration behavior, and offline/portable model established in SafeLedger 2.1 and cleaned up in 2.2.
+**Release candidate: 2.3.0**
 
-Target release version: **2.3.0**
+SafeLedger 2.3 strengthens the boundary between an unlocked vault and the physical device running it. The implementation adds centralized automatic session locking, removable-storage failure handling, storage-health visibility, and backup-age awareness while preserving the crypto, vault schema, migration behavior, and offline/portable model established in SafeLedger 2.1 and modernized in 2.2.
 
-This release should make SafeLedger safer when a computer is locked, suspended, resumed, or when the storage containing `SafeLedgerData` becomes unavailable.
+The release candidate is ready for final Windows/Linux validation. It must not merge unless regression, Electron crypto smoke, real GUI smoke, and packaging all pass on the exact 2.3.0 head.
 
-## Non-negotiable invariants
+## Preserved invariants
 
 - Existing SafeLedger 2.x vaults open without conversion.
-- SafeLedger 1.x read-only import continues to work.
-- AES-256-GCM vault encryption does not change.
-- Argon2id key-envelope behavior does not change.
+- SafeLedger 1.x read-only import remains compatible.
+- AES-256-GCM vault encryption is unchanged.
+- Argon2id key-envelope behavior is unchanged.
 - The Data Encryption Key remains main-process only and is explicitly zeroed on lock.
-- Backup format v3 remains unchanged.
+- Backup format v3 is unchanged.
 - Backup format v2 remains accepted for restore compatibility.
-- Portable `SafeLedgerData` placement remains unchanged.
-- No cloud service, telemetry, account, or network dependency is introduced.
-- Emergency Lock remains available at the lower-right edge of the application.
-- Search, Dashboard, and Activity History remain available from the top utility area.
-- A storage or device-security event must never trigger Self-Destruct.
+- Portable `SafeLedgerData` placement is unchanged.
+- No cloud service, telemetry, account, or runtime network dependency was introduced.
+- Emergency Lock remains at the lower-right edge of the application.
+- Search, Dashboard, and Activity History remain in the top utility area.
+- Storage and device-security events never trigger Self-Destruct.
 
-## Primary outcomes
+## Implemented outcomes
 
-### 1. One centralized session-lock path
+### 1. Centralized session-lock path
 
-Create a single main-process function such as `lockSession(reason, options)` and route every non-password lock through it. It must clear the active DEK immediately, reset the renderer to login, optionally minimize/hide depending on reason, record only generic activity when storage is available, and be safe to call repeatedly.
+SafeLedger now routes non-password security locks through a main-process lock controller. It clears the active DEK before UI/minimize/reload work, can reset the renderer to a login state, records only generic privacy-safe activity when possible, and is safe to invoke repeatedly.
 
-Suggested events: `session-locked-manual`, `session-locked-screen`, `session-locked-suspend`, `session-locked-resume`, `session-locked-storage-unavailable`, `session-locked-idle-state`.
+Recognized privacy-safe lock events include manual Emergency Lock, OS screen lock, suspend, resume fail-safe, storage unavailable, storage identity mismatch, and locked idle-state detection.
 
-### 2. Lock on operating-system security events
+### 2. Operating-system security events
 
-Use Electron `powerMonitor` after `app.whenReady()`. Lock on `lock-screen` where supported, lock on `suspend`, ensure the app is locked on `resume`, and poll `getSystemIdleState()` while unlocked for a reported locked state. Never auto-unlock.
+Electron `powerMonitor` hooks are installed after application readiness. SafeLedger locks on supported `lock-screen` events, locks on suspend, enforces a locked state on resume, and polls `getSystemIdleState()` while unlocked for an OS-reported locked state. None of these paths auto-unlock.
 
 ### 3. Portable-storage disconnect protection
 
-Create a random non-secret storage identifier under `SafeLedgerData`, load it in the main process, and probe the data root while unlocked every few seconds. Missing/unavailable storage or an identity mismatch immediately clears the DEK and locks the session. Never invoke Self-Destruct and never auto-unlock when storage returns.
+SafeLedger creates a random non-secret `storage-id.json` under `SafeLedgerData` and probes the expected storage while unlocked. Missing/unavailable storage or an unexpected identity causes the DEK to be cleared and the session locked.
+
+The marker is device-local operational metadata, is excluded from complete backups, and is regenerated after a successful restore. A malformed marker can be safely repaired while establishing the startup baseline before a vault is unlocked; corruption or identity changes detected during an unlocked session fail closed and lock the session.
 
 ### 4. Storage Health
 
-Expose sanitized operational state only: connected, writable, freeBytes when available, portableRoot, lastCheckedAt, status and short reason enum. Never expose disk serials, OS device IDs, volume UUIDs, unrelated mounts, or vault contents.
+The main process exposes sanitized operational state only: connection state, writability, free bytes when available, portable data-root path, last check time, status, and a short reason enum. It does not expose disk serials, hardware IDs, volume UUIDs, unrelated mounts, or vault contents.
+
+Storage Health is surfaced in Settings and the Recovery Dashboard.
 
 ### 5. Backup-age awareness
 
-Add non-secret settings metadata: `lastBackupAt`, `lastVerifiedBackupAt`, `lastVerifiedBackupCreatedAt`, and `backupReminderDays` (recommended default 30). Successful backup/verification updates timestamps; cancelled or failed operations do not. Never store backup paths.
+Non-secret settings metadata tracks:
+
+- `lastBackupAt`
+- `lastVerifiedBackupAt`
+- `lastVerifiedBackupCreatedAt`
+- `backupReminderDays`
+
+Successful backup/verification operations update timestamps. Cancelled or failed operations do not. Backup paths are not persisted. Reminder choices are Off, 30, 60, or 90 days, with 30 days as the normalized default for existing settings without a value.
 
 ### 6. Security & Storage UI
 
-Add compact Settings/Dashboard status presentation for session protection, storage connection/writability/free space, last backup and last verified backup, with concise non-secret warnings.
+Settings includes a **Device & Storage Security** section with storage state, writability, free-space information when available, backup freshness, and reminder configuration. The Recovery Dashboard includes a compact local device/backup health summary and warnings.
 
 ### 7. Activity-history integration
 
-Only generic events may be recorded. Do not log backup paths, profile/wallet/asset names, drive identifiers, secrets, or recovery locations.
+Activity History records only generic event names and timestamps for device-security transitions. It does not log backup paths, Profile/Wallet/Asset names, drive identifiers, secrets, recovery locations, or detailed device information.
 
-## Implementation sequence
+## Implementation phases completed
 
 ### Phase A — Centralized lock controller
-1. Add a main-process lock controller.
-2. Route Emergency Lock through it.
-3. Add a renderer event/reset path.
-4. Add idempotency tests.
-5. Verify raw DEK zeroing for every reason.
+- Main-process lock controller added.
+- Emergency Lock routed through the controller.
+- Renderer reset/login path retained.
+- Idempotency regression coverage added.
+- DEK-clearing-first behavior covered by tests.
 
 ### Phase B — OS lock/suspend integration
-1. Register `powerMonitor` listeners.
-2. Lock on supported `lock-screen` events.
-3. Lock on `suspend` everywhere.
-4. Force locked state on `resume`.
-5. Poll idle-state only while unlocked.
-6. Add test seams.
+- `powerMonitor` listeners installed.
+- Supported OS screen-lock events lock the vault.
+- Suspend locks the vault.
+- Resume cannot restore an old unlocked session.
+- Idle-state polling runs only while unlocked.
+- Test seams cover event behavior.
 
 ### Phase C — Storage identity and disconnect guard
-1. Create/read random storage identity.
-2. Add unlocked-session storage probe.
-3. Handle missing/unavailable storage cleanly.
-4. Lock immediately when data root disappears.
-5. Reject wrong storage identity on reappearance.
-6. Confirm no path invokes Self-Destruct.
+- Random local storage identity implemented.
+- Unlocked-session storage probing implemented.
+- Missing/unavailable storage locks the session.
+- Wrong identity locks the session.
+- Startup repair handles malformed non-secret marker metadata before unlock.
+- No storage path invokes Self-Destruct.
 
 ### Phase D — Storage Health
-1. Add main-process storage-health service.
-2. Add preload API with sanitized results.
-3. Add writable/free-space checks.
-4. Add Settings/Dashboard status card.
-5. Add non-blocking warning states.
+- Main-process storage-health service implemented.
+- Explicit preload API implemented.
+- Writable/free-space checks implemented.
+- Settings and Dashboard presentation implemented.
+- Warning states remain non-secret and non-destructive.
 
 ### Phase E — Backup-age metadata
-1. Extend settings normalization.
-2. Update successful backup/Verify flows.
-3. Add deterministic age helper tests.
-4. Add UI presentation.
-5. Confirm old settings normalize forward.
+- Settings normalization extended backward-compatibly.
+- Successful Backup and Verify flows record timestamps.
+- Deterministic age helper coverage added.
+- Settings and Dashboard presentation added.
+- Backup paths are never stored in settings.
 
 ### Phase F — Release hardening
-1. Add dedicated device-security regression tests.
-2. Run full regression suite.
-3. Run Electron crypto smoke test.
-4. Run real GUI smoke test.
-5. Build Windows portable executable.
-6. Build Linux AppImage.
-7. Verify 1.x import and v2/v3 backup compatibility.
-8. Bump to 2.3.0 only after implementation gates pass.
+- Dedicated device-security regression tests added.
+- Dashboard device-health regression test added to the mandatory suite.
+- Full regression suite passed on the pre-version-bump implementation head on Windows and Linux.
+- Electron crypto smoke passed on Windows and Linux.
+- Real GUI smoke passed on Windows and Linux.
+- Windows portable and Linux AppImage packaging passed on the pre-version-bump implementation head.
+- SafeLedger 1.x import and v2/v3 backup compatibility remain part of the mandatory regression suite.
+- Package version moved to 2.3.0 for the final release-candidate validation.
 
 ## Release acceptance gates
 
-SafeLedger 2.3 is ready to merge when Windows/Linux regression, Electron crypto smoke, real GUI smoke, and packaging all pass; OS/device security test seams prove DEK zeroing; resume cannot restore an old session; simulated storage removal locks immediately; wrong storage identity is rejected; disconnect paths cannot trigger destructive cleanup; Storage Health exposes only approved fields; backup metadata contains timestamps only; legacy import and v2/v3 backup compatibility remain green; and no network dependency is introduced.
+SafeLedger 2.3 may merge only when the exact **2.3.0** release-candidate head passes:
+
+1. Full regression suite on Windows and Linux.
+2. Electron crypto smoke on Windows and Linux.
+3. Real GUI startup smoke on Windows and Linux.
+4. Windows portable EXE build and artifact upload.
+5. Linux AppImage build and artifact upload.
+6. Device-security regressions proving DEK-clearing-first lock behavior.
+7. Simulated storage removal and identity mismatch lock behavior.
+8. Proof that storage/device-security paths cannot trigger destructive cleanup.
+9. Sanitized Storage Health field boundaries.
+10. Timestamp-only backup-age persistence.
+11. SafeLedger 1.x import continuity.
+12. Backup v2/v3 compatibility.
+13. No new runtime network dependency.
 
 ## Package/version strategy
 
-Keep the package at **2.2.0** during implementation. Only after all gates pass set package/lock metadata to **2.3.0**, update README release wording, run both platform workflows again, merge into `master`, and then prepare the release tag/artifacts.
+The application package version is **2.3.0** for the final release candidate. The dependency graph is unchanged from the tested implementation; the existing dependency lock remains the install source of truth for `npm ci`.
+
+After the exact release-candidate head passes both platform workflows, PR #4 can be merged into `master`. Release tagging/publishing remains separate from the merge and is handled by the later distribution/trust release work.
