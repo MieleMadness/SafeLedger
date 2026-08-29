@@ -9,9 +9,11 @@ const settingsManager = require('./installManager/installManager/settingsManager
 const backupHealth = require('./backup-health');
 const { createSessionLockController } = require('./session-lock-main');
 const { createDeviceSecurityService } = require('./device-security-main');
+const { SensitiveFingerprintSession } = require('./recovery-duplicates');
 
-// Load the established SafeLedger application runtime first. SafeLedger 2.3
-// wraps its security lifecycle without changing vault/encryption persistence.
+// Load the established SafeLedger application runtime first. SafeLedger 2.4
+// extends the released 2.3 security lifecycle without changing vault/encryption
+// persistence.
 require('./main');
 
 function getMainWindow() {
@@ -43,11 +45,17 @@ function syncRendererSettings(settings) {
   } catch (_) {}
 }
 
+// Sensitive duplicate fingerprints are keyed with a random in-memory key that
+// exists only for the current unlocked process session. The central lock path
+// destroys it immediately after destroying the vault DEK.
+const sensitiveFingerprints = new SensitiveFingerprintSession();
+
 const lockController = createSessionLockController({
   cryptoSession,
   getMainWindow,
   getDataRoot,
-  audit: securityMain.audit
+  audit: securityMain.audit,
+  onLock: () => sensitiveFingerprints.clear()
 });
 
 const deviceSecurity = createDeviceSecurityService({
@@ -56,9 +64,9 @@ const deviceSecurity = createDeviceSecurityService({
   getDataRoot
 });
 
-// main.js contains the 2.2 Emergency Lock listener. Replace that one listener
-// with the centralized 2.3 lock controller while leaving all other established
-// IPC routes untouched.
+// main.js contains the older Emergency Lock listener. Replace that listener
+// with the centralized 2.3+ lock controller while leaving established IPC
+// routes untouched.
 ipc.removeAllListeners('panic-lock');
 ipc.on('panic-lock', (event, params = {}) => {
   try { assertTrustedEvent(event); } catch (_) { return; }
@@ -117,6 +125,15 @@ app.whenReady().then(() => deviceSecurity.start().catch(() => {
   }
 }));
 
-app.on('before-quit', () => deviceSecurity.stop());
+app.on('before-quit', () => {
+  sensitiveFingerprints.clear();
+  deviceSecurity.stop();
+});
 
-module.exports = { lockController, deviceSecurity, getDataRoot, getMainWindow };
+module.exports = {
+  lockController,
+  deviceSecurity,
+  sensitiveFingerprints,
+  getDataRoot,
+  getMainWindow
+};
