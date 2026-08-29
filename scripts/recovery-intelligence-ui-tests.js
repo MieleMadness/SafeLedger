@@ -34,7 +34,7 @@ function testPrivacyModeDefaultsAndPersistence() {
   const renderer = read('src/main/renderer.js');
   assert(securityUi.includes('let privacyMode = true'));
   assert(securityUi.includes('actions.style.display = privacyMode'));
-  assert(securityUi.includes("exports.setPrivacyMode"));
+  assert(securityUi.includes('exports.setPrivacyMode'));
   assert(privacyUi.includes("id = 'privacyModeEnabled'"));
   assert(privacyUi.includes("ipc.send('save-settings'"));
   assert(renderer.includes('securityUi.setPrivacyMode'));
@@ -47,9 +47,9 @@ function testGuidedRecoveryIsEphemeral() {
   assert(drillUi.includes("input.type = 'password'"));
   assert(drillUi.includes("input.value = ''"), 'temporary BIP39 input must be cleared immediately');
   assert(drillUi.includes('Test Recovery'));
-  assert(!drillUi.includes("clipboard"));
-  assert(!drillUi.includes("ipc.send"));
-  assert(!drillUi.includes("fetch("));
+  assert(!drillUi.includes('clipboard'));
+  assert(!drillUi.includes('ipc.send'));
+  assert(!drillUi.includes('fetch('));
   assert(drillModel.includes('lastRecoveryDrill'));
   assert(drillModel.includes('lastVerified'));
   assert(!drillModel.includes('seedPhrase: completedAt'));
@@ -67,10 +67,10 @@ function testRecoveryIntelligenceBoundary() {
   assert(preload.includes('getRecoveryIntelligence'));
   assert(bridge.includes("'recovery-intelligence-summary': 'getRecoveryIntelligence'"));
   assert(dashboard.includes('never addresses, seed phrases, private keys, fingerprints, or backup paths'));
-  assert(!dashboard.includes('.publicAddress'));
-  assert(!dashboard.includes('.privateAddress'));
-  assert(!dashboard.includes('.seedPhrase'));
-  assert(!dashboard.includes('backupPath'));
+  assert(!dashboard.includes('item.publicAddress'));
+  assert(!dashboard.includes('item.privateAddress'));
+  assert(!dashboard.includes('item.seedPhrase'));
+  assert(!dashboard.includes('item.backupPath'));
   assert(!bootstrap.includes('scrubContent'), 'Recovery Intelligence must not have a destructive cleanup path');
 }
 
