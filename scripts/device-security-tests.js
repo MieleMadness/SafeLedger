@@ -76,6 +76,11 @@ async function testStorageIdentityAndHealth() {
     assert(!('serial' in health));
     assert(!('deviceId' in health));
     assert(!('volumeId' in health));
+
+    const rotated = await deviceSecurity.writeNewStorageIdentity(temp);
+    assert.notStrictEqual(rotated.id, first.id, 'restore must rotate device-local storage identity');
+    assert.strictEqual((await deviceSecurity.probeStorageIdentity(temp, rotated.id)).ok, true);
+    assert.strictEqual((await deviceSecurity.probeStorageIdentity(temp, first.id)).reason, 'identity-mismatch');
   } finally {
     await fs.promises.rm(temp, { recursive: true, force: true });
   }
@@ -106,6 +111,11 @@ async function testDeviceSecurityEvents() {
     assert.strictEqual(intervals.length, 2);
     assert.strictEqual(intervals[0].ms, deviceSecurity.STORAGE_PROBE_INTERVAL_MS);
     assert.strictEqual(intervals[1].ms, deviceSecurity.IDLE_POLL_INTERVAL_MS);
+
+    const originalId = service.getExpectedStorageId();
+    const rotatedId = await service.rotateStorageIdentity();
+    assert.notStrictEqual(rotatedId, originalId);
+    assert.strictEqual(service.getExpectedStorageId(), rotatedId);
 
     powerMonitor.emit('lock-screen');
     assert.strictEqual(locks.pop().reason, 'screen-lock');
@@ -183,21 +193,27 @@ function testStaticBootstrapBoundary() {
   assert(bootstrap.includes("ipc.removeAllListeners('panic-lock')"));
   assert(bootstrap.includes('lockController.lockSession'));
   assert(bootstrap.includes("ipc.handle('device-storage-health'"));
+  assert(bootstrap.includes("ipc.handle('device-reset-storage-identity'"));
   assert(bootstrap.includes("ipc.handle('device-record-backup-success'"));
   assert(bootstrap.includes("ipc.handle('device-record-backup-verified'"));
+  assert(bootstrap.includes("win.webContents.send('result-save-settings', { settings })"));
   assert(!bootstrap.includes('filePath'), 'backup health persistence must not store backup paths');
   assert(preload.includes('getStorageHealth'));
+  assert(preload.includes('resetStorageIdentity'));
   assert(preload.includes('getBackupHealth'));
   assert(preload.includes('recordBackupSuccess'));
   assert(preload.includes('recordBackupVerified'));
   assert(preload.includes('onSecuritySessionLocked'));
   assert(rendererBridge.includes("'security-session-locked': 'onSecuritySessionLocked'"));
+  assert(rendererBridge.includes("'device-reset-storage-identity': 'resetStorageIdentity'"));
   assert(rendererSecurity.includes("ipc.on('security-session-locked'"));
   assert(rendererSecurity.includes("ipc.invoke('device-record-backup-success')"));
   assert(rendererSecurity.includes("ipc.invoke('device-record-backup-verified'"));
+  assert(rendererSecurity.includes("ipc.invoke('device-reset-storage-identity')"));
   assert(settingsUi.includes("makeSection('Device & Storage Security')"));
   assert(settingsUi.includes("[0, 'Off'], [30, '30 days'], [60, '60 days'], [90, '90 days']"));
   assert(service.includes("lockController.lockSession('storage-unavailable'"));
+  assert(service.includes('rotateStorageIdentity'));
   assert(!service.includes('scrubContent'), 'device security must never invoke Self-Destruct cleanup');
 }
 
@@ -207,7 +223,7 @@ function testStaticBootstrapBoundary() {
   await testDeviceSecurityEvents();
   await testBackupAgeSettings();
   testStaticBootstrapBoundary();
-  console.log('PASS SafeLedger 2.3 centralized locks, OS events, storage protection/health, and backup-age metadata.');
+  console.log('PASS SafeLedger 2.3 centralized locks, OS events, storage protection/health, restore identity rotation, and backup-age metadata.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
