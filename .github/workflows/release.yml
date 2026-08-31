@@ -27,7 +27,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if ! gh api "repos/$GITHUB_REPOSITORY/branches/master/protection" > /dev/null; then
+          protected="$(gh api "repos/$GITHUB_REPOSITORY/branches/master" --jq '.protected')"
+          if [ "$protected" != "true" ]; then
             echo "::error::Official SafeLedger publishing requires branch protection on master."
             exit 1
           fi
