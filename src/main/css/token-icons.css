@@ -1,4 +1,4 @@
-/* SafeLedger 2.0.14 bundled branded token artwork */
+/* SafeLedger bundled branded crypto artwork */
 .coin-brand-image {
   width: 54px;
   height: 54px;
@@ -53,6 +53,52 @@
   white-space: nowrap;
 }
 
+.wallet-list-brand-image,
+.wallet-list-icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  margin-right: 8px;
+}
+
+.wallet-list-brand-image {
+  display: block;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.wallet-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wallet-detail-brand-image,
+.wallet-detail-generic-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+}
+
+.wallet-detail-brand-image {
+  display: block;
+  object-fit: contain;
+  border-radius: 9px;
+}
+
+.wallet-detail-generic-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: var(--sl-primary-strong, #1d4ed8);
+}
+
+.wallet-detail-title-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1000px) {
   .coin-brand-image {
     width: 46px;
@@ -65,5 +111,20 @@
     width: 19px;
     height: 19px;
     flex-basis: 19px;
+  }
+
+  .wallet-list-brand-image,
+  .wallet-list-icon {
+    width: 21px;
+    height: 21px;
+    flex-basis: 21px;
+    margin-right: 6px;
+  }
+
+  .wallet-detail-brand-image,
+  .wallet-detail-generic-icon {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
   }
 }
