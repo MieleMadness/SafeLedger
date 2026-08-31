@@ -24,17 +24,25 @@ function writeDummy(file, content) {
   fs.writeFileSync(file, content);
 }
 
+function populateExpected(input, version = '2.5.0') {
+  writeDummy(path.join(input, 'windows', `SafeLedger-${version}-Portable.exe`), 'windows');
+  writeDummy(path.join(input, 'windows', 'README.pdf'), 'pdf');
+  writeDummy(path.join(input, 'windows', 'WINDOWS-SIGNING.txt'), 'unsigned\n');
+  writeDummy(path.join(input, 'linux', `SafeLedger-${version}-x86_64.AppImage`), 'linux');
+  writeDummy(path.join(input, 'sbom', `safeledger-${version}.cdx.json`), '{"bomFormat":"CycloneDX"}\n');
+  writeDummy(path.join(input, 'legal', 'LICENSE'), 'license');
+  writeDummy(path.join(input, 'legal', 'NOTICE'), 'notice');
+  writeDummy(path.join(input, 'legal', 'THIRD-PARTY-NOTICES.md'), 'third party');
+  writeDummy(path.join(input, 'legal', 'RELEASE-VERIFICATION.md'), 'verify');
+}
+
 function testArtifactCollectionAndVerification() {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'safeledger-release-test-'));
   const input = path.join(temp, 'input');
   const output = path.join(temp, 'final');
   const pkg = { version: '2.5.0' };
   try {
-    writeDummy(path.join(input, 'windows', 'SafeLedger-2.5.0-Portable.exe'), 'windows');
-    writeDummy(path.join(input, 'windows', 'README.pdf'), 'pdf');
-    writeDummy(path.join(input, 'windows', 'WINDOWS-SIGNING.txt'), 'unsigned\n');
-    writeDummy(path.join(input, 'linux', 'SafeLedger-2.5.0-x86_64.AppImage'), 'linux');
-    writeDummy(path.join(input, 'sbom', 'safeledger-2.5.0.cdx.json'), '{"bomFormat":"CycloneDX"}\n');
+    populateExpected(input);
     const manifest = releaseArtifacts.collectArtifacts(input, output, {
       pkg,
       sourceCommit: '0123456789abcdef',
@@ -42,9 +50,10 @@ function testArtifactCollectionAndVerification() {
     });
     assert.strictEqual(manifest.version, '2.5.0');
     assert.strictEqual(manifest.windowsSigning, 'unsigned');
-    assert.strictEqual(manifest.artifacts.length, 4);
+    assert.strictEqual(manifest.artifacts.length, 8);
     assert(fs.existsSync(path.join(output, 'SHA256SUMS.txt')));
     assert(fs.existsSync(path.join(output, 'release-manifest.json')));
+    assert(fs.existsSync(path.join(output, 'RELEASE-VERIFICATION.md')));
     assert.strictEqual(releaseArtifacts.verifyChecksums(output), true);
 
     fs.appendFileSync(path.join(output, 'SafeLedger-2.5.0-Portable.exe'), 'tamper');
@@ -58,11 +67,8 @@ function testDuplicateAndMissingArtifactsFailClosed() {
   const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'safeledger-release-duplicates-'));
   const input = path.join(temp, 'input');
   try {
-    writeDummy(path.join(input, 'a', 'SafeLedger-2.5.0-Portable.exe'), 'one');
-    writeDummy(path.join(input, 'b', 'SafeLedger-2.5.0-Portable.exe'), 'two');
-    writeDummy(path.join(input, 'a', 'README.pdf'), 'pdf');
-    writeDummy(path.join(input, 'a', 'SafeLedger-2.5.0-x86_64.AppImage'), 'linux');
-    writeDummy(path.join(input, 'a', 'safeledger-2.5.0.cdx.json'), '{}');
+    populateExpected(input);
+    writeDummy(path.join(input, 'duplicate', 'SafeLedger-2.5.0-Portable.exe'), 'two');
     assert.throws(
       () => releaseArtifacts.collectArtifacts(input, path.join(temp, 'out'), { pkg: { version: '2.5.0' } }),
       /exactly once/
@@ -82,9 +88,11 @@ function testLegalAndPackagingSurface() {
   assert(license.includes('TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION'));
   const notice = read('NOTICE');
   assert(notice.includes('SafeLedger'));
+  assert(notice.includes('Cborgtech'));
   const pkg = JSON.parse(read('package.json'));
   assert(pkg.build.files.includes('LICENSE'));
   assert(pkg.build.files.includes('NOTICE'));
+  assert(pkg.build.files.includes('THIRD-PARTY-NOTICES.md'));
 }
 
 function testReleaseWorkflowTrustBoundary() {
@@ -102,6 +110,16 @@ function testReleaseWorkflowTrustBoundary() {
   assert(workflow.includes('needs: attest-artifacts'));
   assert(workflow.includes('gh release create'));
   assert(workflow.includes('node scripts/release-artifacts.js verify release/final'));
+  assert(workflow.includes('THIRD-PARTY-NOTICES.md'));
+  assert(workflow.includes('RELEASE-VERIFICATION.md'));
+}
+
+function testNormalCiPins() {
+  for (const file of ['.github/workflows/windows-portable.yml', '.github/workflows/linux-appimage.yml']) {
+    const workflow = read(file);
+    assert(!/uses:\s+[^\n]+@v\d/.test(workflow), `${file} contains a movable Action tag`);
+    assert(workflow.includes('permissions:\n  contents: read'));
+  }
 }
 
 function testNoProductSecurityScopeChange() {
@@ -118,6 +136,7 @@ testArtifactCollectionAndVerification();
 testDuplicateAndMissingArtifactsFailClosed();
 testLegalAndPackagingSurface();
 testReleaseWorkflowTrustBoundary();
+testNormalCiPins();
 testNoProductSecurityScopeChange();
 
 console.log('PASS SafeLedger 2.5 distribution trust, release-policy, checksum, legal, and publishing-boundary tests.');
