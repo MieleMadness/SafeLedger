@@ -26,6 +26,19 @@
   --sl-icon-gold: #7a4b00;
   --sl-icon-teal: #0f766e;
   --sl-icon-neutral: #475467;
+
+  /* Semantic text controls use stronger foreground/background pairs than the
+   * earlier pastel-on-pastel treatment. Each pair exceeds WCAG 4.5:1 for
+   * normal-size text while preserving green / amber / red meaning. */
+  --sl-status-success-bg: #e6f4ea;
+  --sl-status-success-text: #176b32;
+  --sl-status-success-border: #5a9b70;
+  --sl-status-warning-bg: #fff3cd;
+  --sl-status-warning-text: #6b4f00;
+  --sl-status-warning-border: #b58a22;
+  --sl-status-danger-bg: #fde8e8;
+  --sl-status-danger-text: #9b1c1c;
+  --sl-status-danger-border: #c96a6a;
 }
 
 html[data-theme="dark"] {
@@ -39,6 +52,15 @@ html[data-theme="dark"] {
   --sl-icon-gold: #fde68a;
   --sl-icon-teal: #99f6e4;
   --sl-icon-neutral: #cbd5e1;
+  --sl-status-success-bg: #13351f;
+  --sl-status-success-text: #9be7ad;
+  --sl-status-success-border: #3f8b58;
+  --sl-status-warning-bg: #3b2c0b;
+  --sl-status-warning-text: #ffd166;
+  --sl-status-warning-border: #a77a18;
+  --sl-status-danger-bg: #3b1717;
+  --sl-status-danger-text: #ff9b9b;
+  --sl-status-danger-border: #a94b4b;
 }
 
 /* ---------- Global vertical rhythm ---------- */
@@ -228,6 +250,62 @@ html[data-theme="dark"] {
 .activity-empty,
 .public-address-placeholder {
   color: var(--sl-muted) !important;
+}
+
+#detailArea .btn-default {
+  color: var(--sl-text-strong) !important;
+  border-color: var(--sl-border-strong) !important;
+  font-weight: 600;
+}
+
+#detailArea .btn-default:hover,
+#detailArea .btn-default:focus {
+  color: var(--sl-primary-strong) !important;
+}
+
+.dashboard-status,
+.recovery-readiness-status {
+  border: 1px solid transparent !important;
+  font-weight: 700;
+}
+
+.dashboard-status.is-ready,
+.recovery-readiness-status.is-ready {
+  background: var(--sl-status-success-bg) !important;
+  color: var(--sl-status-success-text) !important;
+  border-color: var(--sl-status-success-border) !important;
+}
+
+.dashboard-status.is-review,
+.recovery-readiness-status.is-review {
+  background: var(--sl-status-warning-bg) !important;
+  color: var(--sl-status-warning-text) !important;
+  border-color: var(--sl-status-warning-border) !important;
+}
+
+.dashboard-status.is-incomplete,
+.recovery-readiness-status.is-incomplete {
+  background: var(--sl-status-danger-bg) !important;
+  color: var(--sl-status-danger-text) !important;
+  border-color: var(--sl-status-danger-border) !important;
+}
+
+.dashboard-status-action {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.dashboard-status-action:hover {
+  box-shadow: inset 0 0 0 1px currentColor;
+}
+
+.dashboard-status-action:focus-visible {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: 2px !important;
 }
 
 /* White on primary blue is >5:1; the old dark-on-blue active filter was ~3.7:1. */
