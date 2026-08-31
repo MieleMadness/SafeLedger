@@ -8,6 +8,8 @@ const SEMVER_TAG = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const REQUIRED_FILES = [
   'LICENSE',
   'NOTICE',
+  'THIRD-PARTY-NOTICES.md',
+  'RELEASE-VERIFICATION.md',
   'CONTRIBUTING.md',
   'SECURITY.md',
   'CODE_OF_CONDUCT.md',
