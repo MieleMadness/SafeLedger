@@ -32,8 +32,10 @@ jobs:
             echo "::error::Official SafeLedger publishing requires branch protection on master."
             exit 1
           fi
+      - name: Install locked graph for trust tests
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Run distribution trust tests
-        run: node scripts/distribution-trust-tests.js
+        run: npm run test:distribution-trust
 
   build-windows:
     needs: preflight
