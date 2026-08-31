@@ -1,0 +1,9 @@
+SafeLedger
+Copyright 2018 SafeLedger, LLC
+Copyright 2026 SafeLedger contributors
+
+This product includes software developed for the SafeLedger project.
+
+SafeLedger is distributed under the Apache License, Version 2.0. See LICENSE for the complete license terms.
+
+Third-party dependencies retain their respective copyright and license terms. The release SBOM records the dependency set used for an official build. Where a dependency requires attribution in redistributed binary form, that attribution must be preserved in the applicable release package or documentation.
