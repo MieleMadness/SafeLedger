@@ -225,6 +225,8 @@ function createDeviceSecurityService(options = {}) {
     powerMonitor.on('resume', () => {
       const generationBeforeSuspend = suspendSessionGeneration;
       suspendSessionGeneration = null;
+      const resumedIdleState = readIdleState();
+      if (resumedIdleState) lastIdleState = resumedIdleState;
       if (!lockController.isUnlocked()) return;
 
       const currentGeneration = currentSessionGeneration();
