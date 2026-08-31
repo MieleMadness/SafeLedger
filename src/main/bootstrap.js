@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain: ipc, powerMonitor } = require('electron');
+const { app, BrowserWindow, ipcMain: ipc, powerMonitor, shell } = require('electron');
 const path = require('path');
 const runtimeUtils = require('./runtime-utils');
 const cryptoSession = require('./crypto-session-main');
@@ -201,6 +201,17 @@ ipc.handle('device-storage-health', async (event) => {
   return deviceSecurity.storageHealth();
 });
 
+ipc.handle('device-open-data-folder', async (event) => {
+  assertTrustedEvent(event);
+  const health = await deviceSecurity.storageHealth();
+  if (!health || health.connected !== true) {
+    return { ok: false, message: 'SafeLedgerData storage is currently unavailable.' };
+  }
+  const error = await shell.openPath(getDataRoot());
+  if (error) return { ok: false, message: 'SafeLedger could not open the SafeLedgerData folder.' };
+  return { ok: true };
+});
+
 ipc.handle('device-reset-storage-identity', async (event) => {
   assertTrustedEvent(event);
   const id = await deviceSecurity.rotateStorageIdentity();
@@ -258,13 +269,3 @@ app.on('before-quit', () => {
   sensitiveFingerprints.clear();
   deviceSecurity.stop();
 });
-
-module.exports = {
-  lockController,
-  deviceSecurity,
-  sensitiveFingerprints,
-  buildRecoveryIntelligence,
-  buildRecoveryIntelligenceSummary,
-  getDataRoot,
-  getMainWindow
-};
