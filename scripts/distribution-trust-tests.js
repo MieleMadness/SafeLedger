@@ -8,7 +8,7 @@ const releasePolicy = require('./release-policy');
 const releaseArtifacts = require('./release-artifacts');
 
 const root = path.join(__dirname, '..');
-const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n');
 
 function testTagPolicy() {
   assert.deepStrictEqual(releasePolicy.parseTag('v2.5.0'), { tag: 'v2.5.0', version: '2.5.0' });
