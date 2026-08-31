@@ -22,6 +22,15 @@ jobs:
           node-version: '24'
       - name: Validate release policy
         run: node scripts/release-policy.js
+      - name: Require protected master release branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if ! gh api "repos/$GITHUB_REPOSITORY/branches/master/protection" > /dev/null; then
+            echo "::error::Official SafeLedger publishing requires branch protection on master."
+            exit 1
+          fi
       - name: Run distribution trust tests
         run: node scripts/distribution-trust-tests.js
 
@@ -30,9 +39,6 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: read
-    env:
-      SAFELEDGER_WINDOWS_PFX_BASE64: ${{ secrets.SAFELEDGER_WINDOWS_PFX_BASE64 }}
-      SAFELEDGER_WINDOWS_PFX_PASSWORD: ${{ secrets.SAFELEDGER_WINDOWS_PFX_PASSWORD }}
     steps:
       - name: Check out tagged source
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -52,7 +58,7 @@ jobs:
         run: npm run test:gui-smoke
       - name: Build Windows portable EXE
         run: npm run dist:win
-      - name: Stage and optionally sign Windows artifact
+      - name: Stage Windows artifact and README
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release/windows | Out-Null
@@ -60,6 +66,17 @@ jobs:
           $exe = Get-ChildItem dist -Filter "SafeLedger-$version-Portable.exe" | Select-Object -First 1
           if (-not $exe) { throw 'Expected Windows portable EXE was not created.' }
           Copy-Item $exe.FullName release/windows/$($exe.Name)
+          npm run docs:pdf -- release/windows/README.pdf
+          if (-not (Test-Path release/windows/README.pdf)) { throw 'README.pdf was not generated.' }
+      - name: Apply optional Authenticode signing
+        shell: pwsh
+        env:
+          SAFELEDGER_WINDOWS_PFX_BASE64: ${{ secrets.SAFELEDGER_WINDOWS_PFX_BASE64 }}
+          SAFELEDGER_WINDOWS_PFX_PASSWORD: ${{ secrets.SAFELEDGER_WINDOWS_PFX_PASSWORD }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $exe = "release/windows/SafeLedger-$version-Portable.exe"
+          if (-not (Test-Path $exe)) { throw 'Staged Windows portable EXE is missing.' }
           $status = 'unsigned'
           $hasCert = -not [string]::IsNullOrWhiteSpace($env:SAFELEDGER_WINDOWS_PFX_BASE64)
           $hasPassword = -not [string]::IsNullOrWhiteSpace($env:SAFELEDGER_WINDOWS_PFX_PASSWORD)
@@ -72,9 +89,9 @@ jobs:
                 Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
                 Sort-Object FullName -Descending | Select-Object -First 1
               if (-not $signTool) { throw 'signtool.exe was not found on the Windows runner.' }
-              & $signTool.FullName sign /f $pfx /p $env:SAFELEDGER_WINDOWS_PFX_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 "release/windows/$($exe.Name)"
+              & $signTool.FullName sign /f $pfx /p $env:SAFELEDGER_WINDOWS_PFX_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $exe
               if ($LASTEXITCODE -ne 0) { throw 'Authenticode signing failed.' }
-              & $signTool.FullName verify /pa "release/windows/$($exe.Name)"
+              & $signTool.FullName verify /pa $exe
               if ($LASTEXITCODE -ne 0) { throw 'Authenticode signature verification failed.' }
               $status = 'authenticode-signed'
             } finally {
@@ -82,8 +99,6 @@ jobs:
             }
           }
           Set-Content release/windows/WINDOWS-SIGNING.txt $status
-          npm run docs:pdf -- release/windows/README.pdf
-          if (-not (Test-Path release/windows/README.pdf)) { throw 'README.pdf was not generated.' }
       - name: Upload Windows release input
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
