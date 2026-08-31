@@ -15,8 +15,14 @@ function normalizeAppearance(value) {
   return APPEARANCE_VALUES.includes(normalized) ? normalized : 'system';
 }
 
+function normalizePrivacyMode(value) {
+  if (value == null || value === '') return true;
+  return value === true || value === 1 || String(value).trim().toLowerCase() === 'true';
+}
+
 exports.BRUTE_FORCE_MIN = BRUTE_FORCE_MIN;
 exports.BRUTE_FORCE_MAX = BRUTE_FORCE_MAX;
 exports.APPEARANCE_VALUES = APPEARANCE_VALUES;
 exports.clampBruteForceValue = clampBruteForceValue;
 exports.normalizeAppearance = normalizeAppearance;
+exports.normalizePrivacyMode = normalizePrivacyMode;

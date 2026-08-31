@@ -4,6 +4,10 @@ const { clipboard } = require('./renderer-bridge');
 const QRCode = require('qrcode');
 
 const CLIPBOARD_CLEAR_MS = 30000;
+let privacyMode = true;
+
+exports.setPrivacyMode = (enabled) => { privacyMode = enabled !== false; };
+exports.isPrivacyMode = () => privacyMode;
 
 function autoClearClipboard(expected) {
   setTimeout(() => {
@@ -140,6 +144,7 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
     () => { details.open = true; },
     allowQr
   );
+  actions.style.display = privacyMode ? 'none' : '';
   summary.appendChild(actions);
   details.appendChild(summary);
 
@@ -166,6 +171,8 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
 
   details.addEventListener('toggle', () => {
     stateIcon.className = details.open ? 'fa fa-minus-circle' : 'fa fa-plus-circle';
+    if (privacyMode) actions.style.display = details.open ? '' : 'none';
+    if (!details.open && qrArea.style.display !== 'none') qrArea.style.display = 'none';
   });
   details.appendChild(content);
   wrapper.appendChild(details);

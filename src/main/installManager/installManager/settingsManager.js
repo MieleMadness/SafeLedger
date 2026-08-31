@@ -7,13 +7,14 @@ const settingsSchema = require('../../settings-schema');
 const backupHealth = require('../../backup-health');
 const { atomicWriteJson } = require('../../atomic-file');
 
-const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance } = settingsSchema;
+const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance, normalizePrivacyMode } = settingsSchema;
 
 const defaults = () => ({
   formatVersion: 2,
   created: new Date().toISOString(),
   modified: new Date().toISOString(),
   appearance: 'system',
+  privacyMode: true,
   failAttemptCount: 0,
   numFailAttempts: 5,
   lockOutCount: 0,
@@ -49,6 +50,7 @@ function normalizeSettings(settings, now = Date.now()) {
   delete next.masterKeyVerifier;
 
   next.appearance = normalizeAppearance(next.appearance);
+  next.privacyMode = normalizePrivacyMode(next.privacyMode);
   next.numFailAttempts = clampBruteForceValue(next.numFailAttempts, baseDefaults.numFailAttempts);
   next.numLockoutRetries = clampBruteForceValue(next.numLockoutRetries, baseDefaults.numLockoutRetries);
   next.minutesToWaitBetweenLockout = clampBruteForceValue(next.minutesToWaitBetweenLockout, baseDefaults.minutesToWaitBetweenLockout);
