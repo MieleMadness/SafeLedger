@@ -25,7 +25,11 @@ function expectedNames(version) {
     `SafeLedger-${version}-Portable.exe`,
     `SafeLedger-${version}-x86_64.AppImage`,
     'README.pdf',
-    `safeledger-${version}.cdx.json`
+    `safeledger-${version}.cdx.json`,
+    'LICENSE',
+    'NOTICE',
+    'THIRD-PARTY-NOTICES.md',
+    'RELEASE-VERIFICATION.md'
   ];
 }
 
@@ -78,6 +82,7 @@ function collectArtifacts(inputDir, outputDir, options = {}) {
   fs.writeFileSync(path.join(outputDir, 'release-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
   const checksumNames = expected.concat('release-manifest.json');
+  if (fs.existsSync(path.join(outputDir, 'WINDOWS-SIGNING.txt'))) checksumNames.push('WINDOWS-SIGNING.txt');
   const sums = checksumNames
     .map((name) => `${sha256File(path.join(outputDir, name))}  ${name}`)
     .join('\n');
