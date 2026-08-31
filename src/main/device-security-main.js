@@ -149,7 +149,7 @@ function createDeviceSecurityService(options = {}) {
   let idleTimer = null;
   let stopping = false;
   let lastIdleState = null;
-  let suspendObserved = false;
+  let suspendSessionGeneration = null;
 
   if (!lockController || typeof lockController.lockSession !== 'function') throw new Error('Device security requires a lock controller.');
   if (typeof getDataRoot !== 'function') throw new Error('Device security requires getDataRoot().');
@@ -203,6 +203,12 @@ function createDeviceSecurityService(options = {}) {
     }
   }
 
+  function currentSessionGeneration() {
+    if (!lockController || typeof lockController.getSessionGeneration !== 'function') return null;
+    const value = Number(lockController.getSessionGeneration());
+    return Number.isInteger(value) && value >= 0 ? value : null;
+  }
+
   function installPowerEvents() {
     if (!powerMonitor || typeof powerMonitor.on !== 'function') return;
     powerMonitor.on('lock-screen', () => {
@@ -213,20 +219,25 @@ function createDeviceSecurityService(options = {}) {
       lastIdleState = 'active';
     });
     powerMonitor.on('suspend', () => {
-      suspendObserved = true;
+      suspendSessionGeneration = lockController.isUnlocked() ? currentSessionGeneration() : null;
       if (lockController.isUnlocked()) lockController.lockSession('suspend');
     });
     powerMonitor.on('resume', () => {
-      const suspendWasHandled = suspendObserved;
-      suspendObserved = false;
+      const generationBeforeSuspend = suspendSessionGeneration;
+      suspendSessionGeneration = null;
+      if (!lockController.isUnlocked()) return;
 
-      // A normal suspend event already destroyed the previous DEK. Do not
-      // apply a second, late resume lock to a freshly authenticated session.
-      // If no suspend signal was observed, retain resume as a fail-safe and
-      // lock any session that genuinely survived the sleep/wake transition.
-      if (!suspendWasHandled && lockController.isUnlocked()) {
-        lockController.lockSession('resume');
+      const currentGeneration = currentSessionGeneration();
+      if (generationBeforeSuspend != null && currentGeneration != null && currentGeneration !== generationBeforeSuspend) {
+        // The session was freshly authenticated after the suspend lock. A late
+        // resume signal belongs to the previous session and must not destroy
+        // the new DEK.
+        return;
       }
+
+      // If no usable session-generation information exists, retain the
+      // original fail-safe behavior and lock any session present on resume.
+      lockController.lockSession('resume');
     });
   }
 
@@ -249,7 +260,7 @@ function createDeviceSecurityService(options = {}) {
     storageTimer = null;
     idleTimer = null;
     lastIdleState = null;
-    suspendObserved = false;
+    suspendSessionGeneration = null;
   }
 
   async function storageHealth() {
