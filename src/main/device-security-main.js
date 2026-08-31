@@ -148,6 +148,8 @@ function createDeviceSecurityService(options = {}) {
   let storageTimer = null;
   let idleTimer = null;
   let stopping = false;
+  let lastIdleState = null;
+  let suspendObserved = false;
 
   if (!lockController || typeof lockController.lockSession !== 'function') throw new Error('Device security requires a lock controller.');
   if (typeof getDataRoot !== 'function') throw new Error('Device security requires getDataRoot().');
@@ -176,31 +178,62 @@ function createDeviceSecurityService(options = {}) {
     return probe;
   }
 
+  function readIdleState() {
+    if (!powerMonitor || typeof powerMonitor.getSystemIdleState !== 'function') return null;
+    try { return powerMonitor.getSystemIdleState(IDLE_THRESHOLD_SECONDS); }
+    catch (_) { return null; }
+  }
+
   function checkIdleState() {
-    if (stopping || !lockController.isUnlocked() || !powerMonitor || typeof powerMonitor.getSystemIdleState !== 'function') return;
-    try {
-      if (powerMonitor.getSystemIdleState(IDLE_THRESHOLD_SECONDS) === 'locked') {
-        lockController.lockSession('idle-state');
-      }
-    } catch (_) {}
+    if (stopping) return;
+    const currentIdleState = readIdleState();
+    if (!currentIdleState) return;
+
+    // Treat the operating-system idle/locked state as an edge-triggered signal,
+    // not a level-triggered one. After SafeLedger has already reacted to an OS
+    // lock, a user may re-authenticate while the OS still briefly reports the
+    // previous "locked" state. Re-locking that new session makes a correct
+    // password appear to fail until the application is restarted. A new lock is
+    // required only when the OS transitions into "locked" again.
+    const previousIdleState = lastIdleState;
+    lastIdleState = currentIdleState;
+    if (!lockController.isUnlocked()) return;
+    if (currentIdleState === 'locked' && previousIdleState !== 'locked') {
+      lockController.lockSession('idle-state');
+    }
   }
 
   function installPowerEvents() {
     if (!powerMonitor || typeof powerMonitor.on !== 'function') return;
     powerMonitor.on('lock-screen', () => {
+      lastIdleState = 'locked';
       if (lockController.isUnlocked()) lockController.lockSession('screen-lock');
     });
+    powerMonitor.on('unlock-screen', () => {
+      lastIdleState = 'active';
+    });
     powerMonitor.on('suspend', () => {
+      suspendObserved = true;
       if (lockController.isUnlocked()) lockController.lockSession('suspend');
     });
     powerMonitor.on('resume', () => {
-      if (lockController.isUnlocked()) lockController.lockSession('resume');
+      const suspendWasHandled = suspendObserved;
+      suspendObserved = false;
+
+      // A normal suspend event already destroyed the previous DEK. Do not
+      // apply a second, late resume lock to a freshly authenticated session.
+      // If no suspend signal was observed, retain resume as a fail-safe and
+      // lock any session that genuinely survived the sleep/wake transition.
+      if (!suspendWasHandled && lockController.isUnlocked()) {
+        lockController.lockSession('resume');
+      }
     });
   }
 
   async function start() {
     stopping = false;
     await initializeStorageIdentity();
+    lastIdleState = readIdleState();
     installPowerEvents();
     storageTimer = setIntervalFn(() => { checkStorage().catch(() => {
       if (lockController.isUnlocked()) lockController.lockSession('storage-unavailable', { reload: false, forceUi: true });
@@ -215,6 +248,8 @@ function createDeviceSecurityService(options = {}) {
     if (idleTimer) clearIntervalFn(idleTimer);
     storageTimer = null;
     idleTimer = null;
+    lastIdleState = null;
+    suspendObserved = false;
   }
 
   async function storageHealth() {
@@ -230,7 +265,8 @@ function createDeviceSecurityService(options = {}) {
     storageHealth,
     initializeStorageIdentity,
     rotateStorageIdentity,
-    getExpectedStorageId: () => expectedStorageId
+    getExpectedStorageId: () => expectedStorageId,
+    getLastIdleState: () => lastIdleState
   };
 }
 
