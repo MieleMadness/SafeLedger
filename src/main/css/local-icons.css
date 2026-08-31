@@ -22,9 +22,39 @@
 .fa-folder-open::before { content: "▣"; }
 .fa-star::before { content: "★"; }
 .fa-star-o::before { content: "☆"; }
+
+/* Floppy-disk Save icon drawn in CSS so it stays local, monochrome, and themeable. */
+.fa-save,
+.glyphicon-save {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+}
 .fa-save::before,
-.fa-check-circle::before,
-.glyphicon-save::before { content: "✓"; }
+.glyphicon-save::before {
+  content: "";
+  position: absolute;
+  inset: .07em .08em;
+  border: .12em solid currentColor;
+  border-radius: .08em;
+  box-sizing: border-box;
+}
+.fa-save::after,
+.glyphicon-save::after {
+  content: "";
+  position: absolute;
+  left: .27em;
+  right: .27em;
+  bottom: .18em;
+  height: .28em;
+  border: .10em solid currentColor;
+  border-bottom-width: .08em;
+  box-sizing: border-box;
+}
+
+.fa-check-circle::before { content: "✓"; }
 .fa-pencil::before { content: "✎"; }
 .fa-paint-brush::before { content: "✦"; }
 .fa-print::before { content: "▤"; }
