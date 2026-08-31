@@ -253,6 +253,13 @@ html[data-theme="dark"] .search-clear {
 #addGroup .fa { color: var(--sl-icon-purple) !important; }
 #addRecord .fa { color: var(--sl-icon-teal) !important; }
 
+/* The Login action mixes an icon and text. Give the icon deliberate spacing
+ * instead of relying only on the browser's collapsed HTML whitespace.
+ */
+#loginBtn .fa {
+  margin-right: var(--sl-space-1);
+}
+
 .detail-action-button .fa-save,
 .detail-action-button .glyphicon-save,
 .detail-action-button .fa-check,
