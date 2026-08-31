@@ -43,6 +43,16 @@ html[data-theme="dark"] {
 
 /* ---------- Global vertical rhythm ---------- */
 
+/* The foundation grid still carries Bootstrap-era 15px cell gutters.
+ * Search, navigation, detail, and dock content all own their spacing now,
+ * so remove the duplicate gutter from the main and bottom rows.
+ */
+.app-main-row > .app-cell,
+.app-button-row > .app-cell {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
 .app-search-row > .app-cell {
   min-height: 58px;
 }
@@ -155,6 +165,8 @@ html[data-theme="dark"] {
 .profile-list-name {
   line-height: 1.25;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pin-indicator {
