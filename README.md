@@ -6,11 +6,11 @@ SafeLedger does not require a cloud account, subscription, license server, or ne
 
 ## Release status
 
-### Current stable release: SafeLedger 2.4.0
+### Current stable release: SafeLedger 2.5.0
 
-SafeLedger **2.4.0** is the version currently merged into `master`.
+SafeLedger **2.5.0** is the version currently merged into protected `master`.
 
-The current release includes the SafeLedger 2.1 continuity/security foundation, 2.2 runtime modernization, 2.3 device-security layer, and 2.4 Recovery Intelligence & Validation work.
+The current release includes the SafeLedger 2.1 continuity/security foundation, 2.2 runtime modernization, 2.3 device-security layer, 2.4 Recovery Intelligence & Validation, and 2.5 Distribution, Trust & Open Source Readiness work.
 
 Key capabilities include:
 
@@ -46,9 +46,18 @@ Key capabilities include:
 - **Privacy Mode**, enabled by default, for masked sensitive information
 - Sanitized Recovery Intelligence output that does not expose seeds, private keys, raw fingerprints, recovery locations, or backup paths
 - Emergency Lock that clears the active encryption session, minimizes SafeLedger, resets the renderer, and returns to a fresh login state
+- Protected-branch release workflow with required Windows and Linux validation
+- Tag/version/source-ancestry release preflight
+- SHA-256 release checksums with self-verification
+- CycloneDX SBOM generation from the committed dependency graph
+- Machine-readable release manifest with source commit and artifact hashes
+- GitHub artifact provenance/attestation support for official binaries
+- Optional isolated Windows Authenticode signing path
+- Full Apache 2.0 license, NOTICE, third-party attribution, contributor, and security documentation
+- User-facing official-download verification guidance in `RELEASE-VERIFICATION.md`
 
 > [!IMPORTANT]
-> **SafeLedger 2.5 is planned, not released.** Its completed design and implementation plan now lives on `master` in `RELEASE-2.5.md`. The application remains version **2.4.0** until the 2.5 implementation and release gates pass.
+> SafeLedger **2.6** is the next planned release and is intentionally scoped to **macOS Apple Silicon (`arm64`) only**. Intel/x64 Macs, universal binaries, and Rosetta compatibility are not 2.6 targets.
 
 ## Release roadmap
 
@@ -98,26 +107,34 @@ Recovery-intelligence features remain offline. Seeds, private keys, passwords, P
 
 ### SafeLedger 2.5 — Distribution, Trust & Open Source Readiness
 
-**Planned target: 2.5.0.** The complete implementation plan is already tracked on `master` in `RELEASE-2.5.md`.
+Released as **2.5.0**.
 
-Planned focus:
+Included:
 
-- Tag-only, fail-closed official GitHub release publishing
-- Exact tag/package-version and source-ancestry validation
+- Tag-only, fail-closed official GitHub Release publishing
+- Exact tag/package-version and protected-`master` source validation
+- Required Windows and Linux release validation
 - Least-privilege release workflow permissions
-- Full-SHA pinning for release-critical GitHub Actions
+- Full-SHA pinning for release-critical and normal CI GitHub Actions
 - Windows Portable EXE and Linux AppImage artifact contract
 - SHA-256 checksums and self-verification
-- CycloneDX SBOM generation
+- CycloneDX SBOM generation and live regression coverage
 - Machine-readable release manifest
 - GitHub artifact attestations / build provenance
-- Windows Authenticode signing-ready architecture
-- Complete Apache 2.0 licensing/NOTICE and third-party attribution review
-- Contributor, security, code-of-conduct, PR, and issue documentation
-- Download-verification instructions
+- Windows Authenticode signing-ready architecture with credentials isolated to the signing step
+- Normalized 2.5 dependency lock matching the current application graph
+- Complete Apache 2.0 licensing, NOTICE, and third-party attribution
+- Contributor, security, collaboration, PR, and issue documentation
+- Official-download verification instructions
 - Dedicated distribution-trust regression suite and fail-closed release gates
 
 2.5 does not change the vault crypto format, Argon2id behavior, backup compatibility, portable data layout, device locking, Recovery Intelligence, or local-first/offline operating model.
+
+### SafeLedger 2.6 — macOS Apple Silicon Distribution & Platform Hardening
+
+**Planned target.** SafeLedger 2.6 is intentionally macOS **arm64-only**.
+
+Planned focus includes Apple Silicon packaging, Developer ID signing, notarization/stapling, Gatekeeper validation, macOS lock/sleep/resume behavior, removable-storage handling, and preserving `SafeLedgerData` beside the application. Intel/x64, universal binaries, and Rosetta compatibility are explicitly out of scope.
 
 ## How SafeLedger is organized
 
@@ -169,7 +186,7 @@ For packaged builds, SafeLedger creates and uses `SafeLedgerData` in the same fo
 
 ```text
 D:\My SafeLedger\
-├─ SafeLedger-2.4.0-Portable.exe
+├─ SafeLedger-2.5.0-Portable.exe
 └─ SafeLedgerData\
    ├─ settings\
    └─ vaults\
@@ -179,7 +196,7 @@ D:\My SafeLedger\
 
 ```text
 /home/user/Apps/SafeLedger/
-├─ SafeLedger-2.4.0-x86_64.AppImage
+├─ SafeLedger-2.5.0-x86_64.AppImage
 └─ SafeLedgerData/
    ├─ settings/
    └─ vaults/
@@ -282,6 +299,12 @@ QR generation and recovery-sheet generation are local and do not require online 
 
 SafeLedger maintains a local `audit.log` under `SafeLedgerData/settings`. Activity entries contain generic event types and timestamps rather than passwords, seed phrases, private keys, wallet names, storage identifiers, recovery locations, or backup paths.
 
+## Official release verification
+
+Official SafeLedger releases include `SHA256SUMS.txt`, `release-manifest.json`, a CycloneDX SBOM, legal/attribution files, and `RELEASE-VERIFICATION.md` alongside the platform binaries. The release workflow verifies checksums before publication and publishes only after its required build/provenance chain succeeds.
+
+Checksums prove that a downloaded file matches the published digest. They are not a guarantee that software contains no vulnerabilities. Windows Authenticode signing is reported separately from checksum/provenance status.
+
 ## Development
 
 Install locked dependencies:
@@ -338,7 +361,7 @@ Build Linux AppImage:
 npm run dist:linux
 ```
 
-Release changes are expected to pass regression, crypto, GUI, and packaging checks before implementation is considered releasable.
+Release changes are expected to pass regression, crypto, GUI, SBOM, distribution-trust, and packaging checks before implementation is considered releasable.
 
 ## Release documents
 
@@ -346,7 +369,10 @@ Release changes are expected to pass regression, crypto, GUI, and packaging chec
 - `RELEASE-2.2.md` — Runtime Modernization
 - `RELEASE-2.3.md` — Device Security & Recovery Health
 - `RELEASE-2.4.md` — released Recovery Intelligence & Validation
-- `RELEASE-2.5.md` — Distribution, Trust & Open Source Readiness implementation plan
+- `RELEASE-2.5.md` — released Distribution, Trust & Open Source Readiness
+- `RELEASE-VERIFICATION.md` — official download verification guidance
+
+The SafeLedger 2.6 macOS Apple Silicon plan is maintained on its development branch until that release work is ready to move onto `master`.
 
 ## Recommended operating practices
 
@@ -369,4 +395,4 @@ Storing a seed phrase or private key in any software creates risk. Maintain appr
 
 ## License
 
-SafeLedger is licensed under the Apache License 2.0. See `LICENSE` for current repository license information. SafeLedger 2.5 includes a planned legal/distribution cleanup to complete packaged licensing and attribution materials.
+SafeLedger is licensed under the Apache License 2.0. See `LICENSE` for the complete license text, `NOTICE` for SafeLedger attribution/history, and `THIRD-PARTY-NOTICES.md` for third-party attribution information.
