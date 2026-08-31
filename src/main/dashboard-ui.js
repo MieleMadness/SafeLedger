@@ -20,11 +20,37 @@ function makeStat(label, value) {
   return card;
 }
 
-function makeStatus(status) {
-  const badge = document.createElement('span');
-  badge.className = `dashboard-status ${status === 'Ready' ? 'is-ready' : status === 'Needs Review' ? 'is-review' : 'is-incomplete'}`;
+function statusClass(status) {
+  return status === 'Ready' ? 'is-ready' : status === 'Needs Review' ? 'is-review' : 'is-incomplete';
+}
+
+function makeStatus(status, options = {}) {
+  const actionable = typeof options.onActivate === 'function';
+  const badge = document.createElement(actionable ? 'button' : 'span');
+  badge.className = `dashboard-status ${statusClass(status)}${actionable ? ' dashboard-status-action' : ''}`;
   badge.textContent = status;
+  if (actionable) {
+    badge.type = 'button';
+    if (options.title) badge.title = options.title;
+    if (options.ariaLabel) badge.setAttribute('aria-label', options.ariaLabel);
+    badge.addEventListener('click', options.onActivate);
+  }
   return badge;
+}
+
+async function openPortableStorageFolder() {
+  if (!window.safeLedgerApi || typeof window.safeLedgerApi.openDataFolder !== 'function') {
+    window.alert('SafeLedgerData folder access is unavailable in this build.');
+    return;
+  }
+  try {
+    const result = await window.safeLedgerApi.openDataFolder();
+    if (!result || result.ok !== true) {
+      window.alert(result && result.message ? result.message : 'SafeLedger could not open the SafeLedgerData folder.');
+    }
+  } catch (_) {
+    window.alert('SafeLedger could not open the SafeLedgerData folder.');
+  }
 }
 
 function appendWalletList(section, items, emptyText, showDate) {
@@ -74,7 +100,7 @@ function backupAgeLabel(entry) {
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
-function appendHealthRow(section, titleText, metaText, statusText, statusKind) {
+function appendHealthRow(section, titleText, metaText, statusText, statusKind, statusOptions = {}) {
   const row = document.createElement('div');
   row.className = 'dashboard-list-row device-health-row';
   const main = document.createElement('div');
@@ -88,9 +114,9 @@ function appendHealthRow(section, titleText, metaText, statusText, statusKind) {
   main.appendChild(title);
   main.appendChild(meta);
   row.appendChild(main);
-  row.appendChild(makeStatus(statusKind || statusText));
-  const badge = row.lastChild;
+  const badge = makeStatus(statusKind || statusText, statusOptions);
   badge.textContent = statusText;
+  row.appendChild(badge);
   section.appendChild(row);
 }
 
@@ -109,7 +135,11 @@ function renderDeviceHealth(area, device = {}) {
     const meta = storage.connected
       ? `${storage.writable ? 'SafeLedgerData writable' : 'SafeLedgerData not writable'} • ${formatBytes(storage.freeBytes)}`
       : `SafeLedgerData ${storage.reason || 'unavailable'}`;
-    appendHealthRow(section, 'Portable storage', meta, label, status);
+    appendHealthRow(section, 'Portable storage', meta, label, status, storageReady ? {
+      onActivate: openPortableStorageFolder,
+      title: 'Open SafeLedgerData folder',
+      ariaLabel: 'Open SafeLedgerData folder in the system file manager'
+    } : {});
   } else {
     appendHealthRow(section, 'Portable storage', 'Storage status unavailable.', 'Review', 'Needs Review');
   }
@@ -229,4 +259,4 @@ window.addEventListener('DOMContentLoaded', () => {
 
 exports.show = showDashboard;
 exports.render = render;
-exports._test = { formatBytes, backupAgeLabel, renderDeviceHealth };
+exports._test = { formatBytes, backupAgeLabel, renderDeviceHealth, makeStatus, openPortableStorageFolder };
