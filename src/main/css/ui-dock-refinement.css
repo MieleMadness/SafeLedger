@@ -1,0 +1,122 @@
+/* Bottom-dock and icon refinements layered after ui-polish.css. */
+
+:root {
+  /* Match the 12px outer padding used by the top search/utility row. */
+  --sl-dock-pad: var(--sl-space-3);
+  --sl-dock-height: 66px;
+
+  /* Amber/yellow that keeps non-text contrast above 3:1 on white. */
+  --sl-icon-gold: #a16207;
+}
+
+html[data-theme="dark"] {
+  --sl-icon-gold: #fde68a;
+}
+
+/* Give the bottom row the same breathing room as the top utility row. */
+.app-button-row {
+  min-height: var(--sl-dock-height) !important;
+}
+
+.app-button-row > .app-cell {
+  min-height: var(--sl-dock-height) !important;
+  padding-top: var(--sl-dock-pad) !important;
+  padding-bottom: var(--sl-dock-pad) !important;
+  display: flex;
+  align-items: center !important;
+}
+
+.app-button-row > .app-cell:nth-child(-n+3) {
+  justify-content: center !important;
+}
+
+.bottom-space {
+  margin: 0 !important;
+  align-self: center;
+}
+
+.emergency-lock-cell {
+  padding: var(--sl-dock-pad) !important;
+  align-items: center !important;
+}
+
+.detail-action-area {
+  min-height: var(--sl-action-size) !important;
+  align-items: center !important;
+}
+
+/* Activity History: clock face and hands instead of a back/history arrow. */
+#activityButton .fa-history {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  border: .11em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  vertical-align: -.08em;
+}
+
+#activityButton .fa-history::before {
+  content: "";
+  position: absolute;
+  left: calc(50% - .045em);
+  top: .15em;
+  width: .09em;
+  height: .31em;
+  border-radius: .05em;
+  background: currentColor;
+}
+
+#activityButton .fa-history::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(50% - .045em);
+  width: .28em;
+  height: .09em;
+  border-radius: .05em;
+  background: currentColor;
+  transform: rotate(35deg);
+  transform-origin: 0 50%;
+}
+
+/* Real CSS-drawn trash can for wallet/asset/profile delete actions. */
+.fa-trash {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+  background: linear-gradient(currentColor, currentColor) center .04em / .30em .10em no-repeat;
+}
+
+.fa-trash::before {
+  content: "";
+  position: absolute;
+  left: .22em;
+  right: .22em;
+  top: .31em;
+  bottom: .07em;
+  border: .11em solid currentColor;
+  border-top: 0;
+  border-radius: 0 0 .08em .08em;
+  box-sizing: border-box;
+}
+
+.fa-trash::after {
+  content: "";
+  position: absolute;
+  left: .12em;
+  right: .12em;
+  top: .19em;
+  height: .11em;
+  border-radius: .06em;
+  background: currentColor;
+}
+
+/* Keep favorite/pin actions visibly yellow in both themes. */
+.detail-action-button .fa-star,
+.detail-action-button .fa-star-o {
+  color: var(--sl-icon-gold) !important;
+}
