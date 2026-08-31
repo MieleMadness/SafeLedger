@@ -17,6 +17,16 @@ const excludedWallets = new Set([
   'rabby wallet'
 ]);
 
+const walletAliases = {
+  'base-app-coinbase-wallet': ['coinbase-wallet', 'coinbase'],
+  'bitbox02-multi': ['bitbox', 'bitbox02'],
+  'coldcard': ['coldcard'],
+  'rabby-wallet': ['rabby'],
+  'trust-wallet': ['trust-wallet', 'trust'],
+  'onekey': ['onekey', 'one-key'],
+  'safepal': ['safepal', 'safe-pal']
+};
+
 const standardNetworkAliases = {
   'bnb': 'binance-smart-chain',
   'bnb-chain': 'binance-smart-chain',
@@ -102,6 +112,40 @@ async function loadBestIcon(type, name) {
     (await loadIcon(type, 'mono', name));
 }
 
+function availableIconNames(type) {
+  const names = new Set();
+  for (const variant of ['branded', 'background', 'mono']) {
+    const folder = path.join(sourceRoot, type, variant);
+    if (!fs.existsSync(folder)) continue;
+    for (const file of fs.readdirSync(folder)) {
+      const match = file.match(/^(.+?)\.svg(?:\.js)?$/i);
+      if (match) names.add(match[1]);
+    }
+  }
+  return names;
+}
+
+function walletCandidates(name) {
+  const canonical = slug(name);
+  const candidates = [canonical, ...(walletAliases[canonical] || [])];
+  if (canonical.endsWith('-wallet')) candidates.push(canonical.slice(0, -7));
+  return [...new Set(candidates.filter(Boolean))];
+}
+
+function resolveWalletIconName(name, available) {
+  const candidates = walletCandidates(name);
+  for (const candidate of candidates) {
+    if (available.has(candidate)) return candidate;
+  }
+
+  const compact = new Map([...available].map((item) => [item.replace(/[^a-z0-9]/g, ''), item]));
+  for (const candidate of candidates) {
+    const matched = compact.get(candidate.replace(/[^a-z0-9]/g, ''));
+    if (matched) return matched;
+  }
+  return null;
+}
+
 async function main() {
   if (!fs.existsSync(sourceRoot)) {
     throw new Error(`Web3Icons SVG directory was not found: ${sourceRoot}`);
@@ -124,7 +168,7 @@ async function main() {
     }
   }
 
-  const manifest = { version: 1, tokens: {}, networks: {} };
+  const manifest = { version: 2, tokens: {}, networks: {}, wallets: {} };
 
   for (const symbol of [...tokenSymbols].sort()) {
     const source = await loadBestIcon('tokens', symbol);
@@ -136,12 +180,22 @@ async function main() {
     if (source) manifest.networks[network] = source;
   }
 
+  const availableWallets = availableIconNames('wallets');
+  for (const wallet of catalogModule.catalog || []) {
+    const iconName = resolveWalletIconName(wallet.name, availableWallets);
+    if (!iconName) continue;
+    const source = await loadBestIcon('wallets', iconName);
+    if (!source) continue;
+    manifest.wallets[normalize(wallet.name)] = source;
+    if (normalize(wallet.name) === 'base app (coinbase wallet)') manifest.wallets['coinbase wallet'] = source;
+  }
+
   if (!manifest.tokens.BTC) {
     throw new Error('SafeLedger token icon preparation failed: branded/background BTC artwork was not found. Build stopped to prevent an iconless release.');
   }
 
   fs.writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
-  console.log(`Prepared ${Object.keys(manifest.tokens).length} token icons and ${Object.keys(manifest.networks).length} network icons for SafeLedger.`);
+  console.log(`Prepared ${Object.keys(manifest.tokens).length} token icons, ${Object.keys(manifest.networks).length} network icons, and ${Object.keys(manifest.wallets).length} wallet icons for SafeLedger.`);
 }
 
 main().catch((error) => {
