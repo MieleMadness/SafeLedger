@@ -23,6 +23,43 @@
 .fa-star::before { content: "★"; }
 .fa-star-o::before { content: "☆"; }
 
+/* Login uses a CSS-drawn person instead of the legacy unlock glyph.
+ * Keeping this local avoids missing icon-font characters rendering as squares. */
+.fa-user,
+#loginBtn .fa-unlock {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.10em;
+}
+.fa-user::before,
+#loginBtn .fa-unlock::before {
+  content: "";
+  position: absolute;
+  width: .34em;
+  height: .34em;
+  left: 50%;
+  top: .03em;
+  transform: translateX(-50%);
+  border: .11em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.fa-user::after,
+#loginBtn .fa-unlock::after {
+  content: "";
+  position: absolute;
+  left: .14em;
+  right: .14em;
+  bottom: .02em;
+  height: .43em;
+  border: .11em solid currentColor;
+  border-bottom: 0;
+  border-radius: .46em .46em .08em .08em;
+  box-sizing: border-box;
+}
+
 /* Floppy-disk Save icon drawn in CSS so it stays local, monochrome, and themeable. */
 .fa-save,
 .glyphicon-save {
