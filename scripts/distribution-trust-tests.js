@@ -106,7 +106,9 @@ function testReleaseWorkflowTrustBoundary() {
   assert(workflow.includes('id-token: write'));
   assert(workflow.includes('attestations: write'));
   assert(!/uses:\s+[^\n]+@v\d/.test(workflow), 'release-critical Actions must be pinned to full SHAs');
-  assert(workflow.includes('branches/master/protection'));
+  assert(workflow.includes('repos/$GITHUB_REPOSITORY/branches/master'));
+  assert(workflow.includes("--jq '.protected'"));
+  assert(!workflow.includes('branches/master/protection'), 'release workflow must not require administration-level branch-protection API access');
   assert(workflow.includes('Official SafeLedger publishing requires branch protection on master.'));
   assert(workflow.includes('SAFELEDGER_WINDOWS_PFX_BASE64'));
   assert(workflow.includes('SAFELEDGER_WINDOWS_PFX_PASSWORD'));
