@@ -12,6 +12,7 @@ function createController(vaultDir) {
   const envelopePath = path.join(vaultDir, ENVELOPE_FILE);
   const vaultListPath = path.join(vaultDir, 'vaultlist.json');
   let activeDataKey = null;
+  let sessionGeneration = 0;
 
   const hasEnvelope = () => fs.existsSync(envelopePath);
   const isUnlocked = () => Buffer.isBuffer(activeDataKey) && activeDataKey.length === keyEnvelope.KEY_BYTES;
@@ -27,10 +28,15 @@ function createController(vaultDir) {
     }
     clearSession();
     activeDataKey = Buffer.from(dataKey);
+    sessionGeneration++;
   }
 
   function getSessionKey() {
     return activeDataKey;
+  }
+
+  function getSessionGeneration() {
+    return sessionGeneration;
   }
 
   async function readEnvelope() {
@@ -106,8 +112,7 @@ function createController(vaultDir) {
         ok: true,
         status: 'SUCCESS',
         statusMsg: 'Password change successful. Vault data did not need to be re-encrypted.',
-        unlocked: true,
-        envelopeVersion: rewrapped.envelope.version
+        unlocked: true
       };
     } finally {
       rewrapped.dataKey.fill(0);
@@ -122,6 +127,7 @@ function createController(vaultDir) {
     changePassword,
     isUnlocked,
     getSessionKey,
+    getSessionGeneration,
     clearSession
   };
 }
@@ -141,6 +147,7 @@ exports.loginWithEnvelope = (password) => getDefaultController().loginWithEnvelo
 exports.changePassword = (oldPassword, newPassword) => getDefaultController().changePassword(oldPassword, newPassword);
 exports.isUnlocked = () => getDefaultController().isUnlocked();
 exports.getSessionKey = () => getDefaultController().getSessionKey();
+exports.getSessionGeneration = () => getDefaultController().getSessionGeneration();
 exports.clearSession = () => getDefaultController().clearSession();
 exports.createController = createController;
 exports.ENVELOPE_FILE = ENVELOPE_FILE;
