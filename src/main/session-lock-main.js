@@ -37,6 +37,16 @@ function createSessionLockController(options = {}) {
     }
   }
 
+  function getSessionGeneration() {
+    try {
+      if (typeof cryptoSession.getSessionGeneration !== 'function') return null;
+      const value = Number(cryptoSession.getSessionGeneration());
+      return Number.isInteger(value) && value >= 0 ? value : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   function safeWindow() {
     try {
       const win = typeof getMainWindow === 'function' ? getMainWindow() : null;
@@ -99,7 +109,7 @@ function createSessionLockController(options = {}) {
     return { locked: true, wasUnlocked, reason: eventName };
   }
 
-  return { lockSession, isUnlocked };
+  return { lockSession, isUnlocked, getSessionGeneration };
 }
 
 exports.createSessionLockController = createSessionLockController;

@@ -20,11 +20,53 @@ function makeStat(label, value) {
   return card;
 }
 
+function statusClass(status) {
+  return status === 'Ready' ? 'is-ready' : status === 'Needs Review' ? 'is-review' : 'is-incomplete';
+}
+
 function makeStatus(status) {
   const badge = document.createElement('span');
-  badge.className = `dashboard-status ${status === 'Ready' ? 'is-ready' : status === 'Needs Review' ? 'is-review' : 'is-incomplete'}`;
+  badge.className = `dashboard-status ${statusClass(status)}`;
   badge.textContent = status;
   return badge;
+}
+
+async function openPortableStorageFolder() {
+  if (!window.safeLedgerApi || typeof window.safeLedgerApi.openDataFolder !== 'function') {
+    window.alert('SafeLedgerData folder access is unavailable in this build.');
+    return;
+  }
+  try {
+    const result = await window.safeLedgerApi.openDataFolder();
+    if (!result || result.ok !== true) {
+      window.alert(result && result.message ? result.message : 'SafeLedger could not open the SafeLedgerData folder.');
+    }
+  } catch (_) {
+    window.alert('SafeLedger could not open the SafeLedgerData folder.');
+  }
+}
+
+function makeHealthTitle(titleText, options = {}) {
+  const title = document.createElement('div');
+  title.className = 'dashboard-list-title';
+
+  const text = document.createElement('span');
+  text.textContent = titleText;
+  title.appendChild(text);
+
+  if (typeof options.onActivate === 'function') {
+    title.classList.add('has-action');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'dashboard-title-action';
+    button.title = options.title || 'Open';
+    button.setAttribute('aria-label', options.ariaLabel || options.title || 'Open');
+    button.innerHTML = '<i class="fa fa-external-link" aria-hidden="true"></i>';
+    button.addEventListener('click', options.onActivate);
+    title.appendChild(button);
+  }
+
+  return title;
 }
 
 function appendWalletList(section, items, emptyText, showDate) {
@@ -74,23 +116,21 @@ function backupAgeLabel(entry) {
   return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
-function appendHealthRow(section, titleText, metaText, statusText, statusKind) {
+function appendHealthRow(section, titleText, metaText, statusText, statusKind, titleOptions = {}) {
   const row = document.createElement('div');
   row.className = 'dashboard-list-row device-health-row';
   const main = document.createElement('div');
   main.className = 'dashboard-list-main';
-  const title = document.createElement('div');
-  title.className = 'dashboard-list-title';
-  title.textContent = titleText;
+  const title = makeHealthTitle(titleText, titleOptions);
   const meta = document.createElement('div');
   meta.className = 'dashboard-list-meta';
   meta.textContent = metaText;
   main.appendChild(title);
   main.appendChild(meta);
   row.appendChild(main);
-  row.appendChild(makeStatus(statusKind || statusText));
-  const badge = row.lastChild;
+  const badge = makeStatus(statusKind || statusText);
   badge.textContent = statusText;
+  row.appendChild(badge);
   section.appendChild(row);
 }
 
@@ -109,7 +149,11 @@ function renderDeviceHealth(area, device = {}) {
     const meta = storage.connected
       ? `${storage.writable ? 'SafeLedgerData writable' : 'SafeLedgerData not writable'} • ${formatBytes(storage.freeBytes)}`
       : `SafeLedgerData ${storage.reason || 'unavailable'}`;
-    appendHealthRow(section, 'Portable storage', meta, label, status);
+    appendHealthRow(section, 'Portable storage', meta, label, status, storage.connected ? {
+      onActivate: openPortableStorageFolder,
+      title: 'Open SafeLedgerData folder',
+      ariaLabel: 'Open SafeLedgerData folder in the system file manager'
+    } : {});
   } else {
     appendHealthRow(section, 'Portable storage', 'Storage status unavailable.', 'Review', 'Needs Review');
   }
@@ -229,4 +273,4 @@ window.addEventListener('DOMContentLoaded', () => {
 
 exports.show = showDashboard;
 exports.render = render;
-exports._test = { formatBytes, backupAgeLabel, renderDeviceHealth };
+exports._test = { formatBytes, backupAgeLabel, renderDeviceHealth, makeStatus, makeHealthTitle, openPortableStorageFolder };
