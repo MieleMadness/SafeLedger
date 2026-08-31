@@ -105,8 +105,15 @@ function testReleaseWorkflowTrustBoundary() {
   assert(workflow.includes('id-token: write'));
   assert(workflow.includes('attestations: write'));
   assert(!/uses:\s+[^\n]+@v\d/.test(workflow), 'release-critical Actions must be pinned to full SHAs');
+  assert(workflow.includes('branches/master/protection'));
+  assert(workflow.includes('Official SafeLedger publishing requires branch protection on master.'));
   assert(workflow.includes('SAFELEDGER_WINDOWS_PFX_BASE64'));
   assert(workflow.includes('SAFELEDGER_WINDOWS_PFX_PASSWORD'));
+  const signingMarker = '- name: Apply optional Authenticode signing';
+  const buildStart = workflow.indexOf('  build-windows:');
+  const signingStart = workflow.indexOf(signingMarker);
+  assert(buildStart >= 0 && signingStart > buildStart);
+  assert(!workflow.slice(buildStart, signingStart).includes('SAFELEDGER_WINDOWS_PFX_'), 'signing secrets must not be job-scoped or exposed to build/test steps');
   assert(workflow.includes('needs: attest-artifacts'));
   assert(workflow.includes('gh release create'));
   assert(workflow.includes('node scripts/release-artifacts.js verify release/final'));
