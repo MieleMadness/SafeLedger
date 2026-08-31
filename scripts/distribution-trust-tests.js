@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const releasePolicy = require('./release-policy');
 const releaseArtifacts = require('./release-artifacts');
 
@@ -129,6 +130,19 @@ function testNormalCiPins() {
   }
 }
 
+function testSbomGeneration() {
+  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  const output = execFileSync(npmCommand, ['sbom', '--sbom-format=cyclonedx'], {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 32 * 1024 * 1024,
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  const sbom = JSON.parse(output);
+  assert.strictEqual(sbom.bomFormat, 'CycloneDX');
+  assert(sbom.metadata && sbom.metadata.component, 'SBOM must describe the SafeLedger root component');
+}
+
 function testNoProductSecurityScopeChange() {
   const releasePlan = read('RELEASE-2.5.md');
   assert(releasePlan.includes('must not change'));
@@ -144,6 +158,7 @@ testDuplicateAndMissingArtifactsFailClosed();
 testLegalAndPackagingSurface();
 testReleaseWorkflowTrustBoundary();
 testNormalCiPins();
+testSbomGeneration();
 testNoProductSecurityScopeChange();
 
-console.log('PASS SafeLedger 2.5 distribution trust, release-policy, checksum, legal, and publishing-boundary tests.');
+console.log('PASS SafeLedger 2.5 distribution trust, SBOM, release-policy, checksum, legal, and publishing-boundary tests.');
