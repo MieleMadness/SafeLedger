@@ -26,8 +26,10 @@ html[data-theme="dark"] {
   align-items: center !important;
 }
 
+/* Separate the Profile / Wallet / Asset action dock from the lists above. */
 .app-button-row > .app-cell:nth-child(-n+3) {
   justify-content: center !important;
+  border-top: 1px solid rgba(255, 255, 255, .24);
 }
 
 .bottom-space {
@@ -42,6 +44,7 @@ html[data-theme="dark"] {
 .app-button-row > .emergency-lock-cell {
   padding: var(--sl-dock-pad) !important;
   align-items: center !important;
+  border-top: 1px solid var(--sl-border) !important;
 }
 
 .detail-action-area {
