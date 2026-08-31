@@ -131,8 +131,9 @@ function testNormalCiPins() {
 }
 
 function testSbomGeneration() {
-  const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const output = execFileSync(npmCommand, ['sbom', '--sbom-format=cyclonedx'], {
+  const npmCli = process.env.npm_execpath;
+  assert(npmCli && fs.existsSync(npmCli), 'npm_execpath must point to the active npm CLI');
+  const output = execFileSync(process.execPath, [npmCli, 'sbom', '--sbom-format=cyclonedx'], {
     cwd: root,
     encoding: 'utf8',
     maxBuffer: 32 * 1024 * 1024,
