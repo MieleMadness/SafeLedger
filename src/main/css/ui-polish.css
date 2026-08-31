@@ -263,10 +263,14 @@ html[data-theme="dark"] {
   color: var(--sl-primary-strong) !important;
 }
 
+/* Status pills share one typographic contract so dashboard and recovery
+ * readiness states have the same visual weight and text size. */
 .dashboard-status,
 .recovery-readiness-status {
   border: 1px solid transparent !important;
-  font-weight: 700;
+  font-size: 11px !important;
+  line-height: 1.2;
+  font-weight: 700 !important;
 }
 
 .dashboard-status.is-ready,
@@ -290,22 +294,40 @@ html[data-theme="dark"] {
   border-color: var(--sl-status-danger-border) !important;
 }
 
-.dashboard-status-action {
-  appearance: none;
-  -webkit-appearance: none;
-  font: inherit;
-  line-height: 1.2;
+/* Portable storage keeps health as plain status text. The adjacent open icon
+ * carries the folder action so the interaction is visible before hover/focus. */
+.dashboard-list-title.has-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-title-action {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sl-primary-strong);
   cursor: pointer;
-  box-shadow: none;
 }
 
-.dashboard-status-action:hover {
-  box-shadow: inset 0 0 0 1px currentColor;
+.dashboard-title-action .fa {
+  font-size: 14px;
 }
 
-.dashboard-status-action:focus-visible {
+.dashboard-title-action:hover {
+  background: rgba(25, 118, 210, .10);
+}
+
+.dashboard-title-action:focus-visible {
   outline: 2px solid var(--sl-primary) !important;
-  outline-offset: 2px !important;
+  outline-offset: 1px !important;
 }
 
 /* White on primary blue is >5:1; the old dark-on-blue active filter was ~3.7:1. */
@@ -330,6 +352,11 @@ html[data-theme="dark"] .search-clear {
 #addVault .fa { color: var(--sl-icon-blue) !important; }
 #addGroup .fa { color: var(--sl-icon-purple) !important; }
 #addRecord .fa { color: var(--sl-icon-teal) !important; }
+
+/* Keep the Login icon visually separated from its text label. */
+#loginBtn .fa {
+  margin-right: var(--sl-space-1);
+}
 
 .detail-action-button .fa-save,
 .detail-action-button .glyphicon-save,
