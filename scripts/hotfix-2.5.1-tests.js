@@ -146,6 +146,7 @@ function testTrustedFolderAction() {
   const bridge = read('src/main/renderer-bridge.js');
   const bootstrap = read('src/main/bootstrap.js');
   const dashboard = read('src/main/dashboard-ui.js');
+  const icons = read('src/main/css/local-icons.css');
 
   assert(preload.includes("openDataFolder: () => ipcRenderer.invoke('device-open-data-folder')"));
   assert(bridge.includes("'device-open-data-folder': 'openDataFolder'"));
@@ -153,8 +154,11 @@ function testTrustedFolderAction() {
   assert(bootstrap.includes('shell.openPath(getDataRoot())'));
   assert(!bootstrap.includes("shell.openPath(event"), 'renderer event data must never select the opened path');
   assert(dashboard.includes('Open SafeLedgerData folder'));
-  assert(dashboard.includes('dashboard-status-action'));
+  assert(dashboard.includes('dashboard-title-action'));
+  assert(dashboard.includes('fa-external-link'));
+  assert(!dashboard.includes('dashboard-status-action'), 'health pills must remain status-only, not clickable controls');
   assert(dashboard.includes('window.safeLedgerApi.openDataFolder()'));
+  assert(icons.includes('.fa-external-link'));
 }
 
 function testSemanticContrast() {
@@ -172,7 +176,10 @@ function testSemanticContrast() {
   }
 
   assert(css.includes('#detailArea .btn-default'));
-  assert(css.includes('.dashboard-status-action:focus-visible'));
+  assert(css.includes('.dashboard-title-action:focus-visible'));
+  assert(css.includes('font-size: 11px !important;'), 'status pills must share the Portable Storage pill text size');
+  assert(css.includes('font-weight: 700 !important;'), 'status pill text must remain bold');
+  assert(css.includes('#loginBtn .fa'), 'Login icon spacing must remain part of the 2.5.1 UI polish');
 }
 
 function testVersion() {
