@@ -1,0 +1,245 @@
+name: Publish SafeLedger Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Validate release policy
+        run: node scripts/release-policy.js
+      - name: Require protected master release branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          protected="$(gh api "repos/$GITHUB_REPOSITORY/branches/master" --jq '.protected')"
+          if [ "$protected" != "true" ]; then
+            echo "::error::Official SafeLedger publishing requires branch protection on master."
+            exit 1
+          fi
+      - name: Run distribution trust tests
+        run: node scripts/distribution-trust-tests.js
+
+  build-windows:
+    needs: preflight
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 2
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run regression tests
+        run: npm run test:regression
+      - name: Run Electron crypto smoke
+        run: npm run test:electron-crypto
+      - name: Run real GUI smoke
+        run: npm run test:gui-smoke
+      - name: Build Windows portable EXE
+        run: npm run dist:win
+      - name: Stage Windows artifact and README
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force release/windows | Out-Null
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $exe = Get-ChildItem dist -Filter "SafeLedger-$version-Portable.exe" | Select-Object -First 1
+          if (-not $exe) { throw 'Expected Windows portable EXE was not created.' }
+          Copy-Item $exe.FullName release/windows/$($exe.Name)
+          npm run docs:pdf -- release/windows/README.pdf
+          if (-not (Test-Path release/windows/README.pdf)) { throw 'README.pdf was not generated.' }
+      - name: Apply optional Authenticode signing
+        shell: pwsh
+        env:
+          SAFELEDGER_WINDOWS_PFX_BASE64: ${{ secrets.SAFELEDGER_WINDOWS_PFX_BASE64 }}
+          SAFELEDGER_WINDOWS_PFX_PASSWORD: ${{ secrets.SAFELEDGER_WINDOWS_PFX_PASSWORD }}
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $exe = "release/windows/SafeLedger-$version-Portable.exe"
+          if (-not (Test-Path $exe)) { throw 'Staged Windows portable EXE is missing.' }
+          $status = 'unsigned'
+          $hasCert = -not [string]::IsNullOrWhiteSpace($env:SAFELEDGER_WINDOWS_PFX_BASE64)
+          $hasPassword = -not [string]::IsNullOrWhiteSpace($env:SAFELEDGER_WINDOWS_PFX_PASSWORD)
+          if ($hasCert -xor $hasPassword) { throw 'Windows signing configuration is incomplete.' }
+          if ($hasCert -and $hasPassword) {
+            $pfx = Join-Path $env:RUNNER_TEMP 'safeledger-release.pfx'
+            [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:SAFELEDGER_WINDOWS_PFX_BASE64))
+            try {
+              $signTool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction Stop |
+                Where-Object { $_.FullName -match '\\x64\\signtool\.exe$' } |
+                Sort-Object FullName -Descending | Select-Object -First 1
+              if (-not $signTool) { throw 'signtool.exe was not found on the Windows runner.' }
+              & $signTool.FullName sign /f $pfx /p $env:SAFELEDGER_WINDOWS_PFX_PASSWORD /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 $exe
+              if ($LASTEXITCODE -ne 0) { throw 'Authenticode signing failed.' }
+              & $signTool.FullName verify /pa $exe
+              if ($LASTEXITCODE -ne 0) { throw 'Authenticode signature verification failed.' }
+              $status = 'authenticode-signed'
+            } finally {
+              if (Test-Path $pfx) { Remove-Item -Force $pfx }
+            }
+          }
+          Set-Content release/windows/WINDOWS-SIGNING.txt $status
+      - name: Upload Windows release input
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: safeledger-release-windows
+          path: release/windows/*
+          if-no-files-found: error
+
+  build-linux:
+    needs: preflight
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 2
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run regression tests
+        run: npm run test:regression
+      - name: Run Electron crypto smoke
+        run: npm run test:electron-crypto
+      - name: Configure Electron sandbox helper for GUI smoke
+        run: sudo chown root:root node_modules/electron/dist/chrome-sandbox && sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - name: Run real GUI smoke
+        run: xvfb-run -a npm run test:gui-smoke
+      - name: Build Linux AppImage
+        run: npm run dist:linux
+      - name: Stage Linux artifact
+        run: |
+          mkdir -p release/linux
+          version="$(node -p "require('./package.json').version")"
+          appimage="dist/SafeLedger-${version}-x86_64.AppImage"
+          test -f "$appimage"
+          cp "$appimage" release/linux/
+      - name: Upload Linux release input
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: safeledger-release-linux
+          path: release/linux/*
+          if-no-files-found: error
+
+  generate-sbom:
+    needs: preflight
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+      - name: Install locked graph without package scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Generate CycloneDX SBOM
+        run: |
+          mkdir -p release/sbom
+          version="$(node -p "require('./package.json').version")"
+          npm sbom --sbom-format=cyclonedx > "release/sbom/safeledger-${version}.cdx.json"
+          node -e "JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'))" "release/sbom/safeledger-${version}.cdx.json"
+      - name: Upload SBOM
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: safeledger-release-sbom
+          path: release/sbom/*
+          if-no-files-found: error
+
+  collect-and-verify:
+    needs: [build-windows, build-linux, generate-sbom]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Download release inputs
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          path: release/inputs
+      - name: Add legal and verification release inputs
+        run: |
+          mkdir -p release/inputs/legal
+          cp LICENSE NOTICE THIRD-PARTY-NOTICES.md RELEASE-VERIFICATION.md release/inputs/legal/
+      - name: Collect, checksum and self-verify release files
+        run: node scripts/release-artifacts.js collect release/inputs release/final
+      - name: Upload verified release bundle
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: safeledger-release-final
+          path: release/final/*
+          if-no-files-found: error
+
+  attest-artifacts:
+    needs: collect-and-verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download verified release bundle
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: safeledger-release-final
+          path: release/final
+      - name: Attest Windows binary provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: release/final/SafeLedger-*-Portable.exe
+      - name: Attest Linux binary provenance
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: release/final/SafeLedger-*-x86_64.AppImage
+
+  publish-release:
+    needs: attest-artifacts
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Download verified release bundle
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          name: safeledger-release-final
+          path: release/final
+      - name: Verify checksums again before publishing
+        run: node scripts/release-artifacts.js verify release/final
+      - name: Publish immutable GitHub Release assets
+        shell: bash
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          gh release create "$GITHUB_REF_NAME" release/final/* --verify-tag --title "SafeLedger $version" --generate-notes

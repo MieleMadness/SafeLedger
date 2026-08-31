@@ -17,7 +17,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           submodules: false
           fetch-depth: 2
@@ -27,7 +27,7 @@ jobs:
         run: node scripts/version-bump-check.js
 
       - name: Set up Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '24'
 
@@ -62,7 +62,7 @@ jobs:
           if (-not (Test-Path 'release/windows/README.pdf')) { throw 'README.pdf was not generated.' }
 
       - name: Upload flat portable download
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: SafeLedger-Windows-Portable
           path: release/windows/*

@@ -1,0 +1,46 @@
+name: Release trust issue
+description: Report a non-sensitive problem with checksums, SBOM, provenance, signing status, or release metadata.
+title: "[Release Trust]: "
+labels:
+  - release
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use SECURITY.md for a privately reportable vulnerability. Do not include production credentials, signing material, or private user data here.
+  - type: input
+    id: release
+    attributes:
+      label: Release/tag
+      placeholder: v2.5.0
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Checksum mismatch
+        - Missing/duplicate artifact
+        - SBOM problem
+        - Provenance/attestation problem
+        - Windows signing status
+        - Release manifest/source commit
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Include filenames, public hashes, and synthetic reproduction information where useful.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Safety check
+      options:
+        - label: This report contains no private keys, passwords, signing secrets, customer data, or other private material.
+          required: true

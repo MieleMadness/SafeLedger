@@ -1,0 +1,14 @@
+SafeLedger
+
+Historical repository notices include:
+- Copyright 2018 SafeLedger, LLC
+- Copyright 2018 Edward H. Seufert / Cborgtech, LLC
+
+Current modifications and release infrastructure:
+- Copyright 2026 SafeLedger contributors
+
+SafeLedger is distributed under the Apache License, Version 2.0. See `LICENSE` for the complete license terms.
+
+The differing 2018 attributions above are preserved because both appeared in the historical repository. This NOTICE records those source-history notices without attempting to adjudicate ownership beyond what the repository itself documents.
+
+Third-party dependencies retain their respective copyright and license terms. The official release SBOM records the dependency set used for a release build. Where a dependency requires attribution in redistributed binary form, that attribution must be preserved in the applicable release package or documentation.
