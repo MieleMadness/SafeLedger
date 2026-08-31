@@ -1,0 +1,356 @@
+/* SafeLedger UI polish and accessibility layer.
+ * Loaded after app-theme.css so layout, interaction sizing, icon color,
+ * and contrast have one final contract without changing feature modules.
+ */
+
+:root {
+  --sl-space-1: 4px;
+  --sl-space-2: 8px;
+  --sl-space-3: 12px;
+  --sl-space-4: 16px;
+  --sl-space-5: 20px;
+  --sl-space-6: 24px;
+
+  /* Normal text is intentionally stronger than the prior muted gray.
+   * #596579 is 5.9:1 on white and 5.59:1 on the soft surface.
+   */
+  --sl-muted: #596579;
+  --sl-sidebar-muted: rgba(255, 255, 255, .92);
+
+  /* Semantic icon colors are chosen to exceed 3:1 against light surfaces. */
+  --sl-icon-blue: #1d4ed8;
+  --sl-icon-green: #166534;
+  --sl-icon-purple: #6d28d9;
+  --sl-icon-indigo: #4338ca;
+  --sl-icon-red: #b42318;
+  --sl-icon-gold: #7a4b00;
+  --sl-icon-teal: #0f766e;
+  --sl-icon-neutral: #475467;
+}
+
+html[data-theme="dark"] {
+  --sl-muted: #c7d2e0;
+  --sl-sidebar-muted: rgba(255, 255, 255, .94);
+  --sl-icon-blue: #93c5fd;
+  --sl-icon-green: #86efac;
+  --sl-icon-purple: #d8b4fe;
+  --sl-icon-indigo: #a5b4fc;
+  --sl-icon-red: #fda4af;
+  --sl-icon-gold: #fde68a;
+  --sl-icon-teal: #99f6e4;
+  --sl-icon-neutral: #cbd5e1;
+}
+
+/* ---------- Global vertical rhythm ---------- */
+
+.app-search-row > .app-cell {
+  min-height: 58px;
+}
+
+.content-search,
+.top-utility-cell {
+  min-height: 58px !important;
+  padding: var(--sl-space-3) !important;
+  display: flex;
+  align-items: center;
+}
+
+.content-search .search-field-wrap {
+  width: 100%;
+}
+
+.top-utility-cell {
+  gap: var(--sl-space-2);
+}
+
+.top-utility-actions {
+  gap: var(--sl-space-2);
+}
+
+.top-utility-cell #statusArea {
+  min-height: 34px;
+  max-height: 34px;
+  display: flex;
+  align-items: center;
+  padding-left: var(--sl-space-1);
+}
+
+#detailArea {
+  padding: var(--sl-space-4) 18px var(--sl-space-6) !important;
+}
+
+#detailArea h1,
+#detailArea .page-header {
+  margin-bottom: var(--sl-space-2) !important;
+}
+
+#detailArea hr {
+  margin-top: var(--sl-space-2) !important;
+  margin-bottom: var(--sl-space-3) !important;
+}
+
+.detail-info-line {
+  margin-bottom: var(--sl-space-3) !important;
+}
+
+.settings-section,
+.recovery-readiness-card,
+.dashboard-stat,
+.dashboard-list,
+.activity-list,
+.recovery-drill-step,
+.recovery-binder-summary,
+.recovery-binder-option {
+  margin-bottom: var(--sl-space-4);
+}
+
+/* ---------- Navigation rhythm ---------- */
+
+.content-middle .nav {
+  padding: var(--sl-space-2) !important;
+}
+
+.content-middle .nav > li > a {
+  min-height: 44px;
+  margin: 0 0 var(--sl-space-1) !important;
+  padding: var(--sl-space-2) 10px !important;
+  display: flex;
+  align-items: center;
+  border: 2px solid transparent;
+  border-radius: var(--sl-radius-sm) !important;
+  box-sizing: border-box;
+  transition: background-color .12s ease, border-color .12s ease, box-shadow .12s ease;
+}
+
+.content-middle .nav > li > a:hover,
+.content-middle .nav > li > a:focus {
+  transform: none !important;
+  background: rgba(255, 255, 255, .14) !important;
+  border-color: rgba(255, 255, 255, .48) !important;
+  box-shadow: none !important;
+}
+
+.content-middle .nav > li > a.item-selected,
+.content-middle .nav > li > a.item-selected:hover,
+.content-middle .nav > li > a.item-selected:focus {
+  border-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.profile-list-row,
+.wallet-list-row,
+.record-list-row {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sl-space-2);
+}
+
+.profile-list-name,
+.wallet-list-text {
+  min-width: 0;
+}
+
+.profile-list-name {
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.pin-indicator {
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+/* Slightly larger Profile initial while keeping the existing badge footprint. */
+.profile-list-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+}
+
+.wallet-list-category {
+  color: var(--sl-sidebar-muted) !important;
+  opacity: 1 !important;
+}
+
+/* ---------- Text contrast ---------- */
+
+.form-control::placeholder {
+  color: var(--sl-muted) !important;
+  opacity: 1 !important;
+}
+
+.detail-info-line,
+.dates,
+.wallet-detail-category,
+.coin-detail-symbol,
+.settings-section-note,
+.settings-protection-note,
+.recovery-readiness-message,
+.recovery-readiness-meta,
+.dashboard-header p,
+.dashboard-list-meta,
+.dashboard-empty,
+.activity-header p,
+.activity-meta,
+.activity-retention,
+.activity-loading,
+.dashboard-stat-label,
+.recovery-readiness-score,
+.custom-fields-note,
+.custom-field-edit-row label,
+.recovery-drill-wallet,
+.recovery-drill-intro,
+.recovery-drill-step-text,
+.recovery-drill-storage-note,
+.settings-backup-note,
+.safeledger-lockout-retry-time,
+.safeledger-lockout-note,
+.qr-caption,
+.activity-day-title,
+.activity-category,
+.activity-empty,
+.public-address-placeholder {
+  color: var(--sl-muted) !important;
+}
+
+/* White on primary blue is >5:1; the old dark-on-blue active filter was ~3.7:1. */
+.activity-filter.is-active {
+  color: #ffffff !important;
+}
+
+.search-clear {
+  color: #475467 !important;
+}
+
+html[data-theme="dark"] .search-clear {
+  color: #e6edf7 !important;
+}
+
+/* ---------- Colored icon system ---------- */
+
+#globalSearchButton .fa { color: var(--sl-icon-blue) !important; }
+#dashboardButton .fa { color: var(--sl-icon-green) !important; }
+#activityButton .fa { color: var(--sl-icon-purple) !important; }
+
+#addVault .fa { color: var(--sl-icon-blue) !important; }
+#addGroup .fa { color: var(--sl-icon-purple) !important; }
+#addRecord .fa { color: var(--sl-icon-teal) !important; }
+
+.detail-action-button .fa-save,
+.detail-action-button .glyphicon-save,
+.detail-action-button .fa-check,
+.detail-action-button .fa-check-circle { color: var(--sl-icon-green) !important; }
+.detail-action-button .fa-pencil,
+.detail-action-button .fa-eye,
+.detail-action-button .fa-copy { color: var(--sl-icon-blue) !important; }
+.detail-action-button .fa-print,
+.detail-action-button .fa-qrcode { color: var(--sl-icon-purple) !important; }
+.detail-action-button .fa-book { color: var(--sl-icon-indigo) !important; }
+.detail-action-button .fa-trash { color: var(--sl-icon-red) !important; }
+.detail-action-button .fa-star,
+.detail-action-button .fa-star-o { color: var(--sl-icon-gold) !important; }
+.detail-action-button .fa-cog,
+.detail-action-button .fa-history,
+.detail-action-button .fa-list { color: var(--sl-icon-neutral) !important; }
+.detail-action-button .fa-download,
+.detail-action-button .fa-upload,
+.detail-action-button .fa-exchange { color: var(--sl-icon-teal) !important; }
+.detail-action-button .fa-lock,
+.detail-action-button .fa-shield,
+.detail-action-button .fa-exclamation-triangle,
+.detail-action-button .fa-warning { color: var(--sl-icon-red) !important; }
+
+.content-middle .pin-indicator,
+.content-middle .fa-star { color: #fde68a !important; }
+
+/* ---------- Consistent action-button footprint ---------- */
+
+.detail-action-button,
+.panic-lock-inline {
+  width: var(--sl-action-size) !important;
+  min-width: var(--sl-action-size) !important;
+  height: var(--sl-action-size) !important;
+  min-height: var(--sl-action-size) !important;
+  flex: 0 0 var(--sl-action-size) !important;
+  box-sizing: border-box;
+  border-width: 1px !important;
+  border-radius: var(--sl-radius-sm) !important;
+  transform: none !important;
+}
+
+.detail-action-button .fa {
+  font-size: 18px;
+}
+
+.detail-action-button:hover,
+.detail-action-button:focus,
+.panic-lock-inline:hover,
+.panic-lock-inline:focus {
+  width: var(--sl-action-size) !important;
+  height: var(--sl-action-size) !important;
+  transform: none !important;
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: -2px !important;
+  box-shadow: none !important;
+}
+
+.panic-lock-inline {
+  overflow: hidden;
+}
+
+.panic-lock-inline img {
+  width: 100%;
+  height: 100%;
+  padding: var(--sl-space-1);
+  object-fit: contain;
+}
+
+.detail-action-area {
+  gap: var(--sl-space-2) !important;
+}
+
+.emergency-lock-cell {
+  gap: var(--sl-space-2) !important;
+  padding: 0 var(--sl-space-2) var(--sl-dock-pad) var(--sl-space-2) !important;
+}
+
+/* Top utilities remain intentionally compact, but get the same visual outline language. */
+.global-search-inline,
+.dashboard-inline,
+.activity-inline {
+  box-sizing: border-box;
+  border-width: 1px !important;
+}
+
+.global-search-inline:hover,
+.global-search-inline:focus,
+.dashboard-inline:hover,
+.dashboard-inline:focus,
+.activity-inline:hover,
+.activity-inline:focus {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: -2px !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1000px) {
+  #detailArea {
+    padding-left: var(--sl-space-3) !important;
+    padding-right: var(--sl-space-3) !important;
+  }
+
+  .content-middle .nav {
+    padding: 6px !important;
+  }
+
+  .content-middle .nav > li > a {
+    min-height: 42px;
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+  }
+}
