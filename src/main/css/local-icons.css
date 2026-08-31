@@ -23,6 +23,36 @@
 .fa-star::before { content: "★"; }
 .fa-star-o::before { content: "☆"; }
 
+/* Standard external/open affordance: a small square with an arrow leaving it.
+ * Drawn locally so the dashboard never depends on an icon font or network. */
+.fa-external-link {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+}
+.fa-external-link::before {
+  content: "";
+  position: absolute;
+  left: .08em;
+  bottom: .08em;
+  width: .64em;
+  height: .64em;
+  border: .11em solid currentColor;
+  border-radius: .06em;
+  box-sizing: border-box;
+}
+.fa-external-link::after {
+  content: "↗";
+  position: absolute;
+  right: -.03em;
+  top: -.18em;
+  font-size: .86em;
+  line-height: 1;
+  font-weight: 800;
+}
+
 /* Login uses a CSS-drawn person instead of the legacy unlock glyph.
  * Keeping this local avoids missing icon-font characters rendering as squares. */
 .fa-user,
