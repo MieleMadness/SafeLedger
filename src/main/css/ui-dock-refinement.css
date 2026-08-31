@@ -35,7 +35,11 @@ html[data-theme="dark"] {
   align-self: center;
 }
 
-.emergency-lock-cell {
+/* Match the top utility row's 12px inset on every side. The selector is
+ * intentionally as specific as the legacy app-cell gutter reset so the
+ * Favorite action and Emergency Lock cannot sit flush against either edge.
+ */
+.app-button-row > .emergency-lock-cell {
   padding: var(--sl-dock-pad) !important;
   align-items: center !important;
 }
@@ -79,6 +83,44 @@ html[data-theme="dark"] {
   background: currentColor;
   transform: rotate(35deg);
   transform-origin: 0 50%;
+}
+
+/* Recognizable line-art printer: paper above, printer body, output sheet below. */
+.fa-print {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: .62em;
+  margin-top: .20em;
+  border: .11em solid currentColor;
+  border-radius: .11em;
+  box-sizing: border-box;
+  vertical-align: -.04em;
+}
+
+.fa-print::before {
+  content: "";
+  position: absolute;
+  left: .13em;
+  right: .13em;
+  bottom: .34em;
+  height: .48em;
+  border: .10em solid currentColor;
+  border-bottom: 0;
+  border-radius: .05em .05em 0 0;
+  box-sizing: border-box;
+}
+
+.fa-print::after {
+  content: "";
+  position: absolute;
+  left: .14em;
+  right: .14em;
+  top: .32em;
+  height: .39em;
+  border: .10em solid currentColor;
+  border-radius: .03em;
+  box-sizing: border-box;
 }
 
 /* Real CSS-drawn trash can for wallet/asset/profile delete actions. */
