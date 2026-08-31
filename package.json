@@ -39,7 +39,7 @@
     "appId": "com.safeledger.app",
     "productName": "SafeLedger",
     "asar": true,
-    "files": ["src/**/*", "build/icon-source.png", "sl.png", "LICENSE", "NOTICE", "package.json"],
+    "files": ["src/**/*", "build/icon-source.png", "sl.png", "LICENSE", "NOTICE", "THIRD-PARTY-NOTICES.md", "package.json"],
     "win": {
       "icon": "build/icon-source.png",
       "target": [{"target":"portable","arch":["x64"]}],
