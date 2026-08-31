@@ -118,7 +118,7 @@ Checksums prove file identity relative to the published digest; they are not pre
 
 ## Preserved product invariants
 
-SafeLedger 2.5 does not change:
+The following product invariants **must not change** in SafeLedger 2.5:
 
 - AES-256-GCM authenticated vault encryption;
 - Argon2id master-password/key-envelope behavior;
