@@ -170,6 +170,10 @@ jobs:
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
         with:
           path: release/inputs
+      - name: Add legal and verification release inputs
+        run: |
+          mkdir -p release/inputs/legal
+          cp LICENSE NOTICE THIRD-PARTY-NOTICES.md RELEASE-VERIFICATION.md release/inputs/legal/
       - name: Collect, checksum and self-verify release files
         run: node scripts/release-artifacts.js collect release/inputs release/final
       - name: Upload verified release bundle
