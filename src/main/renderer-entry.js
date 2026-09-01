@@ -7,6 +7,7 @@ require('./privacy-mode-ui.js');
 require('./dashboard-ui.js');
 require('./dashboard-row-ui.js');
 require('./recovery-intelligence-dashboard-ui.js');
+require('./recovery-intelligence-vault-overview-ui.js');
 require('./activity-history-ui.js');
 require('./settings-shortcut-ui.js');
 require('./self-destruct-settings-ui.js');
@@ -18,5 +19,6 @@ require('./search-enhancements.js');
 require('./profile-wallet-picker-ui.js');
 require('./sensitive-control-icons-ui.js');
 require('./vault-item-ui.js');
+require('./vault-language-ui.js');
 
 document.documentElement.dataset.safeLedgerRendererReady = 'true';
