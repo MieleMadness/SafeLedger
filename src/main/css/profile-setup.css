@@ -125,10 +125,37 @@
   background: var(--sl-primary-soft, rgba(47, 111, 237, .10));
 }
 
+/* Needs Attention exposes two sibling actions: the wallet description and the
+ * status pill. Both open the exact profile/wallet without nesting buttons. */
+.dashboard-list-row-action {
+  cursor: default;
+}
+
+.dashboard-list-main-action {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-list-main-action:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--sl-primary, #2f6fed) !important;
+  outline-offset: 3px;
+}
+
 /* The Recovery Dashboard status itself is now an action. A user can click the
  * Incomplete / Needs Review pill to open the exact wallet that needs work. */
 .dashboard-status-action {
   appearance: none;
+  margin: 0;
+  border: 0;
   font: inherit;
   cursor: pointer;
   transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
