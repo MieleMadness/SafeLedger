@@ -14,7 +14,8 @@ const REQUIRED_FILES = [
   'SECURITY.md',
   'CODE_OF_CONDUCT.md',
   'RELEASE-2.5.md',
-  '.github/workflows/release.yml'
+  '.github/workflows/windows-portable.yml',
+  '.github/workflows/linux-appimage.yml'
 ];
 
 function parseTag(tag) {

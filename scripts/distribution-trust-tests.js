@@ -96,40 +96,36 @@ function testLegalAndPackagingSurface() {
   assert(pkg.build.files.includes('THIRD-PARTY-NOTICES.md'));
 }
 
-function testReleaseWorkflowTrustBoundary() {
-  const workflow = read('.github/workflows/release.yml');
-  assert(workflow.includes("tags:\n      - 'v*.*.*'"));
-  assert(!workflow.includes('pull_request_target'));
-  assert(!workflow.includes('pull_request:'));
-  assert(workflow.includes('permissions:\n  contents: read'));
-  assert.strictEqual((workflow.match(/contents: write/g) || []).length, 1, 'only publish job may have contents: write');
-  assert(workflow.includes('id-token: write'));
-  assert(workflow.includes('attestations: write'));
-  assert(!/uses:\s+[^\n]+@v\d/.test(workflow), 'release-critical Actions must be pinned to full SHAs');
-  assert(workflow.includes('repos/$GITHUB_REPOSITORY/branches/master'));
-  assert(workflow.includes("--jq '.protected'"));
-  assert(!workflow.includes('branches/master/protection'), 'release workflow must not require administration-level branch-protection API access');
-  assert(workflow.includes('Official SafeLedger publishing requires branch protection on master.'));
-  assert(workflow.includes('SAFELEDGER_WINDOWS_PFX_BASE64'));
-  assert(workflow.includes('SAFELEDGER_WINDOWS_PFX_PASSWORD'));
-  const signingMarker = '- name: Apply optional Authenticode signing';
-  const buildStart = workflow.indexOf('  build-windows:');
-  const signingStart = workflow.indexOf(signingMarker);
-  assert(buildStart >= 0 && signingStart > buildStart);
-  assert(!workflow.slice(buildStart, signingStart).includes('SAFELEDGER_WINDOWS_PFX_'), 'signing secrets must not be job-scoped or exposed to build/test steps');
-  assert(workflow.includes('needs: attest-artifacts'));
-  assert(workflow.includes('gh release create'));
-  assert(workflow.includes('node scripts/release-artifacts.js verify release/final'));
-  assert(workflow.includes('THIRD-PARTY-NOTICES.md'));
-  assert(workflow.includes('RELEASE-VERIFICATION.md'));
-}
+function testBuildWorkflowTrustBoundary() {
+  const workflowDir = path.join(root, '.github', 'workflows');
+  const active = fs.readdirSync(workflowDir).filter((name) => /\.ya?ml$/i.test(name)).sort();
+  assert.deepStrictEqual(
+    active,
+    ['linux-appimage.yml', 'windows-portable.yml'],
+    'Only the Windows Portable and Linux AppImage workflows should be active.'
+  );
 
-function testNormalCiPins() {
-  for (const file of ['.github/workflows/windows-portable.yml', '.github/workflows/linux-appimage.yml']) {
-    const workflow = read(file);
+  for (const file of active) {
+    const workflow = read(path.join('.github', 'workflows', file));
+    assert(workflow.includes('workflow_dispatch:'), `${file} must support manual runs`);
+    assert(workflow.includes('push:\n    branches:\n      - master'), `${file} must run when approved changes reach master`);
+    assert(workflow.includes('pull_request:\n    branches:\n      - master'), `${file} must validate pull requests targeting master`);
+    assert(!workflow.includes('pull_request_target'), `${file} must not use pull_request_target`);
+    assert(workflow.includes('permissions:\n  contents: read'), `${file} must remain read-only`);
+    assert(!workflow.includes('contents: write'), `${file} must not publish or mutate repository contents`);
+    assert(!workflow.includes('version-bump-check.js'), `${file} must not dictate SafeLedger product versioning`);
     assert(!/uses:\s+[^\n]+@v\d/.test(workflow), `${file} contains a movable Action tag`);
-    assert(workflow.includes('permissions:\n  contents: read'));
+    assert(workflow.includes('npm run test:regression'), `${file} must run regression tests`);
+    assert(workflow.includes('npm run test:electron-crypto'), `${file} must run crypto smoke tests`);
+    assert(workflow.includes('npm run test:gui-smoke'), `${file} must run GUI smoke tests`);
   }
+
+  const windows = read('.github/workflows/windows-portable.yml');
+  const linux = read('.github/workflows/linux-appimage.yml');
+  assert(windows.includes('npm run dist:win'));
+  assert(windows.includes('SafeLedger-Windows-Portable'));
+  assert(linux.includes('npm run dist:linux'));
+  assert(linux.includes('SafeLedger-Linux-AppImage'));
 }
 
 function testSbomGeneration() {
@@ -159,9 +155,8 @@ testTagPolicy();
 testArtifactCollectionAndVerification();
 testDuplicateAndMissingArtifactsFailClosed();
 testLegalAndPackagingSurface();
-testReleaseWorkflowTrustBoundary();
-testNormalCiPins();
+testBuildWorkflowTrustBoundary();
 testSbomGeneration();
 testNoProductSecurityScopeChange();
 
-console.log('PASS SafeLedger 2.5 distribution trust, SBOM, release-policy, checksum, legal, and publishing-boundary tests.');
+console.log('PASS SafeLedger distribution trust, SBOM, release-policy, checksum, legal, and two-build-workflow tests.');
