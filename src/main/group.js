@@ -8,6 +8,7 @@ const record = require('./record');
 const utils = require('./utils');
 const securityUi = require('./security-ui');
 const walletCatalog = require('./wallet-catalog');
+const walletIcons = require('./wallet-icons');
 const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const recoveryReadiness = require('./recovery-readiness');
@@ -219,8 +220,7 @@ const renderGroups = (params) => {
     });
     if (params.vaultData.groupSelected == i) href.className = 'item-selected';
 
-    const icon = document.createElement('span');
-    icon.className = 'glyphicon glyphicon-piggy-bank wallet-list-icon';
+    const icon = walletIcons.createIconElement(current);
     href.appendChild(icon);
     const text = document.createElement('span');
     text.className = 'wallet-list-text';

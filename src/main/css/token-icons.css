@@ -1,4 +1,4 @@
-/* SafeLedger 2.0.14 bundled branded token artwork */
+/* SafeLedger bundled branded asset and wallet artwork */
 .coin-brand-image {
   width: 54px;
   height: 54px;
@@ -53,6 +53,43 @@
   white-space: nowrap;
 }
 
+/* Wallets use the same local/offline artwork pipeline as assets. Background
+ * wallet variants are preferred at build time so logos remain visible against
+ * both the navy list and the blue selected state. */
+.wallet-list-brand-image,
+.wallet-list-catalog-icon,
+.wallet-list-icon {
+  width: 22px !important;
+  height: 22px !important;
+  flex: 0 0 22px !important;
+  margin-right: 8px;
+}
+
+.wallet-list-brand-image {
+  display: block;
+  object-fit: contain;
+  border-radius: 5px;
+}
+
+.wallet-list-catalog-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,.45);
+  border-radius: 5px;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.item-selected .wallet-list-catalog-icon {
+  border-color: rgba(255,255,255,.72);
+  background: rgba(255,255,255,.16);
+}
+
 @media (max-width: 1000px) {
   .coin-brand-image {
     width: 46px;
@@ -65,5 +102,13 @@
     width: 19px;
     height: 19px;
     flex-basis: 19px;
+  }
+
+  .wallet-list-brand-image,
+  .wallet-list-catalog-icon,
+  .wallet-list-icon {
+    width: 19px !important;
+    height: 19px !important;
+    flex-basis: 19px !important;
   }
 }
