@@ -146,6 +146,7 @@ function testTrustedFolderAction() {
   const bridge = read('src/main/renderer-bridge.js');
   const bootstrap = read('src/main/bootstrap.js');
   const dashboard = read('src/main/dashboard-ui.js');
+  const dashboardRows = read('src/main/dashboard-row-ui.js');
   const icons = read('src/main/css/local-icons.css');
 
   assert(preload.includes("openDataFolder: () => ipcRenderer.invoke('device-open-data-folder')"));
@@ -156,7 +157,10 @@ function testTrustedFolderAction() {
   assert(dashboard.includes('Open SafeLedgerData folder'));
   assert(dashboard.includes('dashboard-title-action'));
   assert(dashboard.includes('fa-external-link'));
-  assert(dashboard.includes('dashboard-status-action'), 'wallet recovery status pills should open the exact wallet needing attention');
+  assert(dashboard.includes("const badge = document.createElement('span');"), 'recovery status pills should remain informational');
+  assert(!dashboard.includes('dashboard-status-action'), 'status pills should not carry a competing wallet navigation action');
+  assert(dashboardRows.includes("row.querySelector('.dashboard-list-main-action')"), 'wallet recovery rows should open the exact vault item needing attention');
+  assert(dashboardRows.includes("row.setAttribute('role', 'button')"), 'wallet recovery rows should remain keyboard accessible');
   assert(dashboard.includes('window.safeLedgerApi.openDataFolder()'));
   assert(icons.includes('.fa-external-link'));
 }
