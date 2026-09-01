@@ -26,7 +26,11 @@ exports.copySensitive = (value) => {
 };
 
 function copyIconMarkup() {
-  return '<svg class="sl-copy-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect class="sl-copy-page sl-copy-page-back" x="4.5" y="3.5" width="11" height="14" rx="1.5"/><rect class="sl-copy-page sl-copy-page-front" x="8.5" y="7.5" width="11" height="13" rx="1.5"/></svg>';
+  return '<svg class="sl-copy-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="sl-copy-sheet sl-copy-sheet-back" d="M9 4h7.5L20 7.5V16"/><path class="sl-copy-sheet sl-copy-sheet-back" d="M16.5 4v3.5H20"/><path class="sl-copy-sheet sl-copy-sheet-front" d="M4 8h7.5l3.5 3.5V20H4z"/><path class="sl-copy-sheet sl-copy-sheet-front" d="M11.5 8v3.5H15"/></svg>';
+}
+
+function qrIconMarkup() {
+  return '<svg class="sl-qr-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect class="sl-qr-frame" x="3.5" y="3.5" width="6" height="6" rx=".5"/><rect class="sl-qr-dot" x="5.5" y="5.5" width="2" height="2"/><rect class="sl-qr-frame" x="14.5" y="3.5" width="6" height="6" rx=".5"/><rect class="sl-qr-dot" x="16.5" y="5.5" width="2" height="2"/><rect class="sl-qr-frame" x="3.5" y="14.5" width="6" height="6" rx=".5"/><rect class="sl-qr-dot" x="5.5" y="16.5" width="2" height="2"/><rect class="sl-qr-pixel" x="14" y="14" width="3" height="3"/><rect class="sl-qr-pixel" x="18" y="14" width="2.5" height="2.5"/><rect class="sl-qr-pixel" x="14" y="18" width="2.5" height="2.5"/><rect class="sl-qr-pixel" x="18" y="18" width="3" height="3"/></svg>';
 }
 
 function makeIconButton(icon, onClick, title, extraClass = '') {
@@ -78,16 +82,18 @@ async function renderQr(area, value, captionText) {
 }
 
 function makeQrButton(valueGetter, qrArea, captionText, onOpen) {
-  return makeIconButton('fa-qrcode', async (_event, button) => {
+  const button = makeIconButton('', async (_event, control) => {
     if (qrArea.style.display !== 'none') {
       qrArea.style.display = 'none';
-      button.classList.remove('active');
+      control.classList.remove('active');
       return;
     }
     if (onOpen) onOpen();
     const shown = await renderQr(qrArea, valueGetter(), captionText);
-    button.classList.toggle('active', shown);
+    control.classList.toggle('active', shown);
   }, 'Show QR code', 'qr-inline-button');
+  button.innerHTML = qrIconMarkup();
+  return button;
 }
 
 function makeInlineActions(copyHandler, qrValueGetter, qrArea, qrCaption, onQrOpen, allowQr = true) {
@@ -273,4 +279,4 @@ exports.printRecoverySheet = (title, fields, includesSensitive) => {
   }, 50);
 };
 
-exports._test = { makeIconButton, makeCopyButton, copyIconMarkup, makeEditRevealButton, makeInlineActions, createPrintFrame };
+exports._test = { makeIconButton, makeCopyButton, copyIconMarkup, qrIconMarkup, makeEditRevealButton, makeInlineActions, createPrintFrame };
