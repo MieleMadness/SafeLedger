@@ -81,7 +81,7 @@ function summarize(profileEntries = [], options = {}) {
   let profileReadErrors = 0;
   let scoreTotal = 0;
 
-  for (const entry of profileEntries) {
+  for (const [profileIndex, entry] of profileEntries.entries()) {
     const profileName = safeName(entry.profileName, 'Profile');
     const profileFile = String(entry && entry.profileFile || '');
     if (entry.readError) profileReadErrors++;
@@ -129,6 +129,7 @@ function summarize(profileEntries = [], options = {}) {
       const item = {
         profileName,
         profileFile,
+        profileIndex,
         walletName,
         walletIndex,
         category: String(group && group.category || ''),
