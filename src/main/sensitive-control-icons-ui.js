@@ -29,7 +29,16 @@ function patchSensitiveSummary(summary) {
     if (legacy) legacy.replaceWith(icon);
     else label.insertBefore(icon, label.firstChild);
   }
-  icon.innerHTML = eyeIcon.markup(details.open);
+
+  // MutationObserver watches this detail area. Rewriting innerHTML every time
+  // the observer fires creates another child-list mutation and can trap the
+  // renderer in an endless loop when a Wallet detail view is opened. Only
+  // redraw the eye when the open/closed state actually changes.
+  const eyeState = details.open ? 'open' : 'closed';
+  if (icon.dataset.eyeState !== eyeState) {
+    icon.dataset.eyeState = eyeState;
+    icon.innerHTML = eyeIcon.markup(details.open);
+  }
 
   const action = details.open ? 'Hide sensitive information' : 'Reveal sensitive information';
   summary.title = action;
@@ -57,7 +66,10 @@ function start() {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ['class', 'open']
+    // We only need to repatch an existing sensitive row when its <details>
+    // open state changes. Child-list observation already handles new rows and
+    // QR controls, so class changes do not need to retrigger the whole patch.
+    attributeFilter: ['open']
   });
 }
 
