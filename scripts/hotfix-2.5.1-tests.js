@@ -182,9 +182,9 @@ function testSemanticContrast() {
   assert(css.includes('#loginBtn .fa'), 'Login icon spacing must remain part of the 2.5.1 UI polish');
 }
 
-function testVersion() {
+function testVersionLineage() {
   const pkg = JSON.parse(read('package.json'));
-  assert.strictEqual(pkg.version, '2.5.1');
+  assert(/^2\.5\.\d+$/.test(pkg.version), '2.5.1 hotfix regression coverage must remain active for later 2.5 patch releases');
 }
 
 (async () => {
@@ -192,7 +192,7 @@ function testVersion() {
   await testStaleOsSignalsCannotKillFreshSession();
   testTrustedFolderAction();
   testSemanticContrast();
-  testVersion();
+  testVersionLineage();
   console.log('PASS SafeLedger 2.5.1 same-process re-login, stale OS signal protection, accessible semantic controls, and trusted SafeLedgerData folder action.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
