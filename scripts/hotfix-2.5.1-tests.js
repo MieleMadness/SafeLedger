@@ -156,7 +156,7 @@ function testTrustedFolderAction() {
   assert(dashboard.includes('Open SafeLedgerData folder'));
   assert(dashboard.includes('dashboard-title-action'));
   assert(dashboard.includes('fa-external-link'));
-  assert(!dashboard.includes('dashboard-status-action'), 'health pills must remain status-only, not clickable controls');
+  assert(dashboard.includes('dashboard-status-action'), 'wallet recovery status pills should open the exact wallet needing attention');
   assert(dashboard.includes('window.safeLedgerApi.openDataFolder()'));
   assert(icons.includes('.fa-external-link'));
 }
