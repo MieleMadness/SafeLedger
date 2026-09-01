@@ -39,7 +39,7 @@
   border: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
-  color: var(--sl-primary-strong) !important;
+  color: var(--sl-text-strong) !important;
 }
 
 .password-visibility-toggle:hover,
@@ -60,7 +60,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--sl-primary-strong);
+  color: var(--sl-text-strong);
 }
 
 .sl-sensitive-eye .sl-eye-svg {
