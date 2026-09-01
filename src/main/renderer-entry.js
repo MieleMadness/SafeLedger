@@ -16,5 +16,6 @@ require('./crypto-ui-bridge.js');
 require('./search-enhancements.js');
 require('./profile-wallet-picker-ui.js');
 require('./sensitive-control-icons-ui.js');
+require('./vault-item-ui.js');
 
 document.documentElement.dataset.safeLedgerRendererReady = 'true';
