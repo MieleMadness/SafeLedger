@@ -29,9 +29,10 @@ function testBackupReminderContractRemainsLocal() {
   const health = read('src/main/backup-health.js');
   const settings = read('src/main/settings-ui.js');
   const dashboard = read('src/main/dashboard-ui.js');
-  assert(health.includes('const DEFAULT_REMINDER_DAYS = 30;'));
-  assert(health.includes('[0, 30, 60, 90]'));
+  assert(health.includes('const ALLOWED_REMINDER_DAYS = Object.freeze('));
+  assert(health.includes('normalizeReminderDays'));
   assert(settings.includes("label.textContent = 'Backup reminder';"));
+  assert(settings.includes("ipc.send('save-settings'"), 'Backup reminder settings must stay in SafeLedger local settings.');
   assert(dashboard.includes("'Encrypted backup'"));
   assert(dashboard.includes("backupDue || verifyDue ? 'Review' : 'Current'"));
 }
