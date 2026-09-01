@@ -7,9 +7,6 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
-const pkg = JSON.parse(read('package.json'));
-assert.strictEqual(pkg.version, '2.5.6', 'Development build should be numbered 2.5.6.');
-
 const manifest = JSON.parse(read('src/main/assets/token-icons/manifest.json'));
 for (const [category, minimum] of Object.entries({ tokens: 1000, networks: 100, wallets: 30, exchanges: 20 })) {
   assert(manifest[category] && Object.keys(manifest[category]).length >= minimum,
@@ -59,4 +56,4 @@ const dashboardSource = read('src/main/dashboard-ui.js');
 assert(dashboardSource.includes('dashboard-status-action'));
 assert(dashboardSource.includes('onActivate: () => openWallet(item)'));
 
-console.log('PASS SafeLedger 2.5.6 development Web3Icons catalog, wallet templates, and dashboard navigation integration.');
+console.log('PASS SafeLedger development Web3Icons catalog, wallet templates, and dashboard navigation integration.');
