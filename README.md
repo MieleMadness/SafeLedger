@@ -8,9 +8,9 @@ SafeLedger does not require a cloud account, subscription, license server, or ne
 
 ### Current stable release: SafeLedger 2.5.0
 
-SafeLedger **2.5.0** is the version currently merged into protected `master`.
+SafeLedger **2.5.0** remains the latest tagged public release. Protected `master` includes the reviewed 2.5.1 hotfix work. SafeLedger 2.5.2 is being tested on a pull-request branch and will **not** be merged to `master` until hands-on testing is approved.
 
-The current release includes the SafeLedger 2.1 continuity/security foundation, 2.2 runtime modernization, 2.3 device-security layer, 2.4 Recovery Intelligence & Validation, and 2.5 Distribution, Trust & Open Source Readiness work.
+The current release line includes the SafeLedger 2.1 continuity/security foundation, 2.2 runtime modernization, 2.3 device-security layer, 2.4 Recovery Intelligence & Validation, and 2.5 Distribution, Trust & Open Source Readiness work.
 
 Key capabilities include:
 
@@ -57,7 +57,7 @@ Key capabilities include:
 - User-facing official-download verification guidance in `RELEASE-VERIFICATION.md`
 
 > [!IMPORTANT]
-> SafeLedger **2.6** is the next planned release and is intentionally scoped to **macOS Apple Silicon (`arm64`) only**. Intel/x64 Macs, universal binaries, and Rosetta compatibility are not 2.6 targets.
+> The next approved update promoted to protected `master` will move SafeLedger to **2.6.0**. Current 2.5.x work remains a test candidate until hands-on approval. macOS Apple Silicon support remains planned platform work, but is not the sole scope of the 2.6 version line.
 
 ## Release roadmap
 
@@ -130,11 +130,11 @@ Included:
 
 2.5 does not change the vault crypto format, Argon2id behavior, backup compatibility, portable data layout, device locking, Recovery Intelligence, or local-first/offline operating model.
 
-### SafeLedger 2.6 — macOS Apple Silicon Distribution & Platform Hardening
+### SafeLedger 2.6 — Next Master Release & Platform Expansion
 
-**Planned target.** SafeLedger 2.6 is intentionally macOS **arm64-only**.
+**Next approved master version.** Current 2.5.x test-candidate work must pass automated validation and hands-on testing before it is promoted. When approved changes are merged into protected `master`, the application version will move to **2.6.0**.
 
-Planned focus includes Apple Silicon packaging, Developer ID signing, notarization/stapling, Gatekeeper validation, macOS lock/sleep/resume behavior, removable-storage handling, and preserving `SafeLedgerData` beside the application. Intel/x64, universal binaries, and Rosetta compatibility are explicitly out of scope.
+The 2.6 line can include approved product improvements in addition to future platform work. Planned macOS work remains focused on Apple Silicon packaging, Developer ID signing, notarization/stapling, Gatekeeper validation, macOS lock/sleep/resume behavior, removable-storage handling, and preserving `SafeLedgerData` beside the application. Intel/x64 Macs, universal binaries, and Rosetta compatibility remain outside the current macOS target.
 
 ## How SafeLedger is organized
 
@@ -177,6 +177,65 @@ Assets can store information such as:
 - Private key, when you choose to store one
 - Notes
 - Custom fields
+
+## Automatic wallet and asset icons
+
+SafeLedger bundles wallet and crypto artwork during the build from the pinned local `@web3icons/core` dependency. **No icon is downloaded from the internet while SafeLedger is running.** If SafeLedger cannot find a matching bundled icon, it uses the generic wallet/asset fallback instead of making a network request.
+
+### Wallet icon triggers
+
+Wallet-name matching is case-insensitive. The following wallet names currently trigger a branded icon:
+
+| Wallet icon | Names that trigger it |
+| --- | --- |
+| Ledger | `Ledger` |
+| Trezor | `Trezor` |
+| BitBox | `BitBox02 Multi`, `BitBox02`, `BitBox` |
+| MetaMask | `MetaMask` |
+| Trust Wallet | `Trust Wallet` |
+| Exodus | `Exodus` |
+| Phantom | `Phantom` |
+| Coinbase Wallet | `Base App (Coinbase Wallet)`, `Coinbase Wallet`, `Base App` |
+| Rabby | `Rabby Wallet`, `Rabby` |
+
+The current default catalog also includes `Tangem`, `Keystone`, `OneKey`, `COLDCARD`, `SafePal`, and `Electrum`. Those names currently use SafeLedger's generic wallet icon because the pinned local icon bundle does not provide a matching wallet image through SafeLedger's current mapping.
+
+### Asset icon triggers
+
+For Assets, **the Symbol field is checked first**. If the symbol does not have a bundled token icon, SafeLedger then checks the Asset Name as a network name. This means entering a standard ticker such as `BTC` is generally the most reliable way to trigger an icon.
+
+#### Symbol triggers currently bundled
+
+The 2.5.2 test build currently contains automatic token artwork for these symbols:
+
+`3ULL`, `ADA`, `ADI`, `AKT`, `ALGO`, `ALPH`, `APE`, `APT`, `ARB`, `AREA`, `ATOM`, `AURORA`, `AVAX`, `AXL`, `AZERO`, `BCH`, `BLAST`, `BNB`, `BROCK`, `BTC`, `CELO`, `CHZ`, `CLORE`, `CORE`, `CRO`, `CSPR`, `CYBER`, `DASH`, `DEL`, `DGB`, `DIONE`, `DOGE`, `DOT`, `ETC`, `ETH`, `ETHW`, `EWT`, `FIL`, `FLR`, `FTM`, `GLMR`, `GNO`, `HBAR`, `ICP`, `JOY`, `KAS`, `KAVA`, `KOIN`, `KSM`, `LINK`, `LTC`, `LUNA`, `LUNC`, `MNT`, `MOVR`, `NEAR`, `NEO`, `OCTA`, `ONE`, `OP`, `POL`, `QTUM`, `RVN`, `RXD`, `SEI`, `SOL`, `SUI`, `TAO`, `TARA`, `TLOS`, `TOKEN`, `TRX`, `USDC`, `USDT`, `VET`, `XCH`, `XDC`, `XLM`, `XMR`, `XRP`, `XTZ`, `ZEC`.
+
+Symbols are normalized to uppercase before lookup. Custom tickers that are not in the bundled manifest simply use the generic asset icon.
+
+#### Asset/network name triggers currently bundled
+
+If the Symbol field does not resolve an icon, these network names can trigger bundled artwork through the Asset Name field. Matching ignores capitalization and normalizes spaces/punctuation:
+
+`Acala`, `Algorand`, `ApeChain`, `Aptos`, `Aurora`, `Avalanche`, `Base`, `Binance Smart Chain`, `Bitcoin`, `Blast`, `Cardano`, `Celo`, `Chiliz`, `Cosmos Hub`, `Cronos`, `Ethereum`, `Ethereum Classic`, `Filecoin`, `Flare`, `Harmony`, `Kava`, `Linea`, `Litecoin`, `Manta Pacific`, `Mantle`, `Monad`, `Moonbeam`, `Moonriver`, `NEAR Protocol`, `Optimism`, `Plasma`, `Polkadot`, `Polygon`, `Polygon zkEVM`, `PulseChain`, `Rootstock`, `Scroll`, `Solana`, `Sonic`, `Stellar`, `Sui`, `Telos`, `Tempo`, `Terra Classic`, `TON`, `TRON`, `Zora`.
+
+SafeLedger also recognizes these convenience names and maps them to the bundled network artwork:
+
+- `BNB`, `BNB Chain`, `BNB Smart Chain`, `BNB Beacon Chain` → Binance Smart Chain
+- `Avalanche C-Chain` → Avalanche
+- `Cronos EVM` → Cronos
+- `Kava EVM` → Kava
+- `Linea EVM` → Linea
+- `Scroll EVM` → Scroll
+- `Telos EVM` → Telos
+- `Plasma EVM` → Plasma
+- `Chiliz EVM` → Chiliz
+- `EVM Networks`, `EVM Tokens`, `ERC-20 Tokens`, `ERC-20 / EVM Tokens`, `Network Tokens`, `Custom Tokens` → Ethereum
+- `SPL Tokens` → Solana
+- `TRC-20 Tokens` → TRON
+- `BEP-20 Tokens` → Binance Smart Chain
+- `Cardano Native Tokens` → Cardano
+
+If both the Symbol and Name match available artwork, **the Symbol wins**. This keeps common assets such as `ARB`, `AVAX`, `BNB`, `ETH`, and `SOL` predictable even when users choose slightly different descriptive names.
 
 ## Portable data layout
 
@@ -372,7 +431,7 @@ Release changes are expected to pass regression, crypto, GUI, SBOM, distribution
 - `RELEASE-2.5.md` — released Distribution, Trust & Open Source Readiness
 - `RELEASE-VERIFICATION.md` — official download verification guidance
 
-The SafeLedger 2.6 macOS Apple Silicon plan is maintained on its development branch until that release work is ready to move onto `master`.
+SafeLedger 2.6 planning remains on development/test branches until changes pass automated validation and hands-on testing and are explicitly approved for protected `master`.
 
 ## Recommended operating practices
 
