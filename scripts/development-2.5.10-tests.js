@@ -9,17 +9,16 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 const source = read('src/main/sensitive-control-icons-ui.js');
 
-assert(source.includes("const eyeState = details.open ? 'open' : 'closed';"),
-  'Sensitive eye rendering must track the details open/closed state.');
-assert(source.includes('if (icon.dataset.eyeState !== eyeState) {'),
-  'Sensitive eye rendering must be idempotent so MutationObserver cannot continuously redraw the same icon.');
-assert(source.includes('icon.dataset.eyeState = eyeState;'));
-assert(source.includes('icon.innerHTML = eyeIcon.markup(details.open);'));
-assert(source.indexOf('icon.dataset.eyeState = eyeState;') < source.indexOf('icon.innerHTML = eyeIcon.markup(details.open);'),
-  'The eye state must be recorded before changing icon children so the observer sees an already-current state.');
-assert(source.includes("attributeFilter: ['open']"),
-  'The sensitive-control observer should react to details state, not unrelated class mutations.');
-assert(!source.includes("attributeFilter: ['class', 'open']"),
-  'Class changes should not retrigger the sensitive-field patch loop.');
+assert(source.includes("icon.className = details.open ? 'fa fa-minus' : 'fa fa-plus';"),
+  'View-mode sensitive rows should update one existing plus/minus icon rather than replacing SVG children.');
+assert(!source.includes('icon.innerHTML = eyeIcon.markup(details.open);'),
+  'Wallet selection must not trigger repeated sensitive-eye SVG rewrites.');
+assert(!source.includes('dataset.eyeState'),
+  'The old observer-managed eye state is no longer needed for view-mode disclosure rows.');
+assert(source.includes('childList: true'));
+assert(source.includes('subtree: true'));
+assert(!source.includes('attributes: true'),
+  'The detail observer should only discover newly-rendered controls and must not loop on attribute changes.');
+assert(!source.includes("attributeFilter: ['class', 'open']"));
 
-console.log('PASS SafeLedger 2.5.10 sensitive eye rendering is idempotent and cannot loop when a wallet is selected.');
+console.log('PASS SafeLedger wallet selection remains free of the sensitive-control observer render loop.');
