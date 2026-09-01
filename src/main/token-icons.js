@@ -1,23 +1,24 @@
 'use strict';
 
 // Generated at build time by scripts/prepare-token-assets.js. The manifest
-// contains browser-ready data URLs, so runtime icon rendering has no dependency
-// on node_modules, ESM imports, external URLs, or filesystem paths.
-let manifest = { tokens: {}, networks: {} };
+// contains browser-ready local data URLs plus lookup aliases, so runtime icon
+// rendering has no dependency on node_modules, external URLs, or filesystem paths.
+let manifest = { icons: {}, tokens: {}, tokenNames: {}, networks: {} };
 try {
   manifest = require('./assets/token-icons/manifest.json');
 } catch (_) {
-  manifest = { tokens: {}, networks: {} };
+  manifest = { icons: {}, tokens: {}, tokenNames: {}, networks: {} };
 }
 
 const cleanSymbol = (value) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
 const slug = (value) => String(value || '')
   .trim()
   .toLowerCase()
-  .replace(/\([^)]*\)/g, '')
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-+|-+$/g, '');
 
+// Retained for compatibility with older generated manifests and SafeLedger's
+// user-friendly network-family names.
 const standardNetworkAliases = {
   'bnb': 'binance-smart-chain',
   'bnb-chain': 'binance-smart-chain',
@@ -48,21 +49,35 @@ const standardNetworkAliases = {
   'custom-tokens': 'ethereum'
 };
 
+function resolveStoredIcon(value) {
+  if (!value || typeof value !== 'string') return null;
+  if (value.startsWith('data:image/')) return value; // Version-2 manifest compatibility.
+  return manifest.icons && manifest.icons[value] ? manifest.icons[value] : null;
+}
+
+function lookup(map, key) {
+  return key && map ? resolveStoredIcon(map[key]) : null;
+}
+
 function tokenIcon(symbol) {
-  const safe = cleanSymbol(symbol);
-  return safe && manifest.tokens ? manifest.tokens[safe] || null : null;
+  return lookup(manifest.tokens, cleanSymbol(symbol));
+}
+
+function tokenNameIcon(name) {
+  return lookup(manifest.tokenNames, slug(name));
 }
 
 function networkIcon(name) {
   const normalized = slug(name);
-  if (!normalized || !manifest.networks) return null;
-  const mapped = standardNetworkAliases[normalized] || normalized;
-  return manifest.networks[mapped] || null;
+  if (!normalized) return null;
+  return lookup(manifest.networks, normalized) || lookup(manifest.networks, standardNetworkAliases[normalized]);
 }
 
 exports.getIconUrl = (record) => {
   const item = record || {};
-  return tokenIcon(item.symbol) || networkIcon(item.name) || null;
+  // Explicit symbols remain the strongest signal. For a manually added entry
+  // without a symbol, prefer a matching network name, then a Web3Icons token name.
+  return tokenIcon(item.symbol) || networkIcon(item.name) || tokenNameIcon(item.name) || null;
 };
 
 exports.createIconElement = (record, className = 'token-brand-image') => {
@@ -75,3 +90,6 @@ exports.createIconElement = (record, className = 'token-brand-image') => {
   img.draggable = false;
   return img;
 };
+
+exports.cleanSymbol = cleanSymbol;
+exports.slug = slug;
