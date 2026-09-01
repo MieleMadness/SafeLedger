@@ -7,7 +7,8 @@ const profile = {
   name: 'Estate',
   created: 'created-date',
   modified: 'modified-date',
-  path: 'C:\\secret\\profile-path'
+  path: 'C:\\secret\\profile-path',
+  notes: 'PROFILE-NOTES-SECRET'
 };
 const vaultData = {
   groups: [{
@@ -52,6 +53,7 @@ const safeBinder = recoveryBinder.buildBinder(profile, vaultData, {}, new Date('
 const safeText = JSON.stringify(safeBinder);
 for (const excluded of [
   profile.path,
+  profile.notes,
   'WALLET-PASSWORD-SECRET',
   '123456',
   'RECOVERY-LINK-SECRET',
@@ -81,11 +83,13 @@ for (const expected of [
 assert.deepStrictEqual(safeBinder.privacySelections, []);
 assert.strictEqual(safeBinder.walletCount, 1);
 assert.strictEqual(safeBinder.assetCount, 1);
+assert(!JSON.stringify(safeBinder).includes('"qr":true'), 'Safe-default binder should not request QR output.');
 
 const allOptions = Object.fromEntries(Object.keys(recoveryBinder.DEFAULT_OPTIONS).map((key) => [key, true]));
 const fullBinder = recoveryBinder.buildBinder(profile, vaultData, allOptions, new Date('2026-08-28T12:30:00.000Z'));
 const fullText = JSON.stringify(fullBinder);
 for (const expected of [
+  'PROFILE-NOTES-SECRET',
   'WALLET-PASSWORD-SECRET',
   '123456',
   'RECOVERY-LINK-SECRET',
@@ -99,6 +103,15 @@ for (const expected of [
   'ASSET-CUSTOM-SECRET'
 ]) assert(fullText.includes(expected), `Explicit binder option did not include expected value: ${expected}`);
 
-assert.strictEqual(fullBinder.privacySelections.length, 6);
+assert.strictEqual(fullBinder.privacySelections.length, 6, 'QR output must not create a new privacy category; it mirrors already-selected values.');
+const assetFields = fullBinder.wallets[0].assets[0].fields;
+const publicAddress = assetFields.find((field) => field.label === 'Public address');
+const privateKey = assetFields.find((field) => field.label === 'Private key');
+assert(publicAddress && publicAddress.qr === true, 'Included public addresses should be marked for QR printing when requested.');
+assert(privateKey && privateKey.qr === true, 'Included private keys should be marked for QR printing when requested.');
+assert(!fullBinder.wallets[0].fields.some((field) => field.qr === true), 'Wallet fields without an in-app QR action must not gain QR output.');
+
+const noQrBinder = recoveryBinder.buildBinder(profile, vaultData, Object.assign({}, allOptions, { includeQrCodes: false }), new Date('2026-08-28T12:30:00.000Z'));
+assert(!JSON.stringify(noQrBinder).includes('"qr":true'), 'QR metadata must remain off unless the user checks Print available QR codes.');
 assert.throws(() => recoveryBinder.buildBinder(profile, vaultData, {}, 'bad-date'));
-console.log('PASS Recovery Binder excludes secrets/private financial data by default and includes each category only after explicit opt-in.');
+console.log('PASS Recovery Binder excludes secrets by default, includes Profile notes only by opt-in, and prints QR metadata only for QR-capable selected fields.');
