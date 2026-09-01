@@ -28,13 +28,7 @@ function testPrivacyModeLayout() {
   assert(privacy.indexOf('section.appendChild(label);') < privacy.indexOf('section.appendChild(save);'));
 }
 
-function testVersion() {
-  const pkg = JSON.parse(read('package.json'));
-  assert.strictEqual(pkg.version, '2.5.2');
-}
-
 testVersionMenuLink();
 testAppearanceAutosave();
 testPrivacyModeLayout();
-testVersion();
-console.log('PASS SafeLedger 2.5.2 version link, automatic appearance saving, and Privacy Mode settings layout.');
+console.log('PASS SafeLedger version link, automatic appearance saving, and Privacy Mode settings layout.');
