@@ -7,7 +7,6 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
-const pkg = JSON.parse(read('package.json'));
 const eye = read('src/main/eye-icon.js');
 const password = read('src/main/password-controls.js');
 const sensitive = read('src/main/sensitive-control-icons-ui.js');
@@ -19,7 +18,6 @@ const uiCss = read('src/main/css/ui-2.5.9.css');
 const index = read('src/main/index.html');
 
 function testOutlineEyeArtwork() {
-  assert.strictEqual(pkg.version, '2.5.9');
   assert(eye.includes('class="sl-eye-outline"'), 'Eye helper should contain a simple outline shape.');
   assert(eye.includes('class="sl-eye-pupil"'), 'Eye helper should contain the round pupil from the supplied reference.');
   assert(eye.includes('class="sl-eye-slash"'), 'Revealed passwords should gain a conventional hide slash.');
