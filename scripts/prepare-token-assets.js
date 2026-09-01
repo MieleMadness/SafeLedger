@@ -2,182 +2,214 @@
 
 const fs = require('fs');
 const path = require('path');
-const { pathToFileURL } = require('url');
 
 const projectRoot = path.resolve(__dirname, '..');
-const catalogModule = require(path.join(projectRoot, 'src', 'main', 'wallet-catalog.js'));
-const sourceRoot = path.join(projectRoot, 'node_modules', '@web3icons', 'core', 'dist', 'svgs');
 const outputRoot = path.join(projectRoot, 'src', 'main', 'assets', 'token-icons');
 const manifestPath = path.join(outputRoot, 'manifest.json');
 
-const excludedWallets = new Set([
-  'bitbox02 multi',
-  'coldcard',
-  'keystone',
-  'rabby wallet'
-]);
+const categories = ['tokens', 'networks', 'wallets', 'exchanges'];
+const variants = ['branded', 'background', 'mono'];
 
-const standardNetworkAliases = {
-  'bnb': 'binance-smart-chain',
-  'bnb-chain': 'binance-smart-chain',
-  'bnb-smart-chain': 'binance-smart-chain',
-  'bnb-beacon-chain': 'binance-smart-chain',
-  'avalanche-c-chain': 'avalanche',
-  'arbitrum-one': 'arbitrum',
-  'arbitrum-nova': 'arbitrum',
-  'polygon-zkevm': 'polygon-zkevm',
-  'hyperliquid-evm': 'hyperliquid',
-  'hyperevm': 'hyperliquid',
-  'cronos-evm': 'cronos',
-  'kava-evm': 'kava',
-  'linea-evm': 'linea',
-  'scroll-evm': 'scroll',
-  'telos-evm': 'telos',
-  'plasma-evm': 'plasma',
-  'chiliz-evm': 'chiliz',
-  'evm-networks': 'ethereum',
-  'evm-tokens': 'ethereum',
-  'erc-20-tokens': 'ethereum',
-  'erc-20-evm-tokens': 'ethereum',
-  'spl-tokens': 'solana',
-  'network-tokens': 'ethereum',
-  'trc-20-tokens': 'tron',
-  'bep-20-tokens': 'binance-smart-chain',
-  'cardano-native-tokens': 'cardano',
-  'custom-tokens': 'ethereum'
+// These preserve SafeLedger terminology that is intentionally broader than a
+// single Web3Icons metadata name. They are only installed when the target icon
+// exists in the pinned Web3Icons package.
+const safeLedgerAliases = {
+  networks: {
+    bnb: 'binance-smart-chain',
+    'bnb-chain': 'binance-smart-chain',
+    'bnb-beacon-chain': 'binance-smart-chain',
+    'avalanche-c-chain': 'avalanche',
+    'arbitrum-one': 'arbitrum',
+    'arbitrum-nova': 'arbitrum',
+    'hyperliquid-evm': 'hyper-evm',
+    hyperevm: 'hyper-evm',
+    'evm-networks': 'ethereum',
+    'evm-tokens': 'ethereum',
+    'erc-20-tokens': 'ethereum',
+    'erc-20-evm-tokens': 'ethereum',
+    'spl-tokens': 'solana',
+    'network-tokens': 'ethereum',
+    'trc-20-tokens': 'tron',
+    'bep-20-tokens': 'binance-smart-chain',
+    'cardano-native-tokens': 'cardano',
+    'custom-tokens': 'ethereum'
+  },
+  wallets: {
+    'base-app': 'coinbase',
+    'base-app-coinbase-wallet': 'coinbase',
+    'coinbase-wallet': 'coinbase',
+    'bitbox02-multi': 'bitbox',
+    'trust-wallet': 'trust',
+    'rabby-wallet': 'rabby'
+  }
 };
-
-// SafeLedger catalog names do not always match Web3Icons filenames. Keep the
-// mapping here and mirror it in wallet-icons.js so preparation and rendering
-// resolve the same local artwork without any runtime network access.
-const standardWalletAliases = {
-  'base-app': 'coinbase',
-  'coinbase-wallet': 'coinbase',
-  'bitbox02-multi': 'bitbox',
-  'trust-wallet': 'trust',
-  'rabby-wallet': 'rabby'
-};
-
-const normalize = (value) => String(value || '').trim().toLowerCase();
-const cleanSymbol = (value) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
-const slug = (value) => String(value || '')
-  .trim()
-  .toLowerCase()
-  .replace(/\([^)]*\)/g, '')
-  .replace(/[^a-z0-9]+/g, '-')
-  .replace(/^-+|-+$/g, '');
 
 function toDataUrl(svg) {
   return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
 }
 
-function normalizeIconSource(value, modulePath) {
+function normalizeIconSource(value) {
   if (!value) return null;
-  if (typeof value === 'object') {
-    return normalizeIconSource(value.default || value.src, modulePath);
-  }
+  if (typeof value === 'object') return normalizeIconSource(value.default || value.src);
   if (typeof value !== 'string') return null;
   if (value.startsWith('data:image/')) return value;
   if (/<svg[\s>]/i.test(value)) return toDataUrl(value);
+  return null;
+}
 
-  const possibleFile = path.isAbsolute(value) ? value : path.resolve(path.dirname(modulePath), value);
-  if (fs.existsSync(possibleFile)) {
-    const contents = fs.readFileSync(possibleFile, 'utf8');
-    if (/<svg[\s>]/i.test(contents)) return toDataUrl(contents);
+function lookupKey(value) {
+  return String(value || '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function lookupVariants(value) {
+  const normalized = lookupKey(value);
+  if (!normalized) return [];
+  const compact = normalized.replace(/-/g, '');
+  return compact && compact !== normalized ? [normalized, compact] : [normalized];
+}
+
+function addAlias(aliasMap, value, canonical) {
+  if (!canonical) return;
+  for (const key of lookupVariants(value)) {
+    // Metadata order is meaningful for collisions (tokens are broadly ranked),
+    // so the first exact human-name/symbol match wins rather than changing on
+    // every build because of object enumeration order.
+    if (!aliasMap[key]) aliasMap[key] = canonical;
+  }
+}
+
+function preferredVariants(category) {
+  return category === 'wallets' || category === 'exchanges'
+    ? ['background', 'branded', 'mono']
+    : ['branded', 'background', 'mono'];
+}
+
+function availableKeys(svgCategory) {
+  const keys = new Set();
+  for (const variant of variants) {
+    for (const key of Object.keys(svgCategory && svgCategory[variant] || {})) keys.add(key);
+  }
+  return [...keys].sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
+}
+
+function bestSource(svgCategory, key, category) {
+  for (const variant of preferredVariants(category)) {
+    const source = normalizeIconSource(svgCategory && svgCategory[variant] && svgCategory[variant][key]);
+    if (source) return source;
   }
   return null;
 }
 
-async function loadIcon(type, variant, name) {
-  const base = path.join(sourceRoot, type, variant, `${name}.svg`);
-  const rawPath = base;
-  if (fs.existsSync(rawPath)) {
-    const contents = fs.readFileSync(rawPath, 'utf8');
-    if (/<svg[\s>]/i.test(contents)) return toDataUrl(contents);
-  }
+function outputKey(category, key) {
+  return category === 'tokens' ? String(key).toUpperCase() : String(key);
+}
 
-  const modulePath = `${base}.js`;
-  if (!fs.existsSync(modulePath)) return null;
-  try {
-    const imported = await import(`${pathToFileURL(modulePath).href}?safeledger=${Date.now()}`);
-    return normalizeIconSource(imported.default || imported, modulePath);
-  } catch (error) {
-    console.warn(`Unable to prepare ${type}/${variant}/${name}: ${error.message}`);
-    return null;
+function metadataCanonical(category, entry) {
+  if (category === 'tokens') return String(entry && entry.symbol || '').toUpperCase();
+  return String(entry && entry.id || '');
+}
+
+function metadataValues(category, entry) {
+  const values = [entry && entry.id, entry && entry.name];
+  if (category === 'tokens') values.push(entry && entry.symbol);
+  if (category === 'networks') values.push(entry && entry.shortName);
+  if (entry && entry.filePath && String(entry.filePath).includes(':')) {
+    values.push(String(entry.filePath).split(':').slice(1).join(':'));
+  }
+  return values.filter(Boolean);
+}
+
+function buildCategory(manifest, svgCatalog, category) {
+  const svgCategory = svgCatalog && svgCatalog[category] || {};
+  for (const key of availableKeys(svgCategory)) {
+    const source = bestSource(svgCategory, key, category);
+    if (!source) continue;
+    const canonical = outputKey(category, key);
+    manifest[category][canonical] = source;
+    addAlias(manifest.aliases[category], key, canonical);
+    addAlias(manifest.aliases[category], canonical, canonical);
   }
 }
 
-async function loadBestIcon(type, name) {
-  return (await loadIcon(type, 'branded', name)) ||
-    (await loadIcon(type, 'background', name)) ||
-    (await loadIcon(type, 'mono', name));
+function applyMetadataAliases(manifest, metadata, category) {
+  const entries = Array.isArray(metadata && metadata[category]) ? metadata[category] : [];
+  for (const entry of entries) {
+    const canonical = metadataCanonical(category, entry);
+    if (!canonical || !manifest[category][canonical]) continue;
+    for (const value of metadataValues(category, entry)) {
+      addAlias(manifest.aliases[category], value, canonical);
+    }
+  }
 }
 
-// Wallet backgrounds are preferred because they remain legible on both the
-// navy wallet column and the selected blue row. Branded/mono remain fallbacks.
-async function loadBestWalletIcon(name) {
-  return (await loadIcon('wallets', 'background', name)) ||
-    (await loadIcon('wallets', 'branded', name)) ||
-    (await loadIcon('wallets', 'mono', name));
+function applySafeLedgerAliases(manifest) {
+  for (const [category, aliases] of Object.entries(safeLedgerAliases)) {
+    for (const [alias, target] of Object.entries(aliases)) {
+      const targetKey = category === 'tokens' ? target.toUpperCase() : target;
+      if (manifest[category] && manifest[category][targetKey]) {
+        addAlias(manifest.aliases[category], alias, targetKey);
+      }
+    }
+  }
 }
 
 async function main() {
-  if (!fs.existsSync(sourceRoot)) {
-    throw new Error(`Web3Icons SVG directory was not found: ${sourceRoot}`);
-  }
+  // Importing the generated Web3Icons catalog once is substantially faster than
+  // importing thousands of individual SVG modules. The catalog is generated
+  // from Web3Icons metadata and already includes tokens, networks, wallets and
+  // exchanges, including entries that intentionally reuse another icon type.
+  const core = await import('@web3icons/core');
+  const metadata = await import('@web3icons/common/metadata');
+  const svgCatalog = core && core.svgs;
+  if (!svgCatalog) throw new Error('Web3Icons catalog was not available from @web3icons/core.');
 
   fs.rmSync(outputRoot, { recursive: true, force: true });
   fs.mkdirSync(outputRoot, { recursive: true });
 
-  const tokenSymbols = new Set();
-  const networkNames = new Set();
-  const walletNames = new Set();
+  // Keep the wallet-aware v2 shape for backward compatibility and add exchange
+  // artwork plus metadata aliases as additive fields.
+  const manifest = { version: 2, tokens: {}, networks: {}, wallets: {} };
+  manifest.exchanges = {};
+  manifest.aliases = { tokens: {}, networks: {}, wallets: {}, exchanges: {} };
 
-  for (const wallet of catalogModule.catalog || []) {
-    const walletName = slug(wallet.name);
-    if (walletName) walletNames.add(standardWalletAliases[walletName] || walletName);
+  for (const category of categories) buildCategory(manifest, svgCatalog, category);
+  for (const category of categories) applyMetadataAliases(manifest, metadata, category);
+  applySafeLedgerAliases(manifest);
 
-    // This exclusion only limits the very large asset/network seed list. Wallet
-    // artwork is still prepared above for excluded catalog wallets when a logo
-    // exists in the local Web3Icons package.
-    if (excludedWallets.has(normalize(wallet.name))) continue;
-    for (const entry of wallet.records || []) {
-      const [name, symbol] = entry;
-      const safeSymbol = cleanSymbol(symbol);
-      if (safeSymbol) tokenSymbols.add(safeSymbol);
-      const normalizedName = slug(name);
-      if (normalizedName) networkNames.add(standardNetworkAliases[normalizedName] || normalizedName);
+  const minimums = { tokens: 1000, networks: 100, wallets: 30, exchanges: 20 };
+  for (const category of categories) {
+    const count = Object.keys(manifest[category]).length;
+    if (count < minimums[category]) {
+      throw new Error(`SafeLedger expected the full Web3Icons ${category} catalog, but only prepared ${count}.`);
     }
   }
 
-  const manifest = { version: 2, tokens: {}, networks: {}, wallets: {} };
-
-  for (const symbol of [...tokenSymbols].sort()) {
-    const source = await loadBestIcon('tokens', symbol);
-    if (source) manifest.tokens[symbol] = source;
-  }
-
-  for (const network of [...networkNames].sort()) {
-    const source = await loadBestIcon('networks', network);
-    if (source) manifest.networks[network] = source;
-  }
-
-  for (const wallet of [...walletNames].sort()) {
-    const source = await loadBestWalletIcon(wallet);
-    if (source) manifest.wallets[wallet] = source;
-  }
-
-  if (!manifest.tokens.BTC) {
-    throw new Error('SafeLedger token icon preparation failed: branded/background BTC artwork was not found. Build stopped to prevent an iconless release.');
-  }
-  for (const requiredWallet of ['coinbase', 'exodus', 'ledger', 'metamask', 'phantom', 'trezor']) {
-    if (!manifest.wallets[requiredWallet]) {
-      throw new Error(`SafeLedger wallet icon preparation failed: ${requiredWallet} artwork was not found. Build stopped to prevent a generic-only wallet release.`);
+  for (const required of [
+    ['tokens', 'BTC'], ['tokens', 'ETH'],
+    ['networks', 'ethereum'], ['networks', 'binance-smart-chain'],
+    ['wallets', 'coinbase'], ['wallets', 'ledger'], ['wallets', 'metamask'],
+    ['exchanges', 'binance'], ['exchanges', 'kraken']
+  ]) {
+    const [category, key] = required;
+    if (!String(manifest[category][key] || '').startsWith('data:image/')) {
+      throw new Error(`SafeLedger Web3Icons preparation failed for required ${category} icon: ${key}`);
     }
   }
 
   fs.writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
-  console.log(`Prepared ${Object.keys(manifest.tokens).length} token icons, ${Object.keys(manifest.networks).length} network icons, and ${Object.keys(manifest.wallets).length} wallet icons for SafeLedger.`);
+  console.log(
+    `Prepared complete Web3Icons catalog for SafeLedger: ` +
+    `${Object.keys(manifest.tokens).length} tokens, ` +
+    `${Object.keys(manifest.networks).length} networks, ` +
+    `${Object.keys(manifest.wallets).length} wallets, ` +
+    `${Object.keys(manifest.exchanges).length} exchanges.`
+  );
 }
 
 main().catch((error) => {
