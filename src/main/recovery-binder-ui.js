@@ -108,9 +108,7 @@ async function appendTable(doc, parent, fields) {
     const th = doc.createElement('th');
     th.textContent = field.label;
     const td = doc.createElement('td');
-    const value = doc.createElement('div');
-    value.textContent = String(field.value);
-    td.appendChild(value);
+    td.textContent = String(field.value);
     await appendQr(doc, td, field);
     tr.appendChild(th);
     tr.appendChild(td);
