@@ -59,6 +59,19 @@ function badgeLabel(name) {
   return `${words[0][0]}${words[1][0]}`.toUpperCase();
 }
 
+function fallbackIconMarkup() {
+  return '<svg class="sl-wallet-fallback-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="sl-wallet-fallback-outline" d="M4 7h13a3 3 0 0 1 3 3v8H6a3 3 0 0 1-3-3V6.5A2.5 2.5 0 0 1 5.5 4H17"/><path class="sl-wallet-fallback-clasp" d="M15.5 11H21v4h-5.5a2 2 0 0 1 0-4Z"/><circle class="sl-wallet-fallback-dot" cx="17.5" cy="13" r=".8"/></svg>';
+}
+
+function createFallbackIcon(name) {
+  const fallback = document.createElement('span');
+  fallback.className = 'wallet-list-fallback-icon';
+  fallback.innerHTML = fallbackIconMarkup();
+  fallback.setAttribute('aria-label', `${name || 'Custom'} wallet`);
+  fallback.setAttribute('title', 'Custom wallet');
+  return fallback;
+}
+
 function getIconUrl(wallet) {
   const match = getIconMatch(wallet);
   return match ? match.src : null;
@@ -69,23 +82,10 @@ function createIconElement(wallet, brandClass = 'wallet-list-brand-image') {
   const name = String(wallet && wallet.name || 'Wallet');
   if (match) return web3Icons.createImage(match.src, name, brandClass);
 
-  // SafeLedger's built-in catalog remains usable even when a wallet is absent
-  // from the pinned Web3Icons release. A distinct badge avoids a row of
-  // identical generic outlines while keeping the application fully offline.
-  if (catalogWallet(name)) {
-    const badge = document.createElement('span');
-    badge.className = 'wallet-list-catalog-icon';
-    badge.textContent = badgeLabel(name);
-    badge.setAttribute('aria-label', `${name} wallet`);
-    return badge;
-  }
-
-  // Truly custom names that are not recognized as a Web3 wallet or exchange
-  // use the neutral local wallet outline.
-  const fallback = document.createElement('span');
-  fallback.className = 'glyphicon glyphicon-piggy-bank wallet-list-icon';
-  fallback.setAttribute('aria-label', `${name} wallet`);
-  return fallback;
+  // Never leave an empty or missing-glyph box when SafeLedger does not have
+  // branded artwork. A local SVG wallet communicates a deliberate fallback and
+  // keeps custom/unsupported wallet rows visually aligned while offline.
+  return createFallbackIcon(name);
 }
 
 exports.iconKey = iconKey;
@@ -94,3 +94,5 @@ exports.getIconUrl = getIconUrl;
 exports.createIconElement = createIconElement;
 exports.badgeLabel = badgeLabel;
 exports.catalogWallet = catalogWallet;
+exports.fallbackIconMarkup = fallbackIconMarkup;
+exports.createFallbackIcon = createFallbackIcon;
