@@ -1,0 +1,178 @@
+/* SafeLedger 2.5.8 targeted UI refinements. Loaded last so the requested
+ * interaction sizing wins without reopening the older consolidated themes. */
+
+/* Match focused fields to the same 2px highlight used by Emergency Lock.
+ * The old form-control rule combined a 3px shadow with a second outline,
+ * making text fields look much heavier than every other control. */
+.form-control:focus,
+.form-control:focus-visible {
+  box-shadow: none !important;
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: 0 !important;
+}
+
+/* Password visibility is an icon inside the field, consistent with sensitive
+ * Asset fields. There is no separate Show/Hide Text button row anymore. */
+.password-visibility-shell {
+  position: relative;
+}
+
+.password-visibility-shell .form-control {
+  padding-right: 44px !important;
+}
+
+.password-visibility-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  z-index: 3;
+  transform: translateY(-50%);
+  margin: 0 !important;
+}
+
+.password-visibility-toggle .fa {
+  margin: 0 !important;
+  font-size: 15px;
+  color: var(--sl-icon-blue, var(--sl-primary-strong));
+}
+
+/* The login password field and its strength meter intentionally use half of
+ * the detail-column width. Login occupies the former Show Text control row. */
+.login-password-shell,
+.login-password-strength,
+#loginSecurityControls {
+  width: 50% !important;
+}
+
+#loginSecurityControls {
+  justify-content: flex-start;
+  margin: 6px 0 8px;
+}
+
+.login-submit-button {
+  float: none !important;
+  margin: 0 !important;
+}
+
+.login-password-strength {
+  margin-top: 8px !important;
+}
+
+/* Sensitive display rows use the same eye language as password fields. */
+.secure-field-summary-label > .fa-eye,
+.secure-field-summary-label > .fa-eye-slash {
+  width: 18px;
+  color: var(--sl-icon-blue, var(--sl-primary-strong));
+  text-align: center;
+}
+
+/* A simplified QR glyph: three clear locator squares plus one data mark.
+ * This reads as QR at small sizes without the visual noise of fa-qrcode. */
+.sl-qr-icon {
+  width: 17px;
+  height: 17px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2px;
+  color: var(--sl-icon-purple, currentColor);
+}
+
+.sl-qr-icon-part {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  border: 2px solid currentColor;
+  border-radius: 1px;
+}
+
+.sl-qr-icon-part-4 {
+  width: 4px;
+  height: 4px;
+  align-self: center;
+  justify-self: center;
+  border: 0;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+/* Wallet selection responds to its actual Settings/Profile panel width. A
+ * normal SafeLedger detail column lands at two cards across; larger windows
+ * can grow to three or four, while narrow windows fall back to one. */
+.profile-wallet-picker {
+  container-type: inline-size;
+}
+
+.profile-wallet-template-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px !important;
+  max-height: 360px;
+  padding: 2px 5px 2px 2px;
+}
+
+.profile-wallet-template {
+  min-width: 0;
+  min-height: 58px;
+  align-items: center !important;
+  gap: 9px !important;
+  padding: 9px 10px !important;
+}
+
+.profile-wallet-template input {
+  margin: 0 !important;
+}
+
+.profile-wallet-template-icon,
+.profile-wallet-template .wallet-list-catalog-icon,
+.profile-wallet-template .wallet-list-icon {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  flex: 0 0 30px;
+  object-fit: contain;
+  border-radius: 7px;
+}
+
+.profile-wallet-template .wallet-list-catalog-icon,
+.profile-wallet-template .wallet-list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-wallet-template-copy {
+  overflow: hidden;
+}
+
+.profile-wallet-template-copy > strong,
+.profile-wallet-template-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@container (min-width: 360px) {
+  .profile-wallet-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 680px) {
+  .profile-wallet-template-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 920px) {
+  .profile-wallet-template-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .login-password-shell,
+  .login-password-strength,
+  #loginSecurityControls {
+    width: 100% !important;
+  }
+}
