@@ -2,14 +2,18 @@
 
 const walletCatalog = require('./wallet-catalog');
 
-// These are the wallets SafeLedger currently includes in its automatic
-// starter profile. They remain the preselected "standard" choices, while every
-// wallet in the catalog is available for a user to opt into explicitly.
+// These wallets remain available as optional templates, but are not
+// preselected when a user chooses SafeLedger's Standard setup. Trust Wallet is
+// intentionally part of the Standard setup and must not be added here.
 const standardExclusions = new Set([
   'bitbox02 multi',
   'coldcard',
+  'electrum',
   'keystone',
-  'rabby wallet'
+  'onekey',
+  'rabby wallet',
+  'safepal',
+  'tangem'
 ]);
 
 const normalizeName = (value) => String(value || '').trim().toLowerCase();
