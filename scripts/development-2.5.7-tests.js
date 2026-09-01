@@ -20,6 +20,9 @@ for (const wallet of ['Electrum', 'OneKey', 'SafePal', 'Tangem']) {
 
 assert(templateNames.has('Trust Wallet'), 'Trust Wallet should remain available as a wallet template.');
 assert(standard.has('Trust Wallet'), 'Trust Wallet should be preselected in Standard setup.');
+const standardGroups = profileSetup.buildGroups(new Date(), profileSetup.standardNames());
+assert(standardGroups.some((group) => group && group.name === 'Trust Wallet'),
+  'Building the Standard setup should create a Trust Wallet group.');
 
 assert.deepStrictEqual(backupHealth.ALLOWED_REMINDER_DAYS, [0, 90, 180, 365],
   'Backup reminder intervals should be Off, 3 months, 6 months, or 12 months.');
