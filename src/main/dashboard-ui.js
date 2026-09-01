@@ -1,5 +1,7 @@
 'use strict';
 
+const rendererNavigation = require('./renderer');
+
 function clearArea() {
   const area = document.getElementById('detailArea');
   if (area) area.innerHTML = '';
@@ -29,6 +31,16 @@ function makeStatus(status) {
   badge.className = `dashboard-status ${statusClass(status)}`;
   badge.textContent = status;
   return badge;
+}
+
+function openWallet(item = {}) {
+  const navigate = rendererNavigation && rendererNavigation._test && rendererNavigation._test.navigateGlobalResult;
+  if (typeof navigate !== 'function') return;
+  navigate({
+    type: 'wallet',
+    profileFile: String(item.profileFile || ''),
+    walletIndex: Number(item.walletIndex)
+  });
 }
 
 async function openPortableStorageFolder() {
@@ -69,7 +81,7 @@ function makeHealthTitle(titleText, options = {}) {
   return title;
 }
 
-function appendWalletList(section, items, emptyText, showDate) {
+function appendWalletList(section, items, emptyText, showDate, actionable = false) {
   if (!items.length) {
     const empty = document.createElement('p');
     empty.className = 'dashboard-empty';
@@ -80,14 +92,20 @@ function appendWalletList(section, items, emptyText, showDate) {
   const list = document.createElement('div');
   list.className = 'dashboard-list';
   for (const item of items) {
-    const row = document.createElement('div');
-    row.className = 'dashboard-list-row';
-    const main = document.createElement('div');
+    const row = document.createElement(actionable ? 'button' : 'div');
+    row.className = `dashboard-list-row${actionable ? ' dashboard-list-row-action' : ''}`;
+    if (actionable) {
+      row.type = 'button';
+      row.title = `Open ${item.walletName} to fix recovery readiness`;
+      row.setAttribute('aria-label', `Open ${item.walletName} in ${item.profileName} to fix recovery readiness`);
+      row.addEventListener('click', () => openWallet(item));
+    }
+    const main = document.createElement(actionable ? 'span' : 'div');
     main.className = 'dashboard-list-main';
-    const title = document.createElement('div');
+    const title = document.createElement(actionable ? 'span' : 'div');
     title.className = 'dashboard-list-title';
     title.textContent = item.walletName;
-    const meta = document.createElement('div');
+    const meta = document.createElement(actionable ? 'span' : 'div');
     meta.className = 'dashboard-list-meta';
     meta.textContent = showDate && item.lastVerified
       ? `${item.profileName} • Verified ${new Date(item.lastVerified).toLocaleDateString()}`
@@ -222,7 +240,7 @@ function render(summary, device = {}) {
   const attentionTitle = document.createElement('h2');
   attentionTitle.textContent = 'Needs Attention';
   attention.appendChild(attentionTitle);
-  appendWalletList(attention, summary.needsAttention || [], 'Everything documented is currently ready.', false);
+  appendWalletList(attention, summary.needsAttention || [], 'Everything documented is currently ready.', false, true);
   area.appendChild(attention);
 
   const recent = document.createElement('section');
@@ -273,4 +291,4 @@ window.addEventListener('DOMContentLoaded', () => {
 
 exports.show = showDashboard;
 exports.render = render;
-exports._test = { formatBytes, backupAgeLabel, renderDeviceHealth, makeStatus, makeHealthTitle, openPortableStorageFolder };
+exports._test = { formatBytes, backupAgeLabel, renderDeviceHealth, makeStatus, makeHealthTitle, openPortableStorageFolder, openWallet, appendWalletList };
