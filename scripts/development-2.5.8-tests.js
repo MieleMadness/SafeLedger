@@ -54,13 +54,13 @@ function testLoginAndSensitiveUiContract() {
   const css = read('src/main/css/ui-2.5.8.css');
   const index = read('src/main/index.html');
 
-  assert(password.includes("show.innerHTML = '<i class=\"fa fa-eye\" aria-hidden=\"true\"></i>';"),
-    'Password reveal should be an eye icon without Show Text copy.');
+  assert(password.includes("show.innerHTML = eyeIcon.markup(false);"),
+    'Password reveal should remain icon-only without Show Text copy.');
   assert(!password.includes('Show Text'), 'Visible Show Text controls should be retired.');
   assert(password.includes("input.id === 'masterCryptoInput' ? moveLoginButtonAfterPassword(shell) : null"),
     'Login should move into the former password-control row.');
-  assert(password.includes("show.innerHTML = `<i class=\"fa ${hidden ? 'fa-eye-slash' : 'fa-eye'}\""),
-    'Password visibility should switch between eye and eye-slash icons.');
+  assert(password.includes('show.innerHTML = eyeIcon.markup(hidden);'),
+    'Password visibility should keep a dedicated reveal/hide icon state.');
 
   assert(/\.login-password-shell,\s*\.login-password-strength,\s*#loginSecurityControls/.test(css),
     'Login password, meter, and action row should share the compact width contract.');
@@ -70,8 +70,8 @@ function testLoginAndSensitiveUiContract() {
   assert(css.includes('outline: 2px solid var(--sl-primary) !important;'),
     'Field focus should match the two-pixel Emergency Lock highlight.');
 
-  assert(sensitive.includes("details.open ? 'fa fa-eye-slash' : 'fa fa-eye'"),
-    'Sensitive information reveal controls should use eye icons.');
+  assert(sensitive.includes('icon.innerHTML = eyeIcon.markup(details.open);'),
+    'Sensitive information reveal controls should use the shared eye icon.');
   assert(sensitive.includes("icon.className = 'sl-qr-icon'"),
     'QR actions should use the simplified SafeLedger QR glyph.');
   assert(css.includes('.sl-qr-icon-part-4'), 'The simplified QR glyph should have dedicated low-noise styling.');
