@@ -103,7 +103,7 @@ function render(params = {}) {
       area,
       'div',
       'recovery-drill-warning',
-      'A recovery method is not documented yet. You can review the checklist, but SafeLedger will not mark Test Recovery complete until recovery information or a recovery-material location is documented for this wallet.'
+      'A recovery method is not documented yet. You can still complete this Test Recovery checklist, but Recovery Readiness will remain incomplete until recovery information or a recovery-material location is documented for this wallet.'
     );
   }
 
@@ -141,7 +141,6 @@ function render(params = {}) {
 
   const allConfirmed = () => checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
   const complete = (_event, button) => {
-    if (!eligible) return alert('Document a recovery method or recovery-material location before completing Test Recovery.');
     if (!allConfirmed()) return alert('Confirm every Test Recovery step before marking the test complete.');
     if (button) button.disabled = true;
     if (typeof params.onComplete === 'function') params.onComplete(recoveryDrill.completionPatch(), button);
@@ -166,7 +165,7 @@ function render(params = {}) {
   const dock = document.getElementById('detailActionArea');
   const completeButton = dock && dock.querySelector('[aria-label="Complete recovery drill"]');
   const syncCompleteState = () => {
-    if (completeButton) completeButton.disabled = !eligible || !allConfirmed();
+    if (completeButton) completeButton.disabled = !allConfirmed();
   };
   checkboxes.forEach((checkbox) => checkbox.addEventListener('change', syncCompleteState));
   syncCompleteState();
