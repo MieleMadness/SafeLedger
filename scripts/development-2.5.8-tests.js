@@ -50,6 +50,7 @@ function testIconBackedWalletPickerAndStandardSetup() {
 
 function testLoginAndSensitiveUiContract() {
   const password = read('src/main/password-controls.js');
+  const security = read('src/main/security-ui.js');
   const sensitive = read('src/main/sensitive-control-icons-ui.js');
   const css = read('src/main/css/ui-2.5.8.css');
   const index = read('src/main/index.html');
@@ -70,8 +71,10 @@ function testLoginAndSensitiveUiContract() {
   assert(css.includes('outline: 2px solid var(--sl-primary) !important;'),
     'Field focus should match the two-pixel Emergency Lock highlight.');
 
-  assert(sensitive.includes('icon.innerHTML = eyeIcon.markup(details.open);'),
-    'Sensitive information reveal controls should use the shared eye icon.');
+  assert(security.includes('control.innerHTML = eyeIcon.markup(hidden);'),
+    'Editable sensitive fields should use the shared eye icon.');
+  assert(security.includes("stateIcon.className = details.open ? 'fa fa-minus' : 'fa fa-plus';"),
+    'View-mode sensitive rows should use plus/minus disclosure icons.');
   assert(sensitive.includes("icon.className = 'sl-qr-icon'"),
     'QR actions should use the simplified SafeLedger QR glyph.');
   assert(css.includes('.sl-qr-icon-part-4'), 'The simplified QR glyph should have dedicated low-noise styling.');
