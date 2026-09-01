@@ -64,7 +64,8 @@ function testScreenshotWalletsNeverUseGenericOutline() {
     }
 
     const custom = walletIcons.createIconElement({ name: 'My Custom Cold Storage' });
-    assert(String(custom.className).includes('glyphicon-piggy-bank'), 'Only an unknown/custom wallet should use the neutral wallet outline.');
+    assert(String(custom.className).includes('wallet-list-fallback-icon'),
+      'An unknown/custom wallet should use the visible local SVG wallet fallback.');
   } finally {
     global.document = previousDocument;
   }
@@ -88,4 +89,4 @@ testPreparedWalletManifest();
 testWalletResolverAndAliases();
 testScreenshotWalletsNeverUseGenericOutline();
 testWalletListUsesResolver();
-console.log('PASS SafeLedger branded/offline wallet icons, catalog-specific fallbacks, and full Web3 catalog preparation.');
+console.log('PASS SafeLedger branded/offline wallet icons, catalog-specific fallbacks, custom SVG fallback, and full Web3 catalog preparation.');
