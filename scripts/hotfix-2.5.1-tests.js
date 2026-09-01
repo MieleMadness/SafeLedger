@@ -184,7 +184,13 @@ function testSemanticContrast() {
 
 function testVersion() {
   const pkg = JSON.parse(read('package.json'));
-  assert.strictEqual(pkg.version, '2.5.1');
+  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(pkg.version);
+  assert(match, 'SafeLedger package version must remain semantic x.y.z');
+  const [major, minor, patch] = match.slice(1).map(Number);
+  assert(
+    major > 2 || (major === 2 && (minor > 5 || (minor === 5 && patch >= 1))),
+    `SafeLedger 2.5.1 hotfix coverage must remain active in later releases (current ${pkg.version})`
+  );
 }
 
 (async () => {

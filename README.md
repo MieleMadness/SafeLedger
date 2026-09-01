@@ -8,9 +8,9 @@ SafeLedger does not require a cloud account, subscription, license server, or ne
 
 ### Current stable release: SafeLedger 2.5.0
 
-SafeLedger **2.5.0** is the version currently merged into protected `master`.
+SafeLedger **2.5.0** remains the latest tagged public release. Protected `master` includes the reviewed 2.5.1 hotfix work. SafeLedger 2.5.2 is being tested on a pull-request branch and will **not** be merged to `master` until hands-on testing is approved.
 
-The current release includes the SafeLedger 2.1 continuity/security foundation, 2.2 runtime modernization, 2.3 device-security layer, 2.4 Recovery Intelligence & Validation, and 2.5 Distribution, Trust & Open Source Readiness work.
+The current release line includes the SafeLedger 2.1 continuity/security foundation, 2.2 runtime modernization, 2.3 device-security layer, 2.4 Recovery Intelligence & Validation, and 2.5 Distribution, Trust & Open Source Readiness work.
 
 Key capabilities include:
 
@@ -57,7 +57,7 @@ Key capabilities include:
 - User-facing official-download verification guidance in `RELEASE-VERIFICATION.md`
 
 > [!IMPORTANT]
-> SafeLedger **2.6** is the next planned release and is intentionally scoped to **macOS Apple Silicon (`arm64`) only**. Intel/x64 Macs, universal binaries, and Rosetta compatibility are not 2.6 targets.
+> The next approved update promoted to protected `master` will move SafeLedger to **2.6.0**. Current 2.5.x work remains a test candidate until hands-on approval. macOS Apple Silicon support remains planned platform work, but is not the sole scope of the 2.6 version line.
 
 ## Release roadmap
 
@@ -130,11 +130,11 @@ Included:
 
 2.5 does not change the vault crypto format, Argon2id behavior, backup compatibility, portable data layout, device locking, Recovery Intelligence, or local-first/offline operating model.
 
-### SafeLedger 2.6 — macOS Apple Silicon Distribution & Platform Hardening
+### SafeLedger 2.6 — Next Master Release & Platform Expansion
 
-**Planned target.** SafeLedger 2.6 is intentionally macOS **arm64-only**.
+**Next approved master version.** Current 2.5.x test-candidate work must pass automated validation and hands-on testing before it is promoted. When approved changes are merged into protected `master`, the application version will move to **2.6.0**.
 
-Planned focus includes Apple Silicon packaging, Developer ID signing, notarization/stapling, Gatekeeper validation, macOS lock/sleep/resume behavior, removable-storage handling, and preserving `SafeLedgerData` beside the application. Intel/x64, universal binaries, and Rosetta compatibility are explicitly out of scope.
+The 2.6 line can include approved product improvements in addition to future platform work. Planned macOS work remains focused on Apple Silicon packaging, Developer ID signing, notarization/stapling, Gatekeeper validation, macOS lock/sleep/resume behavior, removable-storage handling, and preserving `SafeLedgerData` beside the application. Intel/x64 Macs, universal binaries, and Rosetta compatibility remain outside the current macOS target.
 
 ## How SafeLedger is organized
 
@@ -177,6 +177,63 @@ Assets can store information such as:
 - Private key, when you choose to store one
 - Notes
 - Custom fields
+
+## Automatic wallet and asset icons
+
+SafeLedger bundles the complete compatible icon registry from its pinned local `@web3icons/core` / `@web3icons/common` dependency during the build. **No icon is downloaded from the internet while SafeLedger is running.** The starter Wallet and Asset lists do not limit icon support: if a user manually creates an entry that matches artwork in the bundled registry, SafeLedger uses it automatically. Unknown entries fall back to SafeLedger's generic wallet/asset icon.
+
+The current 2.5.2 test candidate prepares **2,091 unique Web3Icons artworks**, providing **1,849 token-symbol triggers**, **2,303 token-name triggers**, **381 network-name triggers**, and **69 wallet-name triggers**. These counts come from the pinned icon package used by the build and can change when that dependency is intentionally updated in a future release.
+
+### Wallet icon triggers
+
+Wallet matching ignores capitalization and normalizes spaces and punctuation. SafeLedger also understands common forms such as `Atomic Wallet`, `WalletConnect`, and `MyEtherWallet`, even when the underlying icon ID uses slightly different spacing.
+
+The bundled wallet registry currently includes these wallet names/brands:
+
+`alfa1`, `Alpha Wallet`, `Argent X`, `Backpack`, `Clave`, `Coin98`, `Coinbase Wallet`, `Enkrypt`, `imToken`, `Kraken Wallet`, `Ledger`, `Lit Protocol`, `MetaMask`, `Multis`, `MyEtherWallet`, `Obvious Wallet`, `OKX Wallet`, `Phantom`, `Pillar`, `Portal`, `Rabby`, `Rainbow`, `Ronin`, `Safe Wallet`, `Sender`, `Sequence`, `Soul`, `Squads`, `Token Pocket`, `Trezor`, `Trust Wallet`, `Unipass`, `Venly`, `Wallet3`, `Wallet Connect`, `XDEFI`, `Zengo`, `Zerion`, `Atomic`, `BitBox`, `Blue Wallet`, `Exodus`, `Glow`, `Keplr`, `Kukai`, `Solflare`, `Temple`, `Pecunity`, `Ambire`, `Cypherock`, and `Daimo Pay`.
+
+SafeLedger also adds these convenience aliases:
+
+- `Base App` and `Base App (Coinbase Wallet)` → Coinbase Wallet
+- `BitBox02` and `BitBox02 Multi` → BitBox
+- `Rabby Wallet` → Rabby
+- A trailing `Wallet` is ignored when the shorter bundled brand exists, so names such as `Atomic Wallet` and `Coin98 Wallet` resolve automatically
+- Compact punctuation/spacing differences are tolerated, so names such as `WalletConnect` and `MyEtherWallet` resolve to their bundled entries
+
+The default SafeLedger catalog currently includes some wallet brands for which this pinned Web3Icons version does not provide matching artwork, including `Tangem`, `Keystone`, `OneKey`, `COLDCARD`, `SafePal`, and `Electrum`. Those remain fully usable and display SafeLedger's generic wallet icon.
+
+### Asset icon triggers
+
+For Assets, SafeLedger checks in this order:
+
+1. **Symbol** — for example `BTC`, `ETH`, `SOL`, or `SHIB`.
+2. **Network name** — for example `Bitcoin`, `Ethereum`, `Base`, `Arbitrum`, or `Shibarium`.
+3. **Token/coin name** — for example `Shiba Inu` when the Symbol field is blank or does not resolve.
+
+The complete bundled registry currently exposes **1,849 symbol triggers**, **2,303 token-name triggers**, and **381 network-name triggers**. This means manually added coins/tokens are not restricted to the assets seeded by a particular wallet.
+
+Common symbol examples include `BTC`, `ETH`, `SOL`, `USDT`, `USDC`, `XRP`, `ADA`, `BNB`, `DOGE`, `AVAX`, `ARB`, `POL`, `LINK`, `LTC`, `XLM`, `XMR`, and `SHIB`. Symbols are normalized to uppercase before lookup.
+
+Common name/network examples include `Bitcoin`, `Ethereum`, `Solana`, `Base`, `Arbitrum`, `Avalanche`, `Polygon`, `Shibarium`, `BNB Smart Chain`, `TRON`, `Cardano`, and `Shiba Inu`.
+
+SafeLedger also recognizes these convenience network-family names:
+
+- `BNB`, `BNB Chain`, `BNB Smart Chain`, `BNB Beacon Chain` → Binance Smart Chain
+- `Avalanche C-Chain` → Avalanche
+- `Cronos EVM` → Cronos
+- `Kava EVM` → Kava
+- `Linea EVM` → Linea
+- `Scroll EVM` → Scroll
+- `Telos EVM` → Telos
+- `Plasma EVM` → Plasma
+- `Chiliz EVM` → Chiliz
+- `EVM Networks`, `EVM Tokens`, `ERC-20 Tokens`, `ERC-20 / EVM Tokens`, `Network Tokens`, `Custom Tokens` → Ethereum
+- `SPL Tokens` → Solana
+- `TRC-20 Tokens` → TRON
+- `BEP-20 Tokens` → Binance Smart Chain
+- `Cardano Native Tokens` → Cardano
+
+If the Symbol and Name both match available artwork, **the Symbol wins** because it is the most explicit user-entered identifier. If no bundled match exists, SafeLedger simply displays the generic asset icon and continues working normally.
 
 ## Portable data layout
 
@@ -372,7 +429,7 @@ Release changes are expected to pass regression, crypto, GUI, SBOM, distribution
 - `RELEASE-2.5.md` — released Distribution, Trust & Open Source Readiness
 - `RELEASE-VERIFICATION.md` — official download verification guidance
 
-The SafeLedger 2.6 macOS Apple Silicon plan is maintained on its development branch until that release work is ready to move onto `master`.
+SafeLedger 2.6 planning remains on development/test branches until changes pass automated validation and hands-on testing and are explicitly approved for protected `master`.
 
 ## Recommended operating practices
 
