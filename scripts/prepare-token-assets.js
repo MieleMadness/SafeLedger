@@ -47,6 +47,17 @@ const standardNetworkAliases = {
   'custom-tokens': 'ethereum'
 };
 
+// SafeLedger catalog names do not always match Web3Icons filenames. Keep the
+// mapping here and mirror it in wallet-icons.js so preparation and rendering
+// resolve the same local artwork without any runtime network access.
+const standardWalletAliases = {
+  'base-app': 'coinbase',
+  'coinbase-wallet': 'coinbase',
+  'bitbox02-multi': 'bitbox',
+  'trust-wallet': 'trust',
+  'rabby-wallet': 'rabby'
+};
+
 const normalize = (value) => String(value || '').trim().toLowerCase();
 const cleanSymbol = (value) => String(value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '');
 const slug = (value) => String(value || '')
@@ -102,6 +113,14 @@ async function loadBestIcon(type, name) {
     (await loadIcon(type, 'mono', name));
 }
 
+// Wallet backgrounds are preferred because they remain legible on both the
+// navy wallet column and the selected blue row. Branded/mono remain fallbacks.
+async function loadBestWalletIcon(name) {
+  return (await loadIcon('wallets', 'background', name)) ||
+    (await loadIcon('wallets', 'branded', name)) ||
+    (await loadIcon('wallets', 'mono', name));
+}
+
 async function main() {
   if (!fs.existsSync(sourceRoot)) {
     throw new Error(`Web3Icons SVG directory was not found: ${sourceRoot}`);
@@ -112,8 +131,15 @@ async function main() {
 
   const tokenSymbols = new Set();
   const networkNames = new Set();
+  const walletNames = new Set();
 
   for (const wallet of catalogModule.catalog || []) {
+    const walletName = slug(wallet.name);
+    if (walletName) walletNames.add(standardWalletAliases[walletName] || walletName);
+
+    // This exclusion only limits the very large asset/network seed list. Wallet
+    // artwork is still prepared above for excluded catalog wallets when a logo
+    // exists in the local Web3Icons package.
     if (excludedWallets.has(normalize(wallet.name))) continue;
     for (const entry of wallet.records || []) {
       const [name, symbol] = entry;
@@ -124,7 +150,7 @@ async function main() {
     }
   }
 
-  const manifest = { version: 1, tokens: {}, networks: {} };
+  const manifest = { version: 2, tokens: {}, networks: {}, wallets: {} };
 
   for (const symbol of [...tokenSymbols].sort()) {
     const source = await loadBestIcon('tokens', symbol);
@@ -136,12 +162,22 @@ async function main() {
     if (source) manifest.networks[network] = source;
   }
 
+  for (const wallet of [...walletNames].sort()) {
+    const source = await loadBestWalletIcon(wallet);
+    if (source) manifest.wallets[wallet] = source;
+  }
+
   if (!manifest.tokens.BTC) {
     throw new Error('SafeLedger token icon preparation failed: branded/background BTC artwork was not found. Build stopped to prevent an iconless release.');
   }
+  for (const requiredWallet of ['coinbase', 'exodus', 'ledger', 'metamask', 'phantom', 'trezor']) {
+    if (!manifest.wallets[requiredWallet]) {
+      throw new Error(`SafeLedger wallet icon preparation failed: ${requiredWallet} artwork was not found. Build stopped to prevent a generic-only wallet release.`);
+    }
+  }
 
   fs.writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
-  console.log(`Prepared ${Object.keys(manifest.tokens).length} token icons and ${Object.keys(manifest.networks).length} network icons for SafeLedger.`);
+  console.log(`Prepared ${Object.keys(manifest.tokens).length} token icons, ${Object.keys(manifest.networks).length} network icons, and ${Object.keys(manifest.wallets).length} wallet icons for SafeLedger.`);
 }
 
 main().catch((error) => {
