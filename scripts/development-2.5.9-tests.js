@@ -9,7 +9,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 const eye = read('src/main/eye-icon.js');
 const password = read('src/main/password-controls.js');
-const sensitive = read('src/main/sensitive-control-icons-ui.js');
+const security = read('src/main/security-ui.js');
 const profile = read('src/main/profile.js');
 const binder = read('src/main/recovery-binder.js');
 const binderUi = read('src/main/recovery-binder-ui.js');
@@ -24,7 +24,9 @@ function testOutlineEyeArtwork() {
   assert(password.includes("const eyeIcon = require('./eye-icon');"));
   assert(password.includes('show.innerHTML = eyeIcon.markup(false);'));
   assert(password.includes('show.innerHTML = eyeIcon.markup(hidden);'));
-  assert(sensitive.includes('icon.innerHTML = eyeIcon.markup(details.open);'));
+  assert(security.includes("const eyeIcon = require('./eye-icon');"));
+  assert(security.includes('button.innerHTML = eyeIcon.markup(false);'));
+  assert(security.includes('control.innerHTML = eyeIcon.markup(hidden);'));
   assert(uiCss.includes('.sl-eye-svg'));
   assert(uiCss.includes('.sl-eye-pupil'));
   assert(uiCss.includes('.password-visibility-toggle'));
@@ -62,4 +64,4 @@ function testRecoveryBinderDarkModeAndQrPrinting() {
 testOutlineEyeArtwork();
 testProfileNotes();
 testRecoveryBinderDarkModeAndQrPrinting();
-console.log('PASS SafeLedger 2.5.9 outline-eye controls, Profile Notes, dark Recovery Binder, and opt-in QR printing.');
+console.log('PASS SafeLedger outline-eye edit controls, Profile Notes, dark Recovery Binder, and opt-in QR printing.');
