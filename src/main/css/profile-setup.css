@@ -1,0 +1,172 @@
+/* Profile creation templates and explicit Recovery Dashboard status actions. */
+
+.profile-setup-section {
+  min-width: 0;
+  margin: var(--sl-space-2, 8px) 0 0;
+  padding: var(--sl-space-3, 12px);
+  border: 1px solid var(--sl-border, rgba(255, 255, 255, .22));
+  border-radius: var(--sl-radius, 8px);
+}
+
+.profile-setup-section legend {
+  width: auto;
+  margin: 0 0 var(--sl-space-2, 8px);
+  padding: 0 4px;
+  border: 0;
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.profile-setup-intro {
+  margin: 0 0 var(--sl-space-3, 12px);
+  color: var(--sl-text-muted, inherit);
+  font-size: .92rem;
+  line-height: 1.45;
+}
+
+.profile-setup-choices {
+  display: grid;
+  gap: var(--sl-space-2, 8px);
+}
+
+.profile-setup-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--sl-border, rgba(255, 255, 255, .22));
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.profile-setup-choice:has(input:checked) {
+  border-color: var(--sl-primary, #2f6fed);
+  background: var(--sl-primary-soft, rgba(47, 111, 237, .12));
+}
+
+.profile-setup-choice input,
+.profile-wallet-template input {
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.profile-setup-choice-copy,
+.profile-wallet-template-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-setup-choice-copy > span,
+.profile-wallet-template-copy > span {
+  color: var(--sl-text-muted, inherit);
+  font-size: .84rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.profile-wallet-picker {
+  margin-top: var(--sl-space-3, 12px);
+  padding-top: var(--sl-space-3, 12px);
+  border-top: 1px solid var(--sl-border, rgba(255, 255, 255, .22));
+}
+
+.profile-wallet-picker[hidden] {
+  display: none !important;
+}
+
+.profile-wallet-picker-header,
+.profile-wallet-picker-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-wallet-picker-header {
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.profile-wallet-selection-count {
+  color: var(--sl-text-muted, inherit);
+  font-size: .82rem;
+  white-space: nowrap;
+}
+
+.profile-wallet-picker-toolbar {
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.profile-wallet-template-grid {
+  display: grid;
+  max-height: 280px;
+  gap: 6px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.profile-wallet-template {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  margin: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--sl-border, rgba(255, 255, 255, .18));
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.profile-wallet-template:has(input:checked) {
+  border-color: var(--sl-primary, #2f6fed);
+  background: var(--sl-primary-soft, rgba(47, 111, 237, .10));
+}
+
+/* Needs Attention exposes two sibling actions: the wallet description and the
+ * status pill. Both open the exact profile/wallet without nesting buttons. */
+.dashboard-list-row-action {
+  cursor: default;
+}
+
+.dashboard-list-main-action {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-list-main-action:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--sl-primary, #2f6fed) !important;
+  outline-offset: 3px;
+}
+
+/* The Recovery Dashboard status itself is now an action. A user can click the
+ * Incomplete / Needs Review pill to open the exact wallet that needs work. */
+.dashboard-status-action {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+.dashboard-status-action:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.dashboard-status-action:focus-visible {
+  outline: 2px solid var(--sl-primary, #2f6fed) !important;
+  outline-offset: 2px;
+}

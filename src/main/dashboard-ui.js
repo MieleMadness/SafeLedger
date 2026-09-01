@@ -26,10 +26,17 @@ function statusClass(status) {
   return status === 'Ready' ? 'is-ready' : status === 'Needs Review' ? 'is-review' : 'is-incomplete';
 }
 
-function makeStatus(status) {
-  const badge = document.createElement('span');
-  badge.className = `dashboard-status ${statusClass(status)}`;
+function makeStatus(status, options = {}) {
+  const actionable = typeof options.onActivate === 'function';
+  const badge = document.createElement(actionable ? 'button' : 'span');
+  badge.className = `dashboard-status ${statusClass(status)}${actionable ? ' dashboard-status-action' : ''}`;
   badge.textContent = status;
+  if (actionable) {
+    badge.type = 'button';
+    badge.title = options.title || 'Open wallet';
+    badge.setAttribute('aria-label', options.ariaLabel || options.title || 'Open wallet');
+    badge.addEventListener('click', options.onActivate);
+  }
   return badge;
 }
 
@@ -92,20 +99,22 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
   const list = document.createElement('div');
   list.className = 'dashboard-list';
   for (const item of items) {
-    const row = document.createElement(actionable ? 'button' : 'div');
+    const row = document.createElement('div');
     row.className = `dashboard-list-row${actionable ? ' dashboard-list-row-action' : ''}`;
+
+    const main = document.createElement(actionable ? 'button' : 'div');
+    main.className = `dashboard-list-main${actionable ? ' dashboard-list-main-action' : ''}`;
     if (actionable) {
-      row.type = 'button';
-      row.title = `Open ${item.walletName} to fix recovery readiness`;
-      row.setAttribute('aria-label', `Open ${item.walletName} in ${item.profileName} to fix recovery readiness`);
-      row.addEventListener('click', () => openWallet(item));
+      main.type = 'button';
+      main.title = `Open ${item.walletName} to fix recovery readiness`;
+      main.setAttribute('aria-label', `Open ${item.walletName} in ${item.profileName} to fix recovery readiness`);
+      main.addEventListener('click', () => openWallet(item));
     }
-    const main = document.createElement(actionable ? 'span' : 'div');
-    main.className = 'dashboard-list-main';
-    const title = document.createElement(actionable ? 'span' : 'div');
+
+    const title = document.createElement('div');
     title.className = 'dashboard-list-title';
     title.textContent = item.walletName;
-    const meta = document.createElement(actionable ? 'span' : 'div');
+    const meta = document.createElement('div');
     meta.className = 'dashboard-list-meta';
     meta.textContent = showDate && item.lastVerified
       ? `${item.profileName} • Verified ${new Date(item.lastVerified).toLocaleDateString()}`
@@ -113,7 +122,11 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
     main.appendChild(title);
     main.appendChild(meta);
     row.appendChild(main);
-    row.appendChild(makeStatus(item.status));
+    row.appendChild(makeStatus(item.status, actionable ? {
+      onActivate: () => openWallet(item),
+      title: `Open ${item.walletName} to resolve recovery issues`,
+      ariaLabel: `${item.status}. Open ${item.walletName} in ${item.profileName} to resolve recovery issues`
+    } : {}));
     list.appendChild(row);
   }
   section.appendChild(list);
