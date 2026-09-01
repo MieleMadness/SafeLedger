@@ -180,34 +180,37 @@ async function testDeviceSecurityEvents() {
 
 async function testBackupAgeSettings() {
   const now = Date.parse('2026-08-28T12:00:00.000Z');
-  const current = backupHealth.ageState('2026-08-08T12:00:00.000Z', 30, now);
-  const due = backupHealth.ageState('2026-07-29T12:00:00.000Z', 30, now);
-  const never = backupHealth.ageState(null, 30, now);
+  const current = backupHealth.ageState(new Date(now - (89 * 86400000)).toISOString(), 90, now);
+  const due = backupHealth.ageState(new Date(now - (90 * 86400000)).toISOString(), 90, now);
+  const never = backupHealth.ageState(null, 90, now);
   assert.strictEqual(current.state, 'current');
-  assert.strictEqual(current.ageDays, 20);
+  assert.strictEqual(current.ageDays, 89);
   assert.strictEqual(due.state, 'due');
-  assert.strictEqual(due.ageDays, 30);
+  assert.strictEqual(due.ageDays, 90);
   assert.strictEqual(never.state, 'never');
   assert.strictEqual(backupHealth.ageState('2026-01-01T00:00:00.000Z', 0, now).state, 'current');
-  assert.strictEqual(backupHealth.normalizeReminderDays(45), 30);
+  assert.deepStrictEqual(backupHealth.ALLOWED_REMINDER_DAYS, [0, 90, 180, 365]);
+  assert.strictEqual(backupHealth.normalizeReminderDays(45), 90);
+  assert.strictEqual(backupHealth.normalizeReminderDays(30), 90, 'retired 30-day reminders should migrate to 3 months');
+  assert.strictEqual(backupHealth.normalizeReminderDays(60), 90, 'retired 60-day reminders should migrate to 3 months');
 
   const normalized = settingsManager._test.normalizeSettings({
     lastBackupAt: '2026-08-20T10:00:00Z',
     lastVerifiedBackupAt: 'not-a-date',
     lastVerifiedBackupCreatedAt: '2026-08-19T10:00:00Z',
-    backupReminderDays: 60
+    backupReminderDays: 180
   }, now);
   assert.strictEqual(normalized.lastBackupAt, '2026-08-20T10:00:00.000Z');
   assert.strictEqual(normalized.lastVerifiedBackupAt, null);
   assert.strictEqual(normalized.lastVerifiedBackupCreatedAt, '2026-08-19T10:00:00.000Z');
-  assert.strictEqual(normalized.backupReminderDays, 60);
+  assert.strictEqual(normalized.backupReminderDays, 180);
   assert(!Object.prototype.hasOwnProperty.call(normalized, 'backupPath'));
 
   const legacy = settingsManager._test.normalizeSettings({}, now);
   assert.strictEqual(legacy.lastBackupAt, null);
   assert.strictEqual(legacy.lastVerifiedBackupAt, null);
   assert.strictEqual(legacy.lastVerifiedBackupCreatedAt, null);
-  assert.strictEqual(legacy.backupReminderDays, 30);
+  assert.strictEqual(legacy.backupReminderDays, 90);
 }
 
 function testStaticBootstrapBoundary() {
@@ -244,7 +247,7 @@ function testStaticBootstrapBoundary() {
   assert(rendererSecurity.includes("ipc.invoke('device-record-backup-verified'"));
   assert(rendererSecurity.includes("ipc.invoke('device-reset-storage-identity')"));
   assert(settingsUi.includes("makeSection('Device & Storage Security')"));
-  assert(settingsUi.includes("[0, 'Off'], [30, '30 days'], [60, '60 days'], [90, '90 days']"));
+  assert(settingsUi.includes("[0, 'Off'], [90, '3 months'], [180, '6 months'], [365, '12 months']"));
   assert(service.includes("lockController.lockSession('storage-unavailable'"));
   assert(service.includes('rotateStorageIdentity'));
   assert(!service.includes('scrubContent'), 'device security must never invoke Self-Destruct cleanup');
