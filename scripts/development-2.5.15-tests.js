@@ -56,7 +56,8 @@ for (const phrase of [
 ]) {
   assert(languageSource.includes(phrase), `missing Vault Item terminology contract: ${phrase}`);
 }
-assert(languageSource.includes("kind.textContent = 'VAULT ITEM'"), 'Global Search must display internal wallet results as Vault Items');
+assert(languageSource.includes("setTextIfChanged(kind, 'VAULT ITEM')"), 'Global Search must display internal wallet results as Vault Items without repeated DOM rewrites');
+assert(languageSource.includes('if (String(node.textContent || \'\') === next) return false;'), 'terminology observer must skip text that is already correct');
 
 const intelligence = read('src/main/recovery-intelligence-vault-overview-ui.js');
 assert(intelligence.includes("!== 'Vault Overview'"), 'Recovery Intelligence companion must recognize the renamed Vault Overview');
