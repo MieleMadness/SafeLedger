@@ -1,7 +1,7 @@
 'use strict';
 
-const DEFAULT_REMINDER_DAYS = 30;
-const ALLOWED_REMINDER_DAYS = Object.freeze([0, 30, 60, 90]);
+const DEFAULT_REMINDER_DAYS = 90;
+const ALLOWED_REMINDER_DAYS = Object.freeze([0, 90, 180, 365]);
 
 function normalizeTimestamp(value) {
   if (!value) return null;
