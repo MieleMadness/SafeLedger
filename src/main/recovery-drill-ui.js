@@ -74,9 +74,9 @@ function appendOptionalBip39Check(area) {
 function documentationReminder(group = {}) {
   if (recoveryDrill.canComplete(group)) return '';
   if (group.lastRecoveryDrill || group.lastVerified) {
-    return 'Documentation reminder: this Test Recovery may be current, but SafeLedger still does not have a recovery method, recovery location, or recovery instructions documented for this wallet. Completing or verifying a drill records that you tested the process; it does not create the missing recovery documentation. Add that information from Edit Wallet to complete Recovery Health.';
+    return 'Documentation reminder: this Test Recovery may be current, but SafeLedger still does not have a recovery method, recovery location, or recovery instructions documented for this wallet. Completing or verifying a drill records that you tested the process; it does not create the missing recovery documentation. Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Wallet.';
   }
-  return 'Documentation reminder: SafeLedger does not have a recovery method, recovery location, or recovery instructions documented for this wallet yet. You can still complete this Test Recovery checklist, but Recovery Health will remain incomplete until at least one part of the recovery plan is documented from Edit Wallet.';
+  return 'Documentation reminder: SafeLedger does not have a recovery method, recovery location, or recovery instructions documented for this wallet yet. You can still complete this Test Recovery checklist, but Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Wallet.';
 }
 
 function render(params = {}) {
