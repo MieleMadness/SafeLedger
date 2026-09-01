@@ -8,7 +8,8 @@ const DEFAULT_OPTIONS = Object.freeze({
   includeBalances: false,
   includePasswordsPins: false,
   includeSeedPrivateKeys: false,
-  includeSensitiveCustomFields: false
+  includeSensitiveCustomFields: false,
+  includeQrCodes: false
 });
 
 const PRIVACY_LABELS = Object.freeze({
@@ -30,9 +31,12 @@ function normalizeOptions(options = {}) {
   return normalized;
 }
 
-function pushField(fields, label, value) {
+function pushField(fields, label, value, fieldOptions = {}) {
   const rendered = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : text(value);
-  if (rendered) fields.push({ label, value: rendered });
+  if (!rendered) return;
+  const field = { label, value: rendered };
+  if (fieldOptions.qr === true) field.qr = true;
+  fields.push(field);
 }
 
 function appendCustomFields(fields, sourceFields, options) {
@@ -47,12 +51,16 @@ function buildAsset(record = {}, options = {}) {
   pushField(fields, 'Coin', record.name);
   pushField(fields, 'Symbol', record.symbol);
   pushField(fields, 'Tags', record.tags);
-  if (options.includePublicAddresses) pushField(fields, 'Public address', record.publicAddress);
+  if (options.includePublicAddresses) {
+    pushField(fields, 'Public address', record.publicAddress, { qr: options.includeQrCodes });
+  }
   if (options.includeBalances) {
     pushField(fields, 'Balance', record.manualBalance);
     pushField(fields, 'Balance updated', record.balanceUpdated);
   }
-  if (options.includeSeedPrivateKeys) pushField(fields, 'Private key', record.privateAddress);
+  if (options.includeSeedPrivateKeys) {
+    pushField(fields, 'Private key', record.privateAddress, { qr: options.includeQrCodes });
+  }
   appendCustomFields(fields, record.customFields, options);
   if (options.includeNotes) pushField(fields, 'Notes', record.notes);
   return {
@@ -113,6 +121,7 @@ function buildBinder(profile = {}, vaultData = {}, options = {}, generatedAt = n
   pushField(profileFields, 'Profile', profile.name);
   pushField(profileFields, 'Created', profile.created);
   pushField(profileFields, 'Modified', profile.modified);
+  if (normalizedOptions.includeNotes) pushField(profileFields, 'Notes', profile.notes);
 
   const groups = Array.isArray(vaultData.groups) ? vaultData.groups : [];
   const wallets = groups.map((group) => buildWallet(group, normalizedOptions));
