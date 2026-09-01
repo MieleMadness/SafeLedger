@@ -18,7 +18,9 @@ const excludedWallets = new Set([
 ]);
 
 const walletAliases = {
-  'base-app-coinbase-wallet': ['coinbase-wallet', 'coinbase'],
+  // slug() removes parenthesized text, so "Base App (Coinbase Wallet)"
+  // becomes "base-app" before icon lookup.
+  'base-app': ['coinbase-wallet', 'coinbase'],
   'bitbox02-multi': ['bitbox', 'bitbox02'],
   'coldcard': ['coldcard'],
   'rabby-wallet': ['rabby'],
