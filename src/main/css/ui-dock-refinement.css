@@ -13,6 +13,21 @@ html[data-theme="dark"] {
   --sl-icon-gold: #fde68a;
 }
 
+/* Top utility messages sit opposite the Home/History/Settings/Search controls.
+ * Right alignment keeps transient save/error text visually separated from the
+ * action buttons instead of making it look like another button label. */
+.top-utility-cell #statusArea {
+  margin-left: auto !important;
+  padding-left: 0 !important;
+  justify-content: flex-end !important;
+  text-align: right !important;
+}
+
+.top-utility-cell #statusArea .alert {
+  margin: 0 !important;
+  text-align: right !important;
+}
+
 /* Give the bottom row the same breathing room as the top utility row. */
 .app-button-row {
   min-height: var(--sl-dock-height) !important;
