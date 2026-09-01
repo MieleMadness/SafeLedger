@@ -104,7 +104,9 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
   if (actionable) {
     const helper = document.createElement('p');
     helper.className = 'dashboard-section-help';
-    helper.textContent = 'Click a wallet or vault item below to open it and resolve the recovery gaps.';
+    helper.textContent = showDate
+      ? 'Click a recently verified vault item below to open it.'
+      : 'Click a wallet or vault item below to open it and resolve the recovery gaps.';
     section.appendChild(helper);
   }
 
@@ -340,7 +342,7 @@ function render(summary, device = {}) {
   area.appendChild(attention);
 
   const recent = makeSection('Recently Verified');
-  appendWalletList(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true);
+  appendWalletList(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true, true);
   area.appendChild(recent);
 }
 
