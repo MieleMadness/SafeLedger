@@ -1,6 +1,7 @@
 'use strict';
 
 const passwordPolicy = require('./password-policy');
+const eyeIcon = require('./eye-icon');
 
 function moveLoginButtonAfterPassword(shell) {
   const loginButton = document.getElementById('loginBtn');
@@ -33,14 +34,14 @@ function makeVisibilityControl(input, showText = 'Show password') {
   show.className = 'btn btn-default btn-sm field-inline-action password-visibility-toggle';
   show.title = showText;
   show.setAttribute('aria-label', showText);
-  show.innerHTML = '<i class="fa fa-eye" aria-hidden="true"></i>';
+  show.innerHTML = eyeIcon.markup(false);
   show.addEventListener('click', () => {
     const hidden = input.type === 'password';
     input.type = hidden ? 'text' : 'password';
     const title = hidden ? 'Hide password' : showText;
     show.title = title;
     show.setAttribute('aria-label', title);
-    show.innerHTML = `<i class="fa ${hidden ? 'fa-eye-slash' : 'fa-eye'}" aria-hidden="true"></i>`;
+    show.innerHTML = eyeIcon.markup(hidden);
   });
   shell.appendChild(show);
 
