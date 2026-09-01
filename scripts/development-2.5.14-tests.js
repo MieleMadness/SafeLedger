@@ -15,21 +15,25 @@ function testBottomAddActionsMatchEmergencyHighlightLanguage() {
   assert(css.includes('outline: 2px solid var(--sl-primary) !important;'), 'Bottom add actions should use the same 2px highlight thickness as Emergency Lock.');
   assert(css.includes('outline-offset: -2px !important;'), 'Bottom add action highlight should sit inside the button footprint.');
   assert(css.includes('border-width: 1px !important;'), 'Base add-button border should remain a stable 1px.');
-  assert(css.includes('box-shadow: none !important;'), 'Hover/focus should not add a mismatched shadow halo.');
+  assert(css.includes('box-shadow: none !important;'), 'The 2.5.14 layer should not add a mismatched shadow halo.');
   assert(css.includes('transform: none !important;'), 'Hover/focus should not resize or shift the add buttons.');
 }
 
 function testRefinementIsLoaded() {
   const html = read('src/main/index.html');
-  assert(html.includes('./css/ui-2.5.14.css'), 'SafeLedger should load the 2.5.14 UI refinement after prior UI layers.');
+  assert(html.includes('./css/ui-2.5.14.css'), 'SafeLedger should continue loading the 2.5.14 UI refinement after prior UI layers.');
 }
 
-function testDevelopmentVersion() {
+function testDevelopmentVersionAtLeast214() {
   const pkg = JSON.parse(read('package.json'));
-  assert.strictEqual(pkg.version, '2.5.14', 'SafeLedger development version should be 2.5.14.');
+  const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
+  assert(
+    parts[0] === 2 && parts[1] === 5 && parts[2] >= 14,
+    'SafeLedger development builds after this feature should remain at 2.5.14 or later.'
+  );
 }
 
 testBottomAddActionsMatchEmergencyHighlightLanguage();
 testRefinementIsLoaded();
-testDevelopmentVersion();
-console.log('PASS SafeLedger 2.5.14 bottom add actions match the Emergency Lock hover/focus aesthetics.');
+testDevelopmentVersionAtLeast214();
+console.log('PASS SafeLedger 2.5.14+ bottom add actions preserve the Emergency Lock hover/focus aesthetics.');
