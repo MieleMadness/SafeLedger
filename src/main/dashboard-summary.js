@@ -1,10 +1,29 @@
 'use strict';
 
 const recoveryHealth = require('./recovery-health');
+const walletCatalog = require('./wallet-catalog');
+require('./wallet-catalog-extensions');
 
 function safeName(value, fallback) {
   const text = String(value || '').trim();
   return text || fallback;
+}
+
+function normalize(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function walletKind(group) {
+  const explicit = normalize(group && group.category);
+  if (explicit.includes('hardware')) return 'hardware';
+  if (explicit.includes('software')) return 'software';
+
+  const name = normalize(group && group.name);
+  const catalog = (walletCatalog.catalog || []).find((item) => normalize(item && item.name) === name);
+  const catalogType = normalize(catalog && catalog.type);
+  if (catalogType.includes('hardware')) return 'hardware';
+  if (catalogType.includes('software')) return 'software';
+  return 'other';
 }
 
 function safeHealthChecks(health) {
@@ -23,7 +42,17 @@ function safeHealthChecks(health) {
 }
 
 function summarize(profileEntries = [], options = {}) {
-  const counts = { profiles: profileEntries.length, wallets: 0, assets: 0, ready: 0, needsReview: 0, incomplete: 0 };
+  const counts = {
+    profiles: profileEntries.length,
+    wallets: 0,
+    assets: 0,
+    hardwareWallets: 0,
+    softwareWallets: 0,
+    otherWallets: 0,
+    ready: 0,
+    needsReview: 0,
+    incomplete: 0
+  };
   const needsAttention = [];
   const recentlyVerified = [];
   let profileReadErrors = 0;
@@ -38,6 +67,11 @@ function summarize(profileEntries = [], options = {}) {
     for (const [walletIndex, group] of groups.entries()) {
       const walletName = safeName(group && group.name, 'Unnamed Wallet');
       counts.assets += group && Array.isArray(group.records) ? group.records.length : 0;
+      const kind = walletKind(group);
+      if (kind === 'hardware') counts.hardwareWallets++;
+      else if (kind === 'software') counts.softwareWallets++;
+      else counts.otherWallets++;
+
       const health = recoveryHealth.evaluateWallet(group || {}, {
         now: options.now,
         verificationDays: options.verificationDays,
@@ -82,4 +116,4 @@ function summarize(profileEntries = [], options = {}) {
 }
 
 exports.summarize = summarize;
-exports._test = { safeName, safeHealthChecks };
+exports._test = { safeName, safeHealthChecks, walletKind };
