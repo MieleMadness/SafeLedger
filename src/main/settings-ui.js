@@ -180,28 +180,27 @@ function showSettings(params) {
   area.appendChild(document.createElement('hr'));
 
   const appearanceSection = makeSection('Appearance');
-  addNote(appearanceSection, 'Choose how SafeLedger looks on this device. System follows your operating-system light or dark preference automatically.');
+  addNote(appearanceSection, 'Choose how SafeLedger looks on this device. Changes are saved automatically. System follows your operating-system light or dark preference.');
   const appearanceOptions = document.createElement('div');
   appearanceOptions.className = 'appearance-options';
   const currentAppearance = normalizeAppearance(params.settings.appearance);
   const system = addAppearanceOption(appearanceOptions, 'system', 'System', 'Follow the operating system and update automatically.', currentAppearance);
   const light = addAppearanceOption(appearanceOptions, 'light', 'Light', 'Bright workspace with SafeLedger blue navigation.', currentAppearance);
   const dark = addAppearanceOption(appearanceOptions, 'dark', 'Dark', 'Low-glare surfaces with deeper blue navigation.', currentAppearance);
-  appearanceSection.appendChild(appearanceOptions);
-  const saveAppearance = document.createElement('button');
-  saveAppearance.type = 'button';
-  saveAppearance.className = 'btn btn-default settings-section-save';
-  saveAppearance.innerHTML = '<i class="fa fa-paint-brush" aria-hidden="true"></i> Save Appearance';
-  saveAppearance.addEventListener('click', () => {
+  const appearanceInputs = [system, light, dark];
+  const saveAppearanceSelection = (event) => {
+    const selected = event && event.target;
+    if (!selected || selected.checked !== true) return;
     if (params.saving.state) return alert('Please wait for processing to complete');
-    const selected = [system, light, dark].find((input) => input.checked);
-    const appearance = normalizeAppearance(selected && selected.value);
-    saveAppearance.disabled = true;
+    const appearance = normalizeAppearance(selected.value);
+    if (appearance === currentAppearance) return;
+    for (const input of appearanceInputs) input.disabled = true;
     params.saving.state = true;
     status.loadStatus();
     ipc.send('save-settings', { newSettings: Object.assign({}, params.settings, { appearance }) });
-  });
-  appearanceSection.appendChild(saveAppearance);
+  };
+  for (const input of appearanceInputs) input.addEventListener('change', saveAppearanceSelection);
+  appearanceSection.appendChild(appearanceOptions);
   area.appendChild(appearanceSection);
 
   const passwordSection = makeSection('Password');

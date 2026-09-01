@@ -32,7 +32,7 @@ function render() {
   section.appendChild(note);
 
   const label = document.createElement('label');
-  label.className = 'privacy-mode-toggle';
+  label.className = 'privacy-mode-toggle settings-field-label';
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
   checkbox.id = 'privacyModeEnabled';

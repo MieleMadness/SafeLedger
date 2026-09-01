@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, Menu, ipcMain: ipc, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain: ipc, dialog, clipboard, shell } = require('electron');
 const path = require('path');
 const vault = require('./robust-vault');
 const vaultSchema = require('./vault-schema');
@@ -17,6 +17,7 @@ let currentSettings;
 let walletCatalog = null;
 const currentVault = 'zvault-0.json';
 const GUI_SMOKE = process.env.SAFELEDGER_GUI_SMOKE === '1';
+const SAFELEDGER_SITE_URL = 'https://safeledger.tnypg.com';
 const excludedDefaultWallets = new Set(['bitbox02 multi', 'coldcard', 'keystone', 'rabby wallet']);
 
 function getWalletCatalog() {
@@ -82,7 +83,10 @@ function buildMenu() {
   const template = [{
     label: 'SafeLedger',
     submenu: [
-      { label: `Version ${app.getVersion()}`, enabled: false },
+      {
+        label: `Version ${app.getVersion()}`,
+        click: () => { shell.openExternal(SAFELEDGER_SITE_URL).catch(() => {}); }
+      },
       { label: 'Settings', click: () => showSettings() },
       {
         label: 'Self-Destruct Protection',
