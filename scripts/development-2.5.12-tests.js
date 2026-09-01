@@ -30,6 +30,9 @@ function testDashboardNavigationAndInsights() {
   assert(dashboard.includes("const badge = document.createElement('span');"));
   assert(!dashboard.includes('dashboard-status-action'));
   assert(dashboard.includes('Click a wallet or vault item below to open it and resolve the recovery gaps.'));
+  assert(dashboard.includes('Click a recently verified vault item below to open it.'));
+  assert(dashboard.includes("appendWalletList(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true, true)"),
+    'Recently Verified rows should use the same direct row navigation as Recovery Needs Attention.');
 
   assert(dashboard.includes("makeSection('Maintenance Snapshot'"));
   assert(dashboard.includes("'Stale information'"));
@@ -61,13 +64,21 @@ function testDashboardNavigationAndInsights() {
 }
 
 function testCopyAndQrArtwork() {
-  assert(security.includes('class="sl-copy-page sl-copy-page-back"'));
-  assert(security.includes('class="sl-copy-page sl-copy-page-front"'));
+  assert(security.includes('class="sl-copy-sheet sl-copy-sheet-back"'));
+  assert(security.includes('class="sl-copy-sheet sl-copy-sheet-front"'));
+  assert(security.includes('function qrIconMarkup()'));
+  assert(security.includes('class="sl-qr-svg"'));
+  assert(security.includes('button.innerHTML = qrIconMarkup();'));
+  assert(!security.includes("makeIconButton('fa-qrcode'"), 'QR button should use centered local SVG artwork instead of an icon-font glyph.');
   assert(!security.includes('sl-copy-arrow'), 'Copy button should no longer look like circular arrows.');
   assert(!security.includes('sl-copy-plus'), 'Copy button should no longer contain the accidentally supplied plus sign.');
-  assert(css.includes('.sl-copy-page'));
+  assert(css.includes('.sl-copy-sheet'));
+  assert(css.includes('.qr-inline-button'));
+  assert(css.includes('.sl-qr-svg'));
   assert(css.includes('.public-address-field .address-qr'));
   assert(css.includes('margin: 0 auto !important;'));
+  assert(css.includes('.compact-qr-area .qr-caption'));
+  assert(css.includes('color: var(--sl-text-strong) !important;'), 'QR caption should use high-contrast theme text.');
 }
 
 function testRecoveryDrillReminderAndContrast() {
@@ -103,4 +114,4 @@ testDashboardNavigationAndInsights();
 testCopyAndQrArtwork();
 testRecoveryDrillReminderAndContrast();
 testExchangeAndWebsiteVaultItems();
-console.log('PASS SafeLedger 2.5.12 direct Vault Overview navigation, maintenance insight, paper-copy icon, centered QR, recovery drill clarity, and exchange/service vault items.');
+console.log('PASS SafeLedger 2.5.12 direct Vault Overview navigation, maintenance insight, revised copy/QR artwork, readable QR captions, recovery drill clarity, and exchange/service vault items.');
