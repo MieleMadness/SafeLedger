@@ -7,6 +7,7 @@ require('./privacy-mode-ui.js');
 require('./dashboard-ui.js');
 require('./recovery-intelligence-dashboard-ui.js');
 require('./activity-history-ui.js');
+require('./settings-shortcut-ui.js');
 require('./lockout-ui-enhancements.js');
 require('./security-enhancements.js');
 require('./crypto-ui-bridge.js');
