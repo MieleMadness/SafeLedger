@@ -1,0 +1,69 @@
+/* SafeLedger 2.5.9 targeted visual refinements. Loaded after 2.5.8. */
+
+/* Shared eye artwork follows the simple outline/pupil shape used in the
+ * supplied design reference. It is inline SVG, so it stays crisp and fully
+ * offline at every display scale. */
+.sl-eye-svg {
+  width: 22px;
+  height: 16px;
+  display: block;
+  overflow: visible;
+  color: currentColor;
+}
+
+.sl-eye-outline,
+.sl-eye-pupil,
+.sl-eye-slash {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-eye-pupil {
+  stroke-width: 2;
+}
+
+.sl-eye-slash {
+  stroke-width: 2.2;
+}
+
+.password-visibility-toggle {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--sl-primary-strong) !important;
+}
+
+.password-visibility-toggle:hover,
+.password-visibility-toggle:focus {
+  border: 0 !important;
+  background: var(--sl-primary-soft) !important;
+  box-shadow: none !important;
+}
+
+.password-visibility-toggle:focus-visible {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: 0 !important;
+}
+
+.sl-sensitive-eye {
+  width: 24px;
+  min-width: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sl-primary-strong);
+}
+
+.sl-sensitive-eye .sl-eye-svg {
+  width: 20px;
+  height: 15px;
+}
