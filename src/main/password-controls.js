@@ -2,39 +2,68 @@
 
 const passwordPolicy = require('./password-policy');
 
-function makeVisibilityControl(input, showText = 'Show Text') {
-  if (!input || input.dataset.safeledgerVisibility === '1') return null;
-  input.dataset.safeledgerVisibility = '1';
-  const controls = document.createElement('div');
-  controls.className = 'login-security-controls';
-  const show = document.createElement('button');
-  show.type = 'button';
-  show.className = 'btn btn-default btn-sm';
-  show.innerHTML = `<i class="fa fa-eye"></i> ${showText}`;
-  show.addEventListener('click', () => {
-    const hidden = input.type === 'password';
-    input.type = hidden ? 'text' : 'password';
-    show.innerHTML = hidden ? '<i class="fa fa-eye-slash"></i> Hide Text' : `<i class="fa fa-eye"></i> ${showText}`;
-  });
-  controls.appendChild(show);
-  input.parentNode.insertBefore(controls, input.nextSibling);
+function moveLoginButtonAfterPassword(shell) {
+  const loginButton = document.getElementById('loginBtn');
+  if (!loginButton || !shell || !shell.parentNode) return null;
+  let controls = document.getElementById('loginSecurityControls');
+  if (!controls) {
+    controls = document.createElement('div');
+    controls.id = 'loginSecurityControls';
+    controls.className = 'login-security-controls';
+    shell.parentNode.insertBefore(controls, shell.nextSibling);
+  }
+  loginButton.classList.remove('pull-right');
+  loginButton.classList.add('login-submit-button');
+  controls.appendChild(loginButton);
   return controls;
 }
 
-function addStrengthMeter(input) {
+function makeVisibilityControl(input, showText = 'Show password') {
+  if (!input || input.dataset.safeledgerVisibility === '1') return null;
+  input.dataset.safeledgerVisibility = '1';
+
+  const parent = input.parentNode;
+  const shell = document.createElement('div');
+  shell.className = `secure-input-shell password-visibility-shell${input.id === 'masterCryptoInput' ? ' login-password-shell' : ''}`;
+  parent.insertBefore(shell, input);
+  shell.appendChild(input);
+
+  const show = document.createElement('button');
+  show.type = 'button';
+  show.className = 'btn btn-default btn-sm field-inline-action password-visibility-toggle';
+  show.title = showText;
+  show.setAttribute('aria-label', showText);
+  show.innerHTML = '<i class="fa fa-eye" aria-hidden="true"></i>';
+  show.addEventListener('click', () => {
+    const hidden = input.type === 'password';
+    input.type = hidden ? 'text' : 'password';
+    const title = hidden ? 'Hide password' : showText;
+    show.title = title;
+    show.setAttribute('aria-label', title);
+    show.innerHTML = `<i class="fa ${hidden ? 'fa-eye-slash' : 'fa-eye'}" aria-hidden="true"></i>`;
+  });
+  shell.appendChild(show);
+
+  const loginControls = input.id === 'masterCryptoInput' ? moveLoginButtonAfterPassword(shell) : null;
+  return { shell, button: show, loginControls };
+}
+
+function addStrengthMeter(input, anchor) {
   if (!input || input.dataset.safeledgerStrength === '1') return null;
   input.dataset.safeledgerStrength = '1';
   const meter = document.createElement('div');
-  meter.className = 'password-strength';
+  meter.className = `password-strength${input.id === 'masterCryptoInput' ? ' login-password-strength' : ''}`;
   const bar = document.createElement('div');
   bar.className = 'password-strength-bar';
   const label = document.createElement('span');
   label.className = 'password-strength-label';
   meter.appendChild(bar);
   meter.appendChild(label);
-  const controls = input.nextSibling;
-  if (controls && controls.parentNode) controls.parentNode.insertBefore(meter, controls.nextSibling);
-  else input.parentNode.insertBefore(meter, input.nextSibling);
+
+  const insertionAnchor = anchor || input.parentNode;
+  if (insertionAnchor && insertionAnchor.parentNode) insertionAnchor.parentNode.insertBefore(meter, insertionAnchor.nextSibling);
+  else if (input.parentNode) input.parentNode.insertBefore(meter, input.nextSibling);
+
   const labels = ['Weak', 'Weak', 'Fair', 'Good', 'Strong', 'Excellent'];
   const update = () => {
     const score = passwordPolicy.scorePassword(input.value);
@@ -48,12 +77,14 @@ function addStrengthMeter(input) {
 }
 
 function configure(input, options = {}) {
-  if (!input) return;
+  if (!input) return null;
   input.type = 'password';
   input.maxLength = passwordPolicy.MAX_MASTER_PASSWORD_LENGTH;
   input.setAttribute('autocomplete', options.autocomplete || 'off');
-  makeVisibilityControl(input, options.showText || 'Show Text');
-  if (options.strength) addStrengthMeter(input);
+  const visibility = makeVisibilityControl(input, options.showText || 'Show password');
+  const strengthAnchor = visibility && visibility.loginControls ? visibility.loginControls : visibility && visibility.shell;
+  const meter = options.strength ? addStrengthMeter(input, strengthAnchor) : null;
+  return { visibility, meter };
 }
 
-module.exports = { configure, makeVisibilityControl, addStrengthMeter };
+module.exports = { configure, makeVisibilityControl, addStrengthMeter, moveLoginButtonAfterPassword };
