@@ -34,10 +34,12 @@ const kraken = web3Icons.match('exchanges', ['Kraken']);
 assert(kraken && kraken.src.startsWith('data:image/'), 'Kraken exchange should resolve locally.');
 
 assert.strictEqual(walletIcons.getIconMatch({ name: 'MetaMask' }).category, 'wallets');
-const binanceAuto = walletIcons.getIconMatch({ name: 'Binance' });
-assert(binanceAuto && ['wallets', 'exchanges'].includes(binanceAuto.category),
-  'A brand present in both Web3 wallet and exchange catalogs should resolve to either valid branded entry.');
-assert.strictEqual(walletIcons.getIconMatch({ name: 'Kraken' }).category, 'exchanges');
+for (const name of ['Binance', 'Kraken']) {
+  const automatic = walletIcons.getIconMatch({ name });
+  assert(automatic && ['wallets', 'exchanges'].includes(automatic.category),
+    `${name} should resolve to valid local branded wallet/exchange artwork even when upstream catalogs overlap.`);
+  assert(String(automatic.src || '').startsWith('data:image/'), `${name} automatic artwork must remain local/offline.`);
+}
 assert.strictEqual(tokenIcons.getIconMatch({ name: 'Bitcoin', symbol: 'BTC' }).category, 'tokens');
 assert(tokenIcons.getIconMatch({ name: 'BNB Smart Chain', symbol: '' }), 'Network names should resolve through the Web3 catalog.');
 
