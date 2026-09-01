@@ -53,7 +53,9 @@ const profileSource = read('src/main/profile.js');
 assert(profileSource.includes("'Blank Profile'"));
 assert(profileSource.includes("'Select wallet templates'"));
 const dashboardSource = read('src/main/dashboard-ui.js');
-assert(dashboardSource.includes('dashboard-status-action'));
-assert(dashboardSource.includes('onActivate: () => openWallet(item)'));
+const dashboardRows = read('src/main/dashboard-row-ui.js');
+assert(dashboardSource.includes("const badge = document.createElement('span');"), 'Vault Overview status pills should remain informational.');
+assert(dashboardSource.includes("source: 'dashboard'"), 'Vault Overview navigation should use direct vault-item targets.');
+assert(dashboardRows.includes("row.querySelector('.dashboard-list-main-action')"), 'Vault Overview attention rows should remain clickable.');
 
-console.log('PASS SafeLedger development Web3Icons catalog, wallet templates, and dashboard navigation integration.');
+console.log('PASS SafeLedger development Web3Icons catalog, wallet templates, and Vault Overview row navigation integration.');
