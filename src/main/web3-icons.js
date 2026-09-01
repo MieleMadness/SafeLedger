@@ -5,7 +5,8 @@
 // an icon never performs a network request or reads node_modules at runtime.
 let manifest = {
   tokens: {}, networks: {}, wallets: {}, exchanges: {},
-  aliases: { tokens: {}, networks: {}, wallets: {}, exchanges: {} }
+  aliases: { tokens: {}, networks: {}, wallets: {}, exchanges: {} },
+  displayNames: { wallets: {}, exchanges: {} }
 };
 try {
   manifest = require('./assets/token-icons/manifest.json');
@@ -82,6 +83,25 @@ function resolveFirst(requests) {
   return result ? result.src : null;
 }
 
+function humanizeKey(value) {
+  return String(value || '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .trim();
+}
+
+function entries(category) {
+  if (!categories.has(category)) return [];
+  const iconMap = manifest[category] || {};
+  const displayNames = manifest.displayNames && manifest.displayNames[category] || {};
+  return Object.keys(iconMap).map((key) => ({
+    category,
+    key,
+    name: String(displayNames[key] || humanizeKey(key)).trim(),
+    src: iconMap[key]
+  })).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+}
+
 function createImage(src, label, className) {
   if (!src) return null;
   const img = document.createElement('img');
@@ -98,5 +118,6 @@ exports.match = match;
 exports.resolve = resolve;
 exports.matchFirst = matchFirst;
 exports.resolveFirst = resolveFirst;
+exports.entries = entries;
 exports.createImage = createImage;
 exports._manifest = manifest;
