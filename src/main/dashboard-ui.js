@@ -35,10 +35,7 @@ function makeStatus(status, options = {}) {
     badge.type = 'button';
     badge.title = options.title || 'Open wallet';
     badge.setAttribute('aria-label', options.ariaLabel || options.title || 'Open wallet');
-    badge.addEventListener('click', (event) => {
-      event.stopPropagation();
-      options.onActivate();
-    });
+    badge.addEventListener('click', options.onActivate);
   }
   return badge;
 }
@@ -104,21 +101,16 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
   for (const item of items) {
     const row = document.createElement('div');
     row.className = `dashboard-list-row${actionable ? ' dashboard-list-row-action' : ''}`;
+
+    const main = document.createElement(actionable ? 'button' : 'div');
+    main.className = `dashboard-list-main${actionable ? ' dashboard-list-main-action' : ''}`;
     if (actionable) {
-      const activate = () => openWallet(item);
-      row.tabIndex = 0;
-      row.setAttribute('role', 'button');
-      row.title = `Open ${item.walletName} to fix recovery readiness`;
-      row.setAttribute('aria-label', `Open ${item.walletName} in ${item.profileName} to fix recovery readiness`);
-      row.addEventListener('click', activate);
-      row.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        activate();
-      });
+      main.type = 'button';
+      main.title = `Open ${item.walletName} to fix recovery readiness`;
+      main.setAttribute('aria-label', `Open ${item.walletName} in ${item.profileName} to fix recovery readiness`);
+      main.addEventListener('click', () => openWallet(item));
     }
-    const main = document.createElement('div');
-    main.className = 'dashboard-list-main';
+
     const title = document.createElement('div');
     title.className = 'dashboard-list-title';
     title.textContent = item.walletName;
