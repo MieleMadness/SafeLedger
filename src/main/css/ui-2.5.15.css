@@ -1,0 +1,73 @@
+/* SafeLedger 2.5.15 interaction consistency.
+ * Visual buttons share the Emergency Lock treatment: a stable 1px frame,
+ * subtle resting shadow, and a 2px inset focus/hover highlight with no glow
+ * outside the control or movement of the button footprint. */
+
+.btn,
+.detail-action-button,
+.dashboard-inline,
+.activity-inline,
+.global-search-inline,
+.panic-lock-inline,
+.field-inline-action,
+.dashboard-title-action,
+.activity-filter {
+  box-sizing: border-box;
+  border-width: 1px !important;
+  border-radius: var(--sl-radius-sm) !important;
+  box-shadow: var(--sl-shadow-soft) !important;
+  transform: none !important;
+  transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+}
+
+.btn:not(:disabled):hover,
+.btn:not(:disabled):focus,
+.btn:not(:disabled):focus-visible,
+.detail-action-button:not(:disabled):hover,
+.detail-action-button:not(:disabled):focus,
+.detail-action-button:not(:disabled):focus-visible,
+.dashboard-inline:not(:disabled):hover,
+.dashboard-inline:not(:disabled):focus,
+.dashboard-inline:not(:disabled):focus-visible,
+.activity-inline:not(:disabled):hover,
+.activity-inline:not(:disabled):focus,
+.activity-inline:not(:disabled):focus-visible,
+.global-search-inline:not(:disabled):hover,
+.global-search-inline:not(:disabled):focus,
+.global-search-inline:not(:disabled):focus-visible,
+.panic-lock-inline:not(:disabled):hover,
+.panic-lock-inline:not(:disabled):focus,
+.panic-lock-inline:not(:disabled):focus-visible,
+.field-inline-action:not(:disabled):hover,
+.field-inline-action:not(:disabled):focus,
+.field-inline-action:not(:disabled):focus-visible,
+.dashboard-title-action:not(:disabled):hover,
+.dashboard-title-action:not(:disabled):focus,
+.dashboard-title-action:not(:disabled):focus-visible,
+.activity-filter:not(:disabled):hover,
+.activity-filter:not(:disabled):focus,
+.activity-filter:not(:disabled):focus-visible {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: -2px !important;
+  box-shadow: var(--sl-shadow-soft) !important;
+  transform: none !important;
+}
+
+/* Explicitly protect the login action from older Bootstrap-style focus glows. */
+#loginBtn,
+.login-submit-button {
+  box-shadow: var(--sl-shadow-soft) !important;
+  transform: none !important;
+}
+
+#loginBtn:not(:disabled):hover,
+#loginBtn:not(:disabled):focus,
+#loginBtn:not(:disabled):focus-visible,
+.login-submit-button:not(:disabled):hover,
+.login-submit-button:not(:disabled):focus,
+.login-submit-button:not(:disabled):focus-visible {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: -2px !important;
+  box-shadow: var(--sl-shadow-soft) !important;
+  transform: none !important;
+}
