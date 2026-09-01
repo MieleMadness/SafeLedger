@@ -38,14 +38,12 @@ function testSensitiveControlLanguage() {
     'Wallet, Asset, and custom sensitive edit fields should render the eye inside the input.');
 }
 
-function testCopyIcon() {
+function testCopyControlFoundation() {
   assert(security.includes('function copyIconMarkup()'));
   assert(security.includes('class="sl-copy-svg"'));
-  assert(security.includes('class="sl-copy-arrow"'));
-  assert(security.includes('class="sl-copy-plus"'));
   assert(security.includes("'copy-inline-button'"));
-  assert(uiCss.includes('.sl-copy-arrow'));
-  assert(uiCss.includes('.sl-copy-plus'));
+  assert(!security.includes("makeIconButton('fa-copy'"),
+    'Copy actions should keep local SafeLedger artwork instead of returning to the legacy icon-font copy button.');
 }
 
 function testVaultOverview() {
@@ -82,7 +80,7 @@ function testFioCatalogSupport() {
 }
 
 testSensitiveControlLanguage();
-testCopyIcon();
+testCopyControlFoundation();
 testVaultOverview();
 testFioCatalogSupport();
-console.log('PASS SafeLedger 2.5.11 editable eye controls, plus/minus disclosures, copy glyph, Vault Overview, and reviewed FIO support.');
+console.log('PASS SafeLedger 2.5.11 editable eye controls, plus/minus disclosures, local copy control, Vault Overview, and reviewed FIO support.');
