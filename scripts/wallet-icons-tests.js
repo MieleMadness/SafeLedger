@@ -3,6 +3,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
@@ -14,6 +15,15 @@ const ui = read('src/main/wallet-icons-ui.js');
 const entry = read('src/main/renderer-entry.js');
 const css = read('src/main/css/token-icons.css');
 const readme = read('README.md');
+
+// Generate the exact offline manifest this release will package. This makes the
+// regression test validate Web3Icons discovery/metadata resolution as well as
+// the renderer-side lookup helpers.
+execFileSync(process.execPath, [path.join(root, 'scripts', 'prepare-token-assets.js')], {
+  cwd: root,
+  stdio: 'pipe'
+});
+
 const manifest = JSON.parse(read('src/main/assets/token-icons/manifest.json'));
 const walletIcons = require('../src/main/wallet-icons');
 const tokenIcons = require('../src/main/token-icons');
