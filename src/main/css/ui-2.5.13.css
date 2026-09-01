@@ -1,0 +1,60 @@
+/* SafeLedger 2.5.13 targeted UI refinements. Loaded after 2.5.12. */
+
+/* Generated QR codes are presented on a white card in every theme. Keep the
+ * explanatory caption dark enough to remain readable against that surface. */
+.compact-qr-area .qr-caption,
+.public-address-field .compact-qr-area .qr-caption {
+  color: #172033 !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+}
+
+/* Custom or unsupported wallet names should never look like a broken/missing
+ * image. The fallback is a fully local SVG wallet with a visible clasp. */
+.wallet-list-fallback-icon {
+  width: 22px !important;
+  height: 22px !important;
+  flex: 0 0 22px !important;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.sl-wallet-fallback-svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+  overflow: visible;
+}
+
+.sl-wallet-fallback-outline,
+.sl-wallet-fallback-clasp {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-wallet-fallback-dot {
+  fill: currentColor;
+}
+
+.item-selected .wallet-list-fallback-icon {
+  color: #ffffff;
+}
+
+@media (max-width: 1000px) {
+  .wallet-list-fallback-icon {
+    width: 19px !important;
+    height: 19px !important;
+    flex-basis: 19px !important;
+  }
+  .sl-wallet-fallback-svg {
+    width: 18px;
+    height: 18px;
+  }
+}
