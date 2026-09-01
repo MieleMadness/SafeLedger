@@ -78,12 +78,14 @@ function testWalletListUsesResolver() {
   assert(group.includes('const icon = walletIcons.createIconElement(current);'));
   assert(css.includes('.wallet-list-brand-image'));
   assert(css.includes('.wallet-list-catalog-icon'));
-  assert(prepare.includes("loadIcon('wallets', 'background', name)"));
-  assert(prepare.includes("manifest = { version: 2, tokens: {}, networks: {}, wallets: {} }"));
+  assert(prepare.includes("const categories = ['tokens', 'networks', 'wallets', 'exchanges'];"));
+  assert(prepare.includes('applyMetadataAliases(manifest, metadata, category)'));
+  assert(prepare.includes('minimums = { tokens: 1000, networks: 100, wallets: 30, exchanges: 20 }'));
+  assert(prepare.includes('manifest.aliases = { tokens: {}, networks: {}, wallets: {}, exchanges: {} }'));
 }
 
 testPreparedWalletManifest();
 testWalletResolverAndAliases();
 testScreenshotWalletsNeverUseGenericOutline();
 testWalletListUsesResolver();
-console.log('PASS SafeLedger 2.5.5 branded/offline wallet icons and catalog-specific fallbacks.');
+console.log('PASS SafeLedger branded/offline wallet icons, catalog-specific fallbacks, and full Web3 catalog preparation.');
