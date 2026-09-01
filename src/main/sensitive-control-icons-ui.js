@@ -1,7 +1,5 @@
 'use strict';
 
-const eyeIcon = require('./eye-icon');
-
 function qrIconMarkup() {
   const icon = document.createElement('span');
   icon.className = 'sl-qr-icon';
@@ -17,30 +15,10 @@ function qrIconMarkup() {
 function patchSensitiveSummary(summary) {
   if (!summary) return;
   const details = summary.closest('details');
-  const label = summary.querySelector('.secure-field-summary-label');
-  if (!details || !label) return;
-
-  let icon = label.querySelector('.sl-sensitive-eye');
-  const legacy = label.querySelector('.fa');
-  if (!icon) {
-    icon = document.createElement('span');
-    icon.className = 'sl-sensitive-eye';
-    icon.setAttribute('aria-hidden', 'true');
-    if (legacy) legacy.replaceWith(icon);
-    else label.insertBefore(icon, label.firstChild);
-  }
-
-  // MutationObserver watches this detail area. Rewriting innerHTML every time
-  // the observer fires creates another child-list mutation and can trap the
-  // renderer in an endless loop when a Wallet detail view is opened. Only
-  // redraw the eye when the open/closed state actually changes.
-  const eyeState = details.open ? 'open' : 'closed';
-  if (icon.dataset.eyeState !== eyeState) {
-    icon.dataset.eyeState = eyeState;
-    icon.innerHTML = eyeIcon.markup(details.open);
-  }
-
-  const action = details.open ? 'Hide sensitive information' : 'Reveal sensitive information';
+  const icon = summary.querySelector('.secure-field-summary-label > .fa');
+  if (!details || !icon) return;
+  icon.className = details.open ? 'fa fa-minus' : 'fa fa-plus';
+  const action = details.open ? 'Collapse sensitive information' : 'Expand sensitive information';
   summary.title = action;
   summary.setAttribute('aria-label', action);
 }
@@ -64,12 +42,7 @@ function start() {
   const observer = new MutationObserver(() => patch(area));
   observer.observe(area, {
     childList: true,
-    subtree: true,
-    attributes: true,
-    // We only need to repatch an existing sensitive row when its <details>
-    // open state changes. Child-list observation already handles new rows and
-    // QR controls, so class changes do not need to retrigger the whole patch.
-    attributeFilter: ['open']
+    subtree: true
   });
 }
 
