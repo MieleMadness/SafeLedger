@@ -65,4 +65,27 @@ for (const wallet of additions) {
   existing.add(key);
 }
 
+function addReviewedRecord(walletName, record) {
+  const wallet = (walletCatalog.catalog || []).find((item) => String(item && item.name || '').trim().toLowerCase() === walletName.toLowerCase());
+  if (!wallet || !Array.isArray(wallet.records)) return false;
+  const symbol = String(record && record[1] || '').trim().toUpperCase();
+  if (!symbol || wallet.records.some((item) => String(item && item[1] || '').trim().toUpperCase() === symbol)) return false;
+  wallet.records.push(record);
+  return true;
+}
+
+// FIO Chain is a native chain and FIO is its only native token. SafeLedger
+// adds it only where current FIO documentation explicitly confirms signing or
+// token support rather than assuming support from generic multi-chain claims.
+addReviewedRecord('Ledger', [
+  'FIO Protocol',
+  'FIO',
+  'Supported through the FIO App with a Ledger hardware wallet. Source: https://fio.net/use/fio-app'
+]);
+addReviewedRecord('MetaMask', [
+  'FIO Protocol',
+  'FIO',
+  'Supported through the production FIO Wallet Snap for MetaMask. Source: https://dev.fio.net/docs/fio-wallet-snap'
+]);
+
 module.exports = additions;
