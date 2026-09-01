@@ -279,6 +279,15 @@ function createEditProfile(params) {
     value: profile && profile.name,
     maxLength: 25
   });
+  const inputNotes = editFormUi.addTextarea(grid, {
+    id: 'inputProfileNotes',
+    label: 'Notes',
+    value: profile && profile.notes,
+    rows: 4,
+    maxLength: 500,
+    className: 'detail-notes-input',
+    full: true
+  });
   const setupControls = profile ? null : createProfileSetupControls(grid);
 
   const saveProfile = (button) => {
@@ -298,6 +307,7 @@ function createEditProfile(params) {
 
     const nextProfile = profile || { created: Date() };
     nextProfile.name = name;
+    nextProfile.notes = inputNotes.value;
     if (profile) nextProfile.modified = Date();
 
     params.saving.state = true;
@@ -334,6 +344,19 @@ function togglePinned(params, button) {
   });
 }
 
+function appendProfileNotes(area, profile) {
+  const notesWrap = document.createElement('div');
+  notesWrap.className = 'detail-notes-section profile-notes-section';
+  const label = document.createElement('b');
+  label.textContent = 'Notes:';
+  notesWrap.appendChild(label);
+  const value = document.createElement('div');
+  value.className = 'outData detail-notes-value profile-notes-value';
+  value.textContent = String(profile && profile.notes || '').trim() || 'Use Edit Profile to add notes.';
+  notesWrap.appendChild(value);
+  area.appendChild(notesWrap);
+}
+
 function showProfileDetail(params) {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -354,6 +377,7 @@ function showProfileDetail(params) {
     location.appendChild(document.createTextNode(String(profile.path)));
     area.appendChild(location);
   }
+  appendProfileNotes(area, profile);
 
   detailActions.set([
     {
@@ -369,7 +393,8 @@ function showProfileDetail(params) {
         { label: 'Profile', value: profile.name },
         { label: 'Created', value: formatDate(profile.created) },
         { label: 'Modified', value: formatDate(profile.modified) },
-        { label: 'Location', value: profile.path }
+        { label: 'Location', value: profile.path },
+        { label: 'Notes', value: profile.notes }
       ], false)
     },
     {
@@ -424,4 +449,4 @@ function confirmDelete(params) {
 exports.listProfiles = listProfiles;
 exports.createProfile = (params) => createEditProfile(params);
 exports.showProfileDetail = showProfileDetail;
-exports._test = { normalize, appendDateLine, formatDate, pinnedSort, createProfileSetupControls };
+exports._test = { normalize, appendDateLine, appendProfileNotes, formatDate, pinnedSort, createProfileSetupControls };
