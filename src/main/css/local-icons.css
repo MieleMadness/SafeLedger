@@ -121,6 +121,40 @@
   box-sizing: border-box;
 }
 
+/* Wallet list icon drawn with borders instead of a font glyph. The previous
+ * diamond character could render as a missing-glyph square on some systems. */
+.glyphicon-piggy-bank {
+  position: relative;
+  width: 1.05em;
+  min-width: 1.05em;
+  height: .78em;
+  border: .11em solid currentColor;
+  border-radius: .14em;
+  box-sizing: border-box;
+  vertical-align: -.06em;
+}
+.glyphicon-piggy-bank::before {
+  content: "";
+  position: absolute;
+  right: -.13em;
+  top: .17em;
+  width: .38em;
+  height: .30em;
+  border: .10em solid currentColor;
+  border-radius: .08em;
+  box-sizing: border-box;
+}
+.glyphicon-piggy-bank::after {
+  content: "";
+  position: absolute;
+  right: .02em;
+  top: .28em;
+  width: .08em;
+  height: .08em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 .fa-check-circle::before { content: "✓"; }
 .fa-pencil::before { content: "✎"; }
 .fa-paint-brush::before { content: "✦"; }
@@ -155,6 +189,5 @@
 .fa-list::before { content: "☷"; }
 .fa-check::before { content: "✓"; }
 .fa-warning::before { content: "!"; }
-.glyphicon-piggy-bank::before { content: "◇"; }
 .fa-spin { animation: safeledger-icon-spin 1s linear infinite; }
 @keyframes safeledger-icon-spin { to { transform: rotate(360deg); } }
