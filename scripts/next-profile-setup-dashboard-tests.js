@@ -55,22 +55,23 @@ function testProfileCreationUiAndMainProcessContract() {
   assert(index.includes('./css/profile-setup.css'), 'Profile setup styles should load in the application.');
 }
 
-function testRecoveryDashboardPillsAreWalletActions() {
+function testRecoveryDashboardRowsOpenVaultItems() {
   const dashboard = read('src/main/dashboard-ui.js');
-  const css = read('src/main/css/profile-setup.css');
+  const rowUi = read('src/main/dashboard-row-ui.js');
 
-  assert(dashboard.includes("document.createElement(actionable ? 'button' : 'span')"), 'Actionable recovery status should render as a button.');
-  assert(dashboard.includes("' dashboard-status-action'"), 'Actionable recovery pills should have an explicit action class.');
-  assert(dashboard.includes('onActivate: () => openWallet(item)'), 'Recovery status pill should open its wallet.');
-  assert(dashboard.includes("document.createElement(actionable ? 'button' : 'div')"), 'Wallet description should be a separate sibling button.');
-  assert(dashboard.includes("profileFile: String(item.profileFile || '')"), 'Wallet navigation should retain exact profile file targeting.');
-  assert(dashboard.includes('walletIndex: Number(item.walletIndex)'), 'Wallet navigation should retain exact wallet index targeting.');
-  assert(css.includes('.dashboard-status-action'), 'Clickable status pills should have interaction styling.');
+  assert(dashboard.includes("const badge = document.createElement('span');"), 'Recovery status pills should be informational spans, not links/buttons.');
+  assert(!dashboard.includes('dashboard-status-action'), 'Status pills should no longer carry their own navigation action.');
+  assert(dashboard.includes("document.createElement(actionable ? 'button' : 'div')"), 'The vault-item description should remain the explicit action target.');
+  assert(dashboard.includes("source: 'dashboard'"), 'Dashboard navigation should identify itself as a direct vault-item action.');
+  assert(dashboard.includes('profileIndex: Number(item.profileIndex)'), 'Dashboard navigation should retain an exact profile index target.');
+  assert(dashboard.includes('walletIndex: Number(item.walletIndex)'), 'Dashboard navigation should retain the exact vault-item index.');
+  assert(rowUi.includes("row.querySelector('.dashboard-list-main-action')"), 'The full Needs Attention row should forward to its vault-item action.');
+  assert(rowUi.includes("row.setAttribute('role', 'button')"), 'Full-row navigation should remain keyboard accessible.');
 }
 
 testStandardAndBlankProfileModels();
 testSelectedWalletsLoadTheirAssets();
 testTemplateInputValidationHelpers();
 testProfileCreationUiAndMainProcessContract();
-testRecoveryDashboardPillsAreWalletActions();
-console.log('PASS branch profile setup choices and Recovery Dashboard wallet actions.');
+testRecoveryDashboardRowsOpenVaultItems();
+console.log('PASS branch profile setup choices and Vault Overview row navigation.');
