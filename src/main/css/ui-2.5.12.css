@@ -1,18 +1,45 @@
 /* SafeLedger 2.5.12 focused UI refinements. Loaded last. */
 
-/* Copy = two overlapping sheets of paper. */
-.sl-copy-svg {
+/* Copy uses two document sheets with folded corners for a clearer copy cue. */
+.copy-inline-button,
+.qr-inline-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+}
+
+.sl-copy-svg,
+.sl-qr-svg {
   width: 19px;
   height: 19px;
   display: block;
+  margin: auto;
   overflow: visible;
+  color: currentColor;
 }
-.sl-copy-page {
+
+.sl-copy-sheet {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
+  stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+}
+
+.sl-qr-frame {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-qr-dot,
+.sl-qr-pixel {
+  fill: currentColor;
 }
 
 /* Public-address QR output should sit visually under the address, not drift. */
@@ -24,10 +51,15 @@
   display: block !important;
   margin: 0 auto !important;
 }
-.public-address-field .qr-caption {
+.compact-qr-area .qr-caption {
   max-width: 320px;
   margin-left: auto;
   margin-right: auto;
+  color: var(--sl-text-strong) !important;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
 }
 
 /* Vault Overview */
