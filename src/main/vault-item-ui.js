@@ -4,6 +4,7 @@ const web3Icons = require('./web3-icons');
 
 const EXCHANGE_CATEGORY = 'Exchange Account';
 const SERVICE_CATEGORY = 'Web3 / Website Account';
+let lastViewedCategory = '';
 
 const SERVICE_PRESETS = Object.freeze([
   'FIO App',
@@ -169,6 +170,9 @@ function patchEditForm(area) {
   if (!form) return;
   categoryInput.dataset.vaultItemPatched = 'true';
 
+  const heading = area.querySelector('h1');
+  const modifying = Boolean(heading && /Modify/i.test(heading.textContent || ''));
+
   for (const value of [EXCHANGE_CATEGORY, SERVICE_CATEGORY]) {
     if (![...categoryInput.options].some((option) => option.value === value)) {
       const option = document.createElement('option');
@@ -178,7 +182,10 @@ function patchEditForm(area) {
     }
   }
 
-  const heading = area.querySelector('h1');
+  if (modifying && !categoryInput.value && [EXCHANGE_CATEGORY, SERVICE_CATEGORY].includes(lastViewedCategory)) {
+    categoryInput.value = lastViewedCategory;
+  }
+
   if (heading && /Wallet/i.test(heading.textContent || '')) heading.textContent = heading.textContent.replace(/Wallet/g, 'Vault Item');
   const customNote = form.querySelector('.custom-fields-note');
   const noteText = 'Add optional information that does not fit the standard wallet, exchange, service, or asset fields. Sensitive values stay encrypted and are excluded from search.';
@@ -204,7 +211,10 @@ function patchServiceIcons(root) {
 
 function patchDetailTerminology(area) {
   const category = area.querySelector('.wallet-detail-category');
-  if (!category || !/exchange|website|service/i.test(category.textContent || '')) return;
+  if (!category) return;
+  const categoryText = String(category.textContent || '').trim();
+  if (categoryText) lastViewedCategory = categoryText;
+  if (!/exchange|website|service/i.test(categoryText)) return;
   for (const heading of area.querySelectorAll('.product-section-title')) {
     if (heading.textContent === 'Wallet information') heading.textContent = 'Account / service information';
   }
@@ -236,9 +246,17 @@ function start() {
   observer.observe(document.body, { childList: true, subtree: true });
 }
 
-window.addEventListener('DOMContentLoaded', start);
+if (typeof window !== 'undefined') window.addEventListener('DOMContentLoaded', start);
 
 exports.EXCHANGE_CATEGORY = EXCHANGE_CATEGORY;
 exports.SERVICE_CATEGORY = SERVICE_CATEGORY;
 exports.SERVICE_PRESETS = SERVICE_PRESETS;
-exports._test = { presetNames, customFieldLabels, addCustomField, updateAccountLayout, patchEditForm };
+exports._test = {
+  presetNames,
+  customFieldLabels,
+  addCustomField,
+  updateAccountLayout,
+  patchEditForm,
+  patchDetailTerminology,
+  getLastViewedCategory: () => lastViewedCategory
+};
