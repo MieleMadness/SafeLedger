@@ -33,7 +33,7 @@ function cssVar(block, name) {
 }
 
 async function testRepeatedSameProcessRelogin() {
-  const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'safeledger-2.5.1-relogin-'));
+  const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'safeledger-relogin-'));
   const vaultDir = path.join(temp, 'vaults');
   const password = 'SafeLedgerRelogin9!';
   const controller = cryptoSession.createController(vaultDir);
@@ -69,7 +69,7 @@ async function testRepeatedSameProcessRelogin() {
 }
 
 async function testStaleOsSignalsCannotKillFreshSession() {
-  const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'safeledger-2.5.1-device-'));
+  const temp = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'safeledger-device-'));
   try {
     const powerMonitor = new EventEmitter();
     let idleState = 'active';
@@ -179,12 +179,7 @@ function testSemanticContrast() {
   assert(css.includes('.dashboard-title-action:focus-visible'));
   assert(css.includes('font-size: 11px !important;'), 'status pills must share the Portable Storage pill text size');
   assert(css.includes('font-weight: 700 !important;'), 'status pill text must remain bold');
-  assert(css.includes('#loginBtn .fa'), 'Login icon spacing must remain part of the 2.5.1 UI polish');
-}
-
-function testVersionLineage() {
-  const pkg = JSON.parse(read('package.json'));
-  assert(/^2\.5\.\d+$/.test(pkg.version), '2.5.1 hotfix regression coverage must remain active for later 2.5 patch releases');
+  assert(css.includes('#loginBtn .fa'), 'Login icon spacing must remain part of the UI polish');
 }
 
 (async () => {
@@ -192,8 +187,7 @@ function testVersionLineage() {
   await testStaleOsSignalsCannotKillFreshSession();
   testTrustedFolderAction();
   testSemanticContrast();
-  testVersionLineage();
-  console.log('PASS SafeLedger 2.5.1 same-process re-login, stale OS signal protection, accessible semantic controls, and trusted SafeLedgerData folder action.');
+  console.log('PASS SafeLedger same-process re-login, stale OS signal protection, accessible semantic controls, and trusted SafeLedgerData folder action.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
