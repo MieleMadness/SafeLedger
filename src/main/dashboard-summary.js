@@ -4,6 +4,8 @@ const recoveryHealth = require('./recovery-health');
 const walletCatalog = require('./wallet-catalog');
 require('./wallet-catalog-extensions');
 
+const STALE_VERIFICATION_DAYS = 180;
+
 function safeName(value, fallback) {
   const text = String(value || '').trim();
   return text || fallback;
@@ -13,10 +15,13 @@ function normalize(value) {
   return String(value || '').trim().toLowerCase();
 }
 
-function walletKind(group) {
+function vaultItemKind(group) {
   const explicit = normalize(group && group.category);
+  if (explicit.includes('exchange')) return 'exchange';
+  if (explicit.includes('website') || explicit.includes('service')) return 'service';
   if (explicit.includes('hardware')) return 'hardware';
   if (explicit.includes('software')) return 'software';
+  if (explicit.includes('wallet')) return 'other';
 
   const name = normalize(group && group.name);
   const catalog = (walletCatalog.catalog || []).find((item) => normalize(item && item.name) === name);
@@ -25,6 +30,8 @@ function walletKind(group) {
   if (catalogType.includes('software')) return 'software';
   return 'other';
 }
+
+const walletKind = vaultItemKind;
 
 function safeHealthChecks(health) {
   return (health && Array.isArray(health.checks) ? health.checks : []).map((item) => ({
@@ -44,7 +51,10 @@ function safeHealthChecks(health) {
 function summarize(profileEntries = [], options = {}) {
   const counts = {
     profiles: profileEntries.length,
+    vaultItems: 0,
     wallets: 0,
+    exchanges: 0,
+    services: 0,
     assets: 0,
     hardwareWallets: 0,
     softwareWallets: 0,
@@ -52,6 +62,19 @@ function summarize(profileEntries = [], options = {}) {
     ready: 0,
     needsReview: 0,
     incomplete: 0
+  };
+  const recoveryCoverage = {
+    total: 0,
+    method: 0,
+    location: 0,
+    instructions: 0,
+    verified: 0,
+    drills: 0
+  };
+  const stale = {
+    thresholdDays: STALE_VERIFICATION_DAYS,
+    count: 0,
+    neverVerified: 0
   };
   const needsAttention = [];
   const recentlyVerified = [];
@@ -63,14 +86,33 @@ function summarize(profileEntries = [], options = {}) {
     const profileFile = String(entry && entry.profileFile || '');
     if (entry.readError) profileReadErrors++;
     const groups = entry && entry.vaultData && Array.isArray(entry.vaultData.groups) ? entry.vaultData.groups : [];
-    counts.wallets += groups.length;
+    counts.vaultItems += groups.length;
+
     for (const [walletIndex, group] of groups.entries()) {
-      const walletName = safeName(group && group.name, 'Unnamed Wallet');
+      const walletName = safeName(group && group.name, 'Unnamed Vault Item');
       counts.assets += group && Array.isArray(group.records) ? group.records.length : 0;
-      const kind = walletKind(group);
-      if (kind === 'hardware') counts.hardwareWallets++;
-      else if (kind === 'software') counts.softwareWallets++;
-      else counts.otherWallets++;
+      const kind = vaultItemKind(group);
+      if (kind === 'exchange') counts.exchanges++;
+      else if (kind === 'service') counts.services++;
+      else {
+        counts.wallets++;
+        if (kind === 'hardware') counts.hardwareWallets++;
+        else if (kind === 'software') counts.softwareWallets++;
+        else counts.otherWallets++;
+      }
+
+      recoveryCoverage.total++;
+      if (recoveryHealth.hasRecoveryMethod(group)) recoveryCoverage.method++;
+      if (recoveryHealth.hasRecoveryLocation(group)) recoveryCoverage.location++;
+      if (recoveryHealth.hasInstructions(group)) recoveryCoverage.instructions++;
+      if (group && group.lastVerified) recoveryCoverage.verified++;
+      if (group && group.lastRecoveryDrill) recoveryCoverage.drills++;
+
+      const verificationAge = recoveryHealth.daysSince(group && group.lastVerified, options.now == null ? Date.now() : options.now);
+      if (verificationAge === null) {
+        stale.count++;
+        stale.neverVerified++;
+      } else if (verificationAge > STALE_VERIFICATION_DAYS) stale.count++;
 
       const health = recoveryHealth.evaluateWallet(group || {}, {
         now: options.now,
@@ -89,6 +131,7 @@ function summarize(profileEntries = [], options = {}) {
         profileFile,
         walletName,
         walletIndex,
+        category: String(group && group.category || ''),
         status: health.status,
         score: health.score,
         lastVerified: group && group.lastVerified ? String(group.lastVerified) : '',
@@ -108,12 +151,15 @@ function summarize(profileEntries = [], options = {}) {
 
   return {
     counts,
-    readinessPercent: counts.wallets ? Math.round(scoreTotal / counts.wallets) : 0,
+    recoveryCoverage,
+    stale,
+    readinessPercent: counts.vaultItems ? Math.round(scoreTotal / counts.vaultItems) : 0,
     profileReadErrors,
     needsAttention: needsAttention.slice(0, 8),
     recentlyVerified: recentlyVerified.slice(0, 6)
   };
 }
 
+exports.STALE_VERIFICATION_DAYS = STALE_VERIFICATION_DAYS;
 exports.summarize = summarize;
-exports._test = { safeName, safeHealthChecks, walletKind };
+exports._test = { safeName, safeHealthChecks, walletKind, vaultItemKind };
