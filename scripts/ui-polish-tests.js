@@ -39,15 +39,17 @@ assert(foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr)
 
 const mainArea = index.indexOf('id="mainArea"');
 const buttonArea = index.indexOf('id="buttonArea"');
-const globalSearchButton = index.indexOf('id="globalSearchButton"');
 const dashboardButton = index.indexOf('id="dashboardButton"');
 const activityButton = index.indexOf('id="activityButton"');
+const settingsButton = index.indexOf('id="settingsButton"');
+const globalSearchButton = index.indexOf('id="globalSearchButton"');
 const panicButton = index.indexOf('id="panicLockButton"');
 assert(index.includes('class="app-cell dark4bg top-utility-cell"'));
 assert(index.includes('class="top-utility-actions"'));
-assert(globalSearchButton > 0 && globalSearchButton < mainArea, 'Global Search belongs in the top utility row');
-assert(dashboardButton > globalSearchButton && dashboardButton < mainArea, 'Dashboard belongs beside Global Search in the top utility row');
-assert(activityButton > dashboardButton && activityButton < mainArea, 'Activity History belongs beside Dashboard in the top utility row');
+assert(dashboardButton > 0 && dashboardButton < mainArea, 'Home belongs in the top utility row');
+assert(activityButton > dashboardButton && activityButton < mainArea, 'History belongs after Home in the top utility row');
+assert(settingsButton > activityButton && settingsButton < mainArea, 'Settings belongs after History in the top utility row');
+assert(globalSearchButton > settingsButton && globalSearchButton < mainArea, 'Global Search belongs after Settings in the top utility row');
 assert(panicButton > buttonArea, 'Emergency Lock must remain in the bottom action row');
 assert(index.indexOf('id="detailActionArea"') > buttonArea && index.indexOf('id="detailActionArea"') < panicButton);
 
@@ -89,4 +91,4 @@ assert(theme.includes('html[data-theme="dark"] .search-field-wrap .form-control'
 assert(theme.includes('.wallet-list-category { color: rgba(255,255,255,.84) !important;'));
 assert(theme.includes('.column-empty-text { max-width: 180px; font-size: 12px;'));
 
-console.log(`PASS UI polish ${pkg.version} keeps Search/Home/History in the top utility bar, Emergency Lock fixed bottom-right, native 2/2/3/5 layout, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
+console.log(`PASS UI polish ${pkg.version} keeps Home/History/Settings/Search in the top utility bar, Emergency Lock fixed bottom-right, native 2/2/3/5 layout, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
