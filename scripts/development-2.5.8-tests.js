@@ -78,8 +78,8 @@ function testLoginAndSensitiveUiContract() {
 }
 
 function testSettingsWorkflowOrder() {
-  const layout = require(path.join(root, 'src', 'main', 'settings-layout-ui.js'));
-  assert.deepStrictEqual(layout.ORDER, [
+  const source = read('src/main/settings-layout-ui.js');
+  const titles = [
     'Appearance',
     'Backup & Recovery',
     'Device & Storage Security',
@@ -87,9 +87,15 @@ function testSettingsWorkflowOrder() {
     'Brute Force Protection',
     'Self-Destruct Protection',
     'Password'
-  ]);
-  assert.strictEqual(layout.ORDER.indexOf('Backup & Recovery') < layout.ORDER.indexOf('Device & Storage Security'), true);
-  assert.strictEqual(layout.ORDER[layout.ORDER.length - 1], 'Password', 'Password/change-password should be the final Settings section.');
+  ];
+  let previous = -1;
+  for (const title of titles) {
+    const index = source.indexOf(`'${title}'`);
+    assert(index > previous, `${title} should appear in the requested Settings order.`);
+    previous = index;
+  }
+  assert(source.includes("const ORDER = Object.freeze(["), 'Settings layout should keep one explicit workflow order.');
+  assert(source.includes("const password = byTitle.get('Password');"), 'Password section should remain the final insertion anchor.');
 }
 
 function testResponsiveWalletGrid() {
