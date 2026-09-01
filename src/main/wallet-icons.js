@@ -82,9 +82,19 @@ function createIconElement(wallet, brandClass = 'wallet-list-brand-image') {
   const name = String(wallet && wallet.name || 'Wallet');
   if (match) return web3Icons.createImage(match.src, name, brandClass);
 
-  // Never leave an empty or missing-glyph box when SafeLedger does not have
-  // branded artwork. A local SVG wallet communicates a deliberate fallback and
-  // keeps custom/unsupported wallet rows visually aligned while offline.
+  // SafeLedger catalog wallets that predate upstream brand artwork keep their
+  // short identifying badge. This remains more useful than making every known
+  // no-artwork wallet look identical.
+  if (catalogWallet(name)) {
+    const badge = document.createElement('span');
+    badge.className = 'wallet-list-catalog-icon';
+    badge.textContent = badgeLabel(name);
+    badge.setAttribute('aria-label', `${name} wallet`);
+    return badge;
+  }
+
+  // Truly custom/unrecognized wallets use a local SVG wallet instead of the
+  // older glyph-style outline that could look like an empty or missing box.
   return createFallbackIcon(name);
 }
 
