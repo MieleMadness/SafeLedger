@@ -22,6 +22,15 @@ function makeStat(label, value) {
   return card;
 }
 
+function makeSection(titleText, className = '') {
+  const section = document.createElement('section');
+  section.className = `dashboard-section${className ? ` ${className}` : ''}`;
+  const title = document.createElement('h2');
+  title.textContent = titleText;
+  section.appendChild(title);
+  return section;
+}
+
 function statusClass(status) {
   return status === 'Ready' ? 'is-ready' : status === 'Needs Review' ? 'is-review' : 'is-incomplete';
 }
@@ -165,12 +174,39 @@ function appendHealthRow(section, titleText, metaText, statusText, statusKind, t
   section.appendChild(row);
 }
 
+function renderInventory(area, summary) {
+  const section = makeSection('Vault Inventory', 'vault-inventory-section');
+  const stats = document.createElement('div');
+  stats.className = 'dashboard-stats vault-inventory-stats';
+  stats.appendChild(makeStat('Profiles', summary.counts.profiles));
+  stats.appendChild(makeStat('Wallets', summary.counts.wallets));
+  stats.appendChild(makeStat('Assets', summary.counts.assets));
+  section.appendChild(stats);
+
+  const types = [];
+  if (summary.counts.hardwareWallets) types.push(`${summary.counts.hardwareWallets} hardware`);
+  if (summary.counts.softwareWallets) types.push(`${summary.counts.softwareWallets} software`);
+  if (summary.counts.otherWallets) types.push(`${summary.counts.otherWallets} other/custom`);
+  const meta = document.createElement('p');
+  meta.className = 'dashboard-inventory-meta';
+  meta.textContent = types.length ? `Wallet mix: ${types.join(' • ')}` : 'Add wallets to begin building your vault inventory.';
+  section.appendChild(meta);
+  area.appendChild(section);
+}
+
+function renderRecoveryHealth(area, summary) {
+  const section = makeSection('Recovery Health', 'vault-recovery-section');
+  const stats = document.createElement('div');
+  stats.className = 'dashboard-stats recovery-health-stats';
+  stats.appendChild(makeStat('Ready', summary.counts.ready));
+  stats.appendChild(makeStat('Needs Review', summary.counts.needsReview));
+  stats.appendChild(makeStat('Incomplete', summary.counts.incomplete));
+  section.appendChild(stats);
+  area.appendChild(section);
+}
+
 function renderDeviceHealth(area, device = {}) {
-  const section = document.createElement('section');
-  section.className = 'dashboard-section device-health-section';
-  const title = document.createElement('h2');
-  title.textContent = 'Device & Backup Health';
-  section.appendChild(title);
+  const section = makeSection('Device & Backup Health', 'device-health-section');
 
   const storage = device.storage;
   if (storage) {
@@ -214,9 +250,9 @@ function render(summary, device = {}) {
   header.className = 'dashboard-header';
   const headingWrap = document.createElement('div');
   const heading = document.createElement('h1');
-  heading.textContent = 'Recovery Dashboard';
+  heading.textContent = 'Vault Overview';
   const intro = document.createElement('p');
-  intro.textContent = 'A local overview of your crypto recovery preparedness. No balances, wallet addresses, or secrets leave this device.';
+  intro.textContent = 'An at-a-glance view of your Profiles, wallets, assets, storage, backups, and recovery health. Everything is calculated locally from your encrypted vault.';
   headingWrap.appendChild(heading);
   headingWrap.appendChild(intro);
   const readiness = document.createElement('div');
@@ -224,43 +260,29 @@ function render(summary, device = {}) {
   const readinessValue = document.createElement('strong');
   readinessValue.textContent = `${summary.readinessPercent}%`;
   const readinessLabel = document.createElement('span');
-  readinessLabel.textContent = ' overall readiness';
+  readinessLabel.textContent = ' recovery readiness';
   readiness.appendChild(readinessValue);
   readiness.appendChild(readinessLabel);
   header.appendChild(headingWrap);
   header.appendChild(readiness);
   area.appendChild(header);
 
-  const stats = document.createElement('div');
-  stats.className = 'dashboard-stats';
-  stats.appendChild(makeStat('Profiles', summary.counts.profiles));
-  stats.appendChild(makeStat('Wallets', summary.counts.wallets));
-  stats.appendChild(makeStat('Assets', summary.counts.assets));
-  stats.appendChild(makeStat('Ready', summary.counts.ready));
-  area.appendChild(stats);
-
   if (summary.profileReadErrors) {
     const warning = document.createElement('p');
     warning.className = 'alert alert-warning dashboard-warning';
-    warning.textContent = `${summary.profileReadErrors} profile${summary.profileReadErrors === 1 ? '' : 's'} could not be authenticated/read for this summary.`;
+    warning.textContent = `${summary.profileReadErrors} profile${summary.profileReadErrors === 1 ? '' : 's'} could not be authenticated/read for this overview.`;
     area.appendChild(warning);
   }
 
+  renderInventory(area, summary);
+  renderRecoveryHealth(area, summary);
   renderDeviceHealth(area, device);
 
-  const attention = document.createElement('section');
-  attention.className = 'dashboard-section';
-  const attentionTitle = document.createElement('h2');
-  attentionTitle.textContent = 'Needs Attention';
-  attention.appendChild(attentionTitle);
+  const attention = makeSection('Recovery Needs Attention');
   appendWalletList(attention, summary.needsAttention || [], 'Everything documented is currently ready.', false, true);
   area.appendChild(attention);
 
-  const recent = document.createElement('section');
-  recent.className = 'dashboard-section';
-  const recentTitle = document.createElement('h2');
-  recentTitle.textContent = 'Recently Verified';
-  recent.appendChild(recentTitle);
+  const recent = makeSection('Recently Verified');
   appendWalletList(recent, summary.recentlyVerified || [], 'No wallet recovery plans have been verified yet.', true);
   area.appendChild(recent);
 }
@@ -270,7 +292,7 @@ async function showDashboard() {
   if (!area || !window.safeLedgerApi || typeof window.safeLedgerApi.getDashboardSummary !== 'function') return;
   const loading = document.createElement('p');
   loading.className = 'dashboard-loading';
-  loading.textContent = 'Reviewing encrypted recovery records locally…';
+  loading.textContent = 'Reviewing encrypted vault records locally…';
   area.appendChild(loading);
   try {
     const [result, storage, backupResult] = await Promise.all([
@@ -278,7 +300,7 @@ async function showDashboard() {
       typeof window.safeLedgerApi.getStorageHealth === 'function' ? window.safeLedgerApi.getStorageHealth().catch(() => null) : Promise.resolve(null),
       typeof window.safeLedgerApi.getBackupHealth === 'function' ? window.safeLedgerApi.getBackupHealth().catch(() => null) : Promise.resolve(null)
     ]);
-    if (!result || !result.ok) throw new Error(result && result.message ? result.message : 'Unable to build dashboard.');
+    if (!result || !result.ok) throw new Error(result && result.message ? result.message : 'Unable to build Vault Overview.');
     render(result.summary, {
       storage,
       backupHealth: backupResult && backupResult.health ? backupResult.health : null
@@ -287,7 +309,7 @@ async function showDashboard() {
     area.innerHTML = '';
     const message = document.createElement('p');
     message.className = 'alert alert-warning';
-    message.textContent = err && err.message ? err.message : 'Unable to build dashboard.';
+    message.textContent = err && err.message ? err.message : 'Unable to build Vault Overview.';
     area.appendChild(message);
   }
 }
@@ -304,4 +326,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
 exports.show = showDashboard;
 exports.render = render;
-exports._test = { formatBytes, backupAgeLabel, renderDeviceHealth, makeStatus, makeHealthTitle, openPortableStorageFolder, openWallet, appendWalletList };
+exports._test = {
+  formatBytes,
+  backupAgeLabel,
+  renderInventory,
+  renderRecoveryHealth,
+  renderDeviceHealth,
+  makeStatus,
+  makeHealthTitle,
+  openPortableStorageFolder,
+  openWallet,
+  appendWalletList
+};
