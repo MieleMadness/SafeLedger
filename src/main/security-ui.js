@@ -26,7 +26,7 @@ exports.copySensitive = (value) => {
 };
 
 function copyIconMarkup() {
-  return '<svg class="sl-copy-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="sl-copy-arrow" d="M18.4 8.4A7.2 7.2 0 0 0 6.2 5.8L4.3 7.7"/><path class="sl-copy-arrow" d="M4.3 7.7V3.7H.8"/><path class="sl-copy-arrow" d="M5.6 15.6a7.2 7.2 0 0 0 12.2 2.6l1.9-1.9"/><path class="sl-copy-arrow" d="M19.7 16.3v4h3.5"/><path class="sl-copy-plus" d="M12 8v8M8 12h8"/></svg>';
+  return '<svg class="sl-copy-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect class="sl-copy-page sl-copy-page-back" x="4.5" y="3.5" width="11" height="14" rx="1.5"/><rect class="sl-copy-page sl-copy-page-front" x="8.5" y="7.5" width="11" height="13" rx="1.5"/></svg>';
 }
 
 function makeIconButton(icon, onClick, title, extraClass = '') {
