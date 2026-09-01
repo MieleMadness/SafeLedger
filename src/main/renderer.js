@@ -54,8 +54,18 @@ function clearUtilitySelections() {
 
 function navigateGlobalResult(target = {}) {
   if (!sessionUnlocked || !vaultList || !Array.isArray(vaultList.vaults)) return;
-  const profileIndex = vaultList.vaults.findIndex((item) => String(item && item.file || '') === String(target.profileFile || ''));
-  if (profileIndex < 0) return status.showStatus({ status: 'ERROR', statusMsg: 'That search result is no longer available.' });
+
+  let profileIndex = Number(target.profileIndex);
+  if (!Number.isInteger(profileIndex) || profileIndex < 0 || profileIndex >= vaultList.vaults.length) {
+    profileIndex = vaultList.vaults.findIndex((item) => String(item && item.file || '') === String(target.profileFile || ''));
+  }
+  if (profileIndex < 0) {
+    const unavailable = target.source === 'dashboard'
+      ? 'That vault item is no longer available.'
+      : 'That search result is no longer available.';
+    return status.showStatus({ status: 'ERROR', statusMsg: unavailable });
+  }
+
   const selectedProfile = vaultList.vaults[profileIndex];
   pendingGlobalTarget = target;
   vaultList.vaultSelected = profileIndex;
@@ -104,7 +114,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (saving.state) return alert('Please wait for processing to complete');
     requireUnlocked(() => {
       if (vaultData && vaultData.groupSelected != null) record.createRecord({ vaultData, saving });
-      else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Wallet.' });
+      else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Vault Item.' });
     });
   });
 
