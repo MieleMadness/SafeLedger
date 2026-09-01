@@ -10,6 +10,14 @@ function quantity(count, singular, plural) {
   return `${value} ${value === 1 ? singular : (plural || `${singular}s`)}`;
 }
 
+function setTextIfChanged(node, text) {
+  if (!node) return false;
+  const next = String(text == null ? '' : text);
+  if (String(node.textContent || '') === next) return false;
+  node.textContent = next;
+  return true;
+}
+
 function readStatCards(section) {
   const map = new Map();
   if (!section) return map;
@@ -62,9 +70,7 @@ function patchVaultOverview(root = document) {
   if (!heading || String(heading.textContent || '').trim() !== 'Vault Overview') return;
 
   const intro = root.querySelector('.dashboard-header p');
-  if (intro) {
-    intro.textContent = 'An at-a-glance view of your Profiles, Vault Items, assets, backups, and recovery health. Vault Items include wallets, exchange accounts, and Web / Web3 services. Everything is calculated locally from your encrypted vault.';
-  }
+  setTextIfChanged(intro, 'An at-a-glance view of your Profiles, Vault Items, assets, backups, and recovery health. Vault Items include wallets, exchange accounts, and Web / Web3 services. Everything is calculated locally from your encrypted vault.');
 
   const section = root.querySelector('.vault-inventory-section');
   if (section) {
@@ -81,8 +87,8 @@ function patchVaultOverview(root = document) {
         walletCard.card.dataset.safeLedgerWalletCount = String(numberFromText(walletCard.value.textContent));
       }
       walletTotal = numberFromText(walletCard.card.dataset.safeLedgerWalletCount);
-      walletCard.label.textContent = 'Vault Items';
-      walletCard.value.textContent = String(walletTotal + exchanges + services);
+      setTextIfChanged(walletCard.label, 'Vault Items');
+      setTextIfChanged(walletCard.value, String(walletTotal + exchanges + services));
     }
 
     const meta = section.querySelector('.dashboard-inventory-meta');
@@ -93,7 +99,7 @@ function patchVaultOverview(root = document) {
         meta.dataset.safeLedgerSoftwareCount = String(mix.software);
         meta.dataset.safeLedgerOtherCount = String(mix.other);
       }
-      meta.textContent = buildVaultContentsLabel({
+      const contentsLabel = buildVaultContentsLabel({
         hardware: numberFromText(meta.dataset.safeLedgerHardwareCount),
         software: numberFromText(meta.dataset.safeLedgerSoftwareCount),
         other: numberFromText(meta.dataset.safeLedgerOtherCount),
@@ -101,12 +107,13 @@ function patchVaultOverview(root = document) {
         exchanges,
         services
       });
+      setTextIfChanged(meta, contentsLabel);
     }
   }
 
   for (const helper of root.querySelectorAll('.dashboard-section-help')) {
     if (/click a wallet or vault item/i.test(helper.textContent || '')) {
-      helper.textContent = 'Click a vault item below to open it and resolve the recovery gaps.';
+      setTextIfChanged(helper, 'Click a vault item below to open it and resolve the recovery gaps.');
     }
   }
 }
@@ -136,11 +143,11 @@ function patchExactText(root = document) {
   ];
   for (const node of root.querySelectorAll(selectors.join(','))) {
     const current = String(node.textContent || '').trim();
-    if (EXACT_TEXT_REPLACEMENTS.has(current)) node.textContent = EXACT_TEXT_REPLACEMENTS.get(current);
+    if (EXACT_TEXT_REPLACEMENTS.has(current)) setTextIfChanged(node, EXACT_TEXT_REPLACEMENTS.get(current));
   }
 
   for (const kind of root.querySelectorAll('.global-search-result-kind')) {
-    if (String(kind.textContent || '').trim().toUpperCase() === 'WALLET') kind.textContent = 'VAULT ITEM';
+    if (String(kind.textContent || '').trim().toUpperCase() === 'WALLET') setTextIfChanged(kind, 'VAULT ITEM');
   }
 }
 
@@ -161,7 +168,7 @@ function patchActionLabels(root = document) {
       if (!current) continue;
       for (const [pattern, replacement] of replacements) {
         if (pattern.test(current)) {
-          node.setAttribute(attribute, replacement);
+          if (current !== replacement) node.setAttribute(attribute, replacement);
           break;
         }
       }
@@ -172,13 +179,14 @@ function patchActionLabels(root = document) {
 function patchRecoveryDrill(root = document) {
   const title = root.querySelector('.recovery-drill-wallet');
   if (title && /^Wallet:/i.test(title.textContent || '')) {
-    title.textContent = String(title.textContent).replace(/^Wallet:/i, 'Vault Item:');
+    setTextIfChanged(title, String(title.textContent).replace(/^Wallet:/i, 'Vault Item:'));
   }
   const warning = root.querySelector('.recovery-drill-warning');
   if (warning) {
-    warning.textContent = String(warning.textContent || '')
+    const next = String(warning.textContent || '')
       .replace(/this wallet/gi, 'this vault item')
       .replace(/Edit Wallet/g, 'Edit Vault Item');
+    setTextIfChanged(warning, next);
   }
 }
 
@@ -187,7 +195,7 @@ function patchRecoveryBinder(root = document) {
     const match = String(node.textContent || '').trim().match(/^(\d+)\s+wallet(s)?$/i);
     if (match) {
       const count = Number.parseInt(match[1], 10) || 0;
-      node.textContent = quantity(count, 'vault item');
+      setTextIfChanged(node, quantity(count, 'vault item'));
     }
   }
 }
@@ -196,12 +204,12 @@ function patchRecoveryIntelligenceText(root = document) {
   const section = root.querySelector('#recoveryIntelligenceSection');
   if (!section) return;
   for (const node of section.querySelectorAll('.dashboard-list-title, .dashboard-list-meta, .dashboard-empty')) {
-    let text = String(node.textContent || '');
-    text = text
+    const current = String(node.textContent || '');
+    const next = current
       .replace(/listed Wallet\/Asset locations/g, 'listed Vault Item / Asset locations')
       .replace(/Repeated Wallet recovery metadata/g, 'Repeated Vault Item recovery metadata')
       .replace(/Wallet entries share/g, 'Vault Item entries share');
-    node.textContent = text;
+    setTextIfChanged(node, next);
   }
 }
 
@@ -225,6 +233,7 @@ if (typeof window !== 'undefined') window.addEventListener('DOMContentLoaded', s
 exports._test = {
   numberFromText,
   quantity,
+  setTextIfChanged,
   parseWalletMix,
   buildVaultContentsLabel,
   readStatCards,
