@@ -88,6 +88,45 @@ html[data-theme="dark"] {
   transform-origin: 0 50%;
 }
 
+/* Keep the new Settings shortcut visually distinct from Search while matching
+ * the same compact top-action footprint. */
+#settingsButton .fa {
+  color: var(--sl-icon-neutral) !important;
+}
+
+/* Needs Attention is not just a report: each row opens the exact wallet that
+ * needs work. The full-row button makes that destination obvious and keyboard
+ * accessible without turning the status pill itself into a misleading link. */
+.dashboard-list-row-action {
+  width: 100%;
+  border-left: 0;
+  border-right: 0;
+  border-top: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dashboard-list-row-action .dashboard-list-main,
+.dashboard-list-row-action .dashboard-list-title,
+.dashboard-list-row-action .dashboard-list-meta {
+  display: block;
+}
+
+.dashboard-list-row-action:hover,
+.dashboard-list-row-action:focus {
+  background: var(--sl-primary-soft) !important;
+}
+
+.dashboard-list-row-action:focus-visible {
+  position: relative;
+  z-index: 1;
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: -2px !important;
+}
+
 /* Recognizable line-art printer: paper above, printer body, output sheet below. */
 .fa-print {
   position: relative;
