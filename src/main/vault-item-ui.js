@@ -63,7 +63,7 @@ function setLabel(form, id, text) {
   const input = form.querySelector(`#${id}`);
   const wrap = fieldWrap(input);
   const label = wrap && wrap.querySelector('label');
-  if (label) label.textContent = text;
+  if (label && label.textContent !== text) label.textContent = text;
 }
 
 function customFieldLabels(form) {
@@ -181,7 +181,8 @@ function patchEditForm(area) {
   const heading = area.querySelector('h1');
   if (heading && /Wallet/i.test(heading.textContent || '')) heading.textContent = heading.textContent.replace(/Wallet/g, 'Vault Item');
   const customNote = form.querySelector('.custom-fields-note');
-  if (customNote) customNote.textContent = 'Add optional information that does not fit the standard wallet, exchange, service, or asset fields. Sensitive values stay encrypted and are excluded from search.';
+  const noteText = 'Add optional information that does not fit the standard wallet, exchange, service, or asset fields. Sensitive values stay encrypted and are excluded from search.';
+  if (customNote && customNote.textContent !== noteText) customNote.textContent = noteText;
 
   categoryInput.addEventListener('change', () => updateAccountLayout(form, categoryInput));
   updateAccountLayout(form, categoryInput);
@@ -211,9 +212,12 @@ function patchDetailTerminology(area) {
 
 function patchGlobalLabels() {
   const search = document.getElementById('groupSearch');
-  if (search) search.placeholder = 'Search vault items...';
+  if (search && search.placeholder !== 'Search vault items...') search.placeholder = 'Search vault items...';
   const add = document.getElementById('addGroup');
-  if (add) add.innerHTML = '<span class="fa fa-plus"></span> Add Vault Item';
+  if (add && add.dataset.vaultItemLabel !== 'true') {
+    add.dataset.vaultItemLabel = 'true';
+    add.innerHTML = '<span class="fa fa-plus"></span> Add Vault Item';
+  }
 }
 
 function patch(root = document) {
