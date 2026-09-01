@@ -79,7 +79,6 @@ function configureStorage() {
 }
 
 function buildMenu() {
-  const selfDestructEnabled = !!(currentSettings && currentSettings.scrubContentAfterRetries === true);
   const template = [{
     label: 'SafeLedger',
     submenu: [
@@ -88,12 +87,6 @@ function buildMenu() {
         click: () => { shell.openExternal(SAFELEDGER_SITE_URL).catch(() => {}); }
       },
       { label: 'Settings', click: () => showSettings() },
-      {
-        label: 'Self-Destruct Protection',
-        type: 'checkbox',
-        checked: selfDestructEnabled,
-        click: (item) => setSelfDestructProtection(item.checked)
-      },
       { type: 'separator' },
       { role: 'quit' }
     ]
@@ -323,6 +316,18 @@ app.whenReady().then(createWindow);
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 app.on('before-quit', () => cryptoSession.clearSession());
+
+ipc.on('request-settings', (event) => {
+  try { assertTrustedEvent(event); } catch (_) { return; }
+  showSettings();
+});
+
+ipc.handle('set-self-destruct-protection', async (event, enabled) => {
+  assertTrustedEvent(event);
+  await setSelfDestructProtection(enabled === true);
+  const settings = await ensureCurrentSettings();
+  return { ok: true, enabled: settings.scrubContentAfterRetries === true };
+});
 
 ipc.on('panic-lock', (event, params = {}) => {
   try { assertTrustedEvent(event); } catch (_) { return; }

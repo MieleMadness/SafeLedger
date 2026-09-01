@@ -13,13 +13,6 @@ function parse(version) {
   return match.slice(1).map(Number);
 }
 
-function compare(a, b) {
-  for (let i = 0; i < 3; i++) {
-    if (a[i] !== b[i]) return a[i] - b[i];
-  }
-  return 0;
-}
-
 let parent;
 try {
   parent = JSON.parse(execFileSync('git', ['show', 'HEAD^:package.json'], {
@@ -32,12 +25,12 @@ try {
   process.exit(0);
 }
 
-const result = compare(parse(current), parse(parent));
-if (result < 0) {
-  throw new Error(`SafeLedger version may not move backward. Parent=${parent}, current=${current}`);
+const [currentMajor, currentMinor, currentPatch] = parse(current);
+const [parentMajor, parentMinor, parentPatch] = parse(parent);
+const isNextPatch = currentMajor === parentMajor && currentMinor === parentMinor && currentPatch === parentPatch + 1;
+
+if (!isNextPatch) {
+  throw new Error(`SafeLedger releases must increase the patch version by exactly one. Parent=${parent}, current=${current}`);
 }
-if (result === 0) {
-  console.log(`PASS SafeLedger version unchanged for a non-release change: ${current}`);
-} else {
-  console.log(`PASS SafeLedger version increased: ${parent} -> ${current}`);
-}
+
+console.log(`PASS SafeLedger patch version increased by exactly one: ${parent} -> ${current}`);

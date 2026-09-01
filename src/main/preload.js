@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   processGroup: (params) => ipcRenderer.send('process-group', params),
   processRecord: (params) => ipcRenderer.send('process-record', params),
   saveSettings: (params) => ipcRenderer.send('save-settings', params),
+  requestSettings: () => ipcRenderer.send('request-settings'),
+  setSelfDestructProtection: (enabled) => ipcRenderer.invoke('set-self-destruct-protection', enabled === true),
   recordPasswordFailure: () => ipcRenderer.send('record-password-failure'),
   panicLock: (params) => ipcRenderer.send('panic-lock', params),
   cryptoHasEnvelope: () => ipcRenderer.invoke('crypto-v3-has-envelope'),
