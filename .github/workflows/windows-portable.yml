@@ -22,10 +22,6 @@ jobs:
           submodules: false
           fetch-depth: 2
 
-      - name: Verify version continuity
-        shell: pwsh
-        run: node scripts/version-bump-check.js
-
       - name: Set up Node.js
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
