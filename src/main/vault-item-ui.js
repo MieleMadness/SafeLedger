@@ -7,16 +7,16 @@ const SERVICE_CATEGORY = 'Web3 / Website Account';
 let lastViewedCategory = '';
 
 const SERVICE_PRESETS = Object.freeze([
-  'FIO App',
-  'OpenSea',
-  'Uniswap',
   'Aave',
-  'Lido',
-  'Etherscan',
-  'Solscan',
-  'Koinly',
+  'CoinGecko',
   'CoinTracker',
-  'CoinGecko'
+  'Etherscan',
+  'FIO App',
+  'Koinly',
+  'Lido',
+  'OpenSea',
+  'Solscan',
+  'Uniswap'
 ]);
 
 const EXCHANGE_FIELDS = Object.freeze([
@@ -200,7 +200,7 @@ function patchServiceIcons(root) {
     const category = anchor.querySelector('.wallet-list-category');
     if (!category || !/website|service/i.test(category.textContent || '')) continue;
     if (anchor.querySelector('.vault-service-icon')) continue;
-    const existing = anchor.querySelector('.wallet-list-icon, .wallet-list-catalog-icon, .wallet-list-brand-image');
+    const existing = anchor.querySelector('.wallet-list-icon, .wallet-list-catalog-icon, .wallet-list-brand-image, .wallet-list-fallback-icon');
     const icon = document.createElement('i');
     icon.className = 'fa fa-globe vault-service-icon';
     icon.setAttribute('aria-hidden', 'true');
