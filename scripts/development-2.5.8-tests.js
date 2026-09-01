@@ -62,7 +62,8 @@ function testLoginAndSensitiveUiContract() {
   assert(password.includes("show.innerHTML = `<i class=\"fa ${hidden ? 'fa-eye-slash' : 'fa-eye'}\""),
     'Password visibility should switch between eye and eye-slash icons.');
 
-  assert(css.includes('.login-password-shell,\n.login-password-strength,\n#loginSecurityControls'));
+  assert(/\.login-password-shell,\s*\.login-password-strength,\s*#loginSecurityControls/.test(css),
+    'Login password, meter, and action row should share the compact width contract.');
   assert(css.includes('width: 50% !important;'), 'Login password and meter should use half the detail width.');
   assert(css.includes('.form-control:focus,'));
   assert(css.includes('box-shadow: none !important;'));
