@@ -41,6 +41,10 @@ const safeLedgerAliases = {
     'bitbox02-multi': 'bitbox',
     'trust-wallet': 'trust',
     'rabby-wallet': 'rabby'
+  },
+  exchanges: {
+    // Kraken Wallet uses the local Kraken brand artwork supplied by Web3Icons.
+    'kraken-wallet': 'kraken'
   }
 };
 
@@ -125,6 +129,13 @@ function metadataValues(category, entry) {
   return values.filter(Boolean);
 }
 
+function humanizeIconKey(value) {
+  return String(value || '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .trim();
+}
+
 function buildCategory(manifest, svgCatalog, category) {
   const svgCategory = svgCatalog && svgCatalog[category] || {};
   for (const key of availableKeys(svgCategory)) {
@@ -145,6 +156,9 @@ function applyMetadataAliases(manifest, metadata, category) {
     for (const value of metadataValues(category, entry)) {
       addAlias(manifest.aliases[category], value, canonical);
     }
+    if ((category === 'wallets' || category === 'exchanges') && entry && entry.name) {
+      manifest.displayNames[category][canonical] = String(entry.name).trim();
+    }
   }
 }
 
@@ -155,6 +169,14 @@ function applySafeLedgerAliases(manifest) {
       if (manifest[category] && manifest[category][targetKey]) {
         addAlias(manifest.aliases[category], alias, targetKey);
       }
+    }
+  }
+}
+
+function ensureDisplayNames(manifest) {
+  for (const category of ['wallets', 'exchanges']) {
+    for (const key of Object.keys(manifest[category] || {})) {
+      if (!manifest.displayNames[category][key]) manifest.displayNames[category][key] = humanizeIconKey(key);
     }
   }
 }
@@ -173,14 +195,18 @@ async function main() {
   fs.mkdirSync(outputRoot, { recursive: true });
 
   // Keep the wallet-aware v2 shape for backward compatibility and add exchange
-  // artwork plus metadata aliases as additive fields.
+  // artwork plus metadata aliases as additive fields. Display names let the
+  // profile picker expose every locally available wallet icon without keeping
+  // a second hand-maintained list of brand names.
   const manifest = { version: 2, tokens: {}, networks: {}, wallets: {} };
   manifest.exchanges = {};
   manifest.aliases = { tokens: {}, networks: {}, wallets: {}, exchanges: {} };
+  manifest.displayNames = { wallets: {}, exchanges: {} };
 
   for (const category of categories) buildCategory(manifest, svgCatalog, category);
   for (const category of categories) applyMetadataAliases(manifest, metadata, category);
   applySafeLedgerAliases(manifest);
+  ensureDisplayNames(manifest);
 
   const minimums = { tokens: 1000, networks: 100, wallets: 30, exchanges: 20 };
   for (const category of categories) {
