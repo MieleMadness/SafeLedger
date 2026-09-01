@@ -1,5 +1,7 @@
 'use strict';
 
+const eyeIcon = require('./eye-icon');
+
 function qrIconMarkup() {
   const icon = document.createElement('span');
   icon.className = 'sl-qr-icon';
@@ -15,10 +17,20 @@ function qrIconMarkup() {
 function patchSensitiveSummary(summary) {
   if (!summary) return;
   const details = summary.closest('details');
-  const icon = summary.querySelector('.secure-field-summary-label > .fa');
-  if (!details || !icon) return;
-  const wanted = details.open ? 'fa fa-eye-slash' : 'fa fa-eye';
-  if (icon.className !== wanted) icon.className = wanted;
+  const label = summary.querySelector('.secure-field-summary-label');
+  if (!details || !label) return;
+
+  let icon = label.querySelector('.sl-sensitive-eye');
+  const legacy = label.querySelector('.fa');
+  if (!icon) {
+    icon = document.createElement('span');
+    icon.className = 'sl-sensitive-eye';
+    icon.setAttribute('aria-hidden', 'true');
+    if (legacy) legacy.replaceWith(icon);
+    else label.insertBefore(icon, label.firstChild);
+  }
+  icon.innerHTML = eyeIcon.markup(details.open);
+
   const action = details.open ? 'Hide sensitive information' : 'Reveal sensitive information';
   summary.title = action;
   summary.setAttribute('aria-label', action);
