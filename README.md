@@ -180,45 +180,43 @@ Assets can store information such as:
 
 ## Automatic wallet and asset icons
 
-SafeLedger bundles wallet and crypto artwork during the build from the pinned local `@web3icons/core` dependency. **No icon is downloaded from the internet while SafeLedger is running.** If SafeLedger cannot find a matching bundled icon, it uses the generic wallet/asset fallback instead of making a network request.
+SafeLedger bundles the complete compatible icon registry from its pinned local `@web3icons/core` / `@web3icons/common` dependency during the build. **No icon is downloaded from the internet while SafeLedger is running.** The starter Wallet and Asset lists do not limit icon support: if a user manually creates an entry that matches artwork in the bundled registry, SafeLedger uses it automatically. Unknown entries fall back to SafeLedger's generic wallet/asset icon.
+
+The current 2.5.2 test candidate prepares **2,091 unique Web3Icons artworks**, providing **1,849 token-symbol triggers**, **2,303 token-name triggers**, **381 network-name triggers**, and **69 wallet-name triggers**. These counts come from the pinned icon package used by the build and can change when that dependency is intentionally updated in a future release.
 
 ### Wallet icon triggers
 
-Wallet-name matching is case-insensitive. The following wallet names currently trigger a branded icon:
+Wallet matching ignores capitalization and normalizes spaces and punctuation. SafeLedger also understands common forms such as `Atomic Wallet`, `WalletConnect`, and `MyEtherWallet`, even when the underlying icon ID uses slightly different spacing.
 
-| Wallet icon | Names that trigger it |
-| --- | --- |
-| Ledger | `Ledger` |
-| Trezor | `Trezor` |
-| BitBox | `BitBox02 Multi`, `BitBox02`, `BitBox` |
-| MetaMask | `MetaMask` |
-| Trust Wallet | `Trust Wallet` |
-| Exodus | `Exodus` |
-| Phantom | `Phantom` |
-| Coinbase Wallet | `Base App (Coinbase Wallet)`, `Coinbase Wallet`, `Base App` |
-| Rabby | `Rabby Wallet`, `Rabby` |
+The bundled wallet registry currently includes these wallet names/brands:
 
-The current default catalog also includes `Tangem`, `Keystone`, `OneKey`, `COLDCARD`, `SafePal`, and `Electrum`. Those names currently use SafeLedger's generic wallet icon because the pinned local icon bundle does not provide a matching wallet image through SafeLedger's current mapping.
+`alfa1`, `Alpha Wallet`, `Argent X`, `Backpack`, `Clave`, `Coin98`, `Coinbase Wallet`, `Enkrypt`, `imToken`, `Kraken Wallet`, `Ledger`, `Lit Protocol`, `MetaMask`, `Multis`, `MyEtherWallet`, `Obvious Wallet`, `OKX Wallet`, `Phantom`, `Pillar`, `Portal`, `Rabby`, `Rainbow`, `Ronin`, `Safe Wallet`, `Sender`, `Sequence`, `Soul`, `Squads`, `Token Pocket`, `Trezor`, `Trust Wallet`, `Unipass`, `Venly`, `Wallet3`, `Wallet Connect`, `XDEFI`, `Zengo`, `Zerion`, `Atomic`, `BitBox`, `Blue Wallet`, `Exodus`, `Glow`, `Keplr`, `Kukai`, `Solflare`, `Temple`, `Pecunity`, `Ambire`, `Cypherock`, and `Daimo Pay`.
+
+SafeLedger also adds these convenience aliases:
+
+- `Base App` and `Base App (Coinbase Wallet)` → Coinbase Wallet
+- `BitBox02` and `BitBox02 Multi` → BitBox
+- `Rabby Wallet` → Rabby
+- A trailing `Wallet` is ignored when the shorter bundled brand exists, so names such as `Atomic Wallet` and `Coin98 Wallet` resolve automatically
+- Compact punctuation/spacing differences are tolerated, so names such as `WalletConnect` and `MyEtherWallet` resolve to their bundled entries
+
+The default SafeLedger catalog currently includes some wallet brands for which this pinned Web3Icons version does not provide matching artwork, including `Tangem`, `Keystone`, `OneKey`, `COLDCARD`, `SafePal`, and `Electrum`. Those remain fully usable and display SafeLedger's generic wallet icon.
 
 ### Asset icon triggers
 
-For Assets, **the Symbol field is checked first**. If the symbol does not have a bundled token icon, SafeLedger then checks the Asset Name as a network name. This means entering a standard ticker such as `BTC` is generally the most reliable way to trigger an icon.
+For Assets, SafeLedger checks in this order:
 
-#### Symbol triggers currently bundled
+1. **Symbol** — for example `BTC`, `ETH`, `SOL`, or `SHIB`.
+2. **Network name** — for example `Bitcoin`, `Ethereum`, `Base`, `Arbitrum`, or `Shibarium`.
+3. **Token/coin name** — for example `Shiba Inu` when the Symbol field is blank or does not resolve.
 
-The 2.5.2 test build currently contains automatic token artwork for these symbols:
+The complete bundled registry currently exposes **1,849 symbol triggers**, **2,303 token-name triggers**, and **381 network-name triggers**. This means manually added coins/tokens are not restricted to the assets seeded by a particular wallet.
 
-`3ULL`, `ADA`, `ADI`, `AKT`, `ALGO`, `ALPH`, `APE`, `APT`, `ARB`, `AREA`, `ATOM`, `AURORA`, `AVAX`, `AXL`, `AZERO`, `BCH`, `BLAST`, `BNB`, `BROCK`, `BTC`, `CELO`, `CHZ`, `CLORE`, `CORE`, `CRO`, `CSPR`, `CYBER`, `DASH`, `DEL`, `DGB`, `DIONE`, `DOGE`, `DOT`, `ETC`, `ETH`, `ETHW`, `EWT`, `FIL`, `FLR`, `FTM`, `GLMR`, `GNO`, `HBAR`, `ICP`, `JOY`, `KAS`, `KAVA`, `KOIN`, `KSM`, `LINK`, `LTC`, `LUNA`, `LUNC`, `MNT`, `MOVR`, `NEAR`, `NEO`, `OCTA`, `ONE`, `OP`, `POL`, `QTUM`, `RVN`, `RXD`, `SEI`, `SOL`, `SUI`, `TAO`, `TARA`, `TLOS`, `TOKEN`, `TRX`, `USDC`, `USDT`, `VET`, `XCH`, `XDC`, `XLM`, `XMR`, `XRP`, `XTZ`, `ZEC`.
+Common symbol examples include `BTC`, `ETH`, `SOL`, `USDT`, `USDC`, `XRP`, `ADA`, `BNB`, `DOGE`, `AVAX`, `ARB`, `POL`, `LINK`, `LTC`, `XLM`, `XMR`, and `SHIB`. Symbols are normalized to uppercase before lookup.
 
-Symbols are normalized to uppercase before lookup. Custom tickers that are not in the bundled manifest simply use the generic asset icon.
+Common name/network examples include `Bitcoin`, `Ethereum`, `Solana`, `Base`, `Arbitrum`, `Avalanche`, `Polygon`, `Shibarium`, `BNB Smart Chain`, `TRON`, `Cardano`, and `Shiba Inu`.
 
-#### Asset/network name triggers currently bundled
-
-If the Symbol field does not resolve an icon, these network names can trigger bundled artwork through the Asset Name field. Matching ignores capitalization and normalizes spaces/punctuation:
-
-`Acala`, `Algorand`, `ApeChain`, `Aptos`, `Aurora`, `Avalanche`, `Base`, `Binance Smart Chain`, `Bitcoin`, `Blast`, `Cardano`, `Celo`, `Chiliz`, `Cosmos Hub`, `Cronos`, `Ethereum`, `Ethereum Classic`, `Filecoin`, `Flare`, `Harmony`, `Kava`, `Linea`, `Litecoin`, `Manta Pacific`, `Mantle`, `Monad`, `Moonbeam`, `Moonriver`, `NEAR Protocol`, `Optimism`, `Plasma`, `Polkadot`, `Polygon`, `Polygon zkEVM`, `PulseChain`, `Rootstock`, `Scroll`, `Solana`, `Sonic`, `Stellar`, `Sui`, `Telos`, `Tempo`, `Terra Classic`, `TON`, `TRON`, `Zora`.
-
-SafeLedger also recognizes these convenience names and maps them to the bundled network artwork:
+SafeLedger also recognizes these convenience network-family names:
 
 - `BNB`, `BNB Chain`, `BNB Smart Chain`, `BNB Beacon Chain` → Binance Smart Chain
 - `Avalanche C-Chain` → Avalanche
@@ -235,7 +233,7 @@ SafeLedger also recognizes these convenience names and maps them to the bundled 
 - `BEP-20 Tokens` → Binance Smart Chain
 - `Cardano Native Tokens` → Cardano
 
-If both the Symbol and Name match available artwork, **the Symbol wins**. This keeps common assets such as `ARB`, `AVAX`, `BNB`, `ETH`, and `SOL` predictable even when users choose slightly different descriptive names.
+If the Symbol and Name both match available artwork, **the Symbol wins** because it is the most explicit user-entered identifier. If no bundled match exists, SafeLedger simply displays the generic asset icon and continues working normally.
 
 ## Portable data layout
 
