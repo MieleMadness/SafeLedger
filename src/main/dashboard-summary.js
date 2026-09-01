@@ -31,10 +31,11 @@ function summarize(profileEntries = [], options = {}) {
 
   for (const entry of profileEntries) {
     const profileName = safeName(entry.profileName, 'Profile');
+    const profileFile = String(entry && entry.profileFile || '');
     if (entry.readError) profileReadErrors++;
     const groups = entry && entry.vaultData && Array.isArray(entry.vaultData.groups) ? entry.vaultData.groups : [];
     counts.wallets += groups.length;
-    for (const group of groups) {
+    for (const [walletIndex, group] of groups.entries()) {
       const walletName = safeName(group && group.name, 'Unnamed Wallet');
       counts.assets += group && Array.isArray(group.records) ? group.records.length : 0;
       const health = recoveryHealth.evaluateWallet(group || {}, {
@@ -51,7 +52,9 @@ function summarize(profileEntries = [], options = {}) {
       const checks = safeHealthChecks(health);
       const item = {
         profileName,
+        profileFile,
         walletName,
+        walletIndex,
         status: health.status,
         score: health.score,
         lastVerified: group && group.lastVerified ? String(group.lastVerified) : '',
