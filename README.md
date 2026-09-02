@@ -6,18 +6,26 @@ Vault Items can represent cryptocurrency wallets, exchange accounts, Web3 accoun
 
 ## Release status
 
-### Current stable release: SafeLedger 2.6.3
+### Current stable release: SafeLedger 2.6.4
 
-SafeLedger **2.6.3** is the current source release on the repository's `master` release line.
+SafeLedger **2.6.4** is the current source release on the repository's `master` release line.
 
-2.6.3 is a focused reliability hotfix for the Chain Games Web3 / Website Account save path. It fixes a sandbox-only local-icon error that could leave a new Chain Games Vault Item stuck in **processing** before the encrypted save request reached the trusted main process.
+2.6.4 is a focused usability and reliability patch for Vault Item selection, Add Asset behavior, Chain Games artwork, and navigation-icon readability.
 
-### What's new in SafeLedger 2.6.3
+### What's new in SafeLedger 2.6.4
 
-- Fixed Chain Games Vault Item saves getting stuck in **processing** when reviewed CHAIN starter assets were prepared in the sandboxed renderer.
-- Local website/service SVG icons now use renderer-safe URI encoding instead of depending on Node's `Buffer` global.
-- Optional preset asset seeding can no longer prevent the core encrypted Vault Item save request from being sent. If preset enrichment fails, SafeLedger logs the enrichment error and continues with the Vault Item save.
+- Fixed **Add Asset** appearing to do nothing when a Profile was open and Vault Items were visible but no internal Vault Item selection had been established.
+- A normal Profile read now selects the first visible Vault Item when no explicit Vault Item is already selected, and the Add Asset action repairs a missing selection before its normal handler runs.
+- Replaced the Chain Games `CG` initials tile with dedicated local/offline vector artwork using the angular interlocking Chain Games visual motif.
+- Chain Games Vault Items and reviewed `CHAIN` Assets now share the same local artwork source.
+- Vault Item and Asset navigation icons now use the same **28px** desktop size and **24px** compact size across branded, generic, catalog, and fallback artwork.
 - No vault schema, AES-256-GCM, Argon2id, main-process DEK, or cloud/network behavior changed in this hotfix.
+
+### 2.6.3 reliability retained
+
+- Chain Games Vault Item saves no longer get stuck in **processing** when reviewed CHAIN starter assets are prepared in the sandboxed renderer.
+- Local website/service SVG icons use renderer-safe URI encoding instead of depending on Node's `Buffer` global.
+- Optional preset asset seeding cannot prevent the core encrypted Vault Item save request from being sent. If preset enrichment fails, SafeLedger logs the enrichment error and continues with the Vault Item save.
 
 ### 2.6.2 features retained
 
@@ -162,9 +170,13 @@ Released as **2.6.0**.
 
 ### SafeLedger 2.6.3 — Chain Games Save Hotfix
 
-2.6.3 fixes the Chain Games save freeze caused by renderer-sandbox-incompatible local icon encoding and hardens preset enrichment so an optional preset error cannot prevent the encrypted Vault Item save IPC request.
+2.6.3 fixed the Chain Games save freeze caused by renderer-sandbox-incompatible local icon encoding and hardened preset enrichment so an optional preset error cannot prevent the encrypted Vault Item save IPC request.
 
-See `RELEASE-2.6.md`, `RELEASE-2.6.1.md`, `RELEASE-2.6.2.md`, and `RELEASE-2.6.3.md` for the detailed 2.6 release history.
+### SafeLedger 2.6.4 — Add Asset & Icon Usability Hotfix
+
+2.6.4 fixes missing Vault Item selection behind Add Asset, replaces the Chain Games initials tile with dedicated local vector artwork, and standardizes larger Vault Item/Asset navigation icons.
+
+See `RELEASE-2.6.md`, `RELEASE-2.6.1.md`, `RELEASE-2.6.2.md`, `RELEASE-2.6.3.md`, and `RELEASE-2.6.4.md` for the detailed 2.6 release history.
 
 ## How SafeLedger is organized
 
@@ -226,7 +238,7 @@ Known exchange choices use the local exchange-logo catalog. A smaller reviewed s
 
 Web3 / Website Account Vault Items can store login information, verified website, connected wallet names, profile/account ID, 2FA information, backup codes, recovery notes, and optional tracked assets.
 
-SafeLedger 2.6.3 retains local known-site choices for major websites as well as Web3 services. Known-site icons are local brand-style tiles generated inside SafeLedger. Unknown websites use the generic globe.
+SafeLedger 2.6.4 retains local known-site choices for major websites as well as Web3 services. Known-site icons are local brand-style tiles generated inside SafeLedger. Unknown websites use the generic globe.
 
 These presets intentionally do **not** auto-fill login URLs. Verify a website yourself before saving it.
 
@@ -262,7 +274,7 @@ For packaged builds, SafeLedger creates and uses `SafeLedgerData` beside the Saf
 
 ```text
 D:\My SafeLedger\
-├─ SafeLedger-2.6.3-Portable.exe
+├─ SafeLedger-2.6.4-Portable.exe
 └─ SafeLedgerData\
    ├─ settings\
    └─ vaults\
@@ -272,7 +284,7 @@ D:\My SafeLedger\
 
 ```text
 /home/user/Apps/SafeLedger/
-├─ SafeLedger-2.6.3-x86_64.AppImage
+├─ SafeLedger-2.6.4-x86_64.AppImage
 └─ SafeLedgerData/
    ├─ settings/
    └─ vaults/
@@ -474,11 +486,12 @@ Release changes are expected to pass regression, crypto, GUI, device-security, R
 - `RELEASE-2.6.1.md` — macOS Apple Silicon Foundation
 - `RELEASE-2.6.2.md` — Asset Identity, Chain Games & Known Website Icons
 - `RELEASE-2.6.3.md` — Chain Games Save Hotfix
+- `RELEASE-2.6.4.md` — Add Asset & Icon Usability Hotfix
 - `RELEASE-VERIFICATION.md` — download verification guidance
 
 ## Icon and preset catalog
 
-SafeLedger 2.6.3 uses `@web3icons/core` **4.0.55** as its pinned local Web3 icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
+SafeLedger 2.6.4 uses `@web3icons/core` **4.0.55** as its pinned local Web3 icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
 
 All prepared artwork is stored as local data URLs for runtime use. Known website/service artwork is also generated locally. Icon lookup does not require a network connection.
 
