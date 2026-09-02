@@ -21,7 +21,6 @@ for (const phrase of [
   'Wallet brand icons',
   'Exchange brand icons',
   'Asset and network icons',
-  'Web3 / website account presets',
   'Coinbase Wallet',
   'Kraken Wallet',
   'MetaMask',
@@ -29,6 +28,12 @@ for (const phrase of [
   'Ethereum (`ETH`)',
   'FIO Protocol (`FIO`)'
 ]) assert(readme.includes(phrase), `README must document: ${phrase}`);
+
+assert(
+  readme.includes('Web3 / website account presets') ||
+  (readme.includes('Web3 Account presets') && readme.includes('Website Account presets')),
+  'README must document the Web3 and website account preset catalogs, whether combined historically or split in later releases.'
+);
 
 assert(
   readme.includes('Current development preview: SafeLedger 2.5.19') ||
