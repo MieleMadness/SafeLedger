@@ -2,6 +2,7 @@
 
 const { ipcRenderer: ipc } = require('./renderer-bridge');
 const assetPresets = require('./vault-item-asset-presets');
+const { createSeededSend } = require('./vault-item-save-forwarder');
 
 const seedMarker = '__safeLedger2517AssetSeedWrapped';
 const refreshMarker = '__safeLedger2518AssetSeedRefresh';
@@ -18,22 +19,6 @@ function seedCreateRequest(request) {
   return records.length;
 }
 
-function createSeededSend(originalSend, seedFn = seedCreateRequest, logError = console.error) {
-  return function sendWithVaultItemAssetSeed(channel, ...args) {
-    if (channel === 'process-group') {
-      try {
-        seedFn(args[0]);
-      } catch (err) {
-        // Preset enrichment is optional. A renderer-side icon/catalog error
-        // must never prevent the actual encrypted Vault Item save request from
-        // reaching the trusted main process or leave the UI stuck processing.
-        logError('SafeLedger preset asset seeding skipped:', err && err.message ? err.message : err);
-      }
-    }
-    return originalSend(channel, ...args);
-  };
-}
-
 function refreshCreatedWallet() {
   const selected = document.querySelector('#groupArea .nav > li > a.item-selected');
   if (!selected || typeof selected.click !== 'function') return false;
@@ -47,7 +32,7 @@ function refreshCreatedWallet() {
 
 if (!ipc[seedMarker]) {
   const originalSend = ipc.send.bind(ipc);
-  ipc.send = createSeededSend(originalSend);
+  ipc.send = createSeededSend(originalSend, seedCreateRequest, (...args) => console.error(...args));
   Object.defineProperty(ipc, seedMarker, { value: true, enumerable: false, configurable: false });
 }
 
@@ -62,4 +47,4 @@ if (!ipc[refreshMarker]) {
   Object.defineProperty(ipc, refreshMarker, { value: true, enumerable: false, configurable: false });
 }
 
-exports._test = { seedCreateRequest, createSeededSend, refreshCreatedWallet };
+exports._test = { seedCreateRequest, refreshCreatedWallet };
