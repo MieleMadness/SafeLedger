@@ -8,22 +8,56 @@ const LEGACY_SERVICE_CATEGORY = 'Web3 / Website Account';
 const WEB3_CATEGORY = 'Web3 Account';
 const WEBSITE_CATEGORY = 'Website Account';
 
-const WEB3_PRESETS = Object.freeze([
-  'Chain Games',
-  'Aave',
-  'FIO App',
-  'Lido',
-  'OpenSea',
-  'Uniswap'
-]);
+const TYPE_GROUPS = Object.freeze([
+  Object.freeze({ label: 'Accounts', values: Object.freeze([EXCHANGE_CATEGORY, WEB3_CATEGORY, WEBSITE_CATEGORY].sort((a, b) => a.localeCompare(b))) }),
+  Object.freeze({ label: 'Wallets', values: Object.freeze(['Hardware Wallet', 'Other Wallet', 'Software Wallet'].sort((a, b) => a.localeCompare(b))) })
+].sort((a, b) => a.label.localeCompare(b)));
 
-const WEBSITE_EXTRA_PRESETS = Object.freeze([
-  'CoinGecko',
-  'CoinTracker',
-  'Etherscan',
-  'Koinly',
-  'Solscan'
-]);
+const WEB3_PRESET_GROUPS = Object.freeze([
+  Object.freeze({ label: 'DeFi', names: Object.freeze(['Aave', 'Lido', 'Uniswap']) }),
+  Object.freeze({ label: 'Gaming', names: Object.freeze(['Chain Games']) }),
+  Object.freeze({ label: 'Identity & Naming', names: Object.freeze(['FIO App']) }),
+  Object.freeze({ label: 'NFT', names: Object.freeze(['OpenSea']) })
+].map((group) => Object.freeze({ label: group.label, names: Object.freeze([...group.names].sort((a, b) => a.localeCompare(b))) }))
+  .sort((a, b) => a.label.localeCompare(b)));
+
+const WEBSITE_GROUP_BY_NAME = Object.freeze({
+  'Adobe': 'Productivity & Cloud',
+  'Amazon': 'Shopping & Payments',
+  'Apple': 'Productivity & Cloud',
+  'CoinGecko': 'Finance & Crypto',
+  'CoinTracker': 'Finance & Crypto',
+  'Discord': 'Social & Community',
+  'Dropbox': 'Productivity & Cloud',
+  'eBay': 'Shopping & Payments',
+  'Etherscan': 'Finance & Crypto',
+  'Facebook': 'Social & Community',
+  'GitHub': 'Developer',
+  'Gmail': 'Email',
+  'Google': 'Productivity & Cloud',
+  'Instagram': 'Social & Community',
+  'Koinly': 'Finance & Crypto',
+  'LinkedIn': 'Social & Community',
+  'Microsoft': 'Productivity & Cloud',
+  'Netflix': 'Entertainment',
+  'Outlook': 'Email',
+  'PayPal': 'Shopping & Payments',
+  'Proton': 'Email',
+  'Reddit': 'Social & Community',
+  'Slack': 'Productivity & Cloud',
+  'Solscan': 'Finance & Crypto',
+  'Spotify': 'Entertainment',
+  'Steam': 'Entertainment',
+  'TikTok': 'Social & Community',
+  'Twitch': 'Entertainment',
+  'X / Twitter': 'Social & Community',
+  'Yahoo': 'Email',
+  'YouTube': 'Entertainment',
+  'Zoom': 'Productivity & Cloud'
+});
+
+const WEBSITE_EXTRA_PRESETS = Object.freeze(['CoinGecko', 'CoinTracker', 'Etherscan', 'Koinly', 'Solscan']);
+const WEB3_PRESETS = Object.freeze(WEB3_PRESET_GROUPS.flatMap((group) => group.names));
 
 const WEB3_FIELDS = Object.freeze([
   ['Login email / username', 'text'],
@@ -78,10 +112,27 @@ function websitePresetNames() {
   return names.sort((a, b) => a.localeCompare(b));
 }
 
-function presetNames(category) {
-  if (category === WEB3_CATEGORY) return [...WEB3_PRESETS];
-  if (category === WEBSITE_CATEGORY) return websitePresetNames();
+function websitePresetGroups() {
+  const grouped = new Map();
+  for (const name of websitePresetNames()) {
+    const label = WEBSITE_GROUP_BY_NAME[name] || 'Other';
+    const names = grouped.get(label) || [];
+    names.push(name);
+    grouped.set(label, names);
+  }
+  return [...grouped.entries()]
+    .map(([label, names]) => ({ label, names: names.sort((a, b) => a.localeCompare(b)) }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function groupedPresetNames(category) {
+  if (category === WEB3_CATEGORY) return WEB3_PRESET_GROUPS.map((group) => ({ label: group.label, names: [...group.names] }));
+  if (category === WEBSITE_CATEGORY) return websitePresetGroups();
   return [];
+}
+
+function presetNames(category) {
+  return groupedPresetNames(category).flatMap((group) => group.names);
 }
 
 function fieldWrap(input) {
@@ -131,17 +182,37 @@ function ensureAccountFields(form, category) {
   for (const [label, type] of fields) addCustomField(form, label, type);
 }
 
-function ensureCategoryOption(categoryInput, value) {
-  if ([...categoryInput.options].some((option) => option.value === value)) return;
+function appendOption(parent, value) {
   const option = document.createElement('option');
   option.value = value;
   option.textContent = value;
-  categoryInput.appendChild(option);
+  parent.appendChild(option);
+  return option;
 }
 
-function removeLegacyCategoryOption(categoryInput) {
-  const legacy = [...categoryInput.options].find((option) => option.value === LEGACY_SERVICE_CATEGORY);
-  if (legacy) legacy.remove();
+function rebuildTypeOptions(categoryInput, selectedValue) {
+  categoryInput.innerHTML = '';
+  const blank = appendOption(categoryInput, '');
+  blank.textContent = 'Choose a type…';
+  for (const group of TYPE_GROUPS) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group.label;
+    for (const value of group.values) appendOption(optgroup, value);
+    categoryInput.appendChild(optgroup);
+  }
+  if ([...categoryInput.options].some((option) => option.value === selectedValue)) categoryInput.value = selectedValue;
+}
+
+function renderGroupedOptions(select, groups, placeholder) {
+  select.innerHTML = '';
+  const blank = appendOption(select, '');
+  blank.textContent = placeholder;
+  for (const group of groups) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group.label;
+    for (const name of group.names) appendOption(optgroup, name);
+    select.appendChild(optgroup);
+  }
 }
 
 function ensurePresetField(form, categoryInput) {
@@ -178,30 +249,25 @@ function updatePresetField(form, categoryInput) {
   const wrap = ensurePresetField(form, categoryInput);
   const select = wrap.querySelector('select');
   const previous = select && select.value;
-  const names = presetNames(categoryInput.value);
+  const groups = groupedPresetNames(categoryInput.value);
+  const names = groups.flatMap((group) => group.names);
   wrap.style.display = '';
   if (!select) return;
-  select.innerHTML = '';
-  const blank = document.createElement('option');
-  blank.value = '';
-  blank.textContent = categoryInput.value === WEB3_CATEGORY
-    ? 'Choose a Web3 service…'
-    : 'Choose a website…';
-  select.appendChild(blank);
-  for (const name of names) {
-    const option = document.createElement('option');
-    option.value = name;
-    option.textContent = name;
-    select.appendChild(option);
-  }
+  renderGroupedOptions(
+    select,
+    groups,
+    categoryInput.value === WEB3_CATEGORY ? 'Choose a Web3 service…' : 'Choose a website…'
+  );
   const inputName = form.querySelector('#inputName');
   const preferred = names.includes(previous) ? previous : String(inputName && inputName.value || '').trim();
   if (names.includes(preferred)) select.value = preferred;
+  const label = wrap.querySelector('label');
+  if (label) label.textContent = categoryInput.value === WEB3_CATEGORY ? 'Known Web3 service (optional)' : 'Known website (optional)';
   const note = wrap.querySelector('.vault-item-preset-note');
   if (note) {
     note.textContent = categoryInput.value === WEB3_CATEGORY
-      ? 'Choose a known Web3 service for local recognition and icons. SafeLedger never auto-fills a login URL.'
-      : 'Choose a known website for local recognition and icons. SafeLedger never auto-fills a login URL.';
+      ? 'Web3 services are grouped by purpose and alphabetized. SafeLedger uses only local recognition/icons and never auto-fills a login URL.'
+      : 'Websites are grouped by purpose and alphabetized. SafeLedger uses only local recognition/icons and never auto-fills a login URL.';
   }
 }
 
@@ -223,9 +289,6 @@ function patchEditForm(area) {
   const form = categoryInput.closest('form');
   if (!form) return;
 
-  ensureCategoryOption(categoryInput, WEB3_CATEGORY);
-  ensureCategoryOption(categoryInput, WEBSITE_CATEGORY);
-
   const heading = area.querySelector('h1');
   const modifying = Boolean(heading && /Modify/i.test(String(heading.textContent || '')));
   const nameInput = form.querySelector('#inputName');
@@ -240,8 +303,12 @@ function patchEditForm(area) {
     desired = inferAccountType(name, lastViewed);
   }
 
-  removeLegacyCategoryOption(categoryInput);
-  if ([WEB3_CATEGORY, WEBSITE_CATEGORY].includes(desired)) categoryInput.value = desired;
+  if (categoryInput.dataset.safeLedgerTypeGroups !== 'true') {
+    rebuildTypeOptions(categoryInput, desired);
+    categoryInput.dataset.safeLedgerTypeGroups = 'true';
+  } else if (desired && categoryInput.value !== desired && [...categoryInput.options].some((option) => option.value === desired)) {
+    categoryInput.value = desired;
+  }
 
   if (categoryInput.dataset.safeLedgerTypeSplit !== 'true') {
     categoryInput.dataset.safeLedgerTypeSplit = 'true';
@@ -317,14 +384,20 @@ exports.EXCHANGE_CATEGORY = EXCHANGE_CATEGORY;
 exports.LEGACY_SERVICE_CATEGORY = LEGACY_SERVICE_CATEGORY;
 exports.WEB3_CATEGORY = WEB3_CATEGORY;
 exports.WEBSITE_CATEGORY = WEBSITE_CATEGORY;
+exports.TYPE_GROUPS = TYPE_GROUPS;
+exports.WEB3_PRESET_GROUPS = WEB3_PRESET_GROUPS;
 exports.WEB3_PRESETS = WEB3_PRESETS;
 exports.WEBSITE_EXTRA_PRESETS = WEBSITE_EXTRA_PRESETS;
 exports._test = {
   isWeb3Name,
   inferAccountType,
   websitePresetNames,
+  websitePresetGroups,
+  groupedPresetNames,
   presetNames,
   customFieldLabels,
+  rebuildTypeOptions,
+  renderGroupedOptions,
   patchEditForm,
   patchListCategories,
   patchDetailCategory
