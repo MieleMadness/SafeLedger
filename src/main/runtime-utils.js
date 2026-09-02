@@ -57,6 +57,51 @@ function inspectPortableRoot(options = {}) {
   });
 }
 
+function getPortableStartupStatus(options = {}) {
+  const inspection = inspectPortableRoot(options);
+  let blocked = false;
+  let reason = 'ok';
+
+  // Windows Portable and Linux AppImage retain their established behavior.
+  // The 2.6.1 startup gate is macOS-specific because a quarantined .app may
+  // be launched from App Translocation and because common macOS install
+  // locations can be read-only to the current user. SafeLedger must never
+  // respond by silently moving encrypted data into a hidden user-data folder.
+  if (inspection.platform === 'darwin') {
+    if (inspection.translocated) {
+      blocked = true;
+      reason = 'app-translocation';
+    } else if (inspection.writable === false) {
+      blocked = true;
+      reason = 'portable-root-read-only';
+    }
+  }
+
+  return Object.freeze(Object.assign({}, inspection, {
+    blocked,
+    reason,
+    allowed: blocked === false
+  }));
+}
+
+function portableStartupMessage(status = {}) {
+  if (status.reason === 'app-translocation') {
+    return {
+      title: 'SafeLedger Portable Storage Required',
+      message: 'SafeLedger cannot safely start from this macOS location.',
+      detail: 'macOS opened SafeLedger from an isolated App Translocation location. Quit SafeLedger, move the complete extracted SafeLedger folder to a normal writable folder or external drive, then open SafeLedger.app again. SafeLedger will not create or move vault data while this location is unsafe.'
+    };
+  }
+  if (status.reason === 'portable-root-read-only') {
+    return {
+      title: 'SafeLedger Portable Storage Required',
+      message: 'SafeLedger needs a writable portable folder.',
+      detail: `The folder containing SafeLedger.app is not writable: ${String(status.root || 'unknown location')}. Quit SafeLedger, move the complete SafeLedger folder to a writable folder or external drive, then open SafeLedger.app again. SafeLedger will not create a second hidden copy of SafeLedgerData.`
+    };
+  }
+  return null;
+}
+
 function formatLockDuration(value) {
   const total = Math.max(0, Number.parseInt(value, 10) || 0);
   if (total < 60) return `${total} minute${total === 1 ? '' : 's'}`;
@@ -71,4 +116,6 @@ exports.findMacAppBundle = findMacAppBundle;
 exports.isMacAppTranslocated = isMacAppTranslocated;
 exports.getPortableRoot = getPortableRoot;
 exports.inspectPortableRoot = inspectPortableRoot;
+exports.getPortableStartupStatus = getPortableStartupStatus;
+exports.portableStartupMessage = portableStartupMessage;
 exports.formatLockDuration = formatLockDuration;
