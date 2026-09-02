@@ -15,12 +15,15 @@ function testIconBackedWalletPickerAndStandardSetup() {
   const standard = profileSetup.standardNames();
 
   assert(templates.length >= web3Icons.entries('wallets').length,
-    'Profile picker should expose the full local wallet-icon catalog plus established SafeLedger templates.');
+    'Profile picker should expose the full local wallet-icon catalog plus logo-backed established SafeLedger templates.');
 
   for (const icon of web3Icons.entries('wallets')) {
     assert(templates.some((template) => template.iconCategory === 'wallets' && template.iconKey === icon.key),
       `Local wallet icon ${icon.name} should be represented in the profile checkbox picker.`);
   }
+
+  assert(templates.every((template) => template.hasIcon === true),
+    'Every New Profile wallet template must have real local artwork.');
 
   for (const name of standard) {
     const template = byName.get(name);
@@ -34,10 +37,15 @@ function testIconBackedWalletPickerAndStandardSetup() {
     assert(byName.get(name) && byName.get(name).hasIcon, `${name} must have local artwork before becoming standard.`);
   }
 
+  /* These remained optional in 2.5.8. Starting with 2.5.16, optional entries
+   * are visible only when they also resolve to local brand artwork. */
   for (const name of ['Electrum', 'OneKey', 'SafePal', 'Tangem']) {
-    assert(byName.has(name), `${name} should remain an optional template.`);
+    const hasArtwork = Boolean(profileSetup.iconMatch(name));
+    assert.strictEqual(byName.has(name), hasArtwork,
+      `${name} optional-template visibility should follow local artwork availability.`);
     assert(!standard.includes(name), `${name} should remain outside Standard setup.`);
   }
+  assert(!byName.has('Electrum'), 'Electrum currently has no local artwork and should not be shown in New Profile templates.');
 
   const built = profileSetup.buildGroups('2026-09-01T00:00:00.000Z', standard);
   assert.deepStrictEqual(built.map((group) => group.name), standard,
@@ -120,4 +128,4 @@ testIconBackedWalletPickerAndStandardSetup();
 testLoginAndSensitiveUiContract();
 testSettingsWorkflowOrder();
 testResponsiveWalletGrid();
-console.log('PASS SafeLedger development login/sensitive controls, Settings order, and icon-backed responsive wallet setup.');
+console.log('PASS SafeLedger development login/sensitive controls, Settings order, and logo-backed responsive wallet setup.');
