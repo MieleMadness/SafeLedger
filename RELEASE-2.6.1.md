@@ -48,7 +48,7 @@ A packaged Mac application runs from a bundle path similar to:
 /Volumes/SafeLedger/SafeLedger.app/Contents/MacOS/SafeLedger
 ```
 
-SafeLedger 2.6.1 now recognizes the enclosing `.app` bundle and resolves the portable root to the directory containing `SafeLedger.app`:
+SafeLedger 2.6.1 recognizes the enclosing `.app` bundle and resolves the portable root to the directory containing `SafeLedger.app`:
 
 ```text
 /Volumes/SafeLedger/
@@ -56,9 +56,27 @@ SafeLedger 2.6.1 now recognizes the enclosing `.app` bundle and resolves the por
 └─ SafeLedgerData/
 ```
 
-It does **not** intentionally redirect normal vault storage into `~/Library/Application Support`, iCloud, or the signed `.app` bundle.
+It does **not** intentionally redirect normal vault storage into `~/Library/Application Support`, iCloud, or the `.app` bundle.
 
-The runtime helper also exposes checks for macOS App Translocation and whether the resolved portable directory is writable. These diagnostics are intended to support safe startup handling without ever treating a storage-location problem as a failed password or Self-Destruct event.
+### Fail-closed macOS startup safety
+
+SafeLedger now checks the portable location **before loading the established main runtime**.
+
+If macOS launches SafeLedger through **App Translocation**, or if the directory containing `SafeLedger.app` is not writable, startup is blocked before normal application initialization can create `SafeLedgerData`.
+
+The user receives a native warning explaining that the complete SafeLedger folder should be moved to a normal writable folder or external drive. SafeLedger then quits instead of guessing a new data location.
+
+The separate device-security startup path uses the same decision and does not initialize a storage identity while startup is blocked. This closes a race where the main window could be blocked but a second startup service could otherwise create `SafeLedgerData` behind the warning.
+
+The macOS gate follows these rules:
+
+- no fallback to `~/Library/Application Support`;
+- no hidden second vault location;
+- no creation or movement of vault data while App Translocation is active;
+- no storage initialization in a read-only portable root;
+- no failed-password counter changes;
+- no Self-Destruct action;
+- Windows and Linux startup behavior remains unchanged by this macOS-specific gate.
 
 ## Signing and notarization
 
@@ -97,6 +115,6 @@ A macOS storage-path, App Translocation, packaging, or signing problem is never 
 
 ## 2.6.1 acceptance goal
 
-Before the Apple Silicon foundation is considered successful, the exact development head should pass the new native macOS workflow and continue passing the repository's regression suite. Windows and Linux support remain unchanged by this work.
+Before the Apple Silicon foundation is considered successful, the exact development head should pass the native macOS workflow and continue passing the repository's regression suite. Windows and Linux support remain unchanged by this work.
 
 2.6.1 is a development milestone, not yet a claim that SafeLedger has a signed/notarized consumer-ready Mac distribution.
