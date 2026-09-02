@@ -11,22 +11,29 @@
 .coin-list-row {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   min-width: 0;
   max-width: 100%;
 }
 
+/* Vault Item and Asset navigation artwork intentionally shares one size.
+ * Larger 28px tiles make small brand marks and short fallback labels easier
+ * to recognize without changing the surrounding row hierarchy. */
 .coin-list-brand-image,
-.coin-list-generic-icon {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
-  border-radius: 50%;
+.coin-list-generic-icon,
+.wallet-list-brand-image,
+.wallet-list-catalog-icon,
+.wallet-list-icon,
+.wallet-list-fallback-icon {
+  width: 28px !important;
+  height: 28px !important;
+  flex: 0 0 28px !important;
 }
 
 .coin-list-brand-image {
   display: block;
   object-fit: contain;
+  border-radius: 7px;
 }
 
 .coin-list-generic-icon {
@@ -36,7 +43,9 @@
   background: rgba(255,255,255,.18);
   border: 1px solid rgba(255,255,255,.35);
   color: #fff;
-  font-size: 8px;
+  border-radius: 7px;
+  font-size: 10px;
+  line-height: 1;
   font-weight: 700;
   letter-spacing: -.02em;
 }
@@ -53,22 +62,20 @@
   white-space: nowrap;
 }
 
-/* Wallets use the same local/offline artwork pipeline as assets. Background
- * wallet variants are preferred at build time so logos remain visible against
- * both the navy list and the blue selected state. */
+/* Wallets/Vault Items use the same local/offline artwork pipeline as assets.
+ * Background variants are preferred at build time so logos remain visible
+ * against both the navy list and the blue selected state. */
 .wallet-list-brand-image,
 .wallet-list-catalog-icon,
-.wallet-list-icon {
-  width: 22px !important;
-  height: 22px !important;
-  flex: 0 0 22px !important;
+.wallet-list-icon,
+.wallet-list-fallback-icon {
   margin-right: 8px;
 }
 
 .wallet-list-brand-image {
   display: block;
   object-fit: contain;
-  border-radius: 5px;
+  border-radius: 7px;
 }
 
 .wallet-list-catalog-icon {
@@ -76,13 +83,24 @@
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255,255,255,.45);
-  border-radius: 5px;
+  border-radius: 7px;
   background: rgba(255,255,255,.12);
   color: #fff;
-  font-size: 8px;
+  font-size: 10px;
   line-height: 1;
   font-weight: 700;
   letter-spacing: -.02em;
+}
+
+.wallet-list-fallback-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wallet-list-fallback-icon .sl-wallet-fallback-svg {
+  width: 22px;
+  height: 22px;
 }
 
 .item-selected .wallet-list-catalog-icon {
@@ -98,17 +116,18 @@
   }
 
   .coin-list-brand-image,
-  .coin-list-generic-icon {
-    width: 19px;
-    height: 19px;
-    flex-basis: 19px;
-  }
-
+  .coin-list-generic-icon,
   .wallet-list-brand-image,
   .wallet-list-catalog-icon,
-  .wallet-list-icon {
-    width: 19px !important;
-    height: 19px !important;
-    flex-basis: 19px !important;
+  .wallet-list-icon,
+  .wallet-list-fallback-icon {
+    width: 24px !important;
+    height: 24px !important;
+    flex-basis: 24px !important;
+  }
+
+  .wallet-list-fallback-icon .sl-wallet-fallback-svg {
+    width: 19px;
+    height: 19px;
   }
 }
