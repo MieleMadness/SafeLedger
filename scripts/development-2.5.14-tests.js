@@ -24,16 +24,16 @@ function testRefinementIsLoaded() {
   assert(html.includes('./css/ui-2.5.14.css'), 'SafeLedger should continue loading the 2.5.14 UI refinement after prior UI layers.');
 }
 
-function testDevelopmentVersionAtLeast214() {
+function testDevelopmentVersionAtLeast2514() {
   const pkg = JSON.parse(read('package.json'));
   const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
-  assert(
-    parts[0] === 2 && parts[1] === 5 && parts[2] >= 14,
-    'SafeLedger development builds after this feature should remain at 2.5.14 or later.'
-  );
+  const atLeast2514 = parts[0] > 2 ||
+    (parts[0] === 2 && parts[1] > 5) ||
+    (parts[0] === 2 && parts[1] === 5 && parts[2] >= 14);
+  assert(atLeast2514, 'SafeLedger builds after this feature should remain at 2.5.14 or later.');
 }
 
 testBottomAddActionsMatchEmergencyHighlightLanguage();
 testRefinementIsLoaded();
-testDevelopmentVersionAtLeast214();
+testDevelopmentVersionAtLeast2514();
 console.log('PASS SafeLedger 2.5.14+ bottom add actions preserve the Emergency Lock hover/focus aesthetics.');
