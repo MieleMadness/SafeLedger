@@ -6,17 +6,13 @@ Vault Items can represent cryptocurrency wallets, exchange accounts, or Web3 / w
 
 ## Release status
 
-### Current stable release: SafeLedger 2.5.0
+### Current stable release: SafeLedger 2.6.0
 
-SafeLedger **2.5.0** is the version currently merged into protected `master`.
+SafeLedger **2.6.0** is the current source release on the repository's `master` release line.
 
-The current stable release includes the SafeLedger 2.1 continuity/security foundation, 2.2 runtime modernization, 2.3 device-security layer, 2.4 Recovery Intelligence & Validation, and 2.5 Distribution, Trust & Open Source Readiness work.
+2.6 promotes the post-2.5 development work into a stable release while preserving the existing encryption, backup, recovery, portable-storage, and offline-first foundation.
 
-### Current development preview: SafeLedger 2.5.19
-
-SafeLedger **2.5.19** is the current development line. It builds on the 2.5.0 security and distribution foundation with the newer Vault Item workflow, local Web3 icon catalog, profile setup improvements, Vault Overview refinements, reviewed asset presets, and UI/accessibility cleanup.
-
-Development changes since the original 2.5 release include:
+### What's new in SafeLedger 2.6
 
 - User-facing hierarchy expanded to **Profile → Vault Item → Asset**
 - Vault Items can represent **Wallets**, **Exchange Accounts**, and **Web3 / Website Accounts**
@@ -27,19 +23,19 @@ Development changes since the original 2.5 release include:
 - Newly saved wallet presets immediately render their seeded asset icons without requiring a second click
 - Vault Overview inventory counts for wallets, exchanges, services, and total Vault Items
 - Vault Overview maintenance snapshot, stale-information awareness, recovery coverage, recently verified items, and direct row navigation
-- Profile Notes stored with the encrypted profile metadata and available to print/recovery workflows
+- Profile Notes stored with encrypted Profile metadata and available to print/recovery workflows
 - Recovery Binder dark-mode improvements and optional local QR-code printing for QR-capable values
 - Backup reminder choices simplified to Off, 3 months, 6 months, or 12 months, with 3 months as the default
 - Explicit Cancel actions for New Profile, Add Vault Item, and Add Asset workflows
-- Consistent local eye, copy, QR, fallback-wallet, and Change Password artwork
+- Consistent local eye, copy, QR, fallback-wallet, and password-control artwork
 - Improved sensitive-field reveal controls, QR caption contrast, password-control alignment, and consistent focus/hover treatment
 - Alphabetized exchange and Web3/service preset choices
 - Local fallback artwork for Vault Items without a recognized brand logo
-- FIO Protocol support added to reviewed Ledger and MetaMask catalogs and to the FIO App service preset
+- FIO Protocol support in reviewed Ledger and MetaMask catalogs and in the FIO App service preset
 
-The development line remains local-first and offline. The icon catalog is prepared into local data URLs at build time; SafeLedger does not fetch wallet, exchange, token, or network artwork from the internet while the vault is running.
+The 2.6 release remains local-first and offline. The icon catalog is prepared into local data URLs at build time; SafeLedger does not fetch wallet, exchange, token, or network artwork from the internet while the vault is running.
 
-Key stable capabilities include:
+### Core capabilities
 
 - Portable `SafeLedgerData` storage beside the packaged application
 - AES-256-GCM authenticated vault encryption
@@ -58,11 +54,11 @@ Key stable capabilities include:
 - Explicit preload/renderer bridge with no renderer-side Electron compatibility shim
 - SafeLedger-owned CSS Grid/Flexbox application shell
 - Host operating-system locale/timezone for displayed timestamps
-- Global Search, Vault Overview, Activity History, recovery sheets, custom fields, and wallet metadata
+- Global Search, Vault Overview, Activity History, recovery sheets, custom fields, and Vault Item metadata
 - Centralized main-process locking for Emergency Lock and device-security events
 - OS lock, suspend/resume, idle-state, and portable-storage session protection where supported
 - Sanitized Storage Health and backup-age awareness
-- Explainable Wallet-level **Recovery Health** scoring
+- Explainable recovery-health scoring
 - Guided, non-destructive **Test Recovery** workflow
 - Offline BIP39 mnemonic validation using the official English word list
 - Offline Bitcoin Base58Check, Bech32, and Bech32m validation
@@ -72,18 +68,18 @@ Key stable capabilities include:
 - **Privacy Mode**, enabled by default, for masked sensitive information
 - Sanitized Recovery Intelligence output that does not expose seeds, private keys, raw fingerprints, recovery locations, or backup paths
 - Emergency Lock that clears the active encryption session, minimizes SafeLedger, resets the renderer, and returns to a fresh login state
-- Protected-branch release workflow with required Windows and Linux validation
-- Tag/version/source-ancestry release preflight
-- SHA-256 release checksums with self-verification
-- CycloneDX SBOM generation from the committed dependency graph
-- Machine-readable release manifest with source commit and artifact hashes
-- GitHub artifact provenance/attestation support for official binaries
-- Optional isolated Windows Authenticode signing path
-- Full Apache 2.0 license, NOTICE, third-party attribution, contributor, and security documentation
-- User-facing official-download verification guidance in `RELEASE-VERIFICATION.md`
+- Windows and Linux validation/build workflows on the repository release branch
+- SHA-256 release/checksum tooling, release-manifest tooling, SBOM support, and release-verification documentation
+- Apache 2.0 license, NOTICE, third-party attribution, contributor, and security documentation
 
-> [!IMPORTANT]
-> SafeLedger **2.6** is the next planned major/minor release and is intentionally scoped to **macOS Apple Silicon (`arm64`) only**. Intel/x64 Macs, universal binaries, and Rosetta compatibility are not 2.6 targets.
+### Supported release platforms
+
+The currently implemented packaged targets are:
+
+- **Windows x64 Portable EXE**
+- **Linux x64 AppImage**
+
+macOS Apple Silicon support was previously proposed for 2.6, but that platform work has **not** been implemented or validated in this release. macOS packaging, Developer ID signing/notarization, Gatekeeper validation, and macOS-specific runtime testing remain future work.
 
 ## Release roadmap
 
@@ -118,7 +114,7 @@ Released as **2.4.0**.
 
 Included:
 
-- Explainable Wallet-level Recovery Health scoring
+- Explainable recovery-health scoring
 - Verified-backup context in recovery readiness
 - Guided non-destructive Test Recovery
 - Optional ephemeral BIP39 validation
@@ -135,38 +131,27 @@ Recovery-intelligence features remain offline. Seeds, private keys, passwords, P
 
 Released as **2.5.0**.
 
-Included:
+2.5 established the distribution/trust foundation, including Windows/Linux artifact contracts, checksum/SBOM/release-manifest tooling, open-source legal and contributor documentation, and release-verification guidance.
 
-- Tag-only, fail-closed official GitHub Release publishing
-- Exact tag/package-version and protected-`master` source validation
-- Required Windows and Linux release validation
-- Least-privilege release workflow permissions
-- Full-SHA pinning for release-critical and normal CI GitHub Actions
-- Windows Portable EXE and Linux AppImage artifact contract
-- SHA-256 checksums and self-verification
-- CycloneDX SBOM generation and live regression coverage
-- Machine-readable release manifest
-- GitHub artifact attestations / build provenance
-- Windows Authenticode signing-ready architecture with credentials isolated to the signing step
-- Normalized 2.5 dependency lock matching the current application graph
-- Complete Apache 2.0 licensing, NOTICE, and third-party attribution
-- Contributor, security, collaboration, PR, and issue documentation
-- Official-download verification instructions
-- Dedicated distribution-trust regression suite and fail-closed release gates
+The repository was later simplified to separate Windows and Linux validation/build workflows. The historical 2.5 release design remains documented in `RELEASE-2.5.md`.
 
-2.5 does not change the vault crypto format, Argon2id behavior, backup compatibility, portable data layout, device locking, Recovery Intelligence, or local-first/offline operating model.
+### SafeLedger 2.6 — Vault Item Experience & Local Web3 Catalog
 
-### SafeLedger 2.5.x — Vault Item & Interface Development
+Released as **2.6.0**.
 
-The post-2.5 development line adds the broader Vault Item model and related usability work while preserving the 2.5 encryption and storage foundation.
+2.6 promotes the completed 2.5.x interface and catalog work into the stable release line, including:
 
-Highlights include the full local Web3 icon catalog, logo-backed Profile setup, exchange and Web3/service Vault Items, reviewed icon-backed asset seeding, the revised Vault Overview, Profile Notes, Recovery Binder QR support, improved local action icons, clearer Settings ordering, and the 2.5.18 post-save asset-icon refresh fix.
+- Profile → Vault Item → Asset terminology and workflows
+- Wallet, Exchange Account, and Web3 / Website Account Vault Items
+- Full local Web3 token/network/wallet/exchange artwork catalog
+- Logo-backed Profile setup and nine Standard starter wallets
+- Reviewed asset preloading for supported wallet/exchange/service presets
+- Immediate post-save rendering of newly seeded wallet assets
+- Vault Overview inventory and maintenance improvements
+- Profile Notes and Recovery Binder QR improvements
+- Consistent local controls, fallback artwork, and UI refinements
 
-### SafeLedger 2.6 — macOS Apple Silicon Distribution & Platform Hardening
-
-**Planned target.** SafeLedger 2.6 is intentionally macOS **arm64-only**.
-
-Planned focus includes Apple Silicon packaging, Developer ID signing, notarization/stapling, Gatekeeper validation, macOS lock/sleep/resume behavior, removable-storage handling, and preserving `SafeLedgerData` beside the application. Intel/x64, universal binaries, and Rosetta compatibility are explicitly out of scope.
+See `RELEASE-2.6.md` for the 2.6 release scope.
 
 ## How SafeLedger is organized
 
@@ -222,7 +207,7 @@ SafeLedger does not require a seed phrase or private key to be stored. Decide wh
 
 Exchange Account Vault Items can store account-oriented information such as login email/username, customer/account ID, verified website, login method, 2FA method, 2FA backup codes, KYC/identity notes, recovery information, and tracked assets.
 
-Known exchange choices use the local exchange-logo catalog. A smaller reviewed set also receives starter assets after creation; SafeLedger never guesses unsupported assets simply because an exchange has a logo.
+Known exchange choices use the local exchange-logo catalog. A smaller reviewed set also receives starter assets after creation; SafeLedger does not guess unsupported assets simply because an exchange has a logo.
 
 ### Web3 / Website Account
 
@@ -252,7 +237,7 @@ For packaged builds, SafeLedger creates and uses `SafeLedgerData` in the same fo
 
 ```text
 D:\My SafeLedger\
-├─ SafeLedger-2.5.0-Portable.exe
+├─ SafeLedger-2.6.0-Portable.exe
 └─ SafeLedgerData\
    ├─ settings\
    └─ vaults\
@@ -262,7 +247,7 @@ D:\My SafeLedger\
 
 ```text
 /home/user/Apps/SafeLedger/
-├─ SafeLedger-2.5.0-x86_64.AppImage
+├─ SafeLedger-2.6.0-x86_64.AppImage
 └─ SafeLedgerData/
    ├─ settings/
    └─ vaults/
@@ -294,7 +279,7 @@ SafeLedger routes non-password device locks through one centralized main-process
 
 ## Recovery Intelligence and Privacy Mode
 
-SafeLedger 2.4 adds local-only recovery analysis without turning the application into a blockchain client or cloud service.
+Recovery Intelligence performs local-only recovery analysis without turning the application into a blockchain client or cloud service.
 
 Recovery Health evaluates documented recovery method/location, instructions, public-address coverage where applicable, verification age, Test Recovery age, and verified-backup context. Results are designed to be actionable without returning secret values.
 
@@ -365,11 +350,13 @@ QR generation, recovery-sheet generation, and optional Recovery Binder QR genera
 
 SafeLedger maintains a local `audit.log` under `SafeLedgerData/settings`. Activity entries contain generic event types and timestamps rather than passwords, seed phrases, private keys, wallet names, storage identifiers, recovery locations, or backup paths.
 
-## Official release verification
+## Build validation and release verification
 
-Official SafeLedger releases include `SHA256SUMS.txt`, `release-manifest.json`, a CycloneDX SBOM, legal/attribution files, and `RELEASE-VERIFICATION.md` alongside the platform binaries. The release workflow verifies checksums before publication and publishes only after its required build/provenance chain succeeds.
+The repository currently contains separate GitHub Actions workflows for the Windows Portable EXE and Linux AppImage. They run against `master` and pull requests targeting `master` and perform locked dependency installation, regression testing, Electron crypto smoke testing, GUI smoke testing, packaging, and artifact staging.
 
-Checksums prove that a downloaded file matches the published digest. They are not a guarantee that software contains no vulnerabilities. Windows Authenticode signing is reported separately from checksum/provenance status.
+The repository also contains checksum, SBOM, release-manifest, distribution-trust, and `RELEASE-VERIFICATION.md` tooling/documentation inherited from the 2.5 trust work. There is currently **no automated GitHub Release publishing workflow in `.github/workflows`**, so source promotion to `master` should not be confused with automatic publication of a signed/tagged downloadable release.
+
+Checksums prove that a downloaded file matches the published digest. They are not a guarantee that software contains no vulnerabilities. Code-signing status should be reported separately from checksum status.
 
 ## Development
 
@@ -427,22 +414,21 @@ Build Linux AppImage:
 npm run dist:linux
 ```
 
-Release changes are expected to pass regression, crypto, GUI, SBOM, distribution-trust, and packaging checks before implementation is considered releasable.
+Release changes are expected to pass regression, crypto, GUI, device-security, Recovery Intelligence, distribution-trust, and packaging checks before an official downloadable binary is considered validated.
 
 ## Release documents
 
 - `RELEASE-2.1.md` — Continuity & Hardening
 - `RELEASE-2.2.md` — Runtime Modernization
 - `RELEASE-2.3.md` — Device Security & Recovery Health
-- `RELEASE-2.4.md` — released Recovery Intelligence & Validation
-- `RELEASE-2.5.md` — released Distribution, Trust & Open Source Readiness
-- `RELEASE-VERIFICATION.md` — official download verification guidance
-
-The SafeLedger 2.6 macOS Apple Silicon plan is maintained on its development branch until that release work is ready to move onto `master`.
+- `RELEASE-2.4.md` — Recovery Intelligence & Validation
+- `RELEASE-2.5.md` — Distribution, Trust & Open Source Readiness
+- `RELEASE-2.6.md` — Vault Item Experience & Local Web3 Catalog
+- `RELEASE-VERIFICATION.md` — download verification guidance
 
 ## Icon and preset catalog
 
-SafeLedger 2.5.19 development uses `@web3icons/core` **4.0.55** as its pinned local icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
+SafeLedger 2.6.0 uses `@web3icons/core` **4.0.55** as its pinned local icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
 
 All prepared artwork is stored as local data URLs for runtime use. Icon lookup does not require a network connection.
 
