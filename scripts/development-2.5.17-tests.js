@@ -47,7 +47,11 @@ const fioAssets = assetPresets.buildRecords('FIO App', assetPresets.SERVICE_CATE
 assert.deepStrictEqual(fioAssets.map((asset) => asset.symbol), ['FIO'], 'FIO App should preload the icon-backed FIO asset only.');
 
 const seedSource = read('src/main/vault-item-asset-seeding-ui.js');
-assert(seedSource.includes("channel === 'process-group'"), 'new Vault Item saves must pass through the asset seeding hook.');
+const forwarderSource = read('src/main/vault-item-save-forwarder.js');
+assert(seedSource.includes('createSeededSend(originalSend, seedCreateRequest'),
+  'new Vault Item saves must pass through the asset seeding hook.');
+assert(forwarderSource.includes("channel === 'process-group'"),
+  'the asset seeding hook must remain limited to Vault Item save IPC.');
 assert(seedSource.includes("request.type !== 'group-create'"), 'asset seeding must be limited to newly created Vault Items.');
 assert(seedSource.includes('if (!records.length) return 0;'), 'unknown Vault Items must remain empty instead of receiving guessed assets.');
 

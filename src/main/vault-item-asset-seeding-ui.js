@@ -2,6 +2,7 @@
 
 const { ipcRenderer: ipc } = require('./renderer-bridge');
 const assetPresets = require('./vault-item-asset-presets');
+const { createSeededSend } = require('./vault-item-save-forwarder');
 
 const seedMarker = '__safeLedger2517AssetSeedWrapped';
 const refreshMarker = '__safeLedger2518AssetSeedRefresh';
@@ -31,10 +32,7 @@ function refreshCreatedWallet() {
 
 if (!ipc[seedMarker]) {
   const originalSend = ipc.send.bind(ipc);
-  ipc.send = function sendWithVaultItemAssetSeed(channel, ...args) {
-    if (channel === 'process-group') seedCreateRequest(args[0]);
-    return originalSend(channel, ...args);
-  };
+  ipc.send = createSeededSend(originalSend, seedCreateRequest, (...args) => console.error(...args));
   Object.defineProperty(ipc, seedMarker, { value: true, enumerable: false, configurable: false });
 }
 

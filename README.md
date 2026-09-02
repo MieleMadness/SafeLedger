@@ -6,13 +6,20 @@ Vault Items can represent cryptocurrency wallets, exchange accounts, Web3 accoun
 
 ## Release status
 
-### Current stable release: SafeLedger 2.6.2
+### Current stable release: SafeLedger 2.6.3
 
-SafeLedger **2.6.2** is the current source release on the repository's `master` release line.
+SafeLedger **2.6.3** is the current source release on the repository's `master` release line.
 
-2.6.2 builds on the 2.6 Vault Item experience and the 2.6.1 Apple Silicon foundation with multichain asset identity, Chain Games support, a broader local website catalog, and optional Shit Coin Mode.
+2.6.3 is a focused reliability hotfix for the Chain Games Web3 / Website Account save path. It fixes a sandbox-only local-icon error that could leave a new Chain Games Vault Item stuck in **processing** before the encrypted save request reached the trusted main process.
 
-### What's new in SafeLedger 2.6.2
+### What's new in SafeLedger 2.6.3
+
+- Fixed Chain Games Vault Item saves getting stuck in **processing** when reviewed CHAIN starter assets were prepared in the sandboxed renderer.
+- Local website/service SVG icons now use renderer-safe URI encoding instead of depending on Node's `Buffer` global.
+- Optional preset asset seeding can no longer prevent the core encrypted Vault Item save request from being sent. If preset enrichment fails, SafeLedger logs the enrichment error and continues with the Vault Item save.
+- No vault schema, AES-256-GCM, Argon2id, main-process DEK, or cloud/network behavior changed in this hotfix.
+
+### 2.6.2 features retained
 
 - **Shit Coin Mode** in Settings → Asset Display. When enabled, unknown assets with no recognized local icon use **💩** instead of the generic ticker fallback. The setting is visual-only and off by default.
 - Standard **Network** and **Contract address** fields for Assets, stored through the existing encrypted field structure without requiring a vault-format migration.
@@ -151,9 +158,13 @@ Released as **2.6.0**.
 
 ### SafeLedger 2.6.2 — Asset Identity & Account Catalog
 
-2.6.2 adds Network/Contract Address asset identity, Chain Games/CHAIN support, the local known-website catalog, and opt-in Shit Coin Mode while retaining the 2.6.1 Apple Silicon foundation.
+2.6.2 added Network/Contract Address asset identity, Chain Games/CHAIN support, the local known-website catalog, and opt-in Shit Coin Mode while retaining the 2.6.1 Apple Silicon foundation.
 
-See `RELEASE-2.6.md`, `RELEASE-2.6.1.md`, and `RELEASE-2.6.2.md` for the detailed 2.6 release history.
+### SafeLedger 2.6.3 — Chain Games Save Hotfix
+
+2.6.3 fixes the Chain Games save freeze caused by renderer-sandbox-incompatible local icon encoding and hardens preset enrichment so an optional preset error cannot prevent the encrypted Vault Item save IPC request.
+
+See `RELEASE-2.6.md`, `RELEASE-2.6.1.md`, `RELEASE-2.6.2.md`, and `RELEASE-2.6.3.md` for the detailed 2.6 release history.
 
 ## How SafeLedger is organized
 
@@ -215,7 +226,7 @@ Known exchange choices use the local exchange-logo catalog. A smaller reviewed s
 
 Web3 / Website Account Vault Items can store login information, verified website, connected wallet names, profile/account ID, 2FA information, backup codes, recovery notes, and optional tracked assets.
 
-SafeLedger 2.6.2 includes local known-site choices for major websites as well as Web3 services. Known-site icons are local brand-style tiles generated inside SafeLedger. Unknown websites use the generic globe.
+SafeLedger 2.6.3 retains local known-site choices for major websites as well as Web3 services. Known-site icons are local brand-style tiles generated inside SafeLedger. Unknown websites use the generic globe.
 
 These presets intentionally do **not** auto-fill login URLs. Verify a website yourself before saving it.
 
@@ -251,7 +262,7 @@ For packaged builds, SafeLedger creates and uses `SafeLedgerData` beside the Saf
 
 ```text
 D:\My SafeLedger\
-├─ SafeLedger-2.6.2-Portable.exe
+├─ SafeLedger-2.6.3-Portable.exe
 └─ SafeLedgerData\
    ├─ settings\
    └─ vaults\
@@ -261,7 +272,7 @@ D:\My SafeLedger\
 
 ```text
 /home/user/Apps/SafeLedger/
-├─ SafeLedger-2.6.2-x86_64.AppImage
+├─ SafeLedger-2.6.3-x86_64.AppImage
 └─ SafeLedgerData/
    ├─ settings/
    └─ vaults/
@@ -462,11 +473,12 @@ Release changes are expected to pass regression, crypto, GUI, device-security, R
 - `RELEASE-2.6.md` — Vault Item Experience & Local Web3 Catalog
 - `RELEASE-2.6.1.md` — macOS Apple Silicon Foundation
 - `RELEASE-2.6.2.md` — Asset Identity, Chain Games & Known Website Icons
+- `RELEASE-2.6.3.md` — Chain Games Save Hotfix
 - `RELEASE-VERIFICATION.md` — download verification guidance
 
 ## Icon and preset catalog
 
-SafeLedger 2.6.2 uses `@web3icons/core` **4.0.55** as its pinned local Web3 icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
+SafeLedger 2.6.3 uses `@web3icons/core` **4.0.55** as its pinned local Web3 icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
 
 All prepared artwork is stored as local data URLs for runtime use. Known website/service artwork is also generated locally. Icon lookup does not require a network connection.
 

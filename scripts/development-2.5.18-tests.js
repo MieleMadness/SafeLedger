@@ -22,8 +22,14 @@ assert(seedSource.includes('selected.click();'),
   'post-save asset refresh must reuse the normal Vault Item selection renderer.');
 assert(seedSource.includes('queueMicrotask(() => refreshCreatedWallet())'),
   'post-save asset refresh must wait until the save result has rebuilt the Vault Item list.');
-assert(seedSource.includes('seedCreateRequest(args[0])'),
+assert(seedSource.includes('createSeededSend(originalSend, seedCreateRequest'),
   '2.5.18+ must preserve reviewed asset seeding before a new Vault Item is saved.');
+
+const forwarderSource = read('src/main/vault-item-save-forwarder.js');
+assert(forwarderSource.includes('seedFn(args[0])'),
+  'the shared save forwarder must invoke reviewed preset seeding for Vault Item saves.');
+assert(forwarderSource.includes('return originalSend(channel, ...args);'),
+  'the save forwarder must continue to the encrypted save IPC after optional preset seeding.');
 
 const rendererEntry = read('src/main/renderer-entry.js');
 assert(rendererEntry.includes("require('./vault-item-asset-seeding-ui.js')"),

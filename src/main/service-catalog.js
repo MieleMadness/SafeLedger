@@ -55,7 +55,11 @@ function iconDataUrl(value) {
   const label = escapeXml(service.name);
   const fontSize = mark.length > 2 ? 23 : mark.length > 1 ? 28 : 36;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${label}"><rect width="96" height="96" rx="22" fill="${service.color}"/><text x="48" y="52" fill="white" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" font-weight="700" font-size="${fontSize}" text-anchor="middle" dominant-baseline="middle">${mark}</text></svg>`;
-  return `data:image/svg+xml;base64,${Buffer.from(svg,'utf8').toString('base64')}`;
+
+  // Renderer code runs inside Electron's sandbox with Node globals disabled.
+  // URI-encode the SVG instead of relying on Buffer/btoa so the same local
+  // icon generator works in both the trusted Node test process and renderer.
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 function createIcon(value, className = 'known-service-brand-image') {
