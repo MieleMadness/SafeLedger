@@ -9,15 +9,15 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 3,
-  'SafeLedger 2.6.3 release gates must apply to 2.6.3 and later 2.6.x patch releases.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 4,
+  'SafeLedger 2.6.4 release gates must apply to 2.6.4 and later 2.6.x patch releases.');
 
 const readme = read('README.md');
-assert(readme.includes('Current stable release: SafeLedger 2.6.3'),
-  'README must identify SafeLedger 2.6.3 as the current stable release.');
+assert(readme.includes('Current stable release: SafeLedger 2.6.4'),
+  'README must identify SafeLedger 2.6.4 as the current stable release.');
 assert(readme.includes('Profile → Vault Item → Asset'), 'README must preserve the 2.6 Vault Item hierarchy.');
 assert(readme.includes('Windows x64 Portable EXE') && readme.includes('Linux x64 AppImage') && readme.includes('macOS Apple Silicon (`arm64`) ZIP'),
-  'README must document all implemented 2.6.3 package targets.');
+  'README must document all implemented 2.6.4 package targets.');
 assert(readme.includes('Shit Coin Mode') && readme.includes('Chain Games'),
   'README must preserve the 2.6.2 asset-display and Chain Games additions.');
 assert(readme.includes('Network') && readme.includes('Contract address'),
@@ -27,7 +27,9 @@ assert(readme.includes('Facebook') && readme.includes('Yahoo'),
 assert(readme.includes('not Developer ID signed or Apple-notarized'),
   'README must accurately disclose the current macOS signing/notarization state.');
 assert(readme.includes('stuck in **processing**') && readme.includes('renderer-safe URI encoding'),
-  'README must document the 2.6.3 Chain Games save hotfix and sandbox-safe icon encoding.');
+  'README must preserve the 2.6.3 Chain Games save hotfix documentation.');
+assert(readme.includes('Add Asset') && readme.includes('28px') && readme.includes('24px'),
+  'README must document the 2.6.4 Add Asset and unified icon-size usability fixes.');
 
 const release260 = read('RELEASE-2.6.md');
 assert(release260.includes('Release: 2.6.0'), 'RELEASE-2.6.md must preserve the historical 2.6.0 release record.');
@@ -51,4 +53,10 @@ assert(release263.includes('Buffer'));
 assert(release263.includes('processing'));
 assert(release263.includes('Preset asset seeding is now isolated'));
 
-console.log(`PASS SafeLedger ${pkg.version} release documentation covers the 2.6.0 history through the 2.6.3 Chain Games save hotfix.`);
+const release264 = read('RELEASE-2.6.4.md');
+assert(release264.includes('Add Asset & Icon Usability Hotfix'));
+assert(release264.includes('first visible Vault Item'));
+assert(release264.includes('28px') && release264.includes('24px'));
+assert(release264.includes('local/offline vector artwork'));
+
+console.log(`PASS SafeLedger ${pkg.version} release documentation covers the 2.6.0 history through the 2.6.4 Add Asset/icon usability hotfix.`);
