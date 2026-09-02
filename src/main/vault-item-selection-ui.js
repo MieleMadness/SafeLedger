@@ -81,6 +81,7 @@ exports._test = {
   firstVaultItem,
   hasValidVaultItemSelection,
   ensureVaultItemSelected,
+  install,
   setActiveVaultData: (value) => { activeVaultData = value; },
   getActiveVaultData: () => activeVaultData
 };
