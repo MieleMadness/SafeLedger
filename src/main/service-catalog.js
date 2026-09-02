@@ -26,11 +26,9 @@ const SERVICES = Object.freeze([
   ['TikTok','TT','#111111',['tiktok','tiktok.com']],
   ['YouTube','YT','#ff0000',['youtube','youtube.com']],
   ['Proton','P','#6d4aff',['proton','proton.me','protonmail']],
-  ['Dropbox','D','#0061ff',['dropbox','dropbox.com']],
   ['Adobe','A','#e60023',['adobe','adobe.com']],
   ['Slack','S','#4a154b',['slack','slack.com']],
-  ['Zoom','Z','#2d8cff',['zoom','zoom.us']],
-  ['Dropbox','D','#0061ff',['dropbox','dropbox.com']]
+  ['Zoom','Z','#2d8cff',['zoom','zoom.us']]
 ].map(([name,mark,color,aliases]) => Object.freeze({name,mark,color,aliases:Object.freeze(aliases)})));
 
 function normalize(value) {
