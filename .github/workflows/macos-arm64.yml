@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - safeledger-2.6.1-development
+      - safeledger-2.6.2-development
   pull_request:
     branches:
       - master
