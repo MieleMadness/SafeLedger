@@ -7,7 +7,7 @@ const settingsSchema = require('../../settings-schema');
 const backupHealth = require('../../backup-health');
 const { atomicWriteJson } = require('../../atomic-file');
 
-const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance, normalizePrivacyMode } = settingsSchema;
+const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance, normalizePrivacyMode, normalizeBoolean } = settingsSchema;
 
 const defaults = () => ({
   formatVersion: 2,
@@ -15,6 +15,7 @@ const defaults = () => ({
   modified: new Date().toISOString(),
   appearance: 'system',
   privacyMode: true,
+  shitCoinMode: false,
   failAttemptCount: 0,
   numFailAttempts: 5,
   lockOutCount: 0,
@@ -22,7 +23,6 @@ const defaults = () => ({
   lockLogin: false,
   lockLoginTime: 0,
   minutesToWaitBetweenLockout: 15,
-  // Destructive cleanup is opt-in. Lockouts remain enabled when this is false.
   scrubContentAfterRetries: false,
   lastBackupAt: null,
   lastVerifiedBackupAt: null,
@@ -40,9 +40,6 @@ function normalizeSettings(settings, now = Date.now()) {
   const baseDefaults = defaults();
   const next = Object.assign({}, baseDefaults, settings || {});
 
-  // SafeLedger 2.x is free and password verification now belongs to the
-  // Argon2id key envelope. Strip retired licensing/verifier fields when an
-  // older 2.x settings file is normalized.
   delete next.activationCode;
   delete next.atime;
   delete next.upper;
@@ -51,13 +48,14 @@ function normalizeSettings(settings, now = Date.now()) {
 
   next.appearance = normalizeAppearance(next.appearance);
   next.privacyMode = normalizePrivacyMode(next.privacyMode);
+  next.shitCoinMode = normalizeBoolean(next.shitCoinMode, false);
   next.numFailAttempts = clampBruteForceValue(next.numFailAttempts, baseDefaults.numFailAttempts);
   next.numLockoutRetries = clampBruteForceValue(next.numLockoutRetries, baseDefaults.numLockoutRetries);
   next.minutesToWaitBetweenLockout = clampBruteForceValue(next.minutesToWaitBetweenLockout, baseDefaults.minutesToWaitBetweenLockout);
   next.failAttemptCount = normalizeCounter(next.failAttemptCount, baseDefaults.failAttemptCount);
   next.lockOutCount = normalizeCounter(next.lockOutCount, baseDefaults.lockOutCount);
-  next.lockLogin = next.lockLogin === true || next.lockLogin === 1 || next.lockLogin === 'true';
-  next.scrubContentAfterRetries = next.scrubContentAfterRetries === true || next.scrubContentAfterRetries === 1 || next.scrubContentAfterRetries === 'true';
+  next.lockLogin = normalizeBoolean(next.lockLogin, false);
+  next.scrubContentAfterRetries = normalizeBoolean(next.scrubContentAfterRetries, false);
   next.lastBackupAt = backupHealth.normalizeTimestamp(next.lastBackupAt);
   next.lastVerifiedBackupAt = backupHealth.normalizeTimestamp(next.lastVerifiedBackupAt);
   next.lastVerifiedBackupCreatedAt = backupHealth.normalizeTimestamp(next.lastVerifiedBackupCreatedAt);
@@ -98,11 +96,4 @@ exports.saveSettings = async (dir, settings) => {
   return { status: 'SUCCESS', settings: next };
 };
 
-exports._test = {
-  BRUTE_FORCE_MIN,
-  BRUTE_FORCE_MAX,
-  clampBruteForceValue,
-  normalizeCounter,
-  normalizeSettings,
-  defaults
-};
+exports._test = { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeCounter, normalizeSettings, defaults };
