@@ -1,5 +1,6 @@
 'use strict';
 
+const QRCode = require('qrcode');
 const detailActions = require('./detail-actions');
 const recoveryBinder = require('./recovery-binder');
 
@@ -9,7 +10,8 @@ const OPTION_DEFINITIONS = Object.freeze([
   ['includeNotes', 'Include notes', 'Notes may contain information you did not intend to print. Review them before enabling this option.'],
   ['includePasswordsPins', 'Include passwords, PINs, and recovery links', 'Anyone with the printout may gain access to protected wallet functions.'],
   ['includeSeedPrivateKeys', 'Include seed phrases and private keys', 'Highest risk. Anyone with this printout may be able to control funds.'],
-  ['includeSensitiveCustomFields', 'Include sensitive custom fields', 'Includes custom fields you explicitly marked Sensitive.']
+  ['includeSensitiveCustomFields', 'Include sensitive custom fields', 'Includes custom fields you explicitly marked Sensitive.'],
+  ['includeQrCodes', 'Print available QR codes', 'Adds QR images only beside fields that already have a QR action in SafeLedger. A QR code never adds a field you did not already choose to print.']
 ]);
 
 function ensureStyles() {
@@ -60,13 +62,40 @@ function addPrintStyles(doc) {
     .safe-note{border-left:4px solid #0D47A1;background:#eef5ff;padding:10px 12px;margin:14px 0;color:#274766}
     table{width:100%;border-collapse:collapse;margin:8px 0 12px}th,td{border:1px solid #c7ced8;padding:7px 8px;text-align:left;vertical-align:top;word-break:break-word}
     th{width:190px;background:#f3f5f8}.asset{margin:12px 0 16px;padding-left:12px;border-left:3px solid #d8dee8}
+    .qr-print-wrap{margin-top:9px;display:flex;align-items:flex-start;gap:8px}.qr-print{width:118px;height:118px;padding:4px;background:#fff;border:1px solid #c7ced8;object-fit:contain}
+    .qr-print-label{max-width:180px;color:#596579;font-size:11px;line-height:1.35}
     .empty{color:#667085;font-style:italic}.print-actions{margin-top:20px}.print-actions button{padding:8px 14px}
-    @media print{.print-actions{display:none}body{padding:0}.wallet-section{break-inside:avoid-page}}
+    @media print{.print-actions{display:none}body{padding:0}.wallet-section{break-inside:avoid-page}.qr-print-wrap{break-inside:avoid}}
   `;
   doc.head.appendChild(style);
 }
 
-function appendTable(doc, parent, fields) {
+async function appendQr(doc, parent, field) {
+  if (!field || field.qr !== true || !String(field.value || '').trim()) return;
+  try {
+    const dataUrl = await QRCode.toDataURL(String(field.value), {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 180
+    });
+    const wrap = doc.createElement('div');
+    wrap.className = 'qr-print-wrap';
+    const image = doc.createElement('img');
+    image.className = 'qr-print';
+    image.src = dataUrl;
+    image.alt = `${field.label} QR code`;
+    wrap.appendChild(image);
+    const label = doc.createElement('div');
+    label.className = 'qr-print-label';
+    label.textContent = `QR code for ${field.label}. It contains the same value printed above.`;
+    wrap.appendChild(label);
+    parent.appendChild(wrap);
+  } catch (_) {
+    // The text value is still printed even if QR generation is unavailable.
+  }
+}
+
+async function appendTable(doc, parent, fields) {
   const rows = Array.isArray(fields) ? fields.filter((field) => field && String(field.value || '').trim()) : [];
   if (!rows.length) {
     appendText(parent, 'p', 'empty', 'No information recorded.');
@@ -80,6 +109,7 @@ function appendTable(doc, parent, fields) {
     th.textContent = field.label;
     const td = doc.createElement('td');
     td.textContent = String(field.value);
+    await appendQr(doc, td, field);
     tr.appendChild(th);
     tr.appendChild(td);
     tbody.appendChild(tr);
@@ -88,7 +118,7 @@ function appendTable(doc, parent, fields) {
   parent.appendChild(table);
 }
 
-function printBinder(binder) {
+async function printBinder(binder) {
   const popup = window.open('', '_blank', 'width=900,height=900');
   if (!popup) return alert('Unable to open print window.');
 
@@ -121,14 +151,14 @@ function printBinder(binder) {
   }
 
   appendText(doc.body, 'h2', '', 'Profile');
-  appendTable(doc, doc.body, binder.profileFields);
+  await appendTable(doc, doc.body, binder.profileFields);
   appendText(doc.body, 'div', 'meta', `${binder.walletCount} wallet${binder.walletCount === 1 ? '' : 's'} · ${binder.assetCount} asset${binder.assetCount === 1 ? '' : 's'}`);
 
   for (const wallet of binder.wallets) {
     const walletSection = doc.createElement('section');
     walletSection.className = 'wallet-section';
     appendText(walletSection, 'h2', '', wallet.title);
-    appendTable(doc, walletSection, wallet.fields);
+    await appendTable(doc, walletSection, wallet.fields);
 
     if (wallet.assets.length) {
       appendText(walletSection, 'h3', '', 'Assets');
@@ -136,7 +166,7 @@ function printBinder(binder) {
         const assetSection = doc.createElement('section');
         assetSection.className = 'asset';
         appendText(assetSection, 'h3', '', asset.title);
-        appendTable(doc, assetSection, asset.fields);
+        await appendTable(doc, assetSection, asset.fields);
         walletSection.appendChild(assetSection);
       }
     }
@@ -214,7 +244,7 @@ async function show(params = {}) {
 
   const risk = document.createElement('div');
   risk.className = 'recovery-binder-risk';
-  risk.textContent = 'Nothing in this list is included unless you check it.';
+  risk.textContent = 'Nothing in this list is included unless you check it. QR codes only mirror values from fields you already chose to print.';
   area.appendChild(risk);
 
   const print = async (_event, button) => {
@@ -229,7 +259,7 @@ async function show(params = {}) {
     if (button) button.disabled = true;
     try {
       const binder = await fetchBinder(params.profile, options, true);
-      printBinder(binder);
+      await printBinder(binder);
     } catch (err) {
       alert(err && err.message ? err.message : 'Unable to prepare the Recovery Binder.');
     } finally {
@@ -245,4 +275,4 @@ async function show(params = {}) {
 }
 
 exports.show = show;
-exports._test = { OPTION_DEFINITIONS, ensureStyles, collectOptions, appendTable, printBinder, fetchBinder };
+exports._test = { OPTION_DEFINITIONS, ensureStyles, collectOptions, appendQr, appendTable, printBinder, fetchBinder };

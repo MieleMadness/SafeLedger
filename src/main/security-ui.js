@@ -2,6 +2,7 @@
 
 const { clipboard } = require('./renderer-bridge');
 const QRCode = require('qrcode');
+const eyeIcon = require('./eye-icon');
 
 const CLIPBOARD_CLEAR_MS = 30000;
 let privacyMode = true;
@@ -24,6 +25,14 @@ exports.copySensitive = (value) => {
   autoClearClipboard(text);
 };
 
+function copyIconMarkup() {
+  return '<svg class="sl-copy-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="sl-copy-sheet sl-copy-sheet-back" d="M9 4h7.5L20 7.5V16"/><path class="sl-copy-sheet sl-copy-sheet-back" d="M16.5 4v3.5H20"/><path class="sl-copy-sheet sl-copy-sheet-front" d="M4 8h7.5l3.5 3.5V20H4z"/><path class="sl-copy-sheet sl-copy-sheet-front" d="M11.5 8v3.5H15"/></svg>';
+}
+
+function qrIconMarkup() {
+  return '<svg class="sl-qr-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect class="sl-qr-frame" x="3.5" y="3.5" width="6" height="6" rx=".5"/><rect class="sl-qr-dot" x="5.5" y="5.5" width="2" height="2"/><rect class="sl-qr-frame" x="14.5" y="3.5" width="6" height="6" rx=".5"/><rect class="sl-qr-dot" x="16.5" y="5.5" width="2" height="2"/><rect class="sl-qr-frame" x="3.5" y="14.5" width="6" height="6" rx=".5"/><rect class="sl-qr-dot" x="5.5" y="16.5" width="2" height="2"/><rect class="sl-qr-pixel" x="14" y="14" width="3" height="3"/><rect class="sl-qr-pixel" x="18" y="14" width="2.5" height="2.5"/><rect class="sl-qr-pixel" x="14" y="18" width="2.5" height="2.5"/><rect class="sl-qr-pixel" x="18" y="18" width="3" height="3"/></svg>';
+}
+
 function makeIconButton(icon, onClick, title, extraClass = '') {
   const button = document.createElement('button');
   button.type = 'button';
@@ -36,6 +45,12 @@ function makeIconButton(icon, onClick, title, extraClass = '') {
     event.stopPropagation();
     onClick(event, button);
   });
+  return button;
+}
+
+function makeCopyButton(copyHandler) {
+  const button = makeIconButton('', copyHandler, 'Copy', 'copy-inline-button');
+  button.innerHTML = copyIconMarkup();
   return button;
 }
 
@@ -67,22 +82,24 @@ async function renderQr(area, value, captionText) {
 }
 
 function makeQrButton(valueGetter, qrArea, captionText, onOpen) {
-  return makeIconButton('fa-qrcode', async (_event, button) => {
+  const button = makeIconButton('', async (_event, control) => {
     if (qrArea.style.display !== 'none') {
       qrArea.style.display = 'none';
-      button.classList.remove('active');
+      control.classList.remove('active');
       return;
     }
     if (onOpen) onOpen();
     const shown = await renderQr(qrArea, valueGetter(), captionText);
-    button.classList.toggle('active', shown);
+    control.classList.toggle('active', shown);
   }, 'Show QR code', 'qr-inline-button');
+  button.innerHTML = qrIconMarkup();
+  return button;
 }
 
 function makeInlineActions(copyHandler, qrValueGetter, qrArea, qrCaption, onQrOpen, allowQr = true) {
   const actions = document.createElement('div');
   actions.className = 'field-inline-actions';
-  actions.appendChild(makeIconButton('fa-copy', copyHandler, 'Copy'));
+  actions.appendChild(makeCopyButton(copyHandler));
   if (allowQr) actions.appendChild(makeQrButton(qrValueGetter, qrArea, qrCaption, onQrOpen));
   return actions;
 }
@@ -90,14 +107,15 @@ function makeInlineActions(copyHandler, qrValueGetter, qrArea, qrCaption, onQrOp
 function makeEditRevealButton(input, label) {
   const actions = document.createElement('div');
   actions.className = 'field-inline-actions edit-sensitive-actions';
-  const button = makeIconButton('fa-eye', (_event, control) => {
+  const button = makeIconButton('', (_event, control) => {
     const hidden = input.type === 'password';
     input.type = hidden ? 'text' : 'password';
     const title = `${hidden ? 'Hide' : 'Show'} ${label}`;
     control.title = title;
     control.setAttribute('aria-label', title);
-    control.innerHTML = `<i class="fa ${hidden ? 'fa-eye-slash' : 'fa-eye'}" aria-hidden="true"></i>`;
+    control.innerHTML = eyeIcon.markup(hidden);
   }, `Show ${label}`, 'edit-sensitive-toggle');
+  button.innerHTML = eyeIcon.markup(false);
   actions.appendChild(button);
   return actions;
 }
@@ -124,7 +142,7 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
   const summaryLabel = document.createElement('span');
   summaryLabel.className = 'secure-field-summary-label';
   const stateIcon = document.createElement('i');
-  stateIcon.className = 'fa fa-plus-circle';
+  stateIcon.className = 'fa fa-plus';
   const labelText = document.createElement('span');
   labelText.className = 'secure-field-summary-text';
   labelText.textContent = label;
@@ -170,7 +188,7 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
   if (allowQr) content.appendChild(qrArea);
 
   details.addEventListener('toggle', () => {
-    stateIcon.className = details.open ? 'fa fa-minus-circle' : 'fa fa-plus-circle';
+    stateIcon.className = details.open ? 'fa fa-minus' : 'fa fa-plus';
     if (privacyMode) actions.style.display = details.open ? '' : 'none';
     if (!details.open && qrArea.style.display !== 'none') qrArea.style.display = 'none';
   });
@@ -261,4 +279,4 @@ exports.printRecoverySheet = (title, fields, includesSensitive) => {
   }, 50);
 };
 
-exports._test = { makeIconButton, makeEditRevealButton, makeInlineActions, createPrintFrame };
+exports._test = { makeIconButton, makeCopyButton, copyIconMarkup, qrIconMarkup, makeEditRevealButton, makeInlineActions, createPrintFrame };

@@ -7,6 +7,7 @@ const editFormUi = require('./edit-form-ui');
 const securityUi = require('./security-ui');
 const recoveryBinderUi = require('./recovery-binder-ui');
 const emptyState = require('./empty-state-ui');
+const profileSetup = require('./profile-setup');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
@@ -119,6 +120,148 @@ function listProfiles(params) {
   area.appendChild(ul);
 }
 
+function createProfileSetupControls(grid) {
+  const templates = profileSetup.availableTemplates();
+  const section = document.createElement('fieldset');
+  section.className = 'edit-info-grid-full profile-setup-section';
+
+  const legend = document.createElement('legend');
+  legend.textContent = 'Starting setup';
+  section.appendChild(legend);
+
+  const intro = document.createElement('p');
+  intro.className = 'profile-setup-intro';
+  intro.textContent = 'Choose whether this Profile starts empty or with wallet templates. Templates only add wallet names and their standard supported assets/networks; you add your private recovery information yourself.';
+  section.appendChild(intro);
+
+  const choices = document.createElement('div');
+  choices.className = 'profile-setup-choices';
+
+  const makeChoice = (value, titleText, description, checked) => {
+    const label = document.createElement('label');
+    label.className = 'profile-setup-choice';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = 'profileSetupMode';
+    input.value = value;
+    input.checked = checked;
+    const copy = document.createElement('span');
+    copy.className = 'profile-setup-choice-copy';
+    const title = document.createElement('strong');
+    title.textContent = titleText;
+    const detail = document.createElement('span');
+    detail.textContent = description;
+    copy.appendChild(title);
+    copy.appendChild(detail);
+    label.appendChild(input);
+    label.appendChild(copy);
+    choices.appendChild(label);
+    return input;
+  };
+
+  const templateMode = makeChoice(
+    'templates',
+    'Standard setup',
+    'Choose the wallets you use. Each selected wallet loads with its standard supported coins and networks.',
+    true
+  );
+  const blankMode = makeChoice(
+    'blank',
+    'Blank Profile',
+    'Start with no wallets or assets and build the Profile manually.',
+    false
+  );
+  section.appendChild(choices);
+
+  const picker = document.createElement('div');
+  picker.className = 'profile-wallet-picker';
+
+  const pickerHeader = document.createElement('div');
+  pickerHeader.className = 'profile-wallet-picker-header';
+  const pickerTitle = document.createElement('strong');
+  pickerTitle.textContent = 'Select wallet templates';
+  const count = document.createElement('span');
+  count.className = 'profile-wallet-selection-count';
+  pickerHeader.appendChild(pickerTitle);
+  pickerHeader.appendChild(count);
+  picker.appendChild(pickerHeader);
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'profile-wallet-picker-toolbar';
+  const standardButton = document.createElement('button');
+  standardButton.type = 'button';
+  standardButton.className = 'btn btn-default btn-sm';
+  standardButton.textContent = 'Select standard';
+  const clearButton = document.createElement('button');
+  clearButton.type = 'button';
+  clearButton.className = 'btn btn-default btn-sm';
+  clearButton.textContent = 'Clear all';
+  toolbar.appendChild(standardButton);
+  toolbar.appendChild(clearButton);
+  picker.appendChild(toolbar);
+
+  const templateGrid = document.createElement('div');
+  templateGrid.className = 'profile-wallet-template-grid';
+  const checkboxes = [];
+
+  for (const template of templates) {
+    const label = document.createElement('label');
+    label.className = 'profile-wallet-template';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = template.name;
+    checkbox.checked = template.standard === true;
+    const copy = document.createElement('span');
+    copy.className = 'profile-wallet-template-copy';
+    const name = document.createElement('strong');
+    name.textContent = template.name;
+    const type = document.createElement('span');
+    type.textContent = template.type ? `${template.type} Wallet` : 'Wallet';
+    copy.appendChild(name);
+    copy.appendChild(type);
+    label.appendChild(checkbox);
+    label.appendChild(copy);
+    templateGrid.appendChild(label);
+    checkboxes.push({ checkbox, template });
+  }
+  picker.appendChild(templateGrid);
+  section.appendChild(picker);
+  grid.appendChild(section);
+
+  const updateCount = () => {
+    const selected = checkboxes.filter(({ checkbox }) => checkbox.checked).length;
+    count.textContent = `${selected} selected`;
+  };
+
+  const applyMode = () => {
+    picker.hidden = blankMode.checked;
+    updateCount();
+  };
+
+  for (const { checkbox } of checkboxes) checkbox.addEventListener('change', updateCount);
+  templateMode.addEventListener('change', applyMode);
+  blankMode.addEventListener('change', applyMode);
+  standardButton.addEventListener('click', () => {
+    for (const { checkbox, template } of checkboxes) checkbox.checked = template.standard === true;
+    updateCount();
+  });
+  clearButton.addEventListener('click', () => {
+    for (const { checkbox } of checkboxes) checkbox.checked = false;
+    updateCount();
+  });
+  applyMode();
+
+  return {
+    getSetup() {
+      if (blankMode.checked) return { mode: 'blank', walletNames: [] };
+      return {
+        mode: 'templates',
+        walletNames: checkboxes.filter(({ checkbox }) => checkbox.checked).map(({ template }) => template.name)
+      };
+    }
+  };
+}
+
 function createEditProfile(params) {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -136,6 +279,16 @@ function createEditProfile(params) {
     value: profile && profile.name,
     maxLength: 25
   });
+  const inputNotes = editFormUi.addTextarea(grid, {
+    id: 'inputProfileNotes',
+    label: 'Notes',
+    value: profile && profile.notes,
+    rows: 4,
+    maxLength: 500,
+    className: 'detail-notes-input',
+    full: true
+  });
+  const setupControls = profile ? null : createProfileSetupControls(grid);
 
   const saveProfile = (button) => {
     if (params.saving.state) return alert('Please wait for processing to complete');
@@ -144,19 +297,28 @@ function createEditProfile(params) {
       if (button) button.disabled = false;
       return;
     }
+
+    const selectedSetup = setupControls ? setupControls.getSetup() : null;
+    if (selectedSetup && selectedSetup.mode === 'templates' && !selectedSetup.walletNames.length) {
+      if (button) button.disabled = false;
+      return alert('Choose at least one wallet template or select Blank Profile.');
+    }
     if (button) button.disabled = true;
 
     const nextProfile = profile || { created: Date() };
     nextProfile.name = name;
+    nextProfile.notes = inputNotes.value;
     if (profile) nextProfile.modified = Date();
 
     params.saving.state = true;
     status.loadStatus();
-    ipc.send('process-vault-list', {
+    const payload = {
       action: profile ? 'modify' : 'create',
       vault: nextProfile,
       vaultList: params.vaultList
-    });
+    };
+    if (!profile) payload.profileSetup = selectedSetup;
+    ipc.send('process-vault-list', payload);
   };
 
   form.addEventListener('submit', (event) => {
@@ -182,6 +344,19 @@ function togglePinned(params, button) {
   });
 }
 
+function appendProfileNotes(area, profile) {
+  const notesWrap = document.createElement('div');
+  notesWrap.className = 'detail-notes-section profile-notes-section';
+  const label = document.createElement('b');
+  label.textContent = 'Notes:';
+  notesWrap.appendChild(label);
+  const value = document.createElement('div');
+  value.className = 'outData detail-notes-value profile-notes-value';
+  value.textContent = String(profile && profile.notes || '').trim() || 'Use Edit Profile to add notes.';
+  notesWrap.appendChild(value);
+  area.appendChild(notesWrap);
+}
+
 function showProfileDetail(params) {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -202,6 +377,7 @@ function showProfileDetail(params) {
     location.appendChild(document.createTextNode(String(profile.path)));
     area.appendChild(location);
   }
+  appendProfileNotes(area, profile);
 
   detailActions.set([
     {
@@ -217,7 +393,8 @@ function showProfileDetail(params) {
         { label: 'Profile', value: profile.name },
         { label: 'Created', value: formatDate(profile.created) },
         { label: 'Modified', value: formatDate(profile.modified) },
-        { label: 'Location', value: profile.path }
+        { label: 'Location', value: profile.path },
+        { label: 'Notes', value: profile.notes }
       ], false)
     },
     {
@@ -272,4 +449,4 @@ function confirmDelete(params) {
 exports.listProfiles = listProfiles;
 exports.createProfile = (params) => createEditProfile(params);
 exports.showProfileDetail = showProfileDetail;
-exports._test = { normalize, appendDateLine, formatDate, pinnedSort };
+exports._test = { normalize, appendDateLine, appendProfileNotes, formatDate, pinnedSort, createProfileSetupControls };

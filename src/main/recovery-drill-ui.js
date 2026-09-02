@@ -71,6 +71,14 @@ function appendOptionalBip39Check(area) {
   area.appendChild(section);
 }
 
+function documentationReminder(group = {}) {
+  if (recoveryDrill.canComplete(group)) return '';
+  if (group.lastRecoveryDrill || group.lastVerified) {
+    return 'Documentation reminder: this Test Recovery may be current, but SafeLedger still does not have a recovery method, recovery location, or recovery instructions documented for this wallet. Completing or verifying a drill records that you tested the process; it does not create the missing recovery documentation. Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Wallet.';
+  }
+  return 'Documentation reminder: SafeLedger does not have a recovery method, recovery location, or recovery instructions documented for this wallet yet. You can still complete this Test Recovery checklist, but Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Wallet.';
+}
+
 function render(params = {}) {
   const area = document.getElementById('detailArea');
   if (!area) return;
@@ -97,15 +105,8 @@ function render(params = {}) {
   );
   area.appendChild(privacy);
 
-  const eligible = recoveryDrill.canComplete(group);
-  if (!eligible) {
-    appendText(
-      area,
-      'div',
-      'recovery-drill-warning',
-      'A recovery method is not documented yet. You can still complete this Test Recovery checklist, but Recovery Readiness will remain incomplete until recovery information or a recovery-material location is documented for this wallet.'
-    );
-  }
+  const reminder = documentationReminder(group);
+  if (reminder) appendText(area, 'div', 'recovery-drill-warning', reminder);
 
   appendText(area, 'p', 'recovery-drill-intro', 'Check every item only after you have physically or operationally confirmed it.');
 
@@ -172,4 +173,4 @@ function render(params = {}) {
 }
 
 exports.render = render;
-exports._test = { appendText, bip39Message, appendOptionalBip39Check };
+exports._test = { appendText, bip39Message, appendOptionalBip39Check, documentationReminder };

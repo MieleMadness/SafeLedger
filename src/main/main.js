@@ -9,25 +9,15 @@ const utils = require('./utils');
 const settingsManager = require('./installManager/installManager/settingsManager');
 const cryptoSession = require('./crypto-session-main');
 const securityMain = require('./security-main');
+const profileSetup = require('./profile-setup');
 
 let mainWindow;
 let vaultDir;
 let settingsDir;
 let currentSettings;
-let walletCatalog = null;
 const currentVault = 'zvault-0.json';
 const GUI_SMOKE = process.env.SAFELEDGER_GUI_SMOKE === '1';
 const SAFELEDGER_SITE_URL = 'https://safeledger.tnypg.com';
-const excludedDefaultWallets = new Set(['bitbox02 multi', 'coldcard', 'keystone', 'rabby wallet']);
-
-function getWalletCatalog() {
-  if (!walletCatalog) walletCatalog = require('./wallet-catalog');
-  return walletCatalog;
-}
-
-function isExcludedDefaultWallet(group) {
-  return excludedDefaultWallets.has(String(group && group.name || '').trim().toLowerCase());
-}
 
 function getPortableRoot() {
   return runtimeUtils.getPortableRoot({ appPath: app.getAppPath(), isPackaged: app.isPackaged });
@@ -60,6 +50,24 @@ function validateVaultList(list) {
 function validateVaultData(data) {
   if (!isPlainObject(data) || !vault.safeVaultFileName(data.file)) throw new Error('Invalid SafeLedger vault data.');
   return vaultSchema.prepareForSave(data);
+}
+
+function resolveNewProfileWalletNames(setup) {
+  // Older renderers did not send profileSetup. Preserve their existing
+  // behavior by creating the standard starter profile in that case.
+  if (setup == null) return profileSetup.standardNames();
+  if (!isPlainObject(setup)) throw new Error('Invalid Profile starting setup.');
+
+  const mode = String(setup.mode || '').trim().toLowerCase();
+  if (mode === 'blank') return [];
+  if (mode !== 'templates') throw new Error('Choose Blank Profile or Standard setup.');
+  if (!Array.isArray(setup.walletNames)) throw new Error('Wallet template selection is invalid.');
+
+  const unknown = profileSetup.unknownNames(setup.walletNames);
+  if (unknown.length) throw new Error('One or more selected wallet templates are not recognized by SafeLedger.');
+  const selected = profileSetup.resolveNames(setup.walletNames);
+  if (!selected.length) throw new Error('Choose at least one wallet template or select Blank Profile.');
+  return selected;
 }
 
 cryptoSession.registerIpcHandlers({ getMainWindow: () => mainWindow });
@@ -134,9 +142,9 @@ async function setSelfDestructProtection(enabled) {
   }
 }
 
-async function initializeModernVault(vaultName, cryptoKey) {
+async function initializeModernVault(vaultName, cryptoKey, walletNames = profileSetup.standardNames()) {
   const today = new Date().toISOString();
-  const groups = getWalletCatalog().buildDefaultGroups(today).filter((group) => !isExcludedDefaultWallet(group));
+  const groups = profileSetup.buildGroups(today, walletNames);
   const data = vaultSchema.prepareForSave({ file: vaultName, catalogVersion: '2026-08-20.3', groups });
   await vault.saveVault(path.join(vaultDir, vaultName), JSON.stringify(data), cryptoKey);
   return data;
@@ -408,6 +416,7 @@ ipc.on('process-vault-list', (event, params = {}) => {
   let nextList;
   let nextProfile;
   let idInfo = null;
+  let newProfileWalletNames = null;
   try {
     assertTrustedEvent(event);
     if (!isPlainObject(params) || !['create', 'modify'].includes(params.action) || !isPlainObject(params.vault) || !isPlainObject(params.vaultList)) {
@@ -420,6 +429,7 @@ ipc.on('process-vault-list', (event, params = {}) => {
     if (!nextProfile.name) throw new Error('Profile name is required.');
 
     if (params.action === 'create') {
+      newProfileWalletNames = resolveNewProfileWalletNames(params.profileSetup);
       idInfo = vault.nextVaultFileName(nextList);
       nextProfile.id = idInfo.id;
       nextProfile.file = idInfo.fileName;
@@ -448,7 +458,7 @@ ipc.on('process-vault-list', (event, params = {}) => {
   vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key)
     .then(async (val) => {
       if (params.action === 'create' && val === 'SUCCESS') {
-        const data = await initializeModernVault(idInfo.fileName, key);
+        const data = await initializeModernVault(idInfo.fileName, key, newProfileWalletNames);
         await securityMain.audit(getDataRoot(), 'profile-created');
         return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: nextList, vaultData: data });
       }

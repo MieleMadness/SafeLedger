@@ -1,7 +1,7 @@
 .recovery-binder-intro {
   max-width: 720px;
   margin: 0 0 14px;
-  color: #4d5968;
+  color: var(--sl-muted, #4d5968);
   font-size: 14px;
   line-height: 1.55;
 }
@@ -12,16 +12,16 @@
   gap: 10px;
   margin: 12px 0 16px;
   padding: 12px 14px;
-  border: 1px solid #bfd4f2;
+  border: 1px solid var(--sl-border, #bfd4f2);
   border-radius: 8px;
-  background: #eef5ff;
-  color: #274766;
+  background: var(--sl-primary-soft, #eef5ff);
+  color: var(--sl-text, #274766);
   font-size: 13px;
   line-height: 1.5;
 }
 
 .recovery-binder-safe-defaults .fa {
-  color: #0D47A1;
+  color: var(--sl-primary-strong, #0D47A1);
   font-size: 17px;
   margin-top: 1px;
 }
@@ -32,14 +32,22 @@
   gap: 12px;
   margin-bottom: 4px;
   padding: 10px 12px;
-  border: 1px solid #d8dee8;
+  border: 1px solid var(--sl-border, #d8dee8);
   border-radius: 8px;
-  background: #fff;
-  color: #172033;
+  background: var(--sl-surface, #fff);
+  color: var(--sl-text-strong, #172033);
 }
 
-.recovery-binder-summary strong { font-size: 16px; }
-.recovery-binder-summary span { color: #667085; font-size: 13px; }
+.recovery-binder-summary strong {
+  color: var(--sl-text-strong, #172033);
+  font-size: 16px;
+}
+
+.recovery-binder-summary span {
+  color: var(--sl-muted, #667085);
+  font-size: 13px;
+}
+
 .recovery-binder-loading { font-weight: 400; }
 
 .recovery-binder-options {
@@ -55,16 +63,17 @@
   align-items: start;
   margin: 0 !important;
   padding: 12px 14px;
-  border: 1px solid #d8dee8;
+  border: 1px solid var(--sl-border, #d8dee8);
   border-radius: 8px;
-  background: #fff;
+  background: var(--sl-surface, #fff);
+  color: var(--sl-text, #172033);
   cursor: pointer;
   font-weight: 400 !important;
 }
 
 .recovery-binder-option:hover {
-  border-color: #aebed3;
-  background: #fbfcfe;
+  border-color: var(--sl-border-strong, #aebed3);
+  background: var(--sl-surface-soft, #fbfcfe);
 }
 
 .recovery-binder-option input {
@@ -79,13 +88,13 @@
 }
 
 .recovery-binder-option-title {
-  color: #172033;
+  color: var(--sl-text-strong, #172033);
   font-size: 14px;
   line-height: 1.35;
 }
 
 .recovery-binder-option-text {
-  color: #596579;
+  color: var(--sl-muted, #596579);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -94,9 +103,9 @@
   max-width: 780px;
   margin-top: 12px;
   padding: 10px 12px;
-  border-left: 3px solid #93a8c2;
-  background: #f8fafc;
-  color: #596579;
+  border-left: 3px solid var(--sl-border-strong, #93a8c2);
+  background: var(--sl-surface-soft, #f8fafc);
+  color: var(--sl-muted, #596579);
   font-size: 12px;
   line-height: 1.5;
 }

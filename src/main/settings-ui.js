@@ -147,7 +147,7 @@ function addBackupReminderControl(section, params) {
   select.id = 'backupReminderDays';
   select.className = 'form-control';
   const current = backupHealth.normalizeReminderDays(params.settings && params.settings.backupReminderDays);
-  for (const [value, text] of [[0, 'Off'], [30, '30 days'], [60, '60 days'], [90, '90 days']]) {
+  for (const [value, text] of [[0, 'Off'], [90, '3 months'], [180, '6 months'], [365, '12 months']]) {
     const option = document.createElement('option');
     option.value = String(value);
     option.textContent = text;

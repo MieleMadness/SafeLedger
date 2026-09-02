@@ -82,8 +82,9 @@ for (const label of ['Password', 'PIN code', 'Recovery link', 'Seed phrase']) {
 assert((group.match(/allowQr: false/g) || []).length >= 4);
 
 assert(securityUi.includes('exports.addEditSensitiveInputControl'));
-assert(securityUi.includes("'fa-eye'"));
-assert(securityUi.includes('fa-eye-slash'));
+assert(securityUi.includes("const eyeIcon = require('./eye-icon');"));
+assert(securityUi.includes('button.innerHTML = eyeIcon.markup(false);'));
+assert(securityUi.includes('control.innerHTML = eyeIcon.markup(hidden);'));
 assert(securityUi.includes('const allowQr = options.allowQr !== false'));
 assert(securityUi.includes('if (allowQr) actions.appendChild(makeQrButton'));
 assert(!securityUi.includes('addPublicInputControls'));
@@ -91,4 +92,4 @@ assert(!securityUi.includes('addSensitiveInputControls'));
 assert(siteCss.includes('.edit-sensitive-shell'));
 assert(!siteCss.includes('.edit-public-shell'));
 
-console.log('PASS direct Asset/Wallet form rendering and security controls.');
+console.log('PASS direct Asset/Wallet form rendering and shared eye security controls.');

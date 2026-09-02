@@ -44,8 +44,8 @@ assert(preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboar
 assert(entry.includes("require('./dashboard-ui.js')"));
 assert(entry.includes("dataset.safeLedgerRendererReady = 'true'"));
 assert(index.includes('id="dashboardButton"'));
-assert(dashboardUi.includes("heading.textContent = 'Recovery Dashboard'"));
-assert(dashboardUi.includes("attentionTitle.textContent = 'Needs Attention'"));
+assert(dashboardUi.includes("heading.textContent = 'Vault Overview'"));
+assert(dashboardUi.includes("makeSection('Recovery Needs Attention')"));
 assert(group.includes("const customFields = require('./custom-fields')"));
 assert(group.includes("const customFieldsUi = require('./custom-fields-ui')"));
 assert(group.includes('g.customFields = customFieldEditor.getFields()'));
