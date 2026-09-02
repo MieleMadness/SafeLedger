@@ -5,10 +5,10 @@ require('./wallet-catalog-extensions');
 const web3Icons = require('./web3-icons');
 
 // This is the deliberate SafeLedger starter set. A wallet is only preselected
-// when SafeLedger also has real local brand artwork for it. The picker itself
-// remains broader: all established catalog wallets stay available, and every
-// wallet represented in the local Web3Icons wallet catalog is added as an
-// optional choice.
+// when SafeLedger also has real local brand artwork for it. The New Profile
+// picker follows the same rule: if SafeLedger cannot display a real local logo
+// for a wallet, that wallet is omitted from the template picker and can still
+// be added manually later as a Vault Item.
 const STANDARD_STARTER_NAMES = Object.freeze([
   'Ledger',
   'Trezor',
@@ -36,25 +36,25 @@ function availableTemplates() {
   const claimedNames = new Set();
   const standardNames = new Set(STANDARD_STARTER_NAMES.map(normalizeName));
 
-  // Preserve every SafeLedger catalog wallet as an optional template. Catalog
-  // wallets know which assets/networks to seed. Only icon-backed entries can be
-  // part of the automatic Standard setup.
+  // Catalog wallets retain their reviewed asset/network templates, but only
+  // logo-backed catalog entries are offered in the New Profile picker.
   for (const wallet of walletCatalog.catalog || []) {
     const name = String(wallet && wallet.name || '').trim();
     if (!name) continue;
     const match = iconMatch(name);
+    if (!match) continue;
     const normalized = normalizeName(name);
     templates.push({
       name,
       type: String(wallet && wallet.type || '').trim(),
-      standard: !!match && standardNames.has(normalized),
-      hasIcon: !!match,
-      iconCategory: match ? match.category : '',
-      iconKey: match ? match.key : '',
+      standard: standardNames.has(normalized),
+      hasIcon: true,
+      iconCategory: match.category,
+      iconKey: match.key,
       catalog: true
     });
     claimedNames.add(normalized);
-    if (match) claimedIcons.add(`${match.category}:${match.key}`);
+    claimedIcons.add(`${match.category}:${match.key}`);
   }
 
   // Add every wallet represented by the pinned local Web3Icons wallet catalog.
