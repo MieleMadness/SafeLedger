@@ -7,12 +7,14 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const serviceCatalog = require(path.join(root, 'src/main/service-catalog.js'));
 const tokenIcons = require(path.join(root, 'src/main/token-icons.js'));
 const assetPresets = require(path.join(root, 'src/main/vault-item-asset-presets.js'));
 const { createSeededSend } = require(path.join(root, 'src/main/vault-item-save-forwarder.js'));
 
-assert.strictEqual(pkg.version, '2.6.3', 'SafeLedger Chain Games save hotfix must report version 2.6.3.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 3,
+  'SafeLedger 2.6.3 save-safety gates must continue to apply to later 2.6.x patches.');
 
 const serviceSource = read('src/main/service-catalog.js');
 assert(!serviceSource.includes('Buffer.from('), 'Renderer service icons must not require Node Buffer.');
@@ -70,4 +72,4 @@ assert(forwarderSource.includes("if (channel === 'process-group')"));
 assert(forwarderSource.includes('return originalSend(channel, ...args);'));
 assert(forwarderSource.includes('must never prevent the encrypted'));
 
-console.log('PASS SafeLedger 2.6.3 keeps Chain Games preset seeding sandbox-safe and proves preset failures cannot strand Vault Item saves before IPC.');
+console.log(`PASS SafeLedger ${pkg.version} preserves the 2.6.3 sandbox-safe Chain Games save-forwarding regression.`);
