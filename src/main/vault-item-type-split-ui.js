@@ -331,9 +331,20 @@ function patchListCategories(root = document) {
 
 function patchDetailCategory(area) {
   const category = area && area.querySelector('.wallet-detail-category');
-  if (!category || String(category.textContent || '').trim() !== LEGACY_SERVICE_CATEGORY) return;
+  if (!category) return;
   const name = area.querySelector('.wallet-detail-title, h1');
-  category.textContent = inferAccountType(name && name.textContent, LEGACY_SERVICE_CATEGORY);
+  let categoryText = String(category.textContent || '').trim();
+  if (categoryText === LEGACY_SERVICE_CATEGORY) {
+    categoryText = inferAccountType(name && name.textContent, LEGACY_SERVICE_CATEGORY);
+    category.textContent = categoryText;
+  }
+  if (![EXCHANGE_CATEGORY, WEB3_CATEGORY, WEBSITE_CATEGORY].includes(categoryText)) return;
+  for (const heading of area.querySelectorAll('.product-section-title')) {
+    if (heading.textContent !== 'Wallet information' && heading.textContent !== 'Account / service information') continue;
+    heading.textContent = categoryText === WEB3_CATEGORY
+      ? 'Web3 account information'
+      : categoryText === WEBSITE_CATEGORY ? 'Website account information' : 'Account information';
+  }
 }
 
 function patchAccountIcons(root = document) {
@@ -342,15 +353,25 @@ function patchAccountIcons(root = document) {
     const nameNode = anchor.querySelector('.wallet-list-name');
     const categoryText = String(category && category.textContent || '').trim();
     if (![WEB3_CATEGORY, WEBSITE_CATEGORY, LEGACY_SERVICE_CATEGORY].includes(categoryText) || !nameNode) continue;
-    const service = serviceCatalog.find(nameNode.textContent);
-    if (!service) continue;
     const existing = anchor.querySelector('.vault-service-icon, .wallet-list-icon, .wallet-list-catalog-icon, .wallet-list-brand-image, .wallet-list-fallback-icon');
-    if (existing && existing.dataset && existing.dataset.serviceCatalog === service.name) continue;
-    const icon = serviceCatalog.createIcon(service.name, 'wallet-list-brand-image vault-service-icon known-service-brand-image');
-    if (!icon) continue;
-    icon.dataset.serviceCatalog = service.name;
-    if (existing) existing.replaceWith(icon);
-    else anchor.insertBefore(icon, anchor.firstChild);
+    const service = serviceCatalog.find(nameNode.textContent);
+    if (service) {
+      if (existing && existing.dataset && existing.dataset.serviceCatalog === service.name) continue;
+      const icon = serviceCatalog.createIcon(service.name, 'wallet-list-brand-image vault-service-icon known-service-brand-image');
+      if (!icon) continue;
+      icon.dataset.serviceCatalog = service.name;
+      if (existing) existing.replaceWith(icon);
+      else anchor.insertBefore(icon, anchor.firstChild);
+      continue;
+    }
+
+    if (existing && existing.classList && existing.classList.contains('vault-service-icon')) continue;
+    const fallback = document.createElement('i');
+    fallback.className = 'fa fa-globe vault-service-icon';
+    fallback.setAttribute('aria-hidden', 'true');
+    fallback.setAttribute('title', 'Account / service');
+    if (existing) existing.replaceWith(fallback);
+    else anchor.insertBefore(fallback, anchor.firstChild);
   }
 }
 
