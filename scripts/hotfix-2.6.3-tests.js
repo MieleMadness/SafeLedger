@@ -10,6 +10,7 @@ const pkg = JSON.parse(read('package.json'));
 const serviceCatalog = require(path.join(root, 'src/main/service-catalog.js'));
 const tokenIcons = require(path.join(root, 'src/main/token-icons.js'));
 const assetPresets = require(path.join(root, 'src/main/vault-item-asset-presets.js'));
+const { createSeededSend } = require(path.join(root, 'src/main/vault-item-save-forwarder.js'));
 
 assert.strictEqual(pkg.version, '2.6.3', 'SafeLedger Chain Games save hotfix must report version 2.6.3.');
 
@@ -38,13 +39,35 @@ assert(records.some((record) => record.customFields.some((field) => field.label 
 assert(records.some((record) => record.customFields.some((field) => field.label === 'Network' && field.value === 'Polygon')));
 assert(records.some((record) => record.customFields.some((field) => field.label === 'Network' && field.value === 'Chain Games Supernet')));
 
-const seedingSource = read('src/main/vault-item-asset-seeding-ui.js');
-assert(seedingSource.includes("if (channel === 'process-group')"));
-assert(seedingSource.includes('try {\n        seedCreateRequest(args[0]);'),
-  'Preset seeding must be isolated from the actual Vault Item save request.');
-assert(seedingSource.includes('return originalSend(channel, ...args);'),
-  'The encrypted save IPC request must still be sent even if optional preset seeding throws.');
-assert(seedingSource.includes('must never prevent the actual encrypted Vault Item save request'),
-  'The save-path invariant should remain documented beside the guard.');
+let forwarded = null;
+let logged = 0;
+const request = { type: 'group-create', vaultData: { file: 'zvault-0.json', groups: [] } };
+const sendWithBrokenPreset = createSeededSend(
+  (channel, payload) => { forwarded = { channel, payload }; return 'FORWARDED'; },
+  () => { throw new Error('synthetic preset failure'); },
+  () => { logged += 1; }
+);
+assert.strictEqual(sendWithBrokenPreset('process-group', request), 'FORWARDED');
+assert.deepStrictEqual(forwarded, { channel: 'process-group', payload: request },
+  'A preset enrichment exception must not block the encrypted Vault Item save IPC request.');
+assert.strictEqual(logged, 1, 'Preset enrichment failure should be logged once.');
 
-console.log('PASS SafeLedger 2.6.3 keeps Chain Games preset seeding sandbox-safe and cannot strand Vault Item saves before IPC.');
+forwarded = null;
+const sendWithBrokenLogger = createSeededSend(
+  (channel, payload) => { forwarded = { channel, payload }; return 'FORWARDED'; },
+  () => { throw new Error('synthetic preset failure'); },
+  () => { throw new Error('synthetic logger failure'); }
+);
+assert.strictEqual(sendWithBrokenLogger('process-group', request), 'FORWARDED');
+assert.deepStrictEqual(forwarded, { channel: 'process-group', payload: request },
+  'Even diagnostic logging failure must not block the encrypted Vault Item save IPC request.');
+
+const seedingSource = read('src/main/vault-item-asset-seeding-ui.js');
+assert(seedingSource.includes("require('./vault-item-save-forwarder')"));
+assert(seedingSource.includes('createSeededSend(originalSend, seedCreateRequest'));
+const forwarderSource = read('src/main/vault-item-save-forwarder.js');
+assert(forwarderSource.includes("if (channel === 'process-group')"));
+assert(forwarderSource.includes('return originalSend(channel, ...args);'));
+assert(forwarderSource.includes('must never prevent the encrypted'));
+
+console.log('PASS SafeLedger 2.6.3 keeps Chain Games preset seeding sandbox-safe and proves preset failures cannot strand Vault Item saves before IPC.');
