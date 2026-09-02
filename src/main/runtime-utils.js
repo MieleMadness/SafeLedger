@@ -5,10 +5,13 @@ const path = require('path');
 const { MAX_MASTER_PASSWORD_LENGTH } = require('./password-policy');
 
 function findMacAppBundle(execPath) {
-  let cursor = path.resolve(String(execPath || ''));
-  while (cursor && cursor !== path.dirname(cursor)) {
-    if (path.extname(cursor).toLowerCase() === '.app') return cursor;
-    cursor = path.dirname(cursor);
+  // A macOS .app path always uses POSIX separators. Use path.posix explicitly
+  // so the same safety logic can be regression-tested on Windows/Linux CI
+  // without the host OS rewriting /Volumes/... into a local drive path.
+  let cursor = path.posix.resolve(String(execPath || '').replace(/\\/g, '/'));
+  while (cursor && cursor !== path.posix.dirname(cursor)) {
+    if (path.posix.extname(cursor).toLowerCase() === '.app') return cursor;
+    cursor = path.posix.dirname(cursor);
   }
   return null;
 }
@@ -26,7 +29,7 @@ function getPortableRoot(options = {}) {
   if (options.isPackaged === false && options.appPath) return options.appPath;
   if (platform === 'darwin') {
     const bundle = findMacAppBundle(execPath);
-    if (bundle) return path.dirname(bundle);
+    if (bundle) return path.posix.dirname(bundle);
   }
   return path.dirname(execPath);
 }
