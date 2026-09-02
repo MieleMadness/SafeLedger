@@ -1,0 +1,65 @@
+name: Build SafeLedger macOS Apple Silicon
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - safeledger-2.6.1-development
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos-arm64:
+    runs-on: macos-15
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          submodules: false
+          fetch-depth: 2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+
+      - name: Confirm native Apple Silicon runner
+        run: |
+          test "$(uname -m)" = "arm64"
+          test "$(node -p 'process.arch')" = "arm64"
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run regression tests
+        run: npm run test:regression
+
+      - name: Run Electron crypto smoke test
+        run: npm run test:electron-crypto
+
+      - name: Launch real SafeLedger GUI smoke test
+        run: npm run test:gui-smoke
+
+      - name: Build unsigned Apple Silicon ZIP
+        run: npm run dist:mac:arm64
+
+      - name: Verify packaged architecture
+        run: |
+          APP_BINARY="dist/mac-arm64/SafeLedger.app/Contents/MacOS/SafeLedger"
+          test -f "$APP_BINARY"
+          test "$(lipo -archs "$APP_BINARY")" = "arm64"
+          ZIP_COUNT=$(find dist -maxdepth 1 -type f -name 'SafeLedger-*-macOS-arm64.zip' | wc -l | tr -d ' ')
+          test "$ZIP_COUNT" = "1"
+
+      - name: Upload unsigned Apple Silicon test build
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: SafeLedger-macOS-arm64
+          path: dist/SafeLedger-*-macOS-arm64.zip
+          if-no-files-found: error
