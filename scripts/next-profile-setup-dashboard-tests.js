@@ -21,19 +21,22 @@ function testStandardAndBlankProfileModels() {
 }
 
 function testSelectedWalletsLoadTheirAssets() {
+  /* Electrum remains in the underlying reviewed wallet catalog but currently
+   * has no local brand logo, so 2.5.16 intentionally omits it from New Profile
+   * templates and rejects it as a template-selection value. */
   const groups = profileSetup.buildGroups('2026-09-01T00:00:00.000Z', ['Ledger', 'Electrum']);
-  assert.deepStrictEqual(groups.map((group) => group.name), ['Ledger', 'Electrum']);
+  assert.deepStrictEqual(groups.map((group) => group.name), ['Ledger']);
 
   const ledger = groups.find((group) => group.name === 'Ledger');
-  const electrum = groups.find((group) => group.name === 'Electrum');
   assert(ledger.records.some((record) => record.symbol === 'BTC'), 'Ledger template should preload Bitcoin.');
   assert(ledger.records.some((record) => record.symbol === 'ETH'), 'Ledger template should preload Ethereum.');
-  assert.deepStrictEqual(electrum.records.map((record) => record.symbol), ['BTC'], 'Electrum should preload its Bitcoin record only.');
+  assert(!groups.some((group) => group.name === 'Electrum'), 'Logo-less wallets must not be created through New Profile templates.');
 }
 
 function testTemplateInputValidationHelpers() {
-  assert.deepStrictEqual(profileSetup.resolveNames(['ledger', 'LEDGER', 'Electrum']), ['Ledger', 'Electrum']);
-  assert.deepStrictEqual(profileSetup.unknownNames(['Ledger', 'Not A Real Wallet']), ['not a real wallet']);
+  assert.deepStrictEqual(profileSetup.resolveNames(['ledger', 'LEDGER', 'Electrum']), ['Ledger']);
+  assert.deepStrictEqual(profileSetup.unknownNames(['Ledger', 'Electrum', 'Not A Real Wallet']), ['electrum', 'not a real wallet']);
+  assert(profileSetup.availableTemplates().every((wallet) => wallet.hasIcon === true), 'Every New Profile wallet template must have local logo artwork.');
 }
 
 function testProfileCreationUiAndMainProcessContract() {
@@ -74,4 +77,4 @@ testSelectedWalletsLoadTheirAssets();
 testTemplateInputValidationHelpers();
 testProfileCreationUiAndMainProcessContract();
 testRecoveryDashboardRowsOpenVaultItems();
-console.log('PASS branch profile setup choices and Vault Overview row navigation.');
+console.log('PASS branch profile setup choices, logo-backed template filtering, and Vault Overview row navigation.');
