@@ -57,6 +57,7 @@ const release264 = read('RELEASE-2.6.4.md');
 assert(release264.includes('Add Asset & Icon Usability Hotfix'));
 assert(release264.includes('first visible Vault Item'));
 assert(release264.includes('28px') && release264.includes('24px'));
-assert(release264.includes('local/offline vector artwork'));
+assert(release264.includes('dedicated local vector artwork') && release264.includes('local/offline artwork source'),
+  '2.6.4 release notes must document dedicated Chain Games vector artwork that remains local/offline.');
 
 console.log(`PASS SafeLedger ${pkg.version} release documentation covers the 2.6.0 history through the 2.6.4 Add Asset/icon usability hotfix.`);
