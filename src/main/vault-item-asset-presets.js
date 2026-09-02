@@ -6,6 +6,7 @@ const tokenIcons = require('./token-icons');
 
 const EXCHANGE_CATEGORY = 'Exchange Account';
 const SERVICE_CATEGORY = 'Web3 / Website Account';
+const WEB3_CATEGORY = 'Web3 Account';
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
 const EXCHANGE_PRESETS = Object.freeze([
@@ -46,7 +47,7 @@ function presetRows(name, category) {
     const preset = findPreset(EXCHANGE_PRESETS, name);
     return preset ? { rows: preset.assets, source: preset.source } : null;
   }
-  if (category === SERVICE_CATEGORY) {
+  if (category === SERVICE_CATEGORY || category === WEB3_CATEGORY) {
     const preset = findPreset(SERVICE_PRESETS, name);
     return preset ? { rows: preset.assets, source: preset.source } : null;
   }
@@ -90,4 +91,4 @@ function buildRecords(name, category, createdAt) {
 
 function hasAssetPreset(name, category) { return buildRecords(name, category, 'preview').length > 0; }
 
-module.exports = { EXCHANGE_CATEGORY, SERVICE_CATEGORY, EXCHANGE_PRESETS, SERVICE_PRESETS, buildRecords, hasAssetPreset, iconBackedRows, _test:{ findPreset, walletRows, presetRows, normalize } };
+module.exports = { EXCHANGE_CATEGORY, SERVICE_CATEGORY, WEB3_CATEGORY, EXCHANGE_PRESETS, SERVICE_PRESETS, buildRecords, hasAssetPreset, iconBackedRows, _test:{ findPreset, walletRows, presetRows, normalize } };
