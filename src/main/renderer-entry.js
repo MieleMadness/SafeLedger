@@ -17,6 +17,7 @@ require('./security-enhancements.js');
 require('./crypto-ui-bridge.js');
 require('./search-enhancements.js');
 require('./profile-wallet-picker-ui.js');
+require('./profile-create-cancel-ui.js');
 require('./sensitive-control-icons-ui.js');
 require('./vault-item-ui.js');
 require('./vault-language-ui.js');
