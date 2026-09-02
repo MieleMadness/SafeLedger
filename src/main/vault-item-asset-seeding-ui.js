@@ -18,6 +18,22 @@ function seedCreateRequest(request) {
   return records.length;
 }
 
+function createSeededSend(originalSend, seedFn = seedCreateRequest, logError = console.error) {
+  return function sendWithVaultItemAssetSeed(channel, ...args) {
+    if (channel === 'process-group') {
+      try {
+        seedFn(args[0]);
+      } catch (err) {
+        // Preset enrichment is optional. A renderer-side icon/catalog error
+        // must never prevent the actual encrypted Vault Item save request from
+        // reaching the trusted main process or leave the UI stuck processing.
+        logError('SafeLedger preset asset seeding skipped:', err && err.message ? err.message : err);
+      }
+    }
+    return originalSend(channel, ...args);
+  };
+}
+
 function refreshCreatedWallet() {
   const selected = document.querySelector('#groupArea .nav > li > a.item-selected');
   if (!selected || typeof selected.click !== 'function') return false;
@@ -31,19 +47,7 @@ function refreshCreatedWallet() {
 
 if (!ipc[seedMarker]) {
   const originalSend = ipc.send.bind(ipc);
-  ipc.send = function sendWithVaultItemAssetSeed(channel, ...args) {
-    if (channel === 'process-group') {
-      try {
-        seedCreateRequest(args[0]);
-      } catch (err) {
-        // Preset enrichment is optional. A renderer-side icon/catalog error
-        // must never prevent the actual encrypted Vault Item save request from
-        // reaching the trusted main process or leave the UI stuck processing.
-        console.error('SafeLedger preset asset seeding skipped:', err && err.message ? err.message : err);
-      }
-    }
-    return originalSend(channel, ...args);
-  };
+  ipc.send = createSeededSend(originalSend);
   Object.defineProperty(ipc, seedMarker, { value: true, enumerable: false, configurable: false });
 }
 
@@ -58,4 +62,4 @@ if (!ipc[refreshMarker]) {
   Object.defineProperty(ipc, refreshMarker, { value: true, enumerable: false, configurable: false });
 }
 
-exports._test = { seedCreateRequest, refreshCreatedWallet };
+exports._test = { seedCreateRequest, createSeededSend, refreshCreatedWallet };
