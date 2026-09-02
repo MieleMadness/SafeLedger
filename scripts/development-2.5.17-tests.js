@@ -8,7 +8,10 @@ const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const version = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
-assert(version[0] === 2 && version[1] === 5 && version[2] >= 17, 'development build must be SafeLedger 2.5.17 or later');
+const atLeast2517 = version[0] > 2 ||
+  (version[0] === 2 && version[1] > 5) ||
+  (version[0] === 2 && version[1] === 5 && version[2] >= 17);
+assert(atLeast2517, 'build must be SafeLedger 2.5.17 or later');
 
 const profileSetup = require(path.join(root, 'src/main/profile-setup.js'));
 const walletCatalog = require(path.join(root, 'src/main/wallet-catalog.js'));
@@ -67,4 +70,4 @@ for (const moduleName of [
   'settings-icon-fix-ui.js'
 ]) assert(rendererEntry.includes(`require('./${moduleName}')`), `${moduleName} must load in the renderer.`);
 
-console.log('PASS SafeLedger 2.5.17 logo-backed wallet selectors, reviewed icon-backed asset seeding, Add-form cancellation, and local Change Password icon.');
+console.log('PASS SafeLedger 2.5.17+ logo-backed wallet selectors, reviewed icon-backed asset seeding, Add-form cancellation, and local Change Password icon.');
