@@ -57,6 +57,20 @@ const invokes = {
   'recovery-intelligence-summary': 'getRecoveryIntelligence'
 };
 
+// Subscribe to each preload event only once, then fan the same payload object
+// out to renderer modules in registration order. This keeps the trusted UI
+// working from one coherent in-memory vault state instead of separate cloned
+// payloads crossing the contextBridge for every listener.
+const nativeSubscriptions = new Set();
+function ensureNativeSubscription(channel) {
+  const subscription = subscriptions[channel];
+  if (!subscription || nativeSubscriptions.has(channel)) return;
+  const api = bridge();
+  if (typeof api[subscription] !== 'function') return;
+  api[subscription]((payload) => emitLocal(channel, {}, payload));
+  nativeSubscriptions.add(channel);
+}
+
 const ipcRenderer = {
   send(channel, ...args) {
     const method = sends[channel];
@@ -69,12 +83,8 @@ const ipcRenderer = {
     return bridge()[method](...args);
   },
   on(channel, listener) {
-    const subscription = subscriptions[channel];
-    if (subscription && typeof bridge()[subscription] === 'function') {
-      bridge()[subscription]((payload) => listener({}, payload));
-      return ipcRenderer;
-    }
     addLocalListener(channel, listener);
+    ensureNativeSubscription(channel);
     return ipcRenderer;
   },
   emit(channel, event, payload) {
