@@ -8,7 +8,10 @@ const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const version = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
-assert(version[0] === 2 && version[1] === 5 && version[2] >= 15, 'development build must be SafeLedger 2.5.15 or later');
+const atLeast2515 = version[0] > 2 ||
+  (version[0] === 2 && version[1] > 5) ||
+  (version[0] === 2 && version[1] === 5 && version[2] >= 15);
+assert(atLeast2515, 'build must be SafeLedger 2.5.15 or later');
 
 const css = read('src/main/css/ui-2.5.15.css');
 assert(css.includes('#loginBtn'), 'login button must receive the shared SafeLedger button treatment');
@@ -62,4 +65,4 @@ assert(languageSource.includes('if (String(node.textContent || \'\') === next) r
 const intelligence = read('src/main/recovery-intelligence-vault-overview-ui.js');
 assert(intelligence.includes("!== 'Vault Overview'"), 'Recovery Intelligence companion must recognize the renamed Vault Overview');
 
-console.log('PASS SafeLedger 2.5.15 shared button aesthetics and Vault Item terminology/overview coverage.');
+console.log('PASS SafeLedger 2.5.15+ shared button aesthetics and Vault Item terminology/overview coverage.');
