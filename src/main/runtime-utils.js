@@ -1,7 +1,24 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const { MAX_MASTER_PASSWORD_LENGTH } = require('./password-policy');
+
+function findMacAppBundle(execPath) {
+  // A macOS .app path always uses POSIX separators. Use path.posix explicitly
+  // so the same safety logic can be regression-tested on Windows/Linux CI
+  // without the host OS rewriting /Volumes/... into a local drive path.
+  let cursor = path.posix.resolve(String(execPath || '').replace(/\\/g, '/'));
+  while (cursor && cursor !== path.posix.dirname(cursor)) {
+    if (path.posix.extname(cursor).toLowerCase() === '.app') return cursor;
+    cursor = path.posix.dirname(cursor);
+  }
+  return null;
+}
+
+function isMacAppTranslocated(value) {
+  return /(^|[\\/])AppTranslocation([\\/]|$)/i.test(String(value || ''));
+}
 
 function getPortableRoot(options = {}) {
   const env = options.env || process.env;
@@ -10,7 +27,82 @@ function getPortableRoot(options = {}) {
   if (env.PORTABLE_EXECUTABLE_DIR) return env.PORTABLE_EXECUTABLE_DIR;
   if (platform === 'linux' && env.APPIMAGE) return path.dirname(env.APPIMAGE);
   if (options.isPackaged === false && options.appPath) return options.appPath;
+  if (platform === 'darwin') {
+    const bundle = findMacAppBundle(execPath);
+    if (bundle) return path.posix.dirname(bundle);
+  }
   return path.dirname(execPath);
+}
+
+function inspectPortableRoot(options = {}) {
+  const platform = options.platform || process.platform;
+  const execPath = options.execPath || process.execPath;
+  const root = getPortableRoot(options);
+  const translocated = platform === 'darwin' && isMacAppTranslocated(execPath);
+  let writable = null;
+
+  if (options.checkWritable !== false) {
+    const fsImpl = options.fs || fs;
+    try {
+      fsImpl.accessSync(root, fs.constants.W_OK);
+      writable = true;
+    } catch (_) {
+      writable = false;
+    }
+  }
+
+  return Object.freeze({
+    platform,
+    root,
+    translocated,
+    writable,
+    safeForPortableData: translocated === false && writable !== false
+  });
+}
+
+function getPortableStartupStatus(options = {}) {
+  const inspection = inspectPortableRoot(options);
+  let blocked = false;
+  let reason = 'ok';
+
+  // Windows Portable and Linux AppImage retain their established behavior.
+  // The 2.6.1 startup gate is macOS-specific because a quarantined .app may
+  // be launched from App Translocation and because common macOS install
+  // locations can be read-only to the current user. SafeLedger must never
+  // respond by silently moving encrypted data into a hidden user-data folder.
+  if (inspection.platform === 'darwin') {
+    if (inspection.translocated) {
+      blocked = true;
+      reason = 'app-translocation';
+    } else if (inspection.writable === false) {
+      blocked = true;
+      reason = 'portable-root-read-only';
+    }
+  }
+
+  return Object.freeze(Object.assign({}, inspection, {
+    blocked,
+    reason,
+    allowed: blocked === false
+  }));
+}
+
+function portableStartupMessage(status = {}) {
+  if (status.reason === 'app-translocation') {
+    return {
+      title: 'SafeLedger Portable Storage Required',
+      message: 'SafeLedger cannot safely start from this macOS location.',
+      detail: 'macOS opened SafeLedger from an isolated App Translocation location. Quit SafeLedger, move the complete extracted SafeLedger folder to a normal writable folder or external drive, then open SafeLedger.app again. SafeLedger will not create or move vault data while this location is unsafe.'
+    };
+  }
+  if (status.reason === 'portable-root-read-only') {
+    return {
+      title: 'SafeLedger Portable Storage Required',
+      message: 'SafeLedger needs a writable portable folder.',
+      detail: `The folder containing SafeLedger.app is not writable: ${String(status.root || 'unknown location')}. Quit SafeLedger, move the complete SafeLedger folder to a writable folder or external drive, then open SafeLedger.app again. SafeLedger will not create a second hidden copy of SafeLedgerData.`
+    };
+  }
+  return null;
 }
 
 function formatLockDuration(value) {
@@ -23,5 +115,10 @@ function formatLockDuration(value) {
 }
 
 exports.MAX_MASTER_PASSWORD_LENGTH = MAX_MASTER_PASSWORD_LENGTH;
+exports.findMacAppBundle = findMacAppBundle;
+exports.isMacAppTranslocated = isMacAppTranslocated;
 exports.getPortableRoot = getPortableRoot;
+exports.inspectPortableRoot = inspectPortableRoot;
+exports.getPortableStartupStatus = getPortableStartupStatus;
+exports.portableStartupMessage = portableStartupMessage;
 exports.formatLockDuration = formatLockDuration;

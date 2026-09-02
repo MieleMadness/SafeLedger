@@ -1,39 +1,44 @@
 # SafeLedger
 
-SafeLedger is a **free, local-first, offline encrypted information vault** for organizing cryptocurrency recovery information. It stores Profiles, Vault Items, Assets, public addresses, recovery details, private keys, balances, notes, and related information in encrypted files that remain under your control.
+SafeLedger is a **free, local-first, offline encrypted information vault** for organizing cryptocurrency recovery information and account-recovery details. It stores Profiles, Vault Items, Assets, public addresses, recovery details, private keys, balances, passwords, notes, and related information in encrypted files that remain under your control.
 
-Vault Items can represent cryptocurrency wallets, exchange accounts, or Web3 / website accounts. SafeLedger does not require a cloud account, subscription, license server, or network connection for normal vault operation.
+Vault Items can represent cryptocurrency wallets, exchange accounts, Web3 accounts, or ordinary website accounts. SafeLedger does not require a cloud account, subscription, license server, or network connection for normal vault operation.
 
 ## Release status
 
-### Current stable release: SafeLedger 2.6.0
+### Current stable release: SafeLedger 2.6.2
 
-SafeLedger **2.6.0** is the current source release on the repository's `master` release line.
+SafeLedger **2.6.2** is the current source release on the repository's `master` release line.
 
-2.6 promotes the post-2.5 development work into a stable release while preserving the existing encryption, backup, recovery, portable-storage, and offline-first foundation.
+2.6.2 builds on the 2.6 Vault Item experience and the 2.6.1 Apple Silicon foundation with multichain asset identity, Chain Games support, a broader local website catalog, and optional Shit Coin Mode.
 
-### What's new in SafeLedger 2.6
+### What's new in SafeLedger 2.6.2
 
-- User-facing hierarchy expanded to **Profile → Vault Item → Asset**
+- **Shit Coin Mode** in Settings → Asset Display. When enabled, unknown assets with no recognized local icon use **💩** instead of the generic ticker fallback. The setting is visual-only and off by default.
+- Standard **Network** and **Contract address** fields for Assets, stored through the existing encrypted field structure without requiring a vault-format migration.
+- **Chain Games** as a known Web3 / Website Account preset.
+- Reviewed `CHAIN` starter assets for Ethereum, Polygon, and the Chain Games Supernet.
+- Deterministic local Chain Games artwork for reviewed CHAIN entries so a ticker collision cannot select an unrelated icon.
+- A local known-site catalog for ordinary account/password records including Facebook, Yahoo, Google, Gmail, Microsoft, Outlook, Apple, Amazon, PayPal, eBay, Instagram, X/Twitter, LinkedIn, Reddit, Discord, Dropbox, GitHub, Netflix, Spotify, Steam, Twitch, TikTok, YouTube, Proton, Adobe, Slack, and Zoom.
+- Known website icons are generated and bundled locally. SafeLedger does not fetch favicons or call an online icon service at runtime.
+- Unknown websites continue to use the generic local globe icon.
+- The 2.6.1 **macOS Apple Silicon (`arm64`)** foundation is retained, including native packaging, native Apple Silicon CI, portable `.app` root handling, and fail-closed App Translocation/read-only startup checks.
+
+### 2.6 foundation retained
+
+- User-facing hierarchy: **Profile → Vault Item → Asset**
 - Vault Items can represent **Wallets**, **Exchange Accounts**, and **Web3 / Website Accounts**
 - Full local Web3Icons preparation for tokens, networks, wallets, and exchanges
-- Icon-backed New Profile wallet picker with responsive layout and real local brand artwork only
+- Icon-backed New Profile wallet picker with responsive layout
 - Nine Standard starter wallets with reviewed starter configuration
-- Reviewed wallet, exchange, and service asset presets that preload only assets with matching local artwork
-- Newly saved wallet presets immediately render their seeded asset icons without requiring a second click
-- Vault Overview inventory counts for wallets, exchanges, services, and total Vault Items
-- Vault Overview maintenance snapshot, stale-information awareness, recovery coverage, recently verified items, and direct row navigation
-- Profile Notes stored with encrypted Profile metadata and available to print/recovery workflows
-- Recovery Binder dark-mode improvements and optional local QR-code printing for QR-capable values
-- Backup reminder choices simplified to Off, 3 months, 6 months, or 12 months, with 3 months as the default
+- Reviewed wallet, exchange, and service asset presets
+- Vault Overview inventory, maintenance, stale-information, recovery coverage, and direct navigation
+- Profile Notes stored with encrypted Profile metadata
+- Recovery Binder dark-mode improvements and optional local QR-code printing
 - Explicit Cancel actions for New Profile, Add Vault Item, and Add Asset workflows
-- Consistent local eye, copy, QR, fallback-wallet, and password-control artwork
-- Improved sensitive-field reveal controls, QR caption contrast, password-control alignment, and consistent focus/hover treatment
-- Alphabetized exchange and Web3/service preset choices
-- Local fallback artwork for Vault Items without a recognized brand logo
 - FIO Protocol support in reviewed Ledger and MetaMask catalogs and in the FIO App service preset
 
-The 2.6 release remains local-first and offline. The icon catalog is prepared into local data URLs at build time; SafeLedger does not fetch wallet, exchange, token, or network artwork from the internet while the vault is running.
+SafeLedger remains local-first and offline. Runtime icon lookup uses local data URLs and generated local service artwork; the vault does not fetch wallet, exchange, token, network, or website artwork from the internet.
 
 ### Core capabilities
 
@@ -68,7 +73,7 @@ The 2.6 release remains local-first and offline. The icon catalog is prepared in
 - **Privacy Mode**, enabled by default, for masked sensitive information
 - Sanitized Recovery Intelligence output that does not expose seeds, private keys, raw fingerprints, recovery locations, or backup paths
 - Emergency Lock that clears the active encryption session, minimizes SafeLedger, resets the renderer, and returns to a fresh login state
-- Windows and Linux validation/build workflows on the repository release branch
+- Windows, Linux, and macOS Apple Silicon validation/build workflows
 - SHA-256 release/checksum tooling, release-manifest tooling, SBOM support, and release-verification documentation
 - Apache 2.0 license, NOTICE, third-party attribution, contributor, and security documentation
 
@@ -78,8 +83,9 @@ The currently implemented packaged targets are:
 
 - **Windows x64 Portable EXE**
 - **Linux x64 AppImage**
+- **macOS Apple Silicon (`arm64`) ZIP**
 
-macOS Apple Silicon support was previously proposed for 2.6, but that platform work has **not** been implemented or validated in this release. macOS packaging, Developer ID signing/notarization, Gatekeeper validation, and macOS-specific runtime testing remain future work.
+The macOS build is native Apple Silicon and is validated on GitHub-hosted Apple Silicon hardware. The project does not currently have Apple Developer Program credentials, so the Mac artifact is **not Developer ID signed or Apple-notarized**. SafeLedger does not claim a notarized consumer distribution until signing credentials are available.
 
 ## Release roadmap
 
@@ -133,25 +139,21 @@ Released as **2.5.0**.
 
 2.5 established the distribution/trust foundation, including Windows/Linux artifact contracts, checksum/SBOM/release-manifest tooling, open-source legal and contributor documentation, and release-verification guidance.
 
-The repository was later simplified to separate Windows and Linux validation/build workflows. The historical 2.5 release design remains documented in `RELEASE-2.5.md`.
-
 ### SafeLedger 2.6 — Vault Item Experience & Local Web3 Catalog
 
 Released as **2.6.0**.
 
-2.6 promotes the completed 2.5.x interface and catalog work into the stable release line, including:
+2.6 introduced the Profile → Vault Item → Asset model, Wallet/Exchange/Web3 account Vault Items, the local Web3 catalog, reviewed starter presets, Profile Notes, Vault Overview improvements, Recovery Binder improvements, and interface refinements.
 
-- Profile → Vault Item → Asset terminology and workflows
-- Wallet, Exchange Account, and Web3 / Website Account Vault Items
-- Full local Web3 token/network/wallet/exchange artwork catalog
-- Logo-backed Profile setup and nine Standard starter wallets
-- Reviewed asset preloading for supported wallet/exchange/service presets
-- Immediate post-save rendering of newly seeded wallet assets
-- Vault Overview inventory and maintenance improvements
-- Profile Notes and Recovery Binder QR improvements
-- Consistent local controls, fallback artwork, and UI refinements
+### SafeLedger 2.6.1 — macOS Apple Silicon Foundation
 
-See `RELEASE-2.6.md` for the 2.6 release scope.
+2.6.1 introduced native `arm64` packaging and validation, macOS `.app` portable-root resolution, App Translocation detection, portable-folder writability checks, and fail-closed startup handling that refuses to create a hidden second `SafeLedgerData` location.
+
+### SafeLedger 2.6.2 — Asset Identity & Account Catalog
+
+2.6.2 adds Network/Contract Address asset identity, Chain Games/CHAIN support, the local known-website catalog, and opt-in Shit Coin Mode while retaining the 2.6.1 Apple Silicon foundation.
+
+See `RELEASE-2.6.md`, `RELEASE-2.6.1.md`, and `RELEASE-2.6.2.md` for the detailed 2.6 release history.
 
 ## How SafeLedger is organized
 
@@ -174,7 +176,7 @@ Profiles can also store encrypted Notes to document information that applies to 
 
 ### Vault Item
 
-A Vault Item represents something a user may need to recover, regain access to, or document. A Vault Item can be a cryptocurrency wallet, an exchange account, or a Web3 / website account.
+A Vault Item represents something a user may need to recover, regain access to, or document. A Vault Item can be a cryptocurrency wallet, an exchange account, a Web3 service, or an ordinary website account.
 
 Common Vault Item information includes:
 
@@ -213,31 +215,43 @@ Known exchange choices use the local exchange-logo catalog. A smaller reviewed s
 
 Web3 / Website Account Vault Items can store login information, verified website, connected wallet names, profile/account ID, 2FA information, backup codes, recovery notes, and optional tracked assets.
 
-These service presets intentionally do **not** auto-fill login URLs. Verify a website yourself before saving it.
+SafeLedger 2.6.2 includes local known-site choices for major websites as well as Web3 services. Known-site icons are local brand-style tiles generated inside SafeLedger. Unknown websites use the generic globe.
+
+These presets intentionally do **not** auto-fill login URLs. Verify a website yourself before saving it.
 
 ### Asset
 
 Assets can store information such as:
 
 - Name and symbol
+- **Network**
+- **Contract address**
 - Public address
 - Tags
 - Balance
 - Private key, when you choose to store one
 - Notes
-- Custom fields
+- Additional custom fields
 
-When a reviewed wallet, exchange, or service preset is created, SafeLedger may preload known assets. Preloading is filtered through the local icon catalog so unsupported/unknown artwork is not silently inserted into the new item.
+Network and Contract address use the existing encrypted custom-field-compatible structure, preserving SafeLedger 2.x compatibility without a vault schema migration.
+
+When a reviewed wallet, exchange, or service preset is created, SafeLedger may preload known assets. Preloading is filtered through the local icon resolver so unsupported/unknown artwork is not silently inserted into the new item.
+
+### Shit Coin Mode
+
+Open **Settings → Asset Display** to enable Shit Coin Mode.
+
+When enabled, an asset that has no recognized local token/network icon uses **💩** as its fallback icon. Recognized assets keep their normal icon. The setting does not decide whether an asset is legitimate or valuable; it is a display preference only and never changes the asset record itself.
 
 ## Portable data layout
 
-For packaged builds, SafeLedger creates and uses `SafeLedgerData` in the same folder as the SafeLedger application you launch.
+For packaged builds, SafeLedger creates and uses `SafeLedgerData` beside the SafeLedger application you launch.
 
 ### Windows portable example
 
 ```text
 D:\My SafeLedger\
-├─ SafeLedger-2.6.0-Portable.exe
+├─ SafeLedger-2.6.2-Portable.exe
 └─ SafeLedgerData\
    ├─ settings\
    └─ vaults\
@@ -247,11 +261,25 @@ D:\My SafeLedger\
 
 ```text
 /home/user/Apps/SafeLedger/
-├─ SafeLedger-2.6.0-x86_64.AppImage
+├─ SafeLedger-2.6.2-x86_64.AppImage
 └─ SafeLedgerData/
    ├─ settings/
    └─ vaults/
 ```
+
+### macOS Apple Silicon example
+
+```text
+/Volumes/SafeLedger/
+├─ SafeLedger.app
+└─ SafeLedgerData/
+   ├─ settings/
+   └─ vaults/
+```
+
+On macOS, SafeLedger resolves the portable root to the folder containing `SafeLedger.app`; it does not intentionally store normal vault data inside the `.app` bundle or silently redirect it to `~/Library/Application Support`.
+
+If macOS App Translocation is detected or the portable folder is not writable, SafeLedger fails closed before vault storage is initialized and instructs the user to move the complete SafeLedger folder to a normal writable location.
 
 Keep the application and its complete `SafeLedgerData` folder together. This allows SafeLedger to run from a local folder or removable drive without a license or cloud account.
 
@@ -352,9 +380,11 @@ SafeLedger maintains a local `audit.log` under `SafeLedgerData/settings`. Activi
 
 ## Build validation and release verification
 
-The repository currently contains separate GitHub Actions workflows for the Windows Portable EXE and Linux AppImage. They run against `master` and pull requests targeting `master` and perform locked dependency installation, regression testing, Electron crypto smoke testing, GUI smoke testing, packaging, and artifact staging.
+The repository contains separate GitHub Actions workflows for the Windows Portable EXE, Linux AppImage, and macOS Apple Silicon arm64 ZIP. Pull requests targeting `master` run locked dependency installation, regression testing, Electron crypto smoke testing, GUI smoke testing, packaging, and platform-specific artifact checks.
 
-The repository also contains checksum, SBOM, release-manifest, distribution-trust, and `RELEASE-VERIFICATION.md` tooling/documentation inherited from the 2.5 trust work. There is currently **no automated GitHub Release publishing workflow in `.github/workflows`**, so source promotion to `master` should not be confused with automatic publication of a signed/tagged downloadable release.
+The macOS workflow validates natively on Apple Silicon and verifies that the packaged executable is arm64. Signing identity auto-discovery is disabled until Apple Developer Program credentials are available.
+
+The repository also contains checksum, SBOM, release-manifest, distribution-trust, and `RELEASE-VERIFICATION.md` tooling/documentation. There is currently **no automated GitHub Release publishing workflow in `.github/workflows`**, so source promotion to `master` should not be confused with automatic publication of a signed/tagged downloadable release.
 
 Checksums prove that a downloaded file matches the published digest. They are not a guarantee that software contains no vulnerabilities. Code-signing status should be reported separately from checksum status.
 
@@ -414,6 +444,12 @@ Build Linux AppImage:
 npm run dist:linux
 ```
 
+Build the unsigned macOS Apple Silicon ZIP:
+
+```bash
+npm run dist:mac:arm64
+```
+
 Release changes are expected to pass regression, crypto, GUI, device-security, Recovery Intelligence, distribution-trust, and packaging checks before an official downloadable binary is considered validated.
 
 ## Release documents
@@ -424,13 +460,15 @@ Release changes are expected to pass regression, crypto, GUI, device-security, R
 - `RELEASE-2.4.md` — Recovery Intelligence & Validation
 - `RELEASE-2.5.md` — Distribution, Trust & Open Source Readiness
 - `RELEASE-2.6.md` — Vault Item Experience & Local Web3 Catalog
+- `RELEASE-2.6.1.md` — macOS Apple Silicon Foundation
+- `RELEASE-2.6.2.md` — Asset Identity, Chain Games & Known Website Icons
 - `RELEASE-VERIFICATION.md` — download verification guidance
 
 ## Icon and preset catalog
 
-SafeLedger 2.6.0 uses `@web3icons/core` **4.0.55** as its pinned local icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
+SafeLedger 2.6.2 uses `@web3icons/core` **4.0.55** as its pinned local Web3 icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
 
-All prepared artwork is stored as local data URLs for runtime use. Icon lookup does not require a network connection.
+All prepared artwork is stored as local data URLs for runtime use. Known website/service artwork is also generated locally. Icon lookup does not require a network connection.
 
 ### Standard starter wallets
 
@@ -553,13 +591,13 @@ Exchange Accounts use the local exchange-logo catalog. The current catalog inclu
 
 </details>
 
-The Exchange Account preset chooser is generated from the complete local exchange icon catalog and is alphabetized. SafeLedger currently maintains reviewed starter-asset presets for **Coinbase, Kraken, Binance, Gemini, and Crypto.com**. Other exchange-logo choices begin without guessed assets.
+The Exchange Account preset chooser is generated from the complete local exchange icon catalog and is alphabetized. SafeLedger maintains reviewed starter-asset presets for **Coinbase, Kraken, Binance, Gemini, and Crypto.com**. Other exchange-logo choices begin without guessed assets.
 
 ### Asset and network icons
 
 SafeLedger prepares the complete token and network artwork included in the pinned Web3Icons package—at least **1,000 token icons** and **100 network icons**. This is intentionally much larger than the reviewed starter-asset catalog, because users can manually add assets that are not part of a wallet's default template.
 
-Common icon-backed assets and networks used by SafeLedger's reviewed wallet/exchange/service catalogs include:
+Common icon-backed assets and networks used by SafeLedger's reviewed catalogs include:
 
 - Aave (`AAVE`)
 - Algorand (`ALGO`)
@@ -571,6 +609,7 @@ Common icon-backed assets and networks used by SafeLedger's reviewed wallet/exch
 - Bitcoin (`BTC`)
 - Bitcoin Cash (`BCH`)
 - Cardano (`ADA`)
+- Chain Games (`CHAIN`)
 - Chainlink (`LINK`)
 - Cosmos Hub (`ATOM`)
 - Cronos (`CRO`)
@@ -601,7 +640,7 @@ Common icon-backed assets and networks used by SafeLedger's reviewed wallet/exch
 
 SafeLedger also recognizes reviewed token/network families such as **ERC-20**, **EVM**, **BEP-20**, **SPL**, **TRC-20**, and **Cardano Native Tokens** where the relevant wallet catalog uses them.
 
-The full token catalog contains well over a thousand generated entries, so it is not duplicated as a thousand-line static README list. SafeLedger's build-generated local manifest is the source of truth for exact token/network artwork in a particular build. This prevents the documentation from claiming an icon that was removed or renamed in a future pinned dependency update.
+The full token catalog contains well over a thousand generated entries, so it is not duplicated as a thousand-line static README list. SafeLedger's build-generated local manifest is the source of truth for exact token/network artwork in a particular build.
 
 ### Reviewed automatic asset preloading
 
@@ -615,25 +654,58 @@ Examples:
 - **Kraken Wallet** and **Backpack** include reviewed supported network starter sets.
 - **Coinbase, Kraken, Binance, Gemini, and Crypto.com Exchange Accounts** receive reviewed starter-asset sets.
 - **FIO App** preloads FIO Protocol (`FIO`).
+- **Chain Games** preloads reviewed CHAIN entries for Ethereum, Polygon, and Chain Games Supernet, including Network and Contract address metadata where applicable.
 
-Availability can change by region, account, wallet model, network, or upstream platform update. The source URL used for reviewed starter data is retained in the generated record notes so the catalog can be audited later.
+Availability can change by region, account, wallet model, network, or upstream platform update. The source URL used for reviewed starter data is retained in generated record notes so the catalog can be audited later.
 
 ### Web3 / website account presets
 
-SafeLedger currently offers these known Web3 / website account choices:
+SafeLedger includes known Web3 and ordinary website account choices so the same encrypted Vault Item model can also be used for password/account recovery records.
+
+Known choices include:
 
 - Aave
+- Adobe
+- Amazon
+- Apple
+- Chain Games
 - CoinGecko
 - CoinTracker
+- Discord
+- Dropbox
+- eBay
 - Etherscan
+- Facebook
 - FIO App
+- GitHub
+- Gmail
+- Google
+- Instagram
 - Koinly
 - Lido
+- LinkedIn
+- Microsoft
+- Netflix
 - OpenSea
+- Outlook
+- PayPal
+- Proton
+- Reddit
+- Slack
 - Solscan
+- Spotify
+- Steam
+- TikTok
+- Twitch
 - Uniswap
+- X / Twitter
+- Yahoo
+- YouTube
+- Zoom
 
-These account/service Vault Items currently use a **generic local service icon** in the Vault Item list rather than implying that every website preset has a dedicated SafeLedger brand logo. FIO App is currently the service preset with a reviewed automatic asset (`FIO`).
+Major known sites use a local SafeLedger-generated brand-style icon. Unknown/manual websites continue to use the generic globe. SafeLedger does not fetch the site's favicon or contact the site to determine its icon.
+
+Known-site presets do **not** auto-fill login URLs. Enter a URL only after verifying it yourself.
 
 ## Recommended operating practices
 
@@ -650,9 +722,9 @@ These account/service Vault Items currently use a **generic local service icon**
 
 ## What SafeLedger is not
 
-SafeLedger is an encrypted information organizer. It is not a cryptocurrency exchange, blockchain node, hardware wallet, or transaction-signing device.
+SafeLedger is an encrypted information organizer. It is not a cryptocurrency exchange, blockchain node, hardware wallet, transaction-signing device, online password-sync service, or token-rating service.
 
-Storing a seed phrase or private key in any software creates risk. Maintain appropriate offline recovery backups for critical assets.
+Storing a seed phrase, private key, or password in any software creates risk. Maintain appropriate offline recovery backups for critical assets and accounts.
 
 ## License
 

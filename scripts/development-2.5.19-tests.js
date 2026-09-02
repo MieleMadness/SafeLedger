@@ -32,13 +32,14 @@ for (const phrase of [
 
 assert(
   readme.includes('Current development preview: SafeLedger 2.5.19') ||
-  readme.includes('Current stable release: SafeLedger 2.6.0'),
-  'README must identify either the original 2.5.19 preview or its promoted 2.6.0 stable release.'
+  /Current stable release: SafeLedger 2\.6\.\d+/.test(readme),
+  'README must identify the original 2.5.19 preview or a promoted 2.6.x stable release.'
 );
 assert(readme.includes('@web3icons/core` **4.0.55**'),
   'README must identify the pinned local icon dependency used by this feature set.');
 assert(readme.includes('at least **1,000 token icons**'));
 assert(readme.includes('at least **100 network icons**'));
-assert(readme.includes('generic local service icon'));
+assert(readme.includes('generic globe'),
+  'README must document a local generic fallback for unknown Web3/website Vault Items.');
 
-console.log('PASS SafeLedger 2.5.19+ README documents current Vault Item features and local icon/preset coverage.');
+console.log(`PASS SafeLedger ${pkg.version} preserves the 2.5.19+ Vault Item and local icon/preset documentation gates.`);

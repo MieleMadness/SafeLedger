@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain: ipc, powerMonitor, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain: ipc, powerMonitor, shell } = require('electron');
 const path = require('path');
 const runtimeUtils = require('./runtime-utils');
 const cryptoSession = require('./crypto-session-main');
@@ -16,10 +16,40 @@ const { createSessionLockController } = require('./session-lock-main');
 const { createDeviceSecurityService } = require('./device-security-main');
 const { SensitiveFingerprintSession } = recoveryDuplicates;
 
-// Load the established SafeLedger application runtime first. SafeLedger 2.4
-// extends the released 2.3 security lifecycle without changing vault/encryption
-// persistence.
-require('./main');
+// Resolve macOS portable-storage safety before loading the established main
+// runtime. If a quarantined app is translocated or its containing directory is
+// read-only, main.js must never run because its normal initialization can create
+// SafeLedgerData. Windows/Linux keep their established startup behavior.
+const startupStorageStatus = runtimeUtils.getPortableStartupStatus({
+  appPath: app.getAppPath(),
+  isPackaged: app.isPackaged
+});
+
+if (startupStorageStatus.allowed) {
+  // Load the established SafeLedger application runtime only after the portable
+  // storage boundary is known to be safe.
+  require('./main');
+} else {
+  app.whenReady().then(async () => {
+    cryptoSession.clearSession();
+    const warning = runtimeUtils.portableStartupMessage(startupStorageStatus);
+    if (warning) {
+      try {
+        await dialog.showMessageBox({
+          type: 'warning',
+          buttons: ['Quit SafeLedger'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+          title: warning.title,
+          message: warning.message,
+          detail: warning.detail
+        });
+      } catch (_) {}
+    }
+    app.quit();
+  });
+}
 
 function getMainWindow() {
   return BrowserWindow.getAllWindows().find((win) => win && !win.isDestroyed()) || null;
@@ -258,12 +288,17 @@ ipc.handle('recovery-intelligence-summary', async (event) => {
   }
 });
 
-app.whenReady().then(() => deviceSecurity.start().catch(() => {
-  // Storage initialization failure must never leave an unlocked session alive.
-  if (lockController.isUnlocked()) {
-    lockController.lockSession('storage-unavailable', { reload: false, forceUi: true });
-  }
-}));
+app.whenReady().then(() => {
+  // If startup was blocked, deviceSecurity must not initialize a storage
+  // identity or create SafeLedgerData behind the warning dialog.
+  if (!startupStorageStatus.allowed) return;
+  return deviceSecurity.start().catch(() => {
+    // Storage initialization failure must never leave an unlocked session alive.
+    if (lockController.isUnlocked()) {
+      lockController.lockSession('storage-unavailable', { reload: false, forceUi: true });
+    }
+  });
+});
 
 app.on('before-quit', () => {
   sensitiveFingerprints.clear();

@@ -101,14 +101,13 @@ function testBuildWorkflowTrustBoundary() {
   const active = fs.readdirSync(workflowDir).filter((name) => /\.ya?ml$/i.test(name)).sort();
   assert.deepStrictEqual(
     active,
-    ['linux-appimage.yml', 'windows-portable.yml'],
-    'Only the Windows Portable and Linux AppImage workflows should be active.'
+    ['linux-appimage.yml', 'macos-arm64.yml', 'windows-portable.yml'],
+    'Only the Windows Portable, Linux AppImage, and macOS Apple Silicon validation workflows should be active.'
   );
 
   for (const file of active) {
     const workflow = read(path.join('.github', 'workflows', file));
     assert(workflow.includes('workflow_dispatch:'), `${file} must support manual runs`);
-    assert(workflow.includes('push:\n    branches:\n      - master'), `${file} must run when approved changes reach master`);
     assert(workflow.includes('pull_request:\n    branches:\n      - master'), `${file} must validate pull requests targeting master`);
     assert(!workflow.includes('pull_request_target'), `${file} must not use pull_request_target`);
     assert(workflow.includes('permissions:\n  contents: read'), `${file} must remain read-only`);
@@ -122,10 +121,24 @@ function testBuildWorkflowTrustBoundary() {
 
   const windows = read('.github/workflows/windows-portable.yml');
   const linux = read('.github/workflows/linux-appimage.yml');
+  const mac = read('.github/workflows/macos-arm64.yml');
+
+  assert(windows.includes('push:\n    branches:\n      - master'));
   assert(windows.includes('npm run dist:win'));
   assert(windows.includes('SafeLedger-Windows-Portable'));
+
+  assert(linux.includes('push:\n    branches:\n      - master'));
   assert(linux.includes('npm run dist:linux'));
   assert(linux.includes('SafeLedger-Linux-AppImage'));
+
+  assert(mac.includes('runs-on: macos-15'), 'macOS validation must run natively on a GitHub-hosted Apple Silicon runner.');
+  assert(mac.includes('safeledger-2.6.1-development'), '2.6.1 development pushes must exercise the macOS workflow.');
+  assert(mac.includes('uname -m'), 'macOS workflow must verify runner architecture.');
+  assert(mac.includes('process.arch'), 'macOS workflow must verify Node is running as arm64.');
+  assert(mac.includes('CSC_IDENTITY_AUTO_DISCOVERY: "false"'), '2.6.1 CI must not require Apple signing credentials.');
+  assert(mac.includes('npm run dist:mac:arm64'), 'macOS workflow must build the native arm64 ZIP.');
+  assert(mac.includes('lipo -archs'), 'macOS workflow must verify the packaged executable architecture.');
+  assert(mac.includes('SafeLedger-macOS-arm64'), 'macOS workflow must upload a clearly labeled test artifact.');
 }
 
 function testSbomGeneration() {
@@ -143,8 +156,8 @@ function testSbomGeneration() {
 }
 
 function testNoProductSecurityScopeChange() {
-  const releasePlan = read('RELEASE-2.5.md');
-  assert(releasePlan.includes('must not change'));
+  const releasePlan = read('RELEASE-2.6.md');
+  assert(releasePlan.includes('does not intentionally change'));
   assert(releasePlan.includes('AES-256-GCM'));
   assert(releasePlan.includes('Argon2id'));
   assert(releasePlan.includes('SafeLedgerData'));
@@ -159,4 +172,4 @@ testBuildWorkflowTrustBoundary();
 testSbomGeneration();
 testNoProductSecurityScopeChange();
 
-console.log('PASS SafeLedger distribution trust, SBOM, release-policy, checksum, legal, and two-build-workflow tests.');
+console.log('PASS SafeLedger distribution trust, SBOM, release-policy, checksum, legal, and three-platform validation workflow tests.');
