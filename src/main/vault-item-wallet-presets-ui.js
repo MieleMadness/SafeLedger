@@ -3,6 +3,7 @@
 const profileSetup = require('./profile-setup');
 
 const WALLET_CATEGORIES = new Set(['Hardware Wallet', 'Software Wallet', 'Other Wallet']);
+const ACCOUNT_CATEGORIES = new Set(['Web3 Account', 'Website Account']);
 
 function displayWalletName(name) {
   return String(name || '').trim().toLowerCase() === 'base app (coinbase wallet)' ? 'Coinbase Wallet' : String(name || '');
@@ -26,6 +27,11 @@ function patchWalletPreset(form, categoryInput) {
 
   if (!WALLET_CATEGORIES.has(categoryInput.value)) {
     delete select.dataset.walletPresetSignature;
+
+    // Web3 Account and Website Account have their own dedicated preset helper.
+    // Do not overwrite its options, labels, visibility, or explanatory copy.
+    if (ACCOUNT_CATEGORIES.has(categoryInput.value)) return;
+
     if (label && label.textContent !== 'Known platform (optional)') label.textContent = 'Known platform (optional)';
     if (note) {
       const generic = 'SafeLedger can recognize known platforms and local icons, but it does not auto-fill login URLs. Enter a URL only after verifying it yourself.';
@@ -83,4 +89,5 @@ function start() {
 if (typeof window !== 'undefined') window.addEventListener('DOMContentLoaded', start);
 
 exports.WALLET_CATEGORIES = WALLET_CATEGORIES;
+exports.ACCOUNT_CATEGORIES = ACCOUNT_CATEGORIES;
 exports._test = { displayWalletName, templatesForCategory, patchWalletPreset };
