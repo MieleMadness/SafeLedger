@@ -9,15 +9,15 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 4,
-  'SafeLedger 2.6.4 release gates must apply to 2.6.4 and later 2.6.x patch releases.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 5,
+  'SafeLedger 2.6.5 release gates must apply to 2.6.5 and later 2.6.x patch releases.');
 
 const readme = read('README.md');
-assert(readme.includes('Current stable release: SafeLedger 2.6.4'),
-  'README must identify SafeLedger 2.6.4 as the current stable release.');
+assert(readme.includes('Current stable release: SafeLedger 2.6.5'),
+  'README must identify SafeLedger 2.6.5 as the current stable release.');
 assert(readme.includes('Profile → Vault Item → Asset'), 'README must preserve the 2.6 Vault Item hierarchy.');
 assert(readme.includes('Windows x64 Portable EXE') && readme.includes('Linux x64 AppImage') && readme.includes('macOS Apple Silicon (`arm64`) ZIP'),
-  'README must document all implemented 2.6.4 package targets.');
+  'README must document all implemented 2.6.5 package targets.');
 assert(readme.includes('Shit Coin Mode') && readme.includes('Chain Games'),
   'README must preserve the 2.6.2 asset-display and Chain Games additions.');
 assert(readme.includes('Network') && readme.includes('Contract address'),
@@ -28,8 +28,12 @@ assert(readme.includes('not Developer ID signed or Apple-notarized'),
   'README must accurately disclose the current macOS signing/notarization state.');
 assert(readme.includes('stuck in **processing**') && readme.includes('renderer-safe URI encoding'),
   'README must preserve the 2.6.3 Chain Games save hotfix documentation.');
-assert(readme.includes('Add Asset') && readme.includes('28px') && readme.includes('24px'),
-  'README must document the 2.6.4 Add Asset and unified icon-size usability fixes.');
+assert(readme.includes('28px') && readme.includes('24px'),
+  'README must preserve the 2.6.4 unified icon-size usability fix.');
+assert(readme.includes('Web3 Account') && readme.includes('Website Account') && readme.includes('grouped and alphabetized'),
+  'README must document the 2.6.5 account-type split and organized dropdowns.');
+assert(readme.includes('selects the first visible Vault Item') && readme.includes('retries the real Add Asset button'),
+  'README must document the 2.6.5 select-then-retry Add Asset repair.');
 
 const release260 = read('RELEASE-2.6.md');
 assert(release260.includes('Release: 2.6.0'), 'RELEASE-2.6.md must preserve the historical 2.6.0 release record.');
@@ -60,4 +64,12 @@ assert(release264.includes('28px') && release264.includes('24px'));
 assert(release264.includes('dedicated local vector artwork') && release264.includes('local/offline artwork source'),
   '2.6.4 release notes must document dedicated Chain Games vector artwork that remains local/offline.');
 
-console.log(`PASS SafeLedger ${pkg.version} release documentation covers the 2.6.0 history through the 2.6.4 Add Asset/icon usability hotfix.`);
+const release265 = read('RELEASE-2.6.5.md');
+assert(release265.includes('Account Types & Add Asset Reliability'));
+assert(release265.includes('Web3 Account') && release265.includes('Website Account'));
+assert(release265.includes('Grouped and alphabetized dropdowns'));
+assert(release265.includes('Gaming') && release265.includes('Social & Community'));
+assert(release265.includes('stops the first Add Asset click') && release265.includes('retries the real Add Asset button'));
+assert(release265.includes('No vault schema migration'));
+
+console.log(`PASS SafeLedger ${pkg.version} release documentation covers the 2.6.0 history through the 2.6.5 account-type/Add Asset reliability patch.`);
