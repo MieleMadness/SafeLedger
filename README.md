@@ -6,22 +6,30 @@ Vault Items can represent cryptocurrency wallets, exchange accounts, Web3 accoun
 
 ## Release status
 
-### Current stable release: SafeLedger 2.6.5
+### Current stable release: SafeLedger 2.6.6
 
-SafeLedger **2.6.5** is the current source release on the repository's `master` release line.
+SafeLedger **2.6.6** is the current source release on the repository's `master` release line.
 
-2.6.5 is a focused usability and account-organization patch that separates Web3 and Website accounts, organizes the growing preset dropdowns, and hardens the Add Asset interaction after the 2.6.4 selection repair proved incomplete in real use.
+2.6.6 is an interaction-reliability patch that fixes the actual Add Asset null-selection bug and stops the self-triggering Web3/Website account DOM render loop found during real-user testing.
 
-### What's new in SafeLedger 2.6.5
+### What's new in SafeLedger 2.6.6
 
-- **Web3 Account** and **Website Account** are now distinct Vault Item types instead of the long combined `Web3 / Website Account` label.
-- Existing combined-category Vault Items remain readable without a vault-format migration. Known Web3 services are presented as Web3 Accounts; other legacy combined items are presented as Website Accounts and convert cleanly when edited and saved.
-- The Vault Item Type chooser is grouped into **Accounts** and **Wallets** and alphabetized within each group.
-- Known Web3 and Website preset dropdowns are **grouped and alphabetized** by purpose. Web3 groups include DeFi, Gaming, Identity & Naming, and NFT. Website groups include Developer, Email, Entertainment, Finance & Crypto, Productivity & Cloud, Shopping & Payments, and Social & Community.
-- Chain Games now lives under **Web3 Account → Gaming → Chain Games** and retains its three reviewed CHAIN starter entries for Ethereum, Polygon, and Chain Games Supernet.
-- **Add Asset** now uses a select-then-retry repair: when Vault Items are visible but none is selected, SafeLedger stops the first dead click, selects the first visible Vault Item through the normal UI path, then **retries the real Add Asset button** after selection has settled.
-- If a Vault Item is already selected, Add Asset follows the normal existing path with no retry or interception.
+- Fixed **Add Asset** when no Vault Item is selected. The prior helper converted `groupSelected: null` with `Number(null)`, which becomes `0` in JavaScript and could incorrectly treat an unselected Profile as if Vault Item index 0 were already selected.
+- The renderer bridge now creates **one preload subscription per result channel** and fans the same renderer-world payload object to all SafeLedger UI listeners, so the core renderer and Vault Item selection helper operate on the same `vaultData` state.
+- Add Asset now repairs a missing selection synchronously through the normal Vault Item click path and then allows the **original Add Asset click** to continue. It no longer cancels the click, calls `stopImmediatePropagation`, or relies on a second synthetic Add Asset click.
+- Fixed the **Web3 Account freeze** caused by UI code observing and repeatedly rebuilding its own grouped dropdown and labels. Grouped option rendering is signature-based and becomes a no-op when the DOM is already correct.
+- The Web3/Website MutationObserver disconnects while applying its own patch and reconnects afterward, preventing self-triggered render loops.
+- The older combined-account UI explicitly leaves **Web3 Account** and **Website Account** forms alone so two UI helpers cannot fight over the same preset controls.
+- New regressions verify `null` is never treated as Vault Item index 0, renderer listeners share the same vault object, repeated Web3 dropdown rendering creates **zero additional DOM mutations**, and the legacy account helper does not touch split account forms.
 - No vault schema, AES-256-GCM, Argon2id, main-process DEK, backup, Self-Destruct, cloud, or network behavior changed in this patch.
+
+### 2.6.5 account organization retained
+
+- **Web3 Account** and **Website Account** remain distinct Vault Item types instead of the long combined `Web3 / Website Account` label.
+- Existing combined-category Vault Items remain readable without a vault-format migration. Known Web3 services are presented as Web3 Accounts; other legacy combined items are presented as Website Accounts and convert cleanly when edited and saved.
+- The Vault Item Type chooser remains grouped into **Accounts** and **Wallets** and alphabetized within each group.
+- Known Web3 and Website preset dropdowns remain **grouped and alphabetized** by purpose. Web3 groups include DeFi, Gaming, Identity & Naming, and NFT. Website groups include Developer, Email, Entertainment, Finance & Crypto, Productivity & Cloud, Shopping & Payments, and Social & Community.
+- Chain Games remains under **Web3 Account → Gaming → Chain Games** and retains its three reviewed CHAIN starter entries for Ethereum, Polygon, and Chain Games Supernet.
 
 ### 2.6.4 reliability retained
 
@@ -184,11 +192,15 @@ Released as **2.6.0**.
 
 2.6.4 fixed the original missing Vault Item selection behind Add Asset, replaced the Chain Games initials tile with dedicated local vector artwork, and standardized larger Vault Item/Asset navigation icons.
 
-### SafeLedger 2.6.5 — Account Types & Add Asset Reliability
+### SafeLedger 2.6.5 — Account Types & Add Asset Reliability Candidate
 
-2.6.5 splits Web3 Account and Website Account into separate Vault Item types, groups and alphabetizes the growing dropdown catalogs, retains Chain Games under the Web3 Gaming group, and changes the Add Asset repair to a select-then-retry sequence after the original 2.6.4 same-click repair proved incomplete in real use.
+2.6.5 was an **unmerged release candidate** that introduced the separate Web3 Account and Website Account types plus grouped/alphabetized preset dropdowns. Real-user testing showed its Add Asset select-then-retry repair was still incomplete, so PR #48 was closed without promotion to `master`. Its account-organization work is retained in 2.6.6.
 
-See `RELEASE-2.6.md`, `RELEASE-2.6.1.md`, `RELEASE-2.6.2.md`, `RELEASE-2.6.3.md`, `RELEASE-2.6.4.md`, and `RELEASE-2.6.5.md` for the detailed 2.6 release history.
+### SafeLedger 2.6.6 — Add Asset & Web3 Interaction Reliability
+
+2.6.6 fixes the Add Asset `null`-selection/index-0 bug, shares one renderer-world vault state across result listeners, removes the synthetic Add Asset retry path, and prevents the Web3/Website account MutationObserver from retriggering itself or competing with the legacy combined-account helper.
+
+See `RELEASE-2.6.md`, `RELEASE-2.6.1.md`, `RELEASE-2.6.2.md`, `RELEASE-2.6.3.md`, `RELEASE-2.6.4.md`, `RELEASE-2.6.5.md`, and `RELEASE-2.6.6.md` for the detailed 2.6 release history.
 
 ## How SafeLedger is organized
 
@@ -294,7 +306,7 @@ For packaged builds, SafeLedger creates and uses `SafeLedgerData` beside the Saf
 
 ```text
 D:\My SafeLedger\
-├─ SafeLedger-2.6.5-Portable.exe
+├─ SafeLedger-2.6.6-Portable.exe
 └─ SafeLedgerData\
    ├─ settings\
    └─ vaults\
@@ -304,7 +316,7 @@ D:\My SafeLedger\
 
 ```text
 /home/user/Apps/SafeLedger/
-├─ SafeLedger-2.6.5-x86_64.AppImage
+├─ SafeLedger-2.6.6-x86_64.AppImage
 └─ SafeLedgerData/
    ├─ settings/
    └─ vaults/
@@ -507,12 +519,13 @@ Release changes are expected to pass regression, crypto, GUI, device-security, R
 - `RELEASE-2.6.2.md` — Asset Identity, Chain Games & Known Website Icons
 - `RELEASE-2.6.3.md` — Chain Games Save Hotfix
 - `RELEASE-2.6.4.md` — Add Asset & Icon Usability Hotfix
-- `RELEASE-2.6.5.md` — Account Types & Add Asset Reliability
+- `RELEASE-2.6.5.md` — Account Types & Add Asset Reliability candidate
+- `RELEASE-2.6.6.md` — Add Asset & Web3 Interaction Reliability
 - `RELEASE-VERIFICATION.md` — download verification guidance
 
 ## Icon and preset catalog
 
-SafeLedger 2.6.5 uses `@web3icons/core` **4.0.55** as its pinned local Web3 icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
+SafeLedger 2.6.6 uses `@web3icons/core` **4.0.55** as its pinned local Web3 icon source. `npm start`, tests, and distribution builds generate a SafeLedger-owned local manifest before the renderer is bundled. The preparation step requires at least **1,000 token icons**, at least **100 network icons**, at least **30 wallet icons**, and at least **20 exchange icons** before a build is accepted.
 
 All prepared artwork is stored as local data URLs for runtime use. Known website/service artwork is also generated locally. Icon lookup does not require a network connection.
 
