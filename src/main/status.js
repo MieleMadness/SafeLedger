@@ -1,48 +1,82 @@
-/*
-  Author: Edward Seufert - Cborgtech, LLC
-*/
+'use strict';
 
-exports.showStatus = (params) => {
+const STATUS_TIMEOUT_MS = 5000;
+let closeTimer = null;
 
-  const statusArea = document.getElementById('statusArea');
-  statusArea.innerHTML = "";
+function statusArea() {
+  return document.getElementById('statusArea');
+}
 
-  const alert = document.createElement('DIV');
-  if (params.status != null){
-    switch(params.status) {
-    case "SUCCESS":
-      alert.className = "alert alert-success";
-      break;
-    case "ERROR":
-      alert.className = "alert alert-danger";
-      break;
-    default:
-        alert.className = "alert alert-info";
-      }
+function cancelCloseTimer() {
+  if (closeTimer == null) return;
+  window.clearTimeout(closeTimer);
+  closeTimer = null;
+}
+
+function resetArea(area) {
+  cancelCloseTimer();
+  if (area) area.innerHTML = '';
+}
+
+function statusKind(value) {
+  switch (String(value || '').toUpperCase()) {
+  case 'SUCCESS': return 'success';
+  case 'ERROR': return 'danger';
+  default: return 'info';
   }
-  alert.setAttribute('role','alert');
-  alert.innerHTML = params.statusMsg;
+}
 
-  statusArea.appendChild(alert);
-  window.setTimeout(closeStatus, 3000);
+function createMessage(kind, message, options = {}) {
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${kind} safeledger-status safeledger-status-${kind}`;
+  alert.setAttribute('role', options.role || (kind === 'danger' ? 'alert' : 'status'));
+  alert.setAttribute('aria-live', kind === 'danger' ? 'assertive' : 'polite');
+  alert.setAttribute('aria-atomic', 'true');
+
+  if (options.iconClass) {
+    const icon = document.createElement('i');
+    icon.className = options.iconClass;
+    icon.setAttribute('aria-hidden', 'true');
+    alert.appendChild(icon);
+  }
+
+  const text = document.createElement('span');
+  text.className = 'safeledger-status-text';
+  text.textContent = String(message || '');
+  alert.appendChild(text);
+  return alert;
+}
+
+function closeStatus() {
+  const area = statusArea();
+  resetArea(area);
+}
+
+exports.showStatus = (params = {}) => {
+  const area = statusArea();
+  if (!area) return;
+  resetArea(area);
+
+  const kind = statusKind(params.status);
+  area.appendChild(createMessage(kind, params.statusMsg));
+  closeTimer = window.setTimeout(closeStatus, STATUS_TIMEOUT_MS);
 };
 
 exports.loadStatus = () => {
-  const statusArea = document.getElementById('statusArea');
-  statusArea.innerHTML = "Processing <i class='fa fa-refresh fa-spin' style='font-size:24px'></i>";
+  const area = statusArea();
+  if (!area) return;
+  resetArea(area);
+  area.appendChild(createMessage('processing', 'Processing', {
+    role: 'status',
+    iconClass: 'fa fa-refresh fa-spin'
+  }));
 };
 
-exports.clearStatus = () => {
-  const statusArea = document.getElementById('statusArea');
-  statusArea.innerHTML = "&nbsp";
-};
-
-exports.hideStatus = () => {
-  closeStatus();
-};
-
-const closeStatus = () => {
-  const statusArea = document.getElementById('statusArea');
-
-  statusArea.innerHTML = "&nbsp";
+exports.clearStatus = closeStatus;
+exports.hideStatus = closeStatus;
+exports._test = {
+  STATUS_TIMEOUT_MS,
+  statusKind,
+  createMessage,
+  cancelCloseTimer
 };
