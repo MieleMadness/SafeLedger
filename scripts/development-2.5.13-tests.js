@@ -6,7 +6,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
-const vaultItemUi = require(path.join(root, 'src', 'main', 'vault-item-ui.js'));
+const vaultItemPresentation = require(path.join(root, 'src', 'main', 'vault-item-presentation.js'));
 
 function assertAlphabetical(values, label) {
   const actual = [...values];
@@ -14,8 +14,14 @@ function assertAlphabetical(values, label) {
   assert.deepStrictEqual(actual, expected, `${label} should be alphabetized for predictable scanning.`);
 }
 
-assertAlphabetical(vaultItemUi._test.presetNames(vaultItemUi.EXCHANGE_CATEGORY), 'Exchange platform choices');
-assertAlphabetical(vaultItemUi._test.presetNames(vaultItemUi.SERVICE_CATEGORY), 'Web3 / website platform choices');
+function assertGroupedAlphabetical(groups, label) {
+  assertAlphabetical(groups.map((group) => group.label), `${label} groups`);
+  for (const group of groups) assertAlphabetical(group.names, `${label} ${group.label} choices`);
+}
+
+assertGroupedAlphabetical(vaultItemPresentation.groupedPresetNames(vaultItemPresentation.EXCHANGE_CATEGORY), 'Exchange platform');
+assertGroupedAlphabetical(vaultItemPresentation.groupedPresetNames(vaultItemPresentation.WEB3_CATEGORY), 'Web3 platform');
+assertGroupedAlphabetical(vaultItemPresentation.groupedPresetNames(vaultItemPresentation.WEBSITE_CATEGORY), 'Website platform');
 
 const walletIcons = read('src/main/wallet-icons.js');
 assert(walletIcons.includes('wallet-list-fallback-icon'), 'Unknown wallets should use a visible local fallback icon.');
@@ -32,4 +38,4 @@ assert(css.includes('.wallet-list-fallback-icon'));
 const index = read('src/main/index.html');
 assert(index.includes('./css/ui-2.5.13.css'), 'SafeLedger must load the 2.5.13 refinement layer after prior UI CSS.');
 
-console.log('PASS SafeLedger 2.5.13 QR caption contrast, alphabetized platform choices, and visible wallet fallback icon.');
+console.log('PASS SafeLedger 2.5.13 QR caption contrast, grouped/alphabetized Vault Item platform choices, and visible wallet fallback icon.');
