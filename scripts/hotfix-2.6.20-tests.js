@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.20', 'This workflow candidate must report SafeLedger 2.6.20.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 20,
+  'SafeLedger 2.6.20 sizing-gate modernization regressions must remain active on 2.6.20 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.20-tests.js'),
   '2.6.20 sizing-gate modernization coverage must stay in the locked suite.');
 
@@ -31,4 +33,4 @@ assert(layoutGate.includes('windowSizing.PREFERRED_WIDTH, 1283'),
 assert(layoutGate.includes("status: 'DELETED', statusMsg: 'Item Deleted'"),
   'The dedicated 2.6.19 regression must keep red deletion feedback protected.');
 
-console.log('PASS SafeLedger 2.6.20 modernizes the general UI sizing gate while preserving the exact 2.6.19 layout and deletion behavior.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.20 general sizing-gate modernization while preserving the exact 2.6.19 layout and deletion behavior.`);
