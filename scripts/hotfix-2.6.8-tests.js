@@ -8,8 +8,10 @@ const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const exists = (file) => fs.existsSync(path.join(root, file));
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.8', 'This cleanup build must report SafeLedger 2.6.8.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 8,
+  'SafeLedger 2.6.8 regressions must remain active on 2.6.8 and later 2.6.x patches.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.8-tests.js'),
   '2.6.8 regression coverage must stay in the locked suite.');
 
@@ -59,4 +61,4 @@ assert(renderer.includes('function showSelectedVaultItemDetail()'));
 assert(renderer.includes('group.showGroupDetail({ vaultData, group: selected, saving });'),
   'Cancel Add Asset should restore the selected Vault Item directly.');
 
-console.log('PASS SafeLedger 2.6.8 requires explicit Vault Item selection and renders Add-form Cancel actions directly with no observer injectors.');
+console.log('PASS SafeLedger 2.6.8 and later 2.6.x patches require explicit Vault Item selection and render Add-form Cancel actions directly with no observer injectors.');
