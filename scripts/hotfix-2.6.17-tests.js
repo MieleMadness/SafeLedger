@@ -7,16 +7,18 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.17', 'This workflow candidate must report SafeLedger 2.6.17.');
-assert.strictEqual(pkg.main, 'src/main/startup.js',
-  'Electron must enter through the main-process startup owner before bootstrap.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 17,
+  'SafeLedger 2.6.17 message/window regressions must remain active on 2.6.17 and later 2.6.x candidates.');
+assert.strictEqual(pkg.main, 'src/main/bootstrap.js',
+  'The trusted portable-storage bootstrap must remain the Electron package entry.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.17-tests.js'),
   '2.6.17 message/window cleanup coverage must stay in the locked suite.');
 
 const statusSource = read('src/main/status.js');
 const statusCss = read('src/main/css/status-messages.css');
-const startupSource = read('src/main/startup.js');
+const bootstrapSource = read('src/main/bootstrap.js');
 const windowSizingSource = read('src/main/window-sizing-main.js');
 const rendererEntry = read('src/main/renderer-entry.js');
 
@@ -60,13 +62,16 @@ try {
 
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/ui-scale-2.6.7.js')), false,
   'The renderer-owned startup resize helper must stay removed.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/startup.js')), false,
+  'The temporary startup wrapper must not bypass the established bootstrap boundary.');
 assert(!rendererEntry.includes("require('./ui-scale-2.6.7.js');"),
   'Renderer entry must not perform startup window sizing.');
-assert(startupSource.includes("const { app, screen } = require('electron');"));
-assert(startupSource.includes("app.on('browser-window-created'"));
-assert(startupSource.includes("windowSizing.applyPreferredWindowSize(win, workArea);"));
-assert(startupSource.indexOf("windowSizing.applyPreferredWindowSize") < startupSource.indexOf("require('./bootstrap')"),
-  'Preferred sizing must be installed before the established bootstrap runtime creates the primary window.');
+assert(bootstrapSource.includes("const windowSizing = require('./window-sizing-main');"));
+assert(bootstrapSource.includes('function installPreferredWindowSizing()'));
+assert(bootstrapSource.includes("app.on('browser-window-created'"));
+assert(bootstrapSource.includes('windowSizing.applyPreferredWindowSize(win, workArea);'));
+assert(bootstrapSource.indexOf('installPreferredWindowSizing();') < bootstrapSource.indexOf("require('./main');"),
+  'Preferred sizing must be installed inside the trusted bootstrap before main.js creates the primary window.');
 assert(!windowSizingSource.includes('window.resizeTo') && !windowSizingSource.includes('DOMContentLoaded'),
   'Preferred sizing must remain independent of the renderer DOM.');
 
@@ -80,4 +85,4 @@ assert.strictEqual(windowSizing.applyPreferredWindowSize({
 }, { width: 1920, height: 1080 }), true);
 assert.deepStrictEqual(setSize, { width: 1400, height: 750, animate: false });
 
-console.log('PASS SafeLedger 2.6.17 keeps compact change/error notices and main-process startup window sizing.');
+console.log(`PASS SafeLedger ${pkg.version} keeps compact change/error notices and trusted-bootstrap main-process window sizing.`);
