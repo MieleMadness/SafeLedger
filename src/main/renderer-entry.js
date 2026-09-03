@@ -1,6 +1,7 @@
 'use strict';
 
 require('./app-appearance.js');
+require('./app-menu-ui.js');
 require('./startup-ui.js');
 require('./renderer.js');
 require('./vault-item-selection-ui.js');
