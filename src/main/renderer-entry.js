@@ -18,7 +18,6 @@ require('./lockout-ui-enhancements.js');
 require('./security-enhancements.js');
 require('./crypto-ui-bridge.js');
 require('./search-enhancements.js');
-require('./profile-wallet-picker-ui.js');
 require('./sensitive-control-icons-ui.js');
 require('./vault-item-asset-seeding-ui.js');
 require('./shitcoin-mode-ui.js');
