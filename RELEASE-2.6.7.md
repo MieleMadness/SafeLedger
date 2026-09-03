@@ -65,6 +65,12 @@ Scrollbars are also theme-aware:
 - dark mode uses dark slate tracks with a clearly visible lighter thumb;
 - the three blue Profile/Vault/Asset columns use translucent light scrollbar treatment matched to those column backgrounds.
 
+## Login password eye stability
+
+The login password visibility eye could move down and partly outside its input when hovered or focused. The eye is implemented as an inline button and depends on `translateY(-50%)` to stay vertically centered. A broad 2.5.15 interaction rule intentionally reset transforms on ordinary buttons during hover/focus, while 2.5.16 restored the eye's centered transform only for its base state. Because the shared hover selector was more specific, hover/focus could still replace the centering transform with `transform: none`.
+
+2.6.7 adds a narrowly scoped, last-loaded password-visibility rule that preserves the existing absolute position and `translateY(-50%)` transform at rest, hover, focus, and keyboard focus. Other buttons keep the shared no-movement interaction behavior. Regression coverage records both the historical transform reset and the required password-eye override so this CSS-specificity conflict cannot silently return.
+
 ## Security and compatibility
 
 This release does **not** change:
