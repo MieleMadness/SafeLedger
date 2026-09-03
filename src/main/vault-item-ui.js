@@ -4,6 +4,9 @@ const web3Icons = require('./web3-icons');
 
 const EXCHANGE_CATEGORY = 'Exchange Account';
 const SERVICE_CATEGORY = 'Web3 / Website Account';
+const WEB3_CATEGORY = 'Web3 Account';
+const WEBSITE_CATEGORY = 'Website Account';
+const SPLIT_ACCOUNT_CATEGORIES = new Set([WEB3_CATEGORY, WEBSITE_CATEGORY]);
 let lastViewedCategory = '';
 
 const SERVICE_PRESETS = Object.freeze([
@@ -153,6 +156,12 @@ function updatePresetField(form, categoryInput) {
 }
 
 function updateAccountLayout(form, categoryInput) {
+  // 2.6.6: Web3 Account and Website Account are owned entirely by
+  // vault-item-type-split-ui. The legacy combined-account helper must not hide,
+  // empty, or rebuild their preset controls or the two observers can fight each
+  // other and lock the renderer in a mutation loop.
+  if (SPLIT_ACCOUNT_CATEGORIES.has(categoryInput.value)) return;
+
   const account = categoryInput.value === EXCHANGE_CATEGORY || categoryInput.value === SERVICE_CATEGORY;
   for (const id of ACCOUNT_ONLY_HIDE_IDS) setFieldVisible(form, id, !account);
   setLabel(form, 'inputCategory', 'Vault item type');
@@ -198,7 +207,9 @@ function patchEditForm(area) {
 function patchServiceIcons(root) {
   for (const anchor of root.querySelectorAll('#groupArea .nav > li > a')) {
     const category = anchor.querySelector('.wallet-list-category');
-    if (!category || !/website|service/i.test(category.textContent || '')) continue;
+    const categoryText = String(category && category.textContent || '').trim();
+    if (SPLIT_ACCOUNT_CATEGORIES.has(categoryText)) continue;
+    if (!category || !/website|service/i.test(categoryText)) continue;
     if (anchor.querySelector('.vault-service-icon')) continue;
     const existing = anchor.querySelector('.wallet-list-icon, .wallet-list-catalog-icon, .wallet-list-brand-image, .wallet-list-fallback-icon');
     const icon = document.createElement('i');
@@ -214,6 +225,7 @@ function patchDetailTerminology(area) {
   if (!category) return;
   const categoryText = String(category.textContent || '').trim();
   if (categoryText) lastViewedCategory = categoryText;
+  if (SPLIT_ACCOUNT_CATEGORIES.has(categoryText)) return;
   if (!/exchange|website|service/i.test(categoryText)) return;
   for (const heading of area.querySelectorAll('.product-section-title')) {
     if (heading.textContent === 'Wallet information') heading.textContent = 'Account / service information';

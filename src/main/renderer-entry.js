@@ -22,6 +22,7 @@ require('./profile-create-cancel-ui.js');
 require('./sensitive-control-icons-ui.js');
 require('./vault-item-ui.js');
 require('./service-catalog-ui.js');
+require('./vault-item-type-split-ui.js');
 require('./vault-item-wallet-presets-ui.js');
 require('./vault-item-asset-seeding-ui.js');
 require('./asset-multichain-ui.js');
