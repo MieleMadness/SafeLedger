@@ -30,7 +30,12 @@ function makeItem(doc, item) {
   button.className = 'app-menu-item';
   button.setAttribute('role', 'menuitem');
   button.dataset.command = item.command;
-  button.textContent = item.label;
+
+  const label = doc.createElement('span');
+  label.className = 'app-menu-label';
+  label.textContent = item.label;
+  button.appendChild(label);
+
   if (item.shortcut) {
     const shortcut = doc.createElement('span');
     shortcut.className = 'app-menu-shortcut';
@@ -84,8 +89,8 @@ function makeGroup(doc, label, items) {
 function buildMenuBar(doc, version) {
   let bar = doc.getElementById('appMenuBar');
   if (bar) {
-    const versionItem = bar.querySelector('[data-command="version"]');
-    if (versionItem) versionItem.firstChild.textContent = `Version ${version}`;
+    const versionLabel = bar.querySelector('[data-command="version"] .app-menu-label');
+    if (versionLabel) versionLabel.textContent = `Version ${version}`;
     return bar;
   }
 
@@ -97,7 +102,7 @@ function buildMenuBar(doc, version) {
 
   bar.appendChild(makeGroup(doc, 'SafeLedger', [
     { label: `Version ${version}`, command: 'version' },
-    { label: 'Settings', command: 'settings', shortcut: 'Ctrl+,' },
+    { label: 'Settings', command: 'settings' },
     { separator: true },
     { label: 'Quit', command: 'quit', shortcut: 'Alt+F4' }
   ]));
@@ -154,9 +159,6 @@ function start() {
   });
 
   if (window.safeLedgerApi) {
-    // main.js rebuilds its native application menu after settings are loaded or
-    // saved. Re-prepare here so Windows/Linux immediately return to the themed
-    // SafeLedger-owned menu without changing macOS behavior.
     if (typeof window.safeLedgerApi.onInitSystem === 'function') {
       window.safeLedgerApi.onInitSystem(() => prepareMenu(document));
     }
