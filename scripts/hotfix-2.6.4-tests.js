@@ -9,7 +9,6 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const serviceCatalog = require(path.join(root, 'src/main/service-catalog.js'));
 const tokenIcons = require(path.join(root, 'src/main/token-icons.js'));
-const selectionUi = require(path.join(root, 'src/main/vault-item-selection-ui.js'))._test;
 
 const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 4,
@@ -29,45 +28,26 @@ assert(chainToken && chainToken.key === 'CHAIN-GAMES');
 assert.strictEqual(chainToken.src, chainUrl,
   'CHAIN Asset artwork and the Chain Games Vault Item must share the same local brand source.');
 
-let selected = null;
-let clicks = 0;
-const vaultData = { groups: [{ name: 'First Vault Item' }], groupSelected: null, recordSelected: null };
-const first = {
-  click() {
-    clicks += 1;
-    selected = first;
-    vaultData.groupSelected = 0;
-  }
-};
-const fakeDocument = {
-  querySelector(selector) {
-    if (selector === '#groupArea .nav > li > a.item-selected') return selected;
-    if (selector === '#groupArea .nav > li > a') return first;
-    return null;
-  }
-};
-assert.strictEqual(selectionUi.ensureVaultItemSelected(fakeDocument, vaultData), first,
-  'A loaded Profile with visible Vault Items must select its first item when none is selected.');
-assert.strictEqual(clicks, 1);
-assert.strictEqual(selectionUi.ensureVaultItemSelected(fakeDocument, vaultData), first,
-  'An existing Vault Item selection must be preserved.');
-assert.strictEqual(clicks, 1, 'Existing Vault Item selection must not be clicked again.');
-
-const selectionSource = read('src/main/vault-item-selection-ui.js');
-assert(selectionSource.includes("result.type !== 'vault-read'"),
-  'Default selection must remain tied to completed Profile vault reads.');
-assert(selectionSource.includes("addAsset.addEventListener('click'"),
-  'Add Asset must keep a capture-phase selection repair before the normal Add Asset handler runs.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection-ui.js')), false,
+  'The capture-phase Vault Item selection UI helper must stay removed.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection.js')), false,
+  'Add Asset must not keep an auto-selection helper after 2.6.8 removes silent destination selection.');
+const rendererSource = read('src/main/renderer.js');
 const rendererEntry = read('src/main/renderer-entry.js');
-assert(rendererEntry.includes("require('./vault-item-selection-ui.js')"),
-  'The Vault Item selection guard must load in the real renderer bundle.');
+assert(rendererSource.includes('function selectedVaultItem()'),
+  'Renderer must validate the current Vault Item directly from its authoritative vaultData state.');
+assert(rendererSource.includes("statusMsg: 'Select a Vault Item first, then choose Add Asset.'"),
+  'Add Asset without a selected Vault Item must instruct the user instead of selecting one silently.');
+assert(!rendererSource.includes('ensureAddAssetSelection') && !rendererSource.includes("require('./vault-item-selection')"),
+  'Silent Add Asset auto-selection must stay removed.');
+assert(!rendererEntry.includes("require('./vault-item-selection-ui.js')"));
 
 const iconCss = read('src/main/css/token-icons.css');
 assert(iconCss.includes('width: 28px !important;') && iconCss.includes('height: 28px !important;'),
-  'Vault Item and Asset list icons must share the larger 28px desktop size.');
+  'The historical 2.6.4 stylesheet must retain its 28px desktop icon baseline.');
 assert(iconCss.includes('.wallet-list-fallback-icon'),
   'Custom/fallback Vault Item icons must use the same sizing contract.');
 assert(iconCss.includes('width: 24px !important;') && iconCss.includes('height: 24px !important;'),
-  'Compact layouts must keep a readable, equal 24px list icon size.');
+  'The historical 2.6.4 stylesheet must retain its 24px compact icon baseline.');
 
-console.log(`PASS SafeLedger ${pkg.version} retains the 2.6.4 Add Asset selection and larger unified Chain Games icon regressions.`);
+console.log(`PASS SafeLedger ${pkg.version} retains Chain Games artwork while Add Asset requires an explicit Vault Item selection.`);

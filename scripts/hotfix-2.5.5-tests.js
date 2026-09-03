@@ -73,10 +73,17 @@ function testScreenshotWalletsNeverUseGenericOutline() {
 
 function testWalletListUsesResolver() {
   const group = read('src/main/group.js');
+  const presentation = read('src/main/vault-item-presentation.js');
   const css = read('src/main/css/token-icons.css');
   const prepare = read('scripts/prepare-token-assets.js');
-  assert(group.includes("const walletIcons = require('./wallet-icons');"));
-  assert(group.includes('const icon = walletIcons.createIconElement(current);'));
+  assert(group.includes("const vaultItemPresentation = require('./vault-item-presentation');"),
+    'Vault Item rendering should delegate presentation concerns to the canonical helper.');
+  assert(group.includes('const icon = vaultItemPresentation.createIconElement(current);'),
+    'Vault Item rows must still render through the local icon resolver.');
+  assert(presentation.includes("const walletIcons = require('./wallet-icons');"),
+    'The canonical Vault Item presentation helper must retain the wallet icon resolver.');
+  assert(presentation.includes('return walletIcons.createIconElement(group);'),
+    'Wallet-like Vault Items must still resolve through the proven local wallet icon path.');
   assert(css.includes('.wallet-list-brand-image'));
   assert(css.includes('.wallet-list-catalog-icon'));
   assert(prepare.includes("const categories = ['tokens', 'networks', 'wallets', 'exchanges'];"));

@@ -56,7 +56,7 @@ function listProfiles(params) {
     emptyState.renderColumn(area, {
       icon: 'fa-folder-open-o',
       title: 'No profiles yet',
-      text: 'Create a Profile to organize wallets and recovery plans.'
+      text: 'Create a Profile to organize vault items, assets, and recovery plans.'
     });
     return;
   }
@@ -325,9 +325,17 @@ function createEditProfile(params) {
     event.preventDefault();
     saveProfile(null);
   });
-  detailActions.set([
-    { icon: 'fa-save', title: 'Save profile', className: 'detail-action-save', onClick: (_event, button) => saveProfile(button) }
-  ]);
+  const actions = [];
+  if (!profile && typeof params.onCancel === 'function') {
+    actions.push({
+      icon: 'fa-times',
+      title: 'Cancel new profile',
+      className: 'detail-action-cancel',
+      onClick: params.onCancel
+    });
+  }
+  actions.push({ icon: 'fa-save', title: 'Save profile', className: 'detail-action-save', onClick: (_event, button) => saveProfile(button) });
+  detailActions.set(actions);
 }
 
 function togglePinned(params, button) {

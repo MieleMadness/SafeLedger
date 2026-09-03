@@ -1,0 +1,230 @@
+/* SafeLedger 2.6.7 theme refinement.
+ * Loaded after the readability scale so menus, buttons, and scrollbars share
+ * the same light/dark visual language as the detail workspace. */
+
+:root {
+  --sl-scroll-track: #e3e8ef;
+  --sl-scroll-thumb: #a8b4c3;
+  --sl-scroll-thumb-hover: #7d8ca0;
+  --sl-nav-scroll-track: rgba(255, 255, 255, .08);
+  --sl-nav-scroll-thumb: rgba(255, 255, 255, .42);
+  --sl-nav-scroll-thumb-hover: rgba(255, 255, 255, .62);
+}
+
+html[data-theme="dark"] {
+  --sl-scroll-track: #111c2e;
+  --sl-scroll-thumb: #465a73;
+  --sl-scroll-thumb-hover: #637993;
+  --sl-nav-scroll-track: rgba(255, 255, 255, .05);
+  --sl-nav-scroll-thumb: rgba(196, 214, 238, .34);
+  --sl-nav-scroll-thumb-hover: rgba(214, 229, 248, .52);
+}
+
+/* SafeLedger-owned application menu used on Windows/Linux so the menu bar can
+ * actually match the renderer theme. macOS keeps the native application menu. */
+.app-menu-bar {
+  flex: 0 0 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: stretch;
+  padding: 0 8px;
+  background: var(--sl-bg);
+  color: var(--sl-text);
+  border-bottom: 1px solid var(--sl-border);
+  position: relative;
+  z-index: 1000;
+  font-size: 13px;
+  user-select: none;
+}
+
+.app-menu-group {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.app-menu-trigger {
+  min-width: 0;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--sl-text);
+  font: inherit;
+  line-height: 1;
+  cursor: default;
+}
+
+.app-menu-trigger:hover,
+.app-menu-trigger:focus,
+.app-menu-group.is-open > .app-menu-trigger {
+  background: var(--sl-primary-soft);
+  color: var(--sl-primary-strong);
+  outline: none;
+}
+
+.app-menu-dropdown {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  min-width: 210px;
+  padding: 5px;
+  background: var(--sl-surface);
+  color: var(--sl-text);
+  border: 1px solid var(--sl-border-strong);
+  border-radius: var(--sl-radius-sm);
+  box-shadow: var(--sl-shadow);
+  z-index: 1100;
+}
+
+.app-menu-group.is-open > .app-menu-dropdown {
+  display: block;
+}
+
+.app-menu-item {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sl-text);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.app-menu-item:hover,
+.app-menu-item:focus {
+  background: var(--sl-primary-soft);
+  color: var(--sl-primary-strong);
+  outline: none;
+}
+
+.app-menu-shortcut {
+  color: var(--sl-muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.app-menu-separator {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--sl-border);
+}
+
+/* Bottom Add buttons now use the exact same themed surface/border/shadow and
+ * interaction language as detail actions. Existing dimensions stay untouched. */
+#addVault,
+#addGroup,
+#addRecord,
+.detail-action-button {
+  background: var(--sl-surface) !important;
+  border: 1px solid var(--sl-border-strong) !important;
+  box-shadow: var(--sl-shadow-soft) !important;
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease, transform .12s ease;
+}
+
+#addVault,
+#addGroup,
+#addRecord {
+  color: var(--sl-text) !important;
+}
+
+#addVault:hover,
+#addVault:focus,
+#addGroup:hover,
+#addGroup:focus,
+#addRecord:hover,
+#addRecord:focus,
+.detail-action-button:hover,
+.detail-action-button:focus {
+  background: var(--sl-primary-soft) !important;
+  border-color: var(--sl-primary) !important;
+  box-shadow: var(--sl-focus-ring) !important;
+}
+
+#addVault:hover,
+#addVault:focus,
+#addGroup:hover,
+#addGroup:focus,
+#addRecord:hover,
+#addRecord:focus {
+  color: var(--sl-primary-strong) !important;
+}
+
+#addVault:active,
+#addGroup:active,
+#addRecord:active,
+.detail-action-button:active {
+  transform: translateY(1px);
+  box-shadow: none !important;
+}
+
+/* Theme-aware scrollbars for the neutral/detail workspace. */
+html,
+body,
+.content-middle,
+#detailArea,
+.settings-section,
+.dashboard-list,
+.activity-list,
+.detail-notes-value,
+.sensitive-value,
+.public-address-value,
+.custom-fields-editor,
+.recovery-binder-summary {
+  scrollbar-color: var(--sl-scroll-thumb) var(--sl-scroll-track);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sl-scroll-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sl-scroll-thumb);
+  border: 2px solid var(--sl-scroll-track);
+  border-radius: 10px;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sl-scroll-thumb-hover);
+  border-color: var(--sl-scroll-track);
+}
+
+/* The first three columns keep scrollbars related to their blue backgrounds. */
+.app-main-row > .dark1bg.content-middle,
+.app-main-row > .dark2bg.content-middle,
+.app-main-row > .dark3bg.content-middle {
+  scrollbar-color: var(--sl-nav-scroll-thumb) var(--sl-nav-scroll-track);
+}
+
+.app-main-row > .dark1bg.content-middle::-webkit-scrollbar-track,
+.app-main-row > .dark2bg.content-middle::-webkit-scrollbar-track,
+.app-main-row > .dark3bg.content-middle::-webkit-scrollbar-track {
+  background: var(--sl-nav-scroll-track);
+}
+
+.app-main-row > .dark1bg.content-middle::-webkit-scrollbar-thumb,
+.app-main-row > .dark2bg.content-middle::-webkit-scrollbar-thumb,
+.app-main-row > .dark3bg.content-middle::-webkit-scrollbar-thumb {
+  background: var(--sl-nav-scroll-thumb);
+  border-color: transparent;
+}
+
+.app-main-row > .dark1bg.content-middle::-webkit-scrollbar-thumb:hover,
+.app-main-row > .dark2bg.content-middle::-webkit-scrollbar-thumb:hover,
+.app-main-row > .dark3bg.content-middle::-webkit-scrollbar-thumb:hover {
+  background: var(--sl-nav-scroll-thumb-hover);
+}

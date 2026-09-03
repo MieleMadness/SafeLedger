@@ -87,6 +87,17 @@ function configureStorage() {
 }
 
 function buildMenu() {
+  if (process.platform !== 'darwin') {
+    // Windows/Linux use the SafeLedger-owned themed renderer menu because the
+    // native Electron menu bar cannot inherit the app light/dark palette.
+    Menu.setApplicationMenu(null);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (typeof mainWindow.setMenuBarVisibility === 'function') mainWindow.setMenuBarVisibility(false);
+      if (typeof mainWindow.setAutoHideMenuBar === 'function') mainWindow.setAutoHideMenuBar(true);
+    }
+    return;
+  }
+
   const template = [{
     label: 'SafeLedger',
     submenu: [

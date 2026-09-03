@@ -39,6 +39,53 @@ function profileParams(extra = {}) {
   return Object.assign({ vaultList, saving }, extra);
 }
 
+function selectedProfile() {
+  if (!vaultList || !Array.isArray(vaultList.vaults)) return null;
+  if (vaultList.vaultSelected == null || vaultList.vaultSelected === '') return null;
+  const index = Number(vaultList.vaultSelected);
+  if (!Number.isInteger(index) || index < 0 || index >= vaultList.vaults.length) return null;
+  return vaultList.vaults[index] || null;
+}
+
+function selectedVaultItem() {
+  if (!vaultData || !Array.isArray(vaultData.groups)) return null;
+  if (vaultData.groupSelected == null || vaultData.groupSelected === '') return null;
+  const index = Number(vaultData.groupSelected);
+  if (!Number.isInteger(index) || index < 0 || index >= vaultData.groups.length) return null;
+  return vaultData.groups[index] || null;
+}
+
+function showSelectedProfileDetail() {
+  const selected = selectedProfile();
+  if (!selected) return showAfterLogin();
+
+  if (vaultData) {
+    vaultData.groupSelected = null;
+    vaultData.recordSelected = null;
+    group.listGroups({ vaultData, saving });
+  }
+  const recordArea = document.getElementById('recordArea');
+  if (recordArea) recordArea.innerHTML = '';
+  profile.showProfileDetail(profileParams({ profile: selected }));
+}
+
+function showSelectedVaultItemDetail() {
+  const selected = selectedVaultItem();
+  if (!selected) return showSelectedProfileDetail();
+  vaultData.recordSelected = null;
+  group.listGroups({ vaultData, saving });
+  record.listRecords({ vaultData, saving });
+  group.showGroupDetail({ vaultData, group: selected, saving });
+}
+
+function cancelAddProfile() {
+  // Vault Overview owns its own data-loading/render path. Reuse that canonical
+  // navigation action rather than duplicating dashboard logic in renderer.js.
+  const dashboardButton = document.getElementById('dashboardButton');
+  if (dashboardButton && typeof dashboardButton.click === 'function') dashboardButton.click();
+  else showAfterLogin();
+}
+
 function clearUtilitySelections() {
   if (vaultList) {
     vaultList.vaultSelected = null;
@@ -66,14 +113,14 @@ function navigateGlobalResult(target = {}) {
     return status.showStatus({ status: 'ERROR', statusMsg: unavailable });
   }
 
-  const selectedProfile = vaultList.vaults[profileIndex];
+  const selectedProfileItem = vaultList.vaults[profileIndex];
   pendingGlobalTarget = target;
   vaultList.vaultSelected = profileIndex;
   profile.listProfiles(profileParams());
-  profile.showProfileDetail(profileParams({ profile: selectedProfile }));
+  profile.showProfileDetail(profileParams({ profile: selectedProfileItem }));
   saving.state = true;
   status.loadStatus();
-  ipc.send('read', { type: 'vault-read', file: selectedProfile.file });
+  ipc.send('read', { type: 'vault-read', file: selectedProfileItem.file });
 }
 
 globalSearchUi.configure({
@@ -95,7 +142,7 @@ window.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     if (saving.state) return alert('Please wait for processing to complete');
     requireUnlocked(() => {
-      if (vaultList) profile.createProfile(profileParams());
+      if (vaultList) profile.createProfile(profileParams({ onCancel: cancelAddProfile }));
       else status.showStatus({ status: 'ERROR', statusMsg: 'Vault list is empty' });
     });
   });
@@ -104,7 +151,7 @@ window.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     if (saving.state) return alert('Please wait for processing to complete');
     requireUnlocked(() => {
-      if (vaultList && vaultList.vaultSelected != null) group.createGroup({ vaultData, saving });
+      if (selectedProfile()) group.createGroup({ vaultData, saving, onCancel: showSelectedProfileDetail });
       else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Profile.' });
     });
   });
@@ -113,8 +160,14 @@ window.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     if (saving.state) return alert('Please wait for processing to complete');
     requireUnlocked(() => {
-      if (vaultData && vaultData.groupSelected != null) record.createRecord({ vaultData, saving });
-      else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Vault Item.' });
+      if (!selectedVaultItem()) {
+        status.showStatus({
+          status: 'INFO',
+          statusMsg: 'Select a Vault Item first, then choose Add Asset.'
+        });
+        return;
+      }
+      record.createRecord({ vaultData, saving, onCancel: showSelectedVaultItemDetail });
     });
   });
 
@@ -408,4 +461,11 @@ const showLockoutDestroy = () => {
   area.appendChild(button);
 };
 
-exports._test = { navigateGlobalResult, applySettings };
+exports._test = {
+  navigateGlobalResult,
+  applySettings,
+  selectedProfile,
+  selectedVaultItem,
+  showSelectedProfileDetail,
+  showSelectedVaultItemDetail
+};

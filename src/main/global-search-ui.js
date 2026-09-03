@@ -23,6 +23,10 @@ function resultIcon(type) {
   return type === 'profile' ? 'fa-folder-o' : type === 'wallet' ? 'fa-credit-card' : 'fa-circle-o';
 }
 
+function resultKind(type) {
+  return type === 'wallet' ? 'VAULT ITEM' : String(type || '').toUpperCase();
+}
+
 function renderResults(host, results, query) {
   host.innerHTML = '';
   if (!results.length) {
@@ -62,7 +66,7 @@ function renderResults(host, results, query) {
     appendText(body, 'span', 'global-search-result-meta', result.subtitle || result.type || '');
     button.appendChild(body);
 
-    const kind = appendText(button, 'span', 'global-search-result-kind', String(result.type || '').toUpperCase());
+    const kind = appendText(button, 'span', 'global-search-result-kind', resultKind(result.type));
     kind.setAttribute('aria-hidden', 'true');
     button.addEventListener('click', () => {
       close();
@@ -109,7 +113,7 @@ function open() {
   header.className = 'global-search-header';
   const heading = document.createElement('div');
   appendText(heading, 'h2', '', 'Global Search');
-  appendText(heading, 'p', '', 'Search Profiles, Wallets, and Assets without indexing secret values.');
+  appendText(heading, 'p', '', 'Search Profiles, Vault Items, and Assets without indexing secret values.');
   header.appendChild(heading);
   const esc = appendText(header, 'span', 'global-search-shortcut', 'ESC');
   esc.setAttribute('aria-hidden', 'true');
@@ -182,4 +186,4 @@ function configure(options = {}) {
 exports.configure = configure;
 exports.open = open;
 exports.close = close;
-exports._test = { resultIcon, renderResults };
+exports._test = { resultIcon, resultKind, renderResults };

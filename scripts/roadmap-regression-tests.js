@@ -31,6 +31,7 @@ const settingsSchema = read('src/main/settings-schema.js');
 const settingsManager = read('src/main/installManager/installManager/settingsManager.js');
 const appearance = read('src/main/app-appearance.js');
 const emptyState = read('src/main/empty-state-ui.js');
+const presentation = read('src/main/vault-item-presentation.js');
 const themeCss = read('src/main/css/app-theme.css');
 const globalCss = read('src/main/css/global-search.css');
 const css = read('src/main/css/product-features.css');
@@ -164,17 +165,19 @@ assert(globalSearchUi.includes('Ctrl+K') || globalSearchUi.includes("event.ctrlK
 assert(globalSearchUi.includes('Not indexed: balances, notes, recovery locations/instructions'));
 assert(globalCss.includes('.global-search-overlay'));
 assert(profile.includes("title: profile.pinned === true ? 'Unpin profile' : 'Pin profile'"));
-assert(group.includes("title: params.group.pinned === true ? 'Unpin wallet' : 'Pin wallet'"));
+assert(group.includes("title: params.group.pinned === true ? 'Unpin vault item' : 'Pin vault item'"));
 assert(record.includes("title: params.record.pinned === true ? 'Unpin asset' : 'Pin asset'"));
 assert(profile.includes('sort(pinnedSort)'));
 assert(group.includes('sort(walletSort)'));
 assert(record.includes('sort(assetSort)'));
-assert(group.includes("title: 'No wallets yet'"));
+assert(group.includes("title: 'No vault items yet'"));
 assert(record.includes("title: 'No assets yet'"));
 assert(!group.includes("groupArea.textContent = 'No items'"));
 assert(!record.includes("recordArea.innerHTML = 'No items'"));
-assert(group.includes("title: 'Cancel edit wallet'"));
+assert(group.includes("title: 'Cancel edit vault item'"));
 assert(record.includes("title: 'Cancel edit asset'"));
+assert(group.includes("require('./vault-item-presentation')"));
+assert(!presentation.includes('MutationObserver'));
 assert(css.includes('.custom-field-edit-row'));
 assert(css.includes('.recovery-drill-step'));
 assert(binderCss.includes('.recovery-binder-option'));
@@ -186,6 +189,7 @@ for (const relative of [
   'src/main/app-appearance.js', 'src/main/empty-state-ui.js', 'src/main/custom-fields.js',
   'src/main/custom-fields-ui.js', 'src/main/recovery-drill.js', 'src/main/recovery-drill-ui.js',
   'src/main/recovery-binder.js', 'src/main/recovery-binder-ui.js', 'src/main/group.js', 'src/main/record.js',
+  'src/main/vault-item-presentation.js',
   'scripts/dashboard-summary-tests.js', 'scripts/custom-fields-tests.js', 'scripts/recovery-drill-tests.js',
   'scripts/recovery-binder-tests.js', 'scripts/activity-history-tests.js', 'scripts/appearance-tests.js',
   'scripts/global-search-tests.js', 'scripts/ui-polish-tests.js'

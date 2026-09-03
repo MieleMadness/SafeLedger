@@ -23,6 +23,7 @@ const securityUi = read('src/main/security-ui.js');
 const profile = read('src/main/profile.js');
 const record = read('src/main/record.js');
 const group = read('src/main/group.js');
+const presentation = read('src/main/vault-item-presentation.js');
 const css = read('src/main/css/site.css');
 
 assert(main.includes('width: 1200'));
@@ -52,11 +53,13 @@ assert(passwordUi.includes("'inputConfirmNewPassword'"));
 assert(passwordUi.includes('passwordControls.configure'));
 assert(profile.includes("title: 'Cancel delete profile'"));
 assert(record.includes("title: 'Cancel delete asset'"));
-assert(group.includes("title: 'Cancel delete wallet'"));
+assert(group.includes("title: 'Cancel delete vault item'"));
 assert(renderer.includes("const profile = require('./profile')"));
 assert(renderer.includes("const settingsUi = require('./settings-ui')"));
+assert(group.includes("require('./vault-item-presentation')"));
+assert(!presentation.includes('MutationObserver'));
 
-// Asset and Wallet detail views use the same readable typography and notes treatment.
+// Asset and Vault Item detail views use the same readable typography and notes treatment.
 assert(record.includes("className: 'detail-notes-input'"));
 assert(group.includes("className: 'detail-notes-input'"));
 assert(record.includes("notesWrap.className = 'detail-notes-section'"));
@@ -84,7 +87,8 @@ for (const relative of [
   'src/main/security-main.js', 'src/main/security-enhancements.js', 'src/main/security-ui.js',
   'src/main/password-policy.js', 'src/main/password-controls.js', 'src/main/password-settings-ui.js',
   'src/main/crypto-ui-bridge.js', 'src/main/settings-ui.js', 'src/main/main.js',
-  'src/main/record.js', 'src/main/group.js'
+  'src/main/record.js', 'src/main/group.js', 'src/main/vault-item-presentation.js',
+  'src/main/custom-fields-ui.js'
 ]) syntaxCheck(relative);
 
-console.log('PASS direct UI modules use consistent Asset/Wallet detail typography behind the explicit sandbox bridge.');
+console.log('PASS direct UI modules use consistent Asset/Vault Item detail typography behind the explicit sandbox bridge.');

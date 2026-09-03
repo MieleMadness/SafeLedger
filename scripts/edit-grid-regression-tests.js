@@ -9,7 +9,7 @@ const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const exists = (relative) => fs.existsSync(path.join(root, relative));
 
-for (const file of ['src/main/edit-form-ui.js', 'src/main/security-ui.js', 'src/main/record.js', 'src/main/group.js']) {
+for (const file of ['src/main/edit-form-ui.js', 'src/main/security-ui.js', 'src/main/record.js', 'src/main/group.js', 'src/main/vault-item-presentation.js']) {
   execFileSync(process.execPath, ['--check', path.join(root, file)], { stdio: 'pipe' });
 }
 
@@ -18,6 +18,7 @@ const formUi = read('src/main/edit-form-ui.js');
 const securityUi = read('src/main/security-ui.js');
 const record = read('src/main/record.js');
 const group = read('src/main/group.js');
+const presentation = read('src/main/vault-item-presentation.js');
 const siteCss = read('src/main/css/site.css');
 
 assert(index.includes('./css/site.css'));
@@ -60,9 +61,9 @@ assert(record.includes("label: 'Balance updated'"));
 assert(record.includes("appendSensitiveField(area, 'Private key', params.record.privateAddress)"));
 assert(record.includes('printIncludesSensitive'));
 
-const walletOrder = [
+const vaultItemOrder = [
   "id: 'inputName', label: 'Name'",
-  "id: 'inputCategory', label: 'Wallet category'",
+  "id: 'inputCategory', label: 'Vault item type'",
   "id: 'inputTags', label: 'Tags (comma separated)'",
   "id: 'inputPassword', label: 'Password'",
   "id: 'inputPin', label: 'PIN code'",
@@ -71,11 +72,15 @@ const walletOrder = [
   "id: 'inputNotes', label: 'Notes'"
 ];
 last = -1;
-for (const token of walletOrder) {
+for (const token of vaultItemOrder) {
   const current = group.indexOf(token);
-  assert(current > last, `Expected ${token} in direct Wallet form order`);
+  assert(current > last, `Expected ${token} in direct Vault Item form order`);
   last = current;
 }
+assert(group.includes('vaultItemPresentation.configureEditForm({'));
+assert(presentation.includes("label: 'Accounts'"));
+assert(presentation.includes("label: 'Wallets'"));
+assert(!presentation.includes('MutationObserver'));
 for (const label of ['Password', 'PIN code', 'Recovery link', 'Seed phrase']) {
   assert(group.includes(`appendSensitiveField(area, '${label}'`));
 }
@@ -92,4 +97,4 @@ assert(!securityUi.includes('addSensitiveInputControls'));
 assert(siteCss.includes('.edit-sensitive-shell'));
 assert(!siteCss.includes('.edit-public-shell'));
 
-console.log('PASS direct Asset/Wallet form rendering and shared eye security controls.');
+console.log('PASS direct Asset/Vault Item form rendering and shared eye security controls.');

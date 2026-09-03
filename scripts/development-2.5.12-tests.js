@@ -13,13 +13,14 @@ const rowUi = read('src/main/dashboard-row-ui.js');
 const renderer = read('src/main/renderer.js');
 const security = read('src/main/security-ui.js');
 const drill = read('src/main/recovery-drill-ui.js');
-const vaultItemUi = read('src/main/vault-item-ui.js');
+const vaultItemPresentationSource = read('src/main/vault-item-presentation.js');
+const groupSource = read('src/main/group.js');
 const entry = read('src/main/renderer-entry.js');
 const css = read('src/main/css/ui-2.5.12.css');
 const index = read('src/main/index.html');
 const web3Icons = require(path.join(root, 'src', 'main', 'web3-icons.js'));
 const dashboardSummary = require(path.join(root, 'src', 'main', 'dashboard-summary.js'));
-const vaultItemModule = require(path.join(root, 'src', 'main', 'vault-item-ui.js'));
+const vaultItemPresentation = require(path.join(root, 'src', 'main', 'vault-item-presentation.js'));
 
 function testDashboardNavigationAndInsights() {
   assert(dashboard.includes("source: 'dashboard'"));
@@ -29,7 +30,7 @@ function testDashboardNavigationAndInsights() {
   assert(rowUi.includes("row.setAttribute('role', 'button')"));
   assert(dashboard.includes("const badge = document.createElement('span');"));
   assert(!dashboard.includes('dashboard-status-action'));
-  assert(dashboard.includes('Click a wallet or vault item below to open it and resolve the recovery gaps.'));
+  assert(dashboard.includes('Click a vault item below to open it and resolve the recovery gaps.'));
   assert(dashboard.includes('Click a recently verified vault item below to open it.'));
   assert(dashboard.includes("appendWalletList(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true, true)"),
     'Recently Verified rows should use the same direct row navigation as Recovery Needs Attention.');
@@ -85,6 +86,7 @@ function testRecoveryDrillReminderAndContrast() {
   assert(drill.includes('Documentation reminder:'));
   assert(drill.includes('Completing or verifying a drill records that you tested the process; it does not create the missing recovery documentation.'));
   assert(drill.includes('documentationReminder'));
+  assert(drill.includes('Edit Vault Item'));
   assert(css.includes('.recovery-drill-step-title'));
   assert(css.includes('color: var(--sl-text-strong) !important;'));
   assert(css.includes('.recovery-drill-step-text'));
@@ -92,26 +94,38 @@ function testRecoveryDrillReminderAndContrast() {
 }
 
 function testExchangeAndWebsiteVaultItems() {
-  assert(entry.includes("require('./vault-item-ui.js')"));
-  assert(vaultItemUi.includes("const EXCHANGE_CATEGORY = 'Exchange Account';"));
-  assert(vaultItemUi.includes("const SERVICE_CATEGORY = 'Web3 / Website Account';"));
-  assert(vaultItemUi.includes("['2FA recovery / backup codes', 'sensitive']"));
-  assert(vaultItemUi.includes('does not auto-fill login URLs'));
-  assert(vaultItemUi.includes("add.dataset.vaultItemLabel !== 'true'"), 'Vault item observer must not rewrite the Add button forever.');
+  assert(groupSource.includes("require('./vault-item-presentation')"),
+    'The canonical group renderer must own Vault Item presentation behavior.');
+  assert(!entry.includes("require('./vault-item-ui.js')"),
+    'The legacy Vault Item observer must not return to the renderer bundle.');
+  assert(vaultItemPresentationSource.includes("const EXCHANGE_CATEGORY = 'Exchange Account';"));
+  assert(vaultItemPresentationSource.includes("const LEGACY_SERVICE_CATEGORY = 'Web3 / Website Account';"));
+  assert(vaultItemPresentationSource.includes("['2FA recovery / backup codes', 'sensitive']"));
+  assert(vaultItemPresentationSource.includes('never auto-fills a login URL'));
   assert(index.includes('placeholder="Search vault items..."'));
-  assert(index.includes('Add Vault Item'));
+  assert(index.includes('id="addGroup"'), 'The Vault add action must remain present even if its user-facing label evolves.');
   assert(index.includes('./css/ui-2.5.12.css'));
 
-  const exchanges = vaultItemModule._test.presetNames(vaultItemModule.EXCHANGE_CATEGORY);
+  const exchanges = vaultItemPresentation.presetNames(vaultItemPresentation.EXCHANGE_CATEGORY);
   assert.strictEqual(exchanges.length, web3Icons.entries('exchanges').length,
     'Exchange presets should automatically cover the complete pinned local Web3Icons exchange catalog.');
   assert(exchanges.length >= 20, 'SafeLedger should offer a useful exchange preset catalog.');
-  assert(vaultItemModule._test.presetNames(vaultItemModule.SERVICE_CATEGORY).includes('FIO App'));
-  assert(vaultItemModule._test.presetNames(vaultItemModule.SERVICE_CATEGORY).includes('OpenSea'));
+  assert(vaultItemPresentation.presetNames(vaultItemPresentation.WEB3_CATEGORY).includes('FIO App'));
+  assert(vaultItemPresentation.presetNames(vaultItemPresentation.WEB3_CATEGORY).includes('OpenSea'));
+  assert.strictEqual(
+    vaultItemPresentation.normalizeCategory('FIO App', vaultItemPresentation.LEGACY_SERVICE_CATEGORY),
+    vaultItemPresentation.WEB3_CATEGORY,
+    'Legacy combined service records must still resolve to the appropriate modern account type.'
+  );
+  assert.strictEqual(
+    vaultItemPresentation.normalizeCategory('Facebook', vaultItemPresentation.LEGACY_SERVICE_CATEGORY),
+    vaultItemPresentation.WEBSITE_CATEGORY,
+    'Legacy website records must remain compatible without a data migration.'
+  );
 }
 
 testDashboardNavigationAndInsights();
 testCopyAndQrArtwork();
 testRecoveryDrillReminderAndContrast();
 testExchangeAndWebsiteVaultItems();
-console.log('PASS SafeLedger 2.5.12 direct Vault Overview navigation, maintenance insight, revised copy/QR artwork, readable QR captions, recovery drill clarity, and exchange/service vault items.');
+console.log('PASS SafeLedger 2.5.12 Vault Overview navigation, maintenance insight, revised copy/QR artwork, recovery drill clarity, and directly rendered exchange/service Vault Items.');

@@ -67,7 +67,7 @@ function createEditor(grid, initialFields) {
   const rows = [];
 
   function addRow(field = {}) {
-    if (rows.length >= customFields.MAX_FIELDS) return;
+    if (rows.length >= customFields.MAX_FIELDS) return null;
     const normalized = customFields.normalize([field])[0] || { label: '', type: 'text', value: '' };
     const row = document.createElement('div');
     row.className = 'custom-field-edit-row';
@@ -140,6 +140,15 @@ function createEditor(grid, initialFields) {
       if (index >= 0) rows.splice(index, 1);
       row.remove();
     });
+    return rowState;
+  }
+
+  function ensureField(field = {}) {
+    const normalized = customFields.normalize([field])[0];
+    if (!normalized || !normalized.label) return null;
+    const key = normalized.label.trim().toLowerCase();
+    const existing = rows.find((row) => String(row.labelInput.value || '').trim().toLowerCase() === key);
+    return existing || addRow(normalized);
   }
 
   for (const field of customFields.normalize(initialFields)) addRow(field);
@@ -152,6 +161,7 @@ function createEditor(grid, initialFields) {
   section.appendChild(add);
 
   return {
+    ensureField,
     getFields: () => customFields.normalize(rows.map((row) => ({
       label: row.labelInput.value,
       type: row.typeSelect.value,

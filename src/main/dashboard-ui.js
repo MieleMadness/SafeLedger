@@ -106,7 +106,7 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
     helper.className = 'dashboard-section-help';
     helper.textContent = showDate
       ? 'Click a recently verified vault item below to open it.'
-      : 'Click a wallet or vault item below to open it and resolve the recovery gaps.';
+      : 'Click a vault item below to open it and resolve the recovery gaps.';
     section.appendChild(helper);
   }
 
@@ -181,26 +181,47 @@ function appendHealthRow(section, titleText, metaText, statusText, statusKind, t
   section.appendChild(row);
 }
 
+function quantity(count, singular, plural) {
+  const value = Number(count) || 0;
+  return `${value} ${value === 1 ? singular : (plural || `${singular}s`)}`;
+}
+
+function vaultContentsLabel(counts = {}) {
+  const hardware = Number(counts.hardwareWallets) || 0;
+  const software = Number(counts.softwareWallets) || 0;
+  const other = Number(counts.otherWallets) || 0;
+  const wallets = Number(counts.wallets) || 0;
+  const exchanges = Number(counts.exchanges) || 0;
+  const services = Number(counts.services) || 0;
+  const total = wallets + exchanges + services;
+  if (!total) return 'Add a wallet, exchange account, or Web / Web3 service to begin building your vault inventory.';
+
+  const parts = [];
+  if (hardware) parts.push(quantity(hardware, 'hardware wallet'));
+  if (software) parts.push(quantity(software, 'software wallet'));
+  if (other) parts.push(quantity(other, 'custom / other wallet'));
+  if (wallets && !hardware && !software && !other) parts.push(quantity(wallets, 'wallet'));
+  if (exchanges) parts.push(quantity(exchanges, 'exchange account'));
+  if (services) parts.push(quantity(services, 'Web / Web3 service'));
+  return `Vault contents: ${parts.join(' • ')}`;
+}
+
 function renderInventory(area, summary) {
+  const counts = summary.counts || {};
   const section = makeSection('Vault Inventory', 'vault-inventory-section');
   const stats = document.createElement('div');
   stats.className = 'dashboard-stats vault-inventory-stats';
-  stats.appendChild(makeStat('Profiles', summary.counts.profiles));
-  stats.appendChild(makeStat('Wallets', summary.counts.wallets));
-  stats.appendChild(makeStat('Exchanges', summary.counts.exchanges || 0));
-  stats.appendChild(makeStat('Services', summary.counts.services || 0));
-  stats.appendChild(makeStat('Assets', summary.counts.assets));
+  const vaultItems = Number(counts.wallets || 0) + Number(counts.exchanges || 0) + Number(counts.services || 0);
+  stats.appendChild(makeStat('Profiles', counts.profiles || 0));
+  stats.appendChild(makeStat('Vault Items', vaultItems));
+  stats.appendChild(makeStat('Exchanges', counts.exchanges || 0));
+  stats.appendChild(makeStat('Services', counts.services || 0));
+  stats.appendChild(makeStat('Assets', counts.assets || 0));
   section.appendChild(stats);
 
-  const types = [];
-  if (summary.counts.hardwareWallets) types.push(`${summary.counts.hardwareWallets} hardware`);
-  if (summary.counts.softwareWallets) types.push(`${summary.counts.softwareWallets} software`);
-  if (summary.counts.otherWallets) types.push(`${summary.counts.otherWallets} other/custom`);
   const meta = document.createElement('p');
   meta.className = 'dashboard-inventory-meta';
-  meta.textContent = types.length
-    ? `Wallet mix: ${types.join(' • ')}`
-    : 'Add wallets, exchanges, or services to begin building your vault inventory.';
+  meta.textContent = vaultContentsLabel(counts);
   section.appendChild(meta);
   area.appendChild(section);
 }
@@ -310,7 +331,7 @@ function render(summary, device = {}) {
   const heading = document.createElement('h1');
   heading.textContent = 'Vault Overview';
   const intro = document.createElement('p');
-  intro.textContent = 'An at-a-glance view of your Profiles, wallets, exchanges, services, assets, backups, and recovery health. Everything is calculated locally from your encrypted vault.';
+  intro.textContent = 'An at-a-glance view of your Profiles, Vault Items, assets, backups, and recovery health. Vault Items include wallets, exchange accounts, and Web / Web3 services. Everything is calculated locally from your encrypted vault.';
   headingWrap.appendChild(heading);
   headingWrap.appendChild(intro);
   const readiness = document.createElement('div');
@@ -399,5 +420,7 @@ exports._test = {
   makeHealthTitle,
   openPortableStorageFolder,
   openWallet,
-  appendWalletList
+  appendWalletList,
+  quantity,
+  vaultContentsLabel
 };
