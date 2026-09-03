@@ -8,11 +8,14 @@ function bridge() {
 }
 
 const localListeners = new Map();
+const activeSubscriptions = new Set();
+
 function addLocalListener(channel, listener) {
   const listeners = localListeners.get(channel) || [];
   listeners.push(listener);
   localListeners.set(channel, listeners);
 }
+
 function emitLocal(channel, event, payload) {
   const listeners = localListeners.get(channel) || [];
   for (const listener of listeners.slice()) listener(event, payload);
@@ -57,6 +60,20 @@ const invokes = {
   'recovery-intelligence-summary': 'getRecoveryIntelligence'
 };
 
+function ensureSubscription(channel) {
+  const subscription = subscriptions[channel];
+  if (!subscription || activeSubscriptions.has(channel)) return;
+  const api = bridge();
+  if (typeof api[subscription] !== 'function') return;
+
+  // Register one preload/contextBridge callback per channel, then fan the same
+  // renderer-world payload object out to every SafeLedger UI listener. This is
+  // important for shared mutable view state such as vaultData selections: the
+  // core renderer and UI helpers must not receive separate structured clones.
+  api[subscription]((payload) => emitLocal(channel, {}, payload));
+  activeSubscriptions.add(channel);
+}
+
 const ipcRenderer = {
   send(channel, ...args) {
     const method = sends[channel];
@@ -69,12 +86,8 @@ const ipcRenderer = {
     return bridge()[method](...args);
   },
   on(channel, listener) {
-    const subscription = subscriptions[channel];
-    if (subscription && typeof bridge()[subscription] === 'function') {
-      bridge()[subscription]((payload) => listener({}, payload));
-      return ipcRenderer;
-    }
     addLocalListener(channel, listener);
+    ensureSubscription(channel);
     return ipcRenderer;
   },
   emit(channel, event, payload) {
@@ -97,4 +110,12 @@ const clipboard = {
   }
 };
 
-module.exports = { ipcRenderer, clipboard };
+module.exports = {
+  ipcRenderer,
+  clipboard,
+  _test: {
+    localListeners,
+    activeSubscriptions,
+    emitLocal
+  }
+};
