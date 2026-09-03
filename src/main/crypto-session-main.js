@@ -5,6 +5,7 @@ const path = require('path');
 const keyEnvelope = require('./key-envelope');
 const runtimeUtils = require('./runtime-utils');
 const { atomicWriteJson } = require('./atomic-file');
+const appMenuMain = require('./app-menu-main');
 
 const ENVELOPE_FILE = 'key-envelope.json';
 
@@ -180,6 +181,10 @@ function registerIpcHandlers(options = {}) {
     assertTrusted(event);
     return getDefaultController().changePassword(oldPassword, newPassword);
   });
+
+  // Keep platform-menu concerns isolated in their own module while reusing the
+  // same trusted-window boundary already established for renderer IPC.
+  appMenuMain.registerIpcHandlers({ getMainWindow: options.getMainWindow });
 }
 
 exports.registerIpcHandlers = registerIpcHandlers;
