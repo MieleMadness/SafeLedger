@@ -14,7 +14,7 @@ const profile = read('src/main/profile.js');
 const binder = read('src/main/recovery-binder.js');
 const binderUi = read('src/main/recovery-binder-ui.js');
 const binderCss = read('src/main/css/recovery-binder.css');
-const uiCss = read('src/main/css/ui-2.5.9.css');
+const uiCss = read('src/main/css/ui-current.css');
 const index = read('src/main/index.html');
 
 function testOutlineEyeArtwork() {
@@ -31,7 +31,8 @@ function testOutlineEyeArtwork() {
   assert(uiCss.includes('.sl-eye-pupil'));
   assert(uiCss.includes('.password-visibility-toggle'));
   assert(uiCss.includes('background: transparent !important;'), 'Password eye should sit cleanly inside the field without a heavy button box.');
-  assert(index.indexOf('./css/ui-2.5.9.css') > index.indexOf('./css/ui-2.5.8.css'), '2.5.9 refinements should load after 2.5.8.');
+  assert(index.indexOf('./css/ui-current.css') > index.indexOf('./css/profile-setup.css'),
+    'Current UI refinements should load after Profile setup styles.');
 }
 
 function testProfileNotes() {
