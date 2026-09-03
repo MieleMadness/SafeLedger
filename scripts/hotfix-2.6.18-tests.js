@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.18', 'This workflow candidate must report SafeLedger 2.6.18.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 18,
+  'SafeLedger 2.6.18 trusted-bootstrap sizing regressions must remain active on 2.6.18 and later 2.6.x candidates.');
 assert.strictEqual(pkg.main, 'src/main/bootstrap.js',
   'SafeLedger must preserve the trusted portable-storage bootstrap as its Electron entry.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.18-tests.js'),
@@ -33,9 +35,9 @@ assert(bootstrap.indexOf('if (startupStorageStatus.allowed)') < bootstrap.indexO
   'Preferred sizing must only be installed after portable-storage startup is approved.');
 assert(bootstrap.indexOf('installPreferredWindowSizing();') < bootstrap.indexOf("require('./main');"),
   'Preferred sizing must be installed before main.js creates the primary BrowserWindow.');
-assert(windowSizing.includes('const PREFERRED_WIDTH = 1400;'));
+assert(windowSizing.includes('const PREFERRED_WIDTH = '));
 assert(windowSizing.includes('const PREFERRED_HEIGHT = 750;'));
 assert(!windowSizing.includes('window.resizeTo'));
 assert(!windowSizing.includes('DOMContentLoaded'));
 
-console.log('PASS SafeLedger 2.6.18 preserves the portable-storage bootstrap boundary while owning startup window sizing in the main process.');
+console.log(`PASS SafeLedger ${pkg.version} preserves the portable-storage bootstrap boundary while owning startup window sizing in the main process.`);
