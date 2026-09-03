@@ -117,17 +117,22 @@ html[data-theme="dark"] {
   background: var(--sl-border);
 }
 
-/* Bottom Add buttons now use the exact same themed interaction language as the
- * detail-action buttons. Their existing size is deliberately unchanged. */
+/* Bottom Add buttons now use the exact same themed surface/border/shadow and
+ * interaction language as detail actions. Existing dimensions stay untouched. */
 #addVault,
 #addGroup,
 #addRecord,
 .detail-action-button {
   background: var(--sl-surface) !important;
-  color: var(--sl-text) !important;
   border: 1px solid var(--sl-border-strong) !important;
   box-shadow: var(--sl-shadow-soft) !important;
   transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease, transform .12s ease;
+}
+
+#addVault,
+#addGroup,
+#addRecord {
+  color: var(--sl-text) !important;
 }
 
 #addVault:hover,
@@ -139,9 +144,17 @@ html[data-theme="dark"] {
 .detail-action-button:hover,
 .detail-action-button:focus {
   background: var(--sl-primary-soft) !important;
-  color: var(--sl-primary-strong) !important;
   border-color: var(--sl-primary) !important;
   box-shadow: var(--sl-focus-ring) !important;
+}
+
+#addVault:hover,
+#addVault:focus,
+#addGroup:hover,
+#addGroup:focus,
+#addRecord:hover,
+#addRecord:focus {
+  color: var(--sl-primary-strong) !important;
 }
 
 #addVault:active,
