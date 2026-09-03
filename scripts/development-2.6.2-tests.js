@@ -37,7 +37,9 @@ assert(polygon.customFields.some((field) => field.label === 'Network' && field.v
 assert(polygon.customFields.some((field) => field.label === 'Contract address' && field.value === '0xd55fce7cdab84d84f2ef3f99816d765a2a94a509'));
 
 const rendererEntry = read('src/main/renderer-entry.js');
-for (const moduleName of ['service-catalog-ui.js','asset-multichain-ui.js','shitcoin-mode-ui.js']) assert(rendererEntry.includes(moduleName));
+for (const moduleName of ['asset-multichain-ui.js','shitcoin-mode-ui.js']) assert(rendererEntry.includes(moduleName));
+assert(!rendererEntry.includes('service-catalog-ui.js'),
+  'Known-service icons must be rendered directly by the canonical Vault Item presenter, not a retired observer.');
 const shitCoinUi = read('src/main/shitcoin-mode-ui.js');
 assert(shitCoinUi.includes('💩'));
 assert(shitCoinUi.includes('visual-only joke setting'));
@@ -45,12 +47,17 @@ assert(shitCoinUi.includes('.coin-list-generic-icon, .coin-brand-generic'));
 const assetUi = read('src/main/asset-multichain-ui.js');
 assert(assetUi.includes("label: 'Network'"));
 assert(assetUi.includes("label: 'Contract address'"));
-const serviceUi = read('src/main/service-catalog-ui.js');
-assert(serviceUi.includes('known-service-brand-image'));
+const presentationSource = read('src/main/vault-item-presentation.js');
+assert(presentationSource.includes("const serviceCatalog = require('./service-catalog');"),
+  'Canonical Vault Item presentation must retain the local known-service catalog.');
+assert(presentationSource.includes('known-service-brand-image'),
+  'Known Web3/website Vault Items must retain their local branded service artwork.');
+assert(presentationSource.includes('serviceCatalog.createIcon(service.name'),
+  'Known service icons must be created directly during Vault Item rendering.');
 
 const release = read('RELEASE-2.6.2.md');
 assert(release.includes('Shit Coin Mode'));
 assert(release.includes('Chain Games'));
 assert(release.includes('known website'));
 
-console.log(`PASS SafeLedger ${pkg.version} preserves the 2.6.2 Shit Coin Mode, Chain Games, multichain asset identity, and known-site icon catalog gates.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves the 2.6.2 Shit Coin Mode, Chain Games, multichain asset identity, and directly rendered known-site icon catalog gates.`);
