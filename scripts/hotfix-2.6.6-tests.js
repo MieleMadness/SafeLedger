@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.6', 'SafeLedger interaction reliability hotfix must report version 2.6.6.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 6,
+  'SafeLedger 2.6.6 interaction reliability regressions must remain active on 2.6.6 and later 2.6.x patches.');
 
 const originalWindow = global.window;
 const originalDocument = global.document;
@@ -91,9 +93,9 @@ assert.strictEqual(realAddAssetOpened, true,
 
 const selectionSource = read('src/main/vault-item-selection-ui.js');
 assert(!selectionSource.includes('stopImmediatePropagation'),
-  '2.6.6 must not cancel the real Add Asset click while repairing selection.');
+  '2.6.6+ must not cancel the real Add Asset click while repairing selection.');
 assert(!selectionSource.includes('addAsset.click()'),
-  '2.6.6 must not rely on a second synthetic Add Asset click.');
+  '2.6.6+ must not rely on a second synthetic Add Asset click.');
 
 // Verify the Web3/Website grouped-option renderer is idempotent. Re-running the
 // patch over its own already-correct DOM must create no new children/mutations.
@@ -169,4 +171,4 @@ else global.document = originalDocument;
 delete require.cache[require.resolve(bridgePath)];
 delete require.cache[require.resolve(selectionPath)];
 
-console.log('PASS SafeLedger 2.6.6 shares renderer vault state for Add Asset and prevents self-triggering Web3/Website DOM render loops.');
+console.log(`PASS SafeLedger ${pkg.version} preserves the 2.6.6 shared renderer state and Web3/Website DOM loop protections.`);
