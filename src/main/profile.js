@@ -8,6 +8,7 @@ const securityUi = require('./security-ui');
 const recoveryBinderUi = require('./recovery-binder-ui');
 const emptyState = require('./empty-state-ui');
 const profileSetup = require('./profile-setup');
+const walletIcons = require('./wallet-icons');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
@@ -120,6 +121,11 @@ function listProfiles(params) {
   area.appendChild(ul);
 }
 
+function createWalletTemplateIcon(template) {
+  if (!template || !template.name) return null;
+  return walletIcons.createIconElement({ name: template.name }, 'profile-wallet-template-icon');
+}
+
 function createProfileSetupControls(grid) {
   const templates = profileSetup.availableTemplates();
   const section = document.createElement('fieldset');
@@ -220,6 +226,8 @@ function createProfileSetupControls(grid) {
     copy.appendChild(name);
     copy.appendChild(type);
     label.appendChild(checkbox);
+    const icon = createWalletTemplateIcon(template);
+    if (icon) label.appendChild(icon);
     label.appendChild(copy);
     templateGrid.appendChild(label);
     checkboxes.push({ checkbox, template });
@@ -457,4 +465,4 @@ function confirmDelete(params) {
 exports.listProfiles = listProfiles;
 exports.createProfile = (params) => createEditProfile(params);
 exports.showProfileDetail = showProfileDetail;
-exports._test = { normalize, appendDateLine, appendProfileNotes, formatDate, pinnedSort, createProfileSetupControls };
+exports._test = { normalize, appendDateLine, appendProfileNotes, formatDate, pinnedSort, createProfileSetupControls, createWalletTemplateIcon };
