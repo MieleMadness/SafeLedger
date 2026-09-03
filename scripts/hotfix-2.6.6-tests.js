@@ -101,71 +101,38 @@ assert(!selectionSource.includes('queueMicrotask(() => ensureVaultItemSelected')
 assert(selectionSource.includes('Selection repair happens only when Add Asset is actually requested.'),
   'Vault Item auto-selection must remain scoped to the Add Asset request path.');
 
-// Verify the Web3/Website grouped-option renderer is idempotent. Re-running the
-// patch over its own already-correct DOM must create no new children/mutations.
-let mutationCount = 0;
-class FakeNode {
-  constructor(tagName) {
-    this.tagName = String(tagName || '').toUpperCase();
-    this.children = [];
-    this.dataset = {};
-    this.style = {};
-    this.value = '';
-    this.textContent = '';
-    this.label = '';
-  }
-  appendChild(child) {
-    this.children.push(child);
-    mutationCount += 1;
-    return child;
-  }
-  set innerHTML(_value) {
-    this.children = [];
-    mutationCount += 1;
-  }
-  get innerHTML() { return ''; }
-  get options() {
-    const result = [];
-    const walk = (node) => {
-      for (const child of node.children || []) {
-        if (child.tagName === 'OPTION') result.push(child);
-        walk(child);
-      }
-    };
-    walk(this);
-    return result;
-  }
+// The old 2.6.5/2.6.6 fix prevented multiple DOM observers from mutating each
+// other's Web3/Website dropdowns. The stronger invariant is now that those
+// observers no longer exist in the runtime path: the real group renderer calls
+// one passive presentation helper directly.
+const presentation = require(path.join(root, 'src/main/vault-item-presentation.js'));
+const firstGroups = presentation.groupedPresetNames('Web3 Account');
+const secondGroups = presentation.groupedPresetNames('Web3 Account');
+assert.deepStrictEqual(secondGroups, firstGroups,
+  'Repeated direct Web3 preset reads must remain deterministic without DOM mutation.');
+assert(presentation.accountFields('Web3 Account').some(([label, type]) => label === 'Connected wallet(s)' && type === 'text'));
+assert(presentation.accountFields('Website Account').some(([label, type]) => label === '2FA recovery / backup codes' && type === 'sensitive'));
+
+const presentationSource = read('src/main/vault-item-presentation.js');
+assert(!presentationSource.includes('MutationObserver'),
+  'Canonical Vault Item rendering must not reintroduce a MutationObserver feedback loop.');
+assert(!presentationSource.includes('queueMicrotask') && !presentationSource.includes('setTimeout('),
+  'Canonical Vault Item rendering must not depend on scheduling after the form has rendered.');
+assert(!presentationSource.includes('.click()'),
+  'Standard Vault Item fields and presets must not be created through synthetic button clicks.');
+const customFieldsSource = read('src/main/custom-fields-ui.js');
+assert(customFieldsSource.includes('function ensureField(field = {})') && customFieldsSource.includes('return existing || addRow(normalized);'),
+  'Custom field editor must expose a direct idempotent field API for canonical Vault Item rendering.');
+const rendererEntry = read('src/main/renderer-entry.js');
+for (const retired of [
+  'vault-item-ui.js',
+  'service-catalog-ui.js',
+  'vault-item-type-split-ui.js',
+  'vault-item-wallet-presets-ui.js',
+  'vault-language-ui.js'
+]) {
+  assert(!rendererEntry.includes(`require('./${retired}')`), `${retired} must remain retired from the renderer bundle.`);
 }
-global.document = { createElement: (tagName) => new FakeNode(tagName) };
-const typeSplit = require(path.join(root, 'src/main/vault-item-type-split-ui.js'));
-const groups = typeSplit._test.groupedPresetNames('Web3 Account');
-const select = new FakeNode('select');
-assert.strictEqual(typeSplit._test.renderGroupedOptions(select, groups, 'Choose a Web3 service…'), true,
-  'First Web3 preset render must build the grouped dropdown.');
-const mutationsAfterFirstRender = mutationCount;
-assert(mutationsAfterFirstRender > 0);
-assert.strictEqual(typeSplit._test.renderGroupedOptions(select, groups, 'Choose a Web3 service…'), false,
-  'Second identical Web3 preset render must be a no-op.');
-assert.strictEqual(mutationCount, mutationsAfterFirstRender,
-  'Repeated Web3 patching must not mutate its own dropdown and retrigger the observer.');
-
-const legacyUi = require(path.join(root, 'src/main/vault-item-ui.js'))._test;
-const hostileForm = {
-  querySelector() { throw new Error('legacy helper touched split account form'); }
-};
-assert.doesNotThrow(() => legacyUi.updateAccountLayout(hostileForm, { value: 'Web3 Account' }),
-  'Legacy combined-account UI must not touch Web3 Account forms.');
-assert.doesNotThrow(() => legacyUi.updateAccountLayout(hostileForm, { value: 'Website Account' }),
-  'Legacy combined-account UI must not touch Website Account forms.');
-
-const splitSource = read('src/main/vault-item-type-split-ui.js');
-assert(splitSource.includes('observer.disconnect()'),
-  'Web3/Website MutationObserver must disconnect while applying its own DOM patch.');
-assert(splitSource.includes('safeLedgerGroupedOptionSignature'),
-  'Grouped account dropdowns must cache their rendered signature.');
-const legacySource = read('src/main/vault-item-ui.js');
-assert(legacySource.includes('SPLIT_ACCOUNT_CATEGORIES.has(categoryInput.value)'),
-  'Legacy account layout must explicitly leave Web3 Account and Website Account to the split UI.');
 
 if (originalWindow === undefined) delete global.window;
 else global.window = originalWindow;
@@ -175,4 +142,4 @@ else global.document = originalDocument;
 delete require.cache[require.resolve(bridgePath)];
 delete require.cache[require.resolve(selectionPath)];
 
-console.log(`PASS SafeLedger ${pkg.version} preserves shared Add Asset state without auto-navigating away from Profile detail, and retains Web3/Website DOM loop protections.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves shared Add Asset state and replaces competing Vault Item DOM observers with deterministic direct rendering.`);
