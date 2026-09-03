@@ -21,16 +21,11 @@ require('./search-enhancements.js');
 require('./profile-wallet-picker-ui.js');
 require('./profile-create-cancel-ui.js');
 require('./sensitive-control-icons-ui.js');
-require('./vault-item-ui.js');
-require('./service-catalog-ui.js');
-require('./vault-item-type-split-ui.js');
-require('./vault-item-wallet-presets-ui.js');
 require('./vault-item-asset-seeding-ui.js');
 require('./asset-multichain-ui.js');
 require('./shitcoin-mode-ui.js');
 require('./add-form-cancel-ui.js');
 require('./settings-icon-fix-ui.js');
-require('./vault-language-ui.js');
 require('./ui-scale-2.6.7.js');
 
 document.documentElement.dataset.safeLedgerRendererReady = 'true';
