@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.14', 'This workflow candidate must report SafeLedger 2.6.14.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 14,
+  'SafeLedger 2.6.14 stylesheet consolidation regressions must remain active on 2.6.14 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.14-tests.js'),
   '2.6.14 stylesheet consolidation coverage must stay in the locked suite.');
 
@@ -34,7 +36,7 @@ assert.strictEqual((index.match(/\.\/css\/ui-current\.css/g) || []).length, 1,
 for (const file of historicalLayers) {
   const href = `./css/${path.basename(file)}`;
   assert(!index.includes(href), `${href} must not be loaded separately at runtime.`);
-  assert(fs.existsSync(path.join(root, file)), `${file} should remain as a temporary equivalence fixture in 2.6.14.`);
+  assert(fs.existsSync(path.join(root, file)), `${file} should remain as a temporary equivalence fixture until its dedicated cleanup candidate.`);
 }
 
 function normalizedCss(value) {
@@ -54,4 +56,4 @@ const currentIndex = index.indexOf('./css/ui-current.css');
 assert(currentIndex > index.indexOf('./css/profile-setup.css'),
   'The consolidated UI cascade must remain after Profile setup styling, matching the former patch-layer position.');
 
-console.log('PASS SafeLedger 2.6.14 loads one current UI stylesheet with an exactly equivalent historical cascade.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.14 single current UI stylesheet with an exactly equivalent historical cascade.`);
