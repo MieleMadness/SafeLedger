@@ -29,25 +29,26 @@ assert(!rendererEntry.includes("require('./vault-language-ui.js')"),
   'Vault Item terminology must be rendered directly instead of restored by the retired language observer.');
 assert(rendererEntry.includes("require('./recovery-intelligence-vault-overview-ui.js')"), 'Vault Overview must restore optional Recovery Intelligence');
 
-const dashboardUi = require(path.join(root, 'src', 'main', 'dashboard-ui.js'))._test;
-const label = dashboardUi.vaultContentsLabel({
-  hardwareWallets: 2,
-  softwareWallets: 3,
-  otherWallets: 1,
-  wallets: 6,
-  exchanges: 2,
-  services: 1
-});
-assert(label.startsWith('Vault contents:'), 'inventory summary must be labeled Vault contents');
-assert(label.includes('2 hardware wallets'), 'Vault contents must retain useful hardware-wallet detail');
-assert(label.includes('3 software wallets'), 'Vault contents must retain useful software-wallet detail');
-assert(label.includes('2 exchange accounts'), 'Vault contents must include exchange accounts');
-assert(label.includes('1 Web / Web3 service'), 'Vault contents must include Web / Web3 services');
-assert.strictEqual(
-  dashboardUi.vaultContentsLabel({}),
+// Keep this historical regression renderer-free. dashboard-ui.js imports the
+// live renderer for navigation, so requiring it from plain Node would boot
+// browser-only modules and make this terminology check depend on window.
+const dashboardSource = read('src/main/dashboard-ui.js');
+assert(dashboardSource.includes('function vaultContentsLabel(counts = {})'),
+  'Vault Overview must own its inventory summary directly.');
+for (const phrase of [
+  "quantity(hardware, 'hardware wallet')",
+  "quantity(software, 'software wallet')",
+  "quantity(exchanges, 'exchange account')",
+  "quantity(services, 'Web / Web3 service')",
   'Add a wallet, exchange account, or Web / Web3 service to begin building your vault inventory.',
-  'empty Vault Overview should explain all supported vault-item families'
-);
+  "return `Vault contents: ${parts.join(' • ')}`;"
+]) {
+  assert(dashboardSource.includes(phrase), `missing direct Vault Overview inventory contract: ${phrase}`);
+}
+assert(dashboardSource.includes("makeStat('Vault Items', vaultItems)"),
+  'Vault Overview inventory must create the Vault Items stat directly.');
+assert(dashboardSource.includes('Click a vault item below to open it and resolve the recovery gaps.'),
+  'Vault Overview recovery actions must use Vault Item terminology directly.');
 
 const groupSource = read('src/main/group.js');
 for (const phrase of [
@@ -63,12 +64,6 @@ assert(globalSearchSource.includes('Search Profiles, Vault Items, and Assets wit
   'Global Search introduction must use Vault Item terminology directly.');
 assert(globalSearchSource.includes("return type === 'wallet' ? 'VAULT ITEM'"),
   'Global Search must display internal wallet results as Vault Items directly.');
-
-const dashboardSource = read('src/main/dashboard-ui.js');
-assert(dashboardSource.includes('Click a vault item below to open it and resolve the recovery gaps.'),
-  'Vault Overview recovery actions must use Vault Item terminology directly.');
-assert(dashboardSource.includes("makeStat('Vault Items', vaultItems)"),
-  'Vault Overview inventory must create the Vault Items stat directly.');
 
 const intelligence = read('src/main/recovery-intelligence-vault-overview-ui.js');
 assert(intelligence.includes("!== 'Vault Overview'"), 'Recovery Intelligence companion must recognize the renamed Vault Overview');
