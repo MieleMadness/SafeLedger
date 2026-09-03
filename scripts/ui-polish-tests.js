@@ -36,7 +36,7 @@ function contrast(a, b) {
 assert(/^2\.\d+\.\d+$/.test(pkg.version));
 assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/local-icons.css'), 'theme stylesheet must load after the legacy icon/foundation layers');
 assert(index.indexOf('./css/ui-current.css') > index.indexOf('./css/app-theme.css'), 'current UI refinements must load after the base theme');
-assert(foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 5fr)'));
+assert(foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr)'));
 
 const mainArea = index.indexOf('id="mainArea"');
 const buttonArea = index.indexOf('id="buttonArea"');
@@ -92,4 +92,4 @@ assert(theme.includes('html[data-theme="dark"] .search-field-wrap .form-control'
 assert(theme.includes('.wallet-list-category { color: rgba(255,255,255,.84) !important;'));
 assert(theme.includes('.column-empty-text { max-width: 180px; font-size: 12px;'));
 
-console.log(`PASS UI polish ${pkg.version} keeps Home/History/Settings/Search in the top utility bar, Emergency Lock fixed bottom-right, native 2/2/3/5 layout, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
+console.log(`PASS UI polish ${pkg.version} keeps Home/History/Settings/Search in the top utility bar, Emergency Lock fixed bottom-right, equal 2/2/2 navigation columns with a 5fr Detail column, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
