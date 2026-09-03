@@ -30,5 +30,6 @@ require('./shitcoin-mode-ui.js');
 require('./add-form-cancel-ui.js');
 require('./settings-icon-fix-ui.js');
 require('./vault-language-ui.js');
+require('./ui-scale-2.6.7.js');
 
 document.documentElement.dataset.safeLedgerRendererReady = 'true';
