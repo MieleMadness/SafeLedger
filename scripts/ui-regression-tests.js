@@ -12,7 +12,7 @@ const syntaxCheck = (relative) => execFileSync(process.execPath, ['--check', pat
 
 const pkg = JSON.parse(read('package.json'));
 const main = read('src/main/main.js');
-const startup = read('src/main/startup.js');
+const bootstrap = read('src/main/bootstrap.js');
 const windowSizing = read('src/main/window-sizing-main.js');
 const preload = read('src/main/preload.js');
 const index = read('src/main/index.html');
@@ -31,11 +31,14 @@ const css = read('src/main/css/site.css');
 
 assert(main.includes('width: 1200'));
 assert(main.includes('height: 750'));
-assert.strictEqual(pkg.main, 'src/main/startup.js');
-assert(startup.includes("app.on('browser-window-created'") && startup.includes("require('./bootstrap')"));
+assert.strictEqual(pkg.main, 'src/main/bootstrap.js');
+assert(bootstrap.includes('function installPreferredWindowSizing()'));
+assert(bootstrap.includes("app.on('browser-window-created'"));
+assert(bootstrap.indexOf('installPreferredWindowSizing();') < bootstrap.indexOf("require('./main');"));
 assert(windowSizing.includes('const PREFERRED_WIDTH = 1400;') && windowSizing.includes('const PREFERRED_HEIGHT = 750;'));
 assert(!entry.includes("require('./ui-scale-2.6.7.js');"));
 assert.strictEqual(exists('src/main/ui-scale-2.6.7.js'), false);
+assert.strictEqual(exists('src/main/startup.js'), false);
 assert(index.includes('id="detailActionArea"'));
 assert(index.includes('<script src="./renderer.bundle.js"></script>'));
 assert(index.includes('Search assets...'));
@@ -93,7 +96,7 @@ assert(securityUi.includes("meta.className = 'sensitive-field-meta'"));
 assert(css.includes('.sensitive-field-meta { margin: 8px 0 0; color: #5f6672; font-size: 13px;'));
 
 for (const relative of [
-  'src/main/startup.js', 'src/main/window-sizing-main.js',
+  'src/main/bootstrap.js', 'src/main/window-sizing-main.js',
   'src/main/preload.js', 'src/main/renderer-entry.js', 'src/main/renderer-bridge.js',
   'src/main/security-main.js', 'src/main/security-enhancements.js', 'src/main/security-ui.js',
   'src/main/password-policy.js', 'src/main/password-controls.js', 'src/main/password-settings-ui.js',
@@ -102,4 +105,4 @@ for (const relative of [
   'src/main/custom-fields-ui.js'
 ]) syntaxCheck(relative);
 
-console.log('PASS direct UI modules, native startup sizing, and shared Asset/Vault Item typography remain behind the explicit sandbox bridge.');
+console.log('PASS direct UI modules, trusted-bootstrap startup sizing, and shared Asset/Vault Item typography remain behind the explicit sandbox bridge.');
