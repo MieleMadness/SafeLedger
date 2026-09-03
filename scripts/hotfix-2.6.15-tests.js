@@ -30,8 +30,8 @@ assert(statusSource.includes("info: 'fa fa-info-circle'") &&
   statusSource.includes("success: 'fa fa-check-circle'") &&
   statusSource.includes("danger: 'fa fa-exclamation-circle'"),
   'Info, success, and error messages should keep clear semantic icons.');
-assert(statusSource.includes("alert.setAttribute('aria-live', kind === 'danger' ? 'assertive' : 'polite')"),
-  'Status messages must keep meaningful live-region behavior.');
+assert(statusSource.includes("options.ariaLive || (kind === 'danger' ? 'assertive' : 'polite')"),
+  'Status messages must keep meaningful default live-region behavior while allowing successful red deletion notices to remain polite.');
 assert(!statusSource.includes('&nbsp'), 'Status clearing should not leave placeholder text behind.');
 assert(!index.includes('<div id="statusArea">&nbsp;</div>'),
   'Initial status area should be genuinely empty.');
@@ -82,6 +82,11 @@ try {
   assert.strictEqual(danger.attributes['aria-live'], 'assertive');
   assert.strictEqual(danger.children[1].textContent, '<b>Invalid Password</b>',
     'Message-like text must stay literal rather than becoming HTML markup.');
+
+  const politeDanger = status._test.createMessage('danger', 'Item Deleted', { role: 'status', ariaLive: 'polite' });
+  assert.strictEqual(politeDanger.attributes.role, 'status');
+  assert.strictEqual(politeDanger.attributes['aria-live'], 'polite');
+  assert(politeDanger.className.includes('safeledger-status-danger'));
 } finally {
   if (previousDocument === undefined) delete global.document;
   else global.document = previousDocument;
