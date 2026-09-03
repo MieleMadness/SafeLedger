@@ -1,15 +1,16 @@
 /* SafeLedger 2.5.16 focused UI corrections. */
 
 /* Password visibility buttons are direct children of secure input shells.
- * Center them over the input instead of letting normal flow place them below
- * or near the bottom edge. This also overrides the shared 2.5.15 button rule
- * that intentionally removes transforms from ordinary action buttons. */
+ * Center them with the absolute-positioning box itself rather than a transform.
+ * This keeps the control centered even when shared button interaction rules
+ * intentionally force transform:none on hover/focus. */
 .password-visibility-shell > .password-visibility-toggle {
   position: absolute !important;
   right: 7px !important;
-  top: 50% !important;
-  margin: 0 !important;
-  transform: translateY(-50%) !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  margin: auto 0 !important;
+  transform: none !important;
   z-index: 3;
 }
 
