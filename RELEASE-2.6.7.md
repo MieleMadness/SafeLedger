@@ -65,13 +65,24 @@ Scrollbars are also theme-aware:
 - dark mode uses dark slate tracks with a clearly visible lighter thumb;
 - the three blue Profile/Vault/Asset columns use translucent light scrollbar treatment matched to those column backgrounds.
 
-## Login password eye stability
+## Login password eye stability and alignment
 
-The login password visibility eye could move down and partly outside its input when hovered or focused. The eye is implemented as an inline button. Its earlier positioning used `top: 50%` plus `translateY(-50%)`, while the shared 2.5.15 button interaction contract intentionally resets transforms to `none` so ordinary buttons never jump on hover/focus. That meant the eye was using a property that the generic button system was designed to remove.
+The login password visibility control had two separate historical issues.
 
-2.6.7 fixes the underlying positioning model instead of layering another hover override on top. The password eye is now centered by its absolute-positioning box using `top: 0`, `bottom: 0`, and automatic vertical margins. It no longer depends on a transform for layout, so the normal shared `transform: none` behavior can remain unchanged and cannot displace the eye. The temporary last-loaded 2.6.7 eye override was removed.
+First, the eye could move down and partly outside its input when hovered or focused. Its earlier positioning used `top: 50%` plus `translateY(-50%)`, while the shared 2.5.15 button interaction contract intentionally resets transforms to `none` so ordinary buttons never jump on hover/focus. The 2.5.16 correction therefore centered the control with a property that the generic button system was designed to remove.
 
-Regression coverage now requires transform-independent centering and explicitly rejects a return to the earlier `translateY(-50%)` dependency.
+Second, the eye artwork itself could sit toward the left side of its 34×28 hover target. Comparing the login control with the known-good 2.5.11 editable sensitive control showed the missing ownership: the sensitive-control eye explicitly centered its SVG with `margin: auto`, while the login eye depended on generic `.field-inline-action` flex behavior.
+
+2.6.7 now gives the password eye a complete, self-contained layout contract:
+
+- the 34×28 button is vertically centered using `top: 0`, `bottom: 0`, and automatic vertical margins;
+- layout no longer depends on any transform;
+- the password-eye button explicitly owns `inline-flex`, `align-items: center`, and `justify-content: center`;
+- the 22×16 SafeLedger eye SVG is explicitly centered inside that button with automatic margins;
+- hover/focus color therefore stays on the same button box and the eye remains centered inside it;
+- no extra last-loaded 2.6.7 eye override stylesheet is used.
+
+Regression coverage separately protects the button's field alignment and the SVG's alignment inside the hover target, and explicitly rejects a return to the earlier `translateY(-50%)` dependency.
 
 ## Security and compatibility
 
