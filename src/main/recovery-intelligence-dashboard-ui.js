@@ -62,7 +62,7 @@ function refreshDashboardSummary(area, summary) {
     return h2 && h2.textContent === 'Recently Verified';
   });
   if (attention) renderWalletRows(attention, summary.needsAttention || [], 'Everything documented is currently ready.', false);
-  if (recent) renderWalletRows(recent, summary.recentlyVerified || [], 'No wallet recovery plans have been verified yet.', true);
+  if (recent) renderWalletRows(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true);
 }
 
 function appendIssue(list, title, meta) {
@@ -136,14 +136,14 @@ function renderIntelligence(area, intelligence) {
     appendIssue(issues, item.walletName, `${item.profileName} • BIP39 check needs review (${item.reason}, ${item.wordCount || 0} words)`);
   }
   for (const group of (duplicates.publicAddress || []).slice(0, 6)) {
-    appendIssue(issues, 'Duplicate public address', `${group.count} Assets reference the same public address; review the listed Wallet/Asset locations.`);
+    appendIssue(issues, 'Duplicate public address', `${group.count} Assets reference the same public address; review the listed Vault Item / Asset locations.`);
   }
   for (const group of (duplicates.sensitive || []).slice(0, 6)) {
     const kinds = Array.from(new Set((group.occurrences || []).map((item) => item.kind))).join(', ');
     appendIssue(issues, 'Matching sensitive recovery data', `${group.count} entries match within this unlocked session (${kinds || 'sensitive recovery data'}). No fingerprint or secret is stored.`);
   }
   for (const group of (duplicates.walletMetadata || []).slice(0, 6)) {
-    appendIssue(issues, 'Repeated Wallet recovery metadata', `${group.count} Wallet entries share the same normalized Wallet/recovery-method metadata.`);
+    appendIssue(issues, 'Repeated Vault Item recovery metadata', `${group.count} Vault Item entries share the same normalized Vault Item/recovery-method metadata.`);
   }
 
   if (!issues.children.length) {
