@@ -18,6 +18,7 @@ function firstVaultItem(doc) {
 
 function hasValidVaultItemSelection(vaultData = activeVaultData) {
   if (!vaultData || !Array.isArray(vaultData.groups)) return false;
+  if (vaultData.groupSelected == null || vaultData.groupSelected === '') return false;
   const index = Number(vaultData.groupSelected);
   return Number.isInteger(index) && index >= 0 && index < vaultData.groups.length;
 }
