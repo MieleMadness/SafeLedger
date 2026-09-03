@@ -22,6 +22,5 @@ require('./sensitive-control-icons-ui.js');
 require('./vault-item-asset-seeding-ui.js');
 require('./shitcoin-mode-ui.js');
 require('./settings-icon-fix-ui.js');
-require('./ui-scale-2.6.7.js');
 
 document.documentElement.dataset.safeLedgerRendererReady = 'true';
