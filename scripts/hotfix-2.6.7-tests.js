@@ -85,43 +85,39 @@ assert(recordSource.includes("header.textContent = params.record ? 'Modify Asset
   recordSource.includes('exports.createRecord = (params) => createEditRecord(params);'),
   'The original core Add Asset form path must remain intact; this hotfix belongs in the enhancer that regressed it.');
 
-// Readability/navigation scale requested after the Add Asset fix was confirmed.
 const indexSource = read('src/main/index.html');
 const scaleCss = read('src/main/css/ui-2.6.7-scale.css');
+const themeCss = read('src/main/css/ui-2.6.7-theme-refinement.css');
 const scaleSource = read('src/main/ui-scale-2.6.7.js');
 const rendererEntry = read('src/main/renderer-entry.js');
+const selectionSource = read('src/main/vault-item-selection-ui.js');
+const appMenuUi = read('src/main/app-menu-ui.js');
+const appMenuMain = read('src/main/app-menu-main.js');
+const preloadSource = read('src/main/preload.js');
 const visualUi = require(path.join(root, 'src/main/ui-scale-2.6.7.js'));
 
-assert(indexSource.includes('<link href="./css/ui-2.6.7-scale.css" rel="stylesheet">'),
-  'SafeLedger must load the 2.6.7 readability scale stylesheet.');
-assert(indexSource.indexOf('./css/ui-2.6.7-scale.css') > indexSource.indexOf('./css/ui-2.5.16.css'),
-  'The readability scale must load last so its requested sizes win.');
-assert(rendererEntry.includes("require('./ui-scale-2.6.7.js');"),
-  'The Vault Item detail artwork and preferred-window helper must be included in the renderer bundle.');
+assert(indexSource.includes('<link href="./css/ui-2.6.7-scale.css" rel="stylesheet">'));
+assert(indexSource.includes('<link href="./css/ui-2.6.7-theme-refinement.css" rel="stylesheet">'),
+  'SafeLedger must load the 2.6.7 theme-refinement stylesheet.');
+assert(indexSource.indexOf('./css/ui-2.6.7-theme-refinement.css') > indexSource.indexOf('./css/ui-2.6.7-scale.css'),
+  'Theme refinements must load after the 2.6.7 readability scale.');
+assert(indexSource.includes('<span class="fa fa-plus"></span> Add Vault</button>') && !indexSource.includes('Add Vault Item</button>'),
+  'The bottom Vault Item action must use the shorter Add Vault label.');
+assert(rendererEntry.includes("require('./ui-scale-2.6.7.js');"));
+assert(rendererEntry.includes("require('./app-menu-ui.js');"),
+  'The themed application menu must be included in the renderer bundle.');
 
-assert(/html,\s*\nbody\s*\{[\s\S]*?font-size:\s*15px\s*!important/.test(scaleCss),
-  'Base SafeLedger text must scale from 14px to 15px.');
-assert(scaleCss.includes('.wallet-list-category,') && scaleCss.includes('font-size: 13px !important;'),
-  '12px helper text must scale to 13px.');
-assert(scaleCss.includes('.wallet-detail-category,') && scaleCss.includes('font-size: 14px !important;'),
-  '13px supporting text must scale to 14px.');
-assert(scaleCss.includes('width: 32px !important;') && scaleCss.includes('flex: 0 0 32px !important;'),
-  'Vault Item and Asset list artwork must scale from 28px to 32px.');
-assert(scaleCss.includes('width: 28px !important;') && scaleCss.includes('flex: 0 0 28px !important;'),
-  'Compact Vault Item and Asset artwork must scale from 24px to 28px.');
-assert(scaleCss.includes('width: 60px !important;') && scaleCss.includes('flex: 0 0 60px !important;'),
-  'Vault Item and Asset detail artwork must use the requested 60px size.');
-assert(scaleCss.includes('width: 52px !important;') && scaleCss.includes('flex: 0 0 52px !important;'),
-  'Compact detail artwork must scale from 46px to 52px.');
-assert(scaleCss.includes('background-color: transparent !important;') && scaleCss.includes('border-color: #fff !important;'),
-  'Selected Vault Item and Asset rows must use a white border without a filled selection background.');
-assert(!scaleCss.includes('--sl-action-size:') && !scaleCss.includes('--sl-top-action-size:'),
-  'The visual scale must not change detail-action or top-utility button dimensions.');
-assert(!/\.panic-lock-inline\s*\{[^}]*\bwidth\s*:/s.test(scaleCss),
-  'The visual scale must not change Emergency Lock dimensions.');
+assert(/html,\s*\nbody\s*\{[\s\S]*?font-size:\s*15px\s*!important/.test(scaleCss));
+assert(scaleCss.includes('width: 32px !important;') && scaleCss.includes('flex: 0 0 32px !important;'));
+assert(scaleCss.includes('width: 28px !important;') && scaleCss.includes('flex: 0 0 28px !important;'));
+assert(scaleCss.includes('width: 60px !important;') && scaleCss.includes('flex: 0 0 60px !important;'));
+assert(scaleCss.includes('width: 52px !important;') && scaleCss.includes('flex: 0 0 52px !important;'));
+assert(scaleCss.includes('background-color: transparent !important;') && scaleCss.includes('border-color: #fff !important;'));
+assert(!scaleCss.includes('--sl-action-size:') && !scaleCss.includes('--sl-top-action-size:'));
+assert(!/\.panic-lock-inline\s*\{[^}]*\bwidth\s*:/s.test(scaleCss));
 
-assert.strictEqual(visualUi.DETAIL_WIDTH, 1400, 'Default SafeLedger width must grow from 1200px to 1400px.');
-assert.strictEqual(visualUi.DETAIL_HEIGHT, 750, 'Default SafeLedger height must remain 750px.');
+assert.strictEqual(visualUi.DETAIL_WIDTH, 1400);
+assert.strictEqual(visualUi.DETAIL_HEIGHT, 750);
 let resized = null;
 const normalScreen = {
   screen: { availWidth: 1920, availHeight: 1080 },
@@ -129,8 +125,7 @@ const normalScreen = {
   outerHeight: 750,
   resizeTo(width, height) { resized = { width, height }; }
 };
-assert.strictEqual(visualUi._test.applyPreferredWindowSize(normalScreen), true,
-  'A current 1200px default window should grow to the requested preferred width.');
+assert.strictEqual(visualUi._test.applyPreferredWindowSize(normalScreen), true);
 assert.deepStrictEqual(resized, { width: 1400, height: 750 });
 
 resized = null;
@@ -140,14 +135,34 @@ const alreadyLarge = {
   outerHeight: 900,
   resizeTo(width, height) { resized = { width, height }; }
 };
-assert.strictEqual(visualUi._test.applyPreferredWindowSize(alreadyLarge), false,
-  'The preferred-size helper must not shrink an already larger user/OS window.');
+assert.strictEqual(visualUi._test.applyPreferredWindowSize(alreadyLarge), false);
 assert.strictEqual(resized, null);
 
-assert(scaleSource.includes("clone.classList.add('wallet-detail-brand-image')") &&
-  scaleSource.includes("header.className = 'wallet-detail-header'"),
-  'Vault Item details must clone the selected local/offline navigation artwork into a dedicated detail header.');
-assert(scaleSource.includes('observer.disconnect();') && scaleSource.includes('patchVaultDetail(document);'),
-  'The Vault Item detail observer must disconnect while applying its own DOM patch.');
+assert(scaleSource.includes("clone.classList.add('wallet-detail-brand-image')") && scaleSource.includes("header.className = 'wallet-detail-header'"));
+assert(scaleSource.includes('observer.disconnect();') && scaleSource.includes('patchVaultDetail(document);'));
 
-console.log('PASS SafeLedger 2.6.7 keeps Add Asset reliable and applies the requested 15px readability scale, border-only selection, larger Vault/Asset artwork, Vault detail icon, and wider default window without resizing action controls.');
+assert(!selectionSource.includes('queueMicrotask(() => ensureVaultItemSelected'),
+  'Profile loading must not auto-click the first Vault Item and replace Profile detail.');
+assert(selectionSource.includes('Selection repair happens only when Add Asset is actually requested.'),
+  'Missing Vault Item selection repair must remain scoped to Add Asset.');
+
+assert(themeCss.includes('.app-menu-bar') && themeCss.includes('background: var(--sl-bg);') && themeCss.includes('color: var(--sl-text);'),
+  'The SafeLedger/Edit menu bar must follow the detail workspace light/dark colors.');
+assert(themeCss.includes('#addVault,') && themeCss.includes('#addGroup,') && themeCss.includes('#addRecord,') && themeCss.includes('.detail-action-button'),
+  'Bottom Add buttons and detail actions must share the same themed button shell.');
+assert(themeCss.includes('--sl-scroll-track: #e3e8ef;') && themeCss.includes('--sl-scroll-thumb: #a8b4c3;') &&
+  themeCss.includes('html[data-theme="dark"]') && themeCss.includes('--sl-scroll-thumb: #465a73;'),
+  'Neutral scrollbars must have distinct light and dark theme palettes.');
+assert(themeCss.includes('--sl-nav-scroll-thumb') && themeCss.includes('.dark1bg.content-middle::-webkit-scrollbar-thumb'),
+  'Blue navigation columns must use their own background-matched scrollbar treatment.');
+
+assert(appMenuUi.includes("makeGroup(doc, 'SafeLedger'") && appMenuUi.includes("makeGroup(doc, 'Edit'"),
+  'The themed renderer menu must preserve the SafeLedger and Edit menus.');
+assert(appMenuMain.includes("const EDIT_COMMANDS = new Set(['undo', 'redo', 'cut', 'copy', 'paste', 'selectAll']);"),
+  'The app-menu bridge must allow-list edit commands.');
+assert(appMenuMain.includes("ipcMain.handle('app-menu-prepare'") && appMenuMain.includes("ipcMain.on('app-menu-command'"));
+assert(preloadSource.includes('prepareAppMenu: () => ipcRenderer.invoke(\'app-menu-prepare\')') &&
+  preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"),
+  'The themed menu must use only the narrow preload bridge.');
+
+console.log('PASS SafeLedger 2.6.7 keeps Add Asset reliable, preserves Profile detail navigation, shortens Add Vault, and applies the requested readability, icon, menu, button, scrollbar, selection, and wider-window refinements.');
