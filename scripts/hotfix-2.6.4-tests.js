@@ -47,15 +47,17 @@ const fakeDocument = {
   }
 };
 assert.strictEqual(selectionUi.ensureVaultItemSelected(fakeDocument, vaultData), first,
-  'A loaded Profile with visible Vault Items must select its first item when none is selected.');
+  'Selection repair must still be able to choose the first visible Vault Item when Add Asset needs a destination.');
 assert.strictEqual(clicks, 1);
 assert.strictEqual(selectionUi.ensureVaultItemSelected(fakeDocument, vaultData), first,
   'An existing Vault Item selection must be preserved.');
 assert.strictEqual(clicks, 1, 'Existing Vault Item selection must not be clicked again.');
 
 const selectionSource = read('src/main/vault-item-selection-ui.js');
-assert(selectionSource.includes("result.type !== 'vault-read'"),
-  'Default selection must remain tied to completed Profile vault reads.');
+assert(!selectionSource.includes('queueMicrotask(() => ensureVaultItemSelected'),
+  'Profile vault reads must not automatically navigate into the first Vault Item.');
+assert(selectionSource.includes('Selection repair happens only when Add Asset is actually requested.'),
+  'The retained first-Vault selection helper must be scoped to the Add Asset request path.');
 assert(selectionSource.includes("addAsset.addEventListener('click'"),
   'Add Asset must keep a capture-phase selection repair before the normal Add Asset handler runs.');
 const rendererEntry = read('src/main/renderer-entry.js');
@@ -64,10 +66,10 @@ assert(rendererEntry.includes("require('./vault-item-selection-ui.js')"),
 
 const iconCss = read('src/main/css/token-icons.css');
 assert(iconCss.includes('width: 28px !important;') && iconCss.includes('height: 28px !important;'),
-  'Vault Item and Asset list icons must share the larger 28px desktop size.');
+  'The historical 2.6.4 stylesheet must retain its 28px desktop icon baseline.');
 assert(iconCss.includes('.wallet-list-fallback-icon'),
   'Custom/fallback Vault Item icons must use the same sizing contract.');
 assert(iconCss.includes('width: 24px !important;') && iconCss.includes('height: 24px !important;'),
-  'Compact layouts must keep a readable, equal 24px list icon size.');
+  'The historical 2.6.4 stylesheet must retain its 24px compact icon baseline.');
 
-console.log(`PASS SafeLedger ${pkg.version} retains the 2.6.4 Add Asset selection and larger unified Chain Games icon regressions.`);
+console.log(`PASS SafeLedger ${pkg.version} retains the 2.6.4 Chain Games artwork and on-demand Add Asset selection regression without hijacking Profile detail navigation.`);
