@@ -7,6 +7,7 @@ const STATUS_ICONS = Object.freeze({
   danger: 'fa fa-exclamation-circle',
   processing: 'fa fa-refresh fa-spin'
 });
+const ROUTINE_SUCCESS = /^load(?:ed)? successful(?:ly)?\.?$/i;
 let closeTimer = null;
 
 function statusArea() {
@@ -30,6 +31,13 @@ function statusKind(value) {
   case 'ERROR': return 'danger';
   default: return 'info';
   }
+}
+
+function shouldDisplayStatus(params = {}) {
+  const state = String(params.status || '').toUpperCase();
+  if (state === 'ERROR') return true;
+  if (state === 'SUCCESS') return !ROUTINE_SUCCESS.test(String(params.statusMsg || '').trim());
+  return state === 'INFO' || state === 'WARNING';
 }
 
 function createMessage(kind, message, options = {}) {
@@ -60,28 +68,30 @@ function closeStatus() {
 }
 
 exports.showStatus = (params = {}) => {
+  if (!shouldDisplayStatus(params)) return false;
   const area = statusArea();
-  if (!area) return;
+  if (!area) return false;
   resetArea(area);
 
   const kind = statusKind(params.status);
   area.appendChild(createMessage(kind, params.statusMsg));
   closeTimer = window.setTimeout(closeStatus, STATUS_TIMEOUT_MS);
+  return true;
 };
 
-exports.loadStatus = () => {
-  const area = statusArea();
-  if (!area) return;
-  resetArea(area);
-  area.appendChild(createMessage('processing', 'Processing', { role: 'status' }));
-};
+// Routine reads no longer create a temporary Processing notice. SafeLedger
+// still blocks conflicting actions through saving.state, while the status area
+// is reserved for completed changes, actionable notices, and errors.
+exports.loadStatus = () => false;
 
 exports.clearStatus = closeStatus;
 exports.hideStatus = closeStatus;
 exports._test = {
   STATUS_TIMEOUT_MS,
   STATUS_ICONS,
+  ROUTINE_SUCCESS,
   statusKind,
+  shouldDisplayStatus,
   createMessage,
   cancelCloseTimer
 };
