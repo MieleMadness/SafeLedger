@@ -60,7 +60,7 @@ function testLoginAndSensitiveUiContract() {
   const password = read('src/main/password-controls.js');
   const security = read('src/main/security-ui.js');
   const sensitive = read('src/main/sensitive-control-icons-ui.js');
-  const css = read('src/main/css/ui-2.5.8.css');
+  const css = read('src/main/css/ui-current.css');
   const index = read('src/main/index.html');
 
   assert(password.includes("show.innerHTML = eyeIcon.markup(false);"),
@@ -86,7 +86,7 @@ function testLoginAndSensitiveUiContract() {
   assert(sensitive.includes("icon.className = 'sl-qr-icon'"),
     'QR actions should use the simplified SafeLedger QR glyph.');
   assert(css.includes('.sl-qr-icon-part-4'), 'The simplified QR glyph should have dedicated low-noise styling.');
-  assert(index.includes('./css/ui-2.5.8.css'), '2.5.8 final UI refinements must load in the app.');
+  assert(index.includes('./css/ui-current.css'), 'The consolidated current UI stylesheet must load in the app.');
 }
 
 function testSettingsWorkflowOrder() {
@@ -111,7 +111,7 @@ function testSettingsWorkflowOrder() {
 }
 
 function testResponsiveWalletGrid() {
-  const css = read('src/main/css/ui-2.5.8.css');
+  const css = read('src/main/css/ui-current.css');
   const profile = read('src/main/profile.js');
   assert(profile.includes("walletIcons.createIconElement({ name: template.name }, 'profile-wallet-template-icon')"),
     'Each wallet checkbox row should render its local wallet artwork directly in the Profile renderer.');
