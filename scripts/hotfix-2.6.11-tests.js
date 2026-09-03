@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.11', 'This cleanup build must report SafeLedger 2.6.11.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 11,
+  'SafeLedger 2.6.11 regressions must remain active on 2.6.11 and later 2.6.x patches.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.11-tests.js'),
   '2.6.11 regression coverage must stay in the locked suite.');
 
@@ -119,4 +121,4 @@ assert.strictEqual(visualUi._test.applyPreferredWindowSize({
 assert.deepStrictEqual(resized, { width: 1400, height: 750 },
   'Retiring the Vault detail patch must not remove the preferred-window sizing behavior.');
 
-console.log('PASS SafeLedger 2.6.11 renders Vault Item detail artwork directly and keeps ui-scale limited to window sizing.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.11 direct Vault Item detail artwork and window-sizing behavior active.`);
