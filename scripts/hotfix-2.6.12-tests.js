@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.12', 'This workflow candidate must report SafeLedger 2.6.12.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 12,
+  'SafeLedger 2.6.12 regressions must remain active on 2.6.12 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.12-tests.js'),
   '2.6.12 regression coverage must stay in the locked suite.');
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/profile-wallet-picker-ui.js')), false,
@@ -73,4 +75,4 @@ try {
   else global.document = previousDocument;
 }
 
-console.log('PASS SafeLedger 2.6.12 renders Add Profile wallet-template artwork directly with no observer helper.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.12 direct Add Profile wallet-template artwork behavior active.`);
