@@ -56,7 +56,7 @@ function listProfiles(params) {
     emptyState.renderColumn(area, {
       icon: 'fa-folder-open-o',
       title: 'No profiles yet',
-      text: 'Create a Profile to organize wallets and recovery plans.'
+      text: 'Create a Profile to organize vault items, assets, and recovery plans.'
     });
     return;
   }
