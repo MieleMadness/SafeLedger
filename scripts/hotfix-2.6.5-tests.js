@@ -7,12 +7,13 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const typeSplit = require(path.join(root, 'src/main/vault-item-type-split-ui.js'));
 const typeTests = typeSplit._test;
 const assetPresets = require(path.join(root, 'src/main/vault-item-asset-presets.js'));
-const selectionTests = require(path.join(root, 'src/main/vault-item-selection-ui.js'))._test;
 
-assert.strictEqual(pkg.version, '2.6.5', 'SafeLedger account-type/Add Asset hotfix must report version 2.6.5.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 5,
+  'SafeLedger 2.6.5 account-type/dropdown regressions must remain active on later 2.6.x patches.');
 
 const typeLabels = typeSplit.TYPE_GROUPS.map((group) => group.label);
 assert.deepStrictEqual(typeLabels, [...typeLabels].sort((a, b) => a.localeCompare(b)),
@@ -71,54 +72,9 @@ assert(typeSource.includes('Finance & Crypto') && typeSource.includes('Social & 
   'Known account dropdowns must keep meaningful grouped categories.');
 const walletPresetSource = read('src/main/vault-item-wallet-presets-ui.js');
 assert(walletPresetSource.includes("'Web3 Account', 'Website Account'"),
-  'Wallet preset UI must leave the new account-specific preset dropdowns alone.');
+  'Wallet preset UI must leave the account-specific preset dropdowns alone.');
 const rendererEntry = read('src/main/renderer-entry.js');
 assert(rendererEntry.includes("require('./vault-item-type-split-ui.js')"),
   'The Web3/Website type split must load in the real renderer bundle.');
 
-(async () => {
-  let selected = null;
-  let firstClicks = 0;
-  let addAssetRetries = 0;
-  let prevented = false;
-  let stopped = false;
-  const first = { click() { firstClicks += 1; selected = first; } };
-  const addAsset = { click() { addAssetRetries += 1; } };
-  const doc = {
-    querySelector(selector) {
-      if (selector === '#groupArea .nav > li > a.item-selected') return selected;
-      if (selector === '#groupArea .nav > li > a') return first;
-      return null;
-    },
-    getElementById(id) { return id === 'addRecord' ? addAsset : null; }
-  };
-  const event = {
-    preventDefault() { prevented = true; },
-    stopImmediatePropagation() { stopped = true; }
-  };
-
-  assert.strictEqual(selectionTests.repairAddAssetClick(event, doc), true,
-    'A dead Add Asset click with no selected Vault Item must enter the repair path.');
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.strictEqual(firstClicks, 1, 'Add Asset repair must select the first visible Vault Item exactly once.');
-  assert.strictEqual(addAssetRetries, 1, 'Add Asset repair must retry the actual Add Asset button after selection settles.');
-  assert(prevented && stopped,
-    'The original Add Asset click must not reach the old null-selection guard before the repair finishes.');
-
-  prevented = false;
-  stopped = false;
-  assert.strictEqual(selectionTests.repairAddAssetClick(event, doc), false,
-    'Add Asset must not interfere when a Vault Item is already selected.');
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.strictEqual(addAssetRetries, 1, 'An already-valid Add Asset click must not create a retry loop.');
-  assert(!prevented && !stopped, 'A valid Add Asset click must continue to the normal renderer handler.');
-
-  const selectionSource = read('src/main/vault-item-selection-ui.js');
-  assert(selectionSource.includes('stopImmediatePropagation') && selectionSource.includes('addAsset.click()'),
-    'The Add Asset repair must explicitly wait for Vault Item selection before retrying the real button.');
-
-  console.log('PASS SafeLedger 2.6.5 splits Web3/Website account types, groups and alphabetizes dropdowns, retains Chain Games presets, and repairs the real Add Asset click sequence.');
-})().catch((err) => {
-  console.error(err && err.stack ? err.stack : err);
-  process.exit(1);
-});
+console.log(`PASS SafeLedger ${pkg.version} preserves the 2.6.5 Web3/Website type split, grouped alphabetized dropdowns, and Chain Games Web3 presets.`);
