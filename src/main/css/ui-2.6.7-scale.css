@@ -1,0 +1,217 @@
+/* SafeLedger 2.6.7 readability and navigation scale.
+ * This file is loaded last so the requested visual scale wins without changing
+ * security, vault data, action-dock sizing, or Emergency Lock dimensions. */
+
+/* Base readability: 14px -> 15px. */
+html,
+body {
+  font-size: 15px !important;
+}
+
+.form-control,
+#detailArea,
+#detailArea .detail-info-line,
+.sensitive-field summary,
+.detail-notes-value,
+.workspace-empty-text {
+  font-size: 15px !important;
+}
+
+/* Supporting 13px text -> 14px. */
+.dates,
+.wallet-detail-category,
+.sensitive-field-meta,
+.appearance-option strong,
+.column-empty-title {
+  font-size: 14px !important;
+}
+
+/* Small/helper 12px text -> 13px. */
+.wallet-list-category,
+.qr-caption,
+.password-strength-label,
+.settings-backup-note,
+.appearance-option span,
+.column-empty-text {
+  font-size: 13px !important;
+}
+
+.coin-detail-symbol {
+  font-size: 17px !important;
+}
+
+.workspace-empty-title {
+  font-size: 27px !important;
+}
+
+/* Keep the primary detail hierarchy at the proposed 30px size. */
+#detailArea h1,
+#detailArea .page-header,
+.wallet-detail-title,
+.coin-detail-title-wrap h1 {
+  font-size: 30px !important;
+}
+
+/* Profiles already use a simple white selection border. Vault Items and
+ * Assets now follow the same no-fill language: border only, no black tile. */
+.content-middle .nav > li > a.item-selected,
+.content-middle .nav > li > a.item-selected:hover,
+.content-middle .nav > li > a.item-selected:focus {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: #fff !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+/* Vault Item and Asset navigation artwork: 28px -> 32px. */
+.coin-list-brand-image,
+.coin-list-generic-icon,
+.wallet-list-brand-image,
+.wallet-list-catalog-icon,
+.wallet-list-icon,
+.wallet-list-fallback-icon {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  flex: 0 0 32px !important;
+}
+
+.coin-list-generic-icon,
+.wallet-list-catalog-icon {
+  font-size: 11px !important;
+}
+
+.wallet-list-fallback-icon .sl-wallet-fallback-svg {
+  width: 25px !important;
+  height: 25px !important;
+}
+
+/* Asset detail artwork: 54px -> 60px. */
+.coin-brand-image,
+.coin-brand-icon {
+  width: 60px !important;
+  min-width: 60px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  flex: 0 0 60px !important;
+}
+
+.coin-brand-icon {
+  font-size: 30px !important;
+}
+
+.coin-brand-generic {
+  font-size: 20px !important;
+}
+
+/* Vault Item detail now mirrors the Asset detail header with the same 60px
+ * local/offline artwork, including service icons such as Chain Games. */
+.wallet-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 4px 0 10px;
+}
+
+.wallet-detail-title-wrap {
+  min-width: 0;
+}
+
+.wallet-detail-header .wallet-detail-title {
+  margin: 0 !important;
+}
+
+.wallet-detail-header .wallet-detail-category {
+  margin: 4px 0 0 !important;
+}
+
+.wallet-detail-header .wallet-detail-brand-image,
+.wallet-detail-header .wallet-list-brand-image,
+.wallet-detail-header .wallet-list-catalog-icon,
+.wallet-detail-header .wallet-list-icon,
+.wallet-detail-header .wallet-list-fallback-icon {
+  width: 60px !important;
+  min-width: 60px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  flex: 0 0 60px !important;
+  margin-right: 0 !important;
+  border-radius: 12px;
+}
+
+.wallet-detail-header img.wallet-detail-brand-image,
+.wallet-detail-header img.wallet-list-brand-image {
+  display: block;
+  object-fit: contain;
+}
+
+.wallet-detail-header .wallet-list-catalog-icon {
+  font-size: 18px !important;
+}
+
+.wallet-detail-header .wallet-list-fallback-icon .sl-wallet-fallback-svg {
+  width: 46px !important;
+  height: 46px !important;
+}
+
+/* Explicitly preserve the existing action and Emergency Lock control scale. */
+.detail-action-button,
+.global-search-inline,
+.dashboard-inline,
+.activity-inline,
+.settings-inline,
+.panic-lock-inline {
+  font-size: 14px !important;
+}
+
+@media (max-width: 1000px) {
+  /* Existing compact list text was 12px; scale it proportionally to 13px. */
+  .content-middle .nav > li > a {
+    font-size: 13px !important;
+  }
+
+  /* Compact navigation artwork: 24px -> 28px. */
+  .coin-list-brand-image,
+  .coin-list-generic-icon,
+  .wallet-list-brand-image,
+  .wallet-list-catalog-icon,
+  .wallet-list-icon,
+  .wallet-list-fallback-icon {
+    width: 28px !important;
+    min-width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    flex: 0 0 28px !important;
+  }
+
+  .wallet-list-fallback-icon .sl-wallet-fallback-svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  /* Compact detail artwork: 46px -> 52px. */
+  .coin-brand-image,
+  .coin-brand-icon,
+  .wallet-detail-header .wallet-detail-brand-image,
+  .wallet-detail-header .wallet-list-brand-image,
+  .wallet-detail-header .wallet-list-catalog-icon,
+  .wallet-detail-header .wallet-list-icon,
+  .wallet-detail-header .wallet-list-fallback-icon {
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    flex: 0 0 52px !important;
+  }
+
+  .coin-brand-icon {
+    font-size: 26px !important;
+  }
+
+  .wallet-detail-header .wallet-list-fallback-icon .sl-wallet-fallback-svg {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
