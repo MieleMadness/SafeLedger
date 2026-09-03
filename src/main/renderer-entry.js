@@ -5,6 +5,7 @@ require('./app-menu-ui.js');
 require('./startup-ui.js');
 require('./renderer.js');
 require('./privacy-mode-ui.js');
+require('./dashboard-action-state-ui.js');
 require('./dashboard-ui.js');
 require('./dashboard-row-ui.js');
 require('./recovery-intelligence-dashboard-ui.js');
