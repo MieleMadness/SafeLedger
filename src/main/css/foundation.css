@@ -11,7 +11,7 @@
 
 .app-grid {
   display: grid !important;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 5fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr);
   width: 100%;
   margin: 0 !important;
 }
