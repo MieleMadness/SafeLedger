@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.13', 'This workflow candidate must report SafeLedger 2.6.13.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 13,
+  'SafeLedger 2.6.13 regressions must remain active on 2.6.13 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.13-tests.js'),
   '2.6.13 regression coverage must stay in the locked suite.');
 
@@ -26,4 +28,4 @@ assert(!entrySource.includes('profile-wallet-picker-ui.js'));
 assert(profileSource.includes('function createWalletTemplateIcon(template)'));
 assert(!profileSource.includes('MutationObserver'));
 
-console.log('PASS SafeLedger 2.6.13 updates the historical wallet-picker gate to the direct Profile renderer without restoring observer code.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.13 historical wallet-picker gate on the direct Profile renderer.`);
