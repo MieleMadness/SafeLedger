@@ -35,7 +35,7 @@ function contrast(a, b) {
 
 assert(/^2\.\d+\.\d+$/.test(pkg.version));
 assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/local-icons.css'), 'theme stylesheet must load after the legacy icon/foundation layers');
-assert(index.indexOf('./css/ui-2.5.8.css') > index.indexOf('./css/app-theme.css'), 'targeted UI refinements must load after the base theme');
+assert(index.indexOf('./css/ui-current.css') > index.indexOf('./css/app-theme.css'), 'current UI refinements must load after the base theme');
 assert(foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 5fr)'));
 
 const mainArea = index.indexOf('id="mainArea"');
