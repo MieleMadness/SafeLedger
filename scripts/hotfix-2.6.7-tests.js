@@ -30,7 +30,7 @@ const indexSource = read('src/main/index.html');
 const scaleCss = read('src/main/css/ui-current.css');
 const themeCss = scaleCss;
 const windowSizingSource = read('src/main/window-sizing-main.js');
-const startupSource = read('src/main/startup.js');
+const bootstrapSource = read('src/main/bootstrap.js');
 const groupSource = read('src/main/group.js');
 const rendererEntry = read('src/main/renderer-entry.js');
 const rendererSource = read('src/main/renderer.js');
@@ -57,8 +57,10 @@ for (const retiredRuntimeLayer of [
 }
 assert(indexSource.includes('<span class="fa fa-plus"></span> Add Vault</button>') && !indexSource.includes('Add Vault Item</button>'));
 assert(!rendererEntry.includes("require('./ui-scale-2.6.7.js');"));
-assert(startupSource.includes("require('./window-sizing-main')") && startupSource.includes("require('./bootstrap')"),
-  'Preferred startup sizing must be installed by the Electron main-process entry before bootstrap.');
+assert(bootstrapSource.includes("const windowSizing = require('./window-sizing-main');") &&
+  bootstrapSource.includes('installPreferredWindowSizing();') &&
+  bootstrapSource.indexOf('installPreferredWindowSizing();') < bootstrapSource.indexOf("require('./main');"),
+  'Preferred startup sizing must be installed inside the trusted Electron bootstrap before main.js creates the window.');
 assert(rendererEntry.includes("require('./app-menu-ui.js');"));
 assert(!rendererEntry.includes("require('./asset-multichain-ui.js');"));
 
@@ -117,4 +119,4 @@ assert(mainSource.includes("if (process.platform !== 'darwin') {") && mainSource
 assert(preloadSource.includes("prepareAppMenu: () => ipcRenderer.invoke('app-menu-prepare')") &&
   preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"));
 
-console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior with native main-process preferred window sizing.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior with trusted-bootstrap main-process window sizing.`);
