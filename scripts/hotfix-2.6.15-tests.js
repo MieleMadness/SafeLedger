@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.15', 'This workflow candidate must report SafeLedger 2.6.15.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 15,
+  'SafeLedger 2.6.15 message-readability regressions must remain active on 2.6.15 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.15-tests.js'),
   '2.6.15 message-readability coverage must stay in the locked suite.');
 assert(read('package.json').includes('node scripts/visual-contract-regression-tests.js'),
@@ -85,4 +87,4 @@ try {
   else global.document = previousDocument;
 }
 
-console.log('PASS SafeLedger 2.6.15 keeps readable, accessible, theme-aware status messages and the reusable visual baseline gate.');
+console.log(`PASS SafeLedger ${pkg.version} keeps readable, accessible, theme-aware status messages and the reusable visual baseline gate.`);
