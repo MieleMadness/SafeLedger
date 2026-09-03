@@ -39,8 +39,8 @@ function appendSectionTitle(area, text) {
   area.appendChild(heading);
 }
 
-function appendDetail(area, group, appendDetailLine) {
-  appendSectionTitle(area, 'Wallet information');
+function appendDetail(area, group, appendDetailLine, options = {}) {
+  appendSectionTitle(area, options.informationTitle || 'Wallet information');
   appendDetailLine(area, 'Manufacturer', group.manufacturer);
   appendDetailLine(area, 'Model', group.model);
   appendDetailLine(area, 'Purchase / setup date', group.purchaseDate);
@@ -91,4 +91,4 @@ exports.applyEditFields = applyEditFields;
 exports.appendDetail = appendDetail;
 exports.printFields = printFields;
 exports.searchableValues = searchableValues;
-exports._test = { DEFINITIONS };
+exports._test = { DEFINITIONS, appendSectionTitle };
