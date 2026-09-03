@@ -68,7 +68,7 @@ assert(theme.includes('.detail-action-area {'));
 assert(theme.includes('flex: 1 1 0'));
 assert(theme.includes('overflow-x: auto'));
 
-assert(group.includes("title: 'Cancel edit wallet'"));
+assert(group.includes("title: 'Cancel edit vault item'"));
 assert(group.includes("onClick: () => renderGroupDetail(params)"));
 assert(record.includes("title: 'Cancel edit asset'"));
 assert(record.includes("onClick: () => renderRecordDetail(params)"));
