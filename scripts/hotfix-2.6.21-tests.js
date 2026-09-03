@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.21', 'This workflow candidate must report SafeLedger 2.6.21.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 21,
+  'SafeLedger 2.6.21 historical sizing-gate regressions must remain active on 2.6.21 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.21-tests.js'),
   '2.6.21 historical sizing-gate coverage must stay in the locked suite.');
 
@@ -21,7 +23,7 @@ const main = read('src/main/main.js');
 for (const [name, source] of [['2.6.7', gate267], ['2.6.11', gate2611]]) {
   assert(!source.includes('PREFERRED_WIDTH, 1400'), `${name} gate must not freeze the retired 1400px width.`);
   assert(!source.includes('width: 1400, height: 750'), `${name} gate must not expect the retired 1400px target.`);
-  assert(source.includes('windowSizing-main') || source.includes('window-sizing-main'),
+  assert(source.includes('window-sizing-main'),
     `${name} gate must continue protecting main-process sizing ownership.`);
 }
 
@@ -39,4 +41,4 @@ assert.strictEqual(windowSizing.applyPreferredWindowSize({
 assert.deepStrictEqual(resized, { width: 1283, height: 750, animate: false },
   'Current preferred sizing must still grow a normal desktop window to the 2.6.19 layout target.');
 
-console.log('PASS SafeLedger 2.6.21 removes retired 1400px assumptions from historical sizing gates while preserving the requested layout and deletion feedback.');
+console.log(`PASS SafeLedger ${pkg.version} keeps retired 1400px assumptions out of historical sizing gates while preserving the requested layout and deletion feedback.`);
