@@ -28,14 +28,15 @@ function resetArea(area) {
 function statusKind(value) {
   switch (String(value || '').toUpperCase()) {
   case 'SUCCESS': return 'success';
-  case 'ERROR': return 'danger';
+  case 'ERROR':
+  case 'DELETED': return 'danger';
   default: return 'info';
   }
 }
 
 function shouldDisplayStatus(params = {}) {
   const state = String(params.status || '').toUpperCase();
-  if (state === 'ERROR') return true;
+  if (state === 'ERROR' || state === 'DELETED') return true;
   if (state === 'SUCCESS') return !ROUTINE_SUCCESS.test(String(params.statusMsg || '').trim());
   return state === 'INFO' || state === 'WARNING';
 }
@@ -44,7 +45,7 @@ function createMessage(kind, message, options = {}) {
   const alert = document.createElement('div');
   alert.className = `alert alert-${kind} safeledger-status safeledger-status-${kind}`;
   alert.setAttribute('role', options.role || (kind === 'danger' ? 'alert' : 'status'));
-  alert.setAttribute('aria-live', kind === 'danger' ? 'assertive' : 'polite');
+  alert.setAttribute('aria-live', options.ariaLive || (kind === 'danger' ? 'assertive' : 'polite'));
   alert.setAttribute('aria-atomic', 'true');
 
   const iconClass = options.iconClass === false ? '' : (options.iconClass || STATUS_ICONS[kind]);
@@ -73,8 +74,10 @@ exports.showStatus = (params = {}) => {
   if (!area) return false;
   resetArea(area);
 
-  const kind = statusKind(params.status);
-  area.appendChild(createMessage(kind, params.statusMsg));
+  const state = String(params.status || '').toUpperCase();
+  const kind = statusKind(state);
+  const options = state === 'DELETED' ? { role: 'status', ariaLive: 'polite' } : {};
+  area.appendChild(createMessage(kind, params.statusMsg, options));
   closeTimer = window.setTimeout(closeStatus, STATUS_TIMEOUT_MS);
   return true;
 };
