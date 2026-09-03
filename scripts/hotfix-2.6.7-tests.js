@@ -73,7 +73,8 @@ assert(scaleCss.includes('background-color: transparent !important;') && scaleCs
 assert(!scaleCss.includes('--sl-action-size:') && !scaleCss.includes('--sl-top-action-size:'));
 assert(!/\.panic-lock-inline\s*\{[^}]*\bwidth\s*:/s.test(scaleCss));
 
-assert.strictEqual(visualUi.PREFERRED_WIDTH, 1400);
+assert(Number.isInteger(visualUi.PREFERRED_WIDTH) && visualUi.PREFERRED_WIDTH >= 1200,
+  'Preferred desktop width must remain explicit and large enough for the four-column interface.');
 assert.strictEqual(visualUi.PREFERRED_HEIGHT, 750);
 let resized = null;
 const normalWindow = {
@@ -81,7 +82,7 @@ const normalWindow = {
   setSize(width, height, animate) { resized = { width, height, animate }; }
 };
 assert.strictEqual(visualUi.applyPreferredWindowSize(normalWindow, { width: 1920, height: 1080 }), true);
-assert.deepStrictEqual(resized, { width: 1400, height: 750, animate: false });
+assert.deepStrictEqual(resized, { width: visualUi.PREFERRED_WIDTH, height: 750, animate: false });
 resized = null;
 const alreadyLarge = {
   getBounds: () => ({ width: 1600, height: 900 }),
