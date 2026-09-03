@@ -1,6 +1,10 @@
 'use strict';
 
-const PREFERRED_WIDTH = 1400;
+// The 2.6.18 layout used 12 total grid units (2/2/3/5) at 1400px.
+// 2.6.19 equalizes the Asset column to 2fr, leaving 11 total units
+// (2/2/2/5). Keep the same approximate per-unit width so the Detail column
+// stays visually stable while the overall window becomes one grid unit narrower.
+const PREFERRED_WIDTH = 1283;
 const PREFERRED_HEIGHT = 750;
 
 function preferredWindowSize(workArea = {}) {
