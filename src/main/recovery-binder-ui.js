@@ -152,7 +152,7 @@ async function printBinder(binder) {
 
   appendText(doc.body, 'h2', '', 'Profile');
   await appendTable(doc, doc.body, binder.profileFields);
-  appendText(doc.body, 'div', 'meta', `${binder.walletCount} wallet${binder.walletCount === 1 ? '' : 's'} · ${binder.assetCount} asset${binder.assetCount === 1 ? '' : 's'}`);
+  appendText(doc.body, 'div', 'meta', `${binder.walletCount} vault item${binder.walletCount === 1 ? '' : 's'} · ${binder.assetCount} asset${binder.assetCount === 1 ? '' : 's'}`);
 
   for (const wallet of binder.wallets) {
     const walletSection = doc.createElement('section');
@@ -225,7 +225,7 @@ async function show(params = {}) {
   try {
     const safeBinder = await fetchBinder(params.profile, recoveryBinder.DEFAULT_OPTIONS, false);
     summary.innerHTML = '';
-    appendText(summary, 'strong', '', `${safeBinder.walletCount} wallet${safeBinder.walletCount === 1 ? '' : 's'}`);
+    appendText(summary, 'strong', '', `${safeBinder.walletCount} vault item${safeBinder.walletCount === 1 ? '' : 's'}`);
     appendText(summary, 'span', '', `${safeBinder.assetCount} asset${safeBinder.assetCount === 1 ? '' : 's'}`);
   } catch (err) {
     summary.textContent = err && err.message ? err.message : 'Unable to read the selected profile.';
@@ -252,7 +252,7 @@ async function show(params = {}) {
     const privacySelections = recoveryBinder.selectedPrivacyLabels(options);
     if (privacySelections.length) {
       const approved = confirm(
-        `This Recovery Binder will include additional private or sensitive information: ${privacySelections.join(', ')}. Anyone who sees the printout may learn wallet details or gain access to funds. Print only to a trusted local printer and store it securely. Continue?`
+        `This Recovery Binder will include additional private or sensitive information: ${privacySelections.join(', ')}. Anyone who sees the printout may learn vault-item details or gain access to funds. Print only to a trusted local printer and store it securely. Continue?`
       );
       if (!approved) return;
     }
