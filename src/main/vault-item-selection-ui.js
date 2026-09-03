@@ -29,9 +29,9 @@ function ensureVaultItemSelected(doc, vaultData = activeVaultData) {
   const candidate = selectedVaultItem(doc) || firstVaultItem(doc);
   if (!candidate || typeof candidate.click !== 'function') return null;
 
-  // renderer-bridge now fans one shared renderer-world vaultData object to all
-  // listeners. The normal Vault Item click path therefore repairs the exact
-  // selection state that renderer.js reads when Add Asset bubbles afterward.
+  // Selection repair happens only when Add Asset is actually requested. This
+  // keeps a Profile click on the Profile detail screen instead of silently
+  // navigating into the first Vault Item after the Profile finishes loading.
   candidate.click();
   return candidate;
 }
@@ -58,12 +58,10 @@ function install(doc = document) {
       return;
     }
     if (result.vaultData) activeVaultData = result.vaultData;
-    if (result.type !== 'vault-read') return;
 
-    // renderer.js handles the read result first and builds the Vault Item list.
-    // Then select through the real list click path so detail/asset columns and
-    // shared selection state all agree before the user presses Add Asset.
-    queueMicrotask(() => ensureVaultItemSelected(doc, activeVaultData));
+    // Do not auto-click a Vault Item after vault-read. renderer.js intentionally
+    // shows the selected Profile detail before reading its encrypted contents;
+    // automatically clicking the first Vault Item here would replace that view.
   });
 }
 
