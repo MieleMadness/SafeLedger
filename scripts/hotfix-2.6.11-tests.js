@@ -16,7 +16,7 @@ assert(read('package.json').includes('node scripts/hotfix-2.6.11-tests.js'),
 
 const groupSource = read('src/main/group.js');
 const windowSizingSource = read('src/main/window-sizing-main.js');
-const startupSource = read('src/main/startup.js');
+const bootstrapSource = read('src/main/bootstrap.js');
 const rendererEntry = read('src/main/renderer-entry.js');
 assert(groupSource.includes('function appendVaultItemHeader(area, group, category = getWalletCategory(group))'));
 assert(groupSource.includes("const icon = vaultItemPresentation.createIconElement(group);"));
@@ -32,8 +32,10 @@ assert(!windowSizingSource.includes('cloneDetailIcon'));
 assert(!windowSizingSource.includes('cloneNode('));
 assert(!rendererEntry.includes("require('./ui-scale-2.6.7.js');"),
   'Renderer must not own startup window sizing after 2.6.17.');
-assert(startupSource.includes("app.on('browser-window-created'") && startupSource.includes("require('./bootstrap')"),
-  'Electron startup must own preferred window sizing before the established bootstrap runtime loads.');
+assert(bootstrapSource.includes('function installPreferredWindowSizing()') &&
+  bootstrapSource.includes("app.on('browser-window-created'") &&
+  bootstrapSource.indexOf('installPreferredWindowSizing();') < bootstrapSource.indexOf("require('./main');"),
+  'Trusted bootstrap must own preferred window sizing before main.js loads.');
 
 class FakeClassList {
   constructor() { this.values = new Set(); }
@@ -67,19 +69,14 @@ class FakeElement {
 }
 
 const previousDocument = global.document;
-global.document = {
-  createElement: (tag) => new FakeElement(tag)
-};
+global.document = { createElement: (tag) => new FakeElement(tag) };
 
 try {
   const groupPath = require.resolve('../src/main/group.js');
   delete require.cache[groupPath];
   const group = require(groupPath);
   const area = new FakeElement('div');
-  const header = group._test.appendVaultItemHeader(area, {
-    name: 'GitHub',
-    category: 'Website Account'
-  }, 'Website Account');
+  const header = group._test.appendVaultItemHeader(area, { name: 'GitHub', category: 'Website Account' }, 'Website Account');
 
   assert.strictEqual(area.children.length, 1, 'Direct renderer must append one complete Vault Item header.');
   assert.strictEqual(header, area.children[0]);
@@ -90,8 +87,7 @@ try {
   assert.strictEqual(icon.tagName, 'IMG');
   assert(icon.src.startsWith('data:image/svg+xml'), 'Known service detail artwork must remain fully local/offline.');
   assert.strictEqual(icon.dataset.serviceCatalog, 'GitHub');
-  assert(icon.classList.contains('wallet-detail-brand-image'),
-    'Detail artwork must receive the existing large-detail artwork class during rendering.');
+  assert(icon.classList.contains('wallet-detail-brand-image'));
 
   const titleWrap = header.children[1];
   assert.strictEqual(titleWrap.className, 'wallet-detail-title-wrap');
@@ -102,15 +98,11 @@ try {
   assert.strictEqual(titleWrap.children[1].textContent, 'Website Account');
 
   const fallbackArea = new FakeElement('div');
-  const fallbackHeader = group._test.appendVaultItemHeader(fallbackArea, {
-    name: 'Unknown Service',
-    category: 'Website Account'
-  }, 'Website Account');
+  const fallbackHeader = group._test.appendVaultItemHeader(fallbackArea, { name: 'Unknown Service', category: 'Website Account' }, 'Website Account');
   const fallbackIcon = fallbackHeader.children[0];
   assert.strictEqual(fallbackIcon.tagName, 'I');
   assert(fallbackIcon.className.includes('fa-globe'));
-  assert(fallbackIcon.classList.contains('wallet-detail-brand-image'),
-    'Fallback account artwork must use the same direct detail treatment.');
+  assert(fallbackIcon.classList.contains('wallet-detail-brand-image'));
 } finally {
   if (previousDocument === undefined) delete global.document;
   else global.document = previousDocument;
@@ -123,6 +115,6 @@ assert.strictEqual(windowSizing.applyPreferredWindowSize({
   setSize(width, height, animate) { resized = { width, height, animate }; }
 }, { width: 1920, height: 1080 }), true);
 assert.deepStrictEqual(resized, { width: 1400, height: 750, animate: false },
-  'Retiring the renderer helper must preserve the preferred-window sizing behavior in the main process.');
+  'Retiring the renderer helper must preserve preferred sizing inside trusted bootstrap ownership.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.11 direct Vault Item detail artwork and native window-sizing behavior active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.11 direct Vault Item artwork and trusted-bootstrap window sizing active.`);
