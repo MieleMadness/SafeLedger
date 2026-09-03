@@ -8,7 +8,6 @@ const record = require('./record');
 const utils = require('./utils');
 const securityUi = require('./security-ui');
 const walletCatalog = require('./wallet-catalog');
-const walletIcons = require('./wallet-icons');
 const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const recoveryReadiness = require('./recovery-readiness');
@@ -17,11 +16,12 @@ const walletMetadata = require('./wallet-metadata');
 const customFields = require('./custom-fields');
 const customFieldsUi = require('./custom-fields-ui');
 const emptyState = require('./empty-state-ui');
+const vaultItemPresentation = require('./vault-item-presentation');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
 function displayWalletName(name) {
-  return normalize(name) === 'base app (coinbase wallet)' ? 'Coinbase Wallet' : (name || '');
+  return vaultItemPresentation.displayName(name);
 }
 
 function getCatalogWallet(group) {
@@ -34,7 +34,8 @@ function getCatalogWallet(group) {
 }
 
 function getWalletCategory(group) {
-  if (group && group.category) return group.category;
+  const explicit = vaultItemPresentation.normalizeCategory(group && group.name, group && group.category);
+  if (explicit) return explicit;
   const catalogWallet = getCatalogWallet(group);
   return catalogWallet && catalogWallet.type ? `${catalogWallet.type} Wallet` : '';
 }
@@ -148,7 +149,7 @@ function renderReadinessCard(area, params) {
     if (params.saving.state) return alert('Please wait for processing to complete');
     recoveryDrillUi.render({
       group: params.group,
-      walletName: displayWalletName(params.group.name) || 'Wallet',
+      walletName: displayWalletName(params.group.name) || 'Vault Item',
       onCancel: () => renderGroupDetail(params),
       onComplete: (patch, button) => persistWalletUpdate(params, patch, button, 'recovery-drill-completed')
     });
@@ -176,7 +177,7 @@ const renderGroups = (params) => {
     emptyState.renderColumn(groupArea, {
       icon: 'fa-credit-card',
       title: 'Select a profile',
-      text: 'Wallets appear after a Profile is selected.'
+      text: 'Vault Items appear after a Profile is selected.'
     });
     return;
   }
@@ -185,8 +186,8 @@ const renderGroups = (params) => {
   if (!groupsArray.length) {
     emptyState.renderColumn(groupArea, {
       icon: 'fa-credit-card',
-      title: 'No wallets yet',
-      text: 'Add a Wallet to build this Profile recovery plan.'
+      title: 'No vault items yet',
+      text: 'Add a Vault Item to build this Profile recovery plan.'
     });
     return;
   }
@@ -201,7 +202,7 @@ const renderGroups = (params) => {
     const i = entry.index;
     const current = entry.group;
     const category = getWalletCategory(current);
-    const visibleName = displayWalletName(current.name) || 'Unnamed Wallet';
+    const visibleName = displayWalletName(current.name) || 'Unnamed Vault Item';
     const searchable = [visibleName, category, current.tags, ...walletMetadata.searchableValues(current), ...customFields.searchableValues(current.customFields), getUserWalletNotes(current)]
       .map((v) => String(v || '').toLowerCase()).join(' ');
     if (query && !searchable.includes(query)) continue;
@@ -220,7 +221,7 @@ const renderGroups = (params) => {
     });
     if (params.vaultData.groupSelected == i) href.className = 'item-selected';
 
-    const icon = walletIcons.createIconElement(current);
+    const icon = vaultItemPresentation.createIconElement(current);
     href.appendChild(icon);
     const text = document.createElement('span');
     text.className = 'wallet-list-text';
@@ -249,8 +250,8 @@ const renderGroups = (params) => {
   if (!visibleCount) {
     emptyState.renderColumn(groupArea, {
       icon: 'fa-search',
-      title: 'No matching wallets',
-      text: 'Try a different wallet search term.'
+      title: 'No matching vault items',
+      text: 'Try a different vault-item search term.'
     });
     return;
   }
@@ -263,17 +264,17 @@ const createEditGroup = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
-  header.textContent = params.group ? 'Modify Wallet' : 'Add Wallet';
+  header.textContent = params.group ? 'Modify Vault Item' : 'Add Vault Item';
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
 
   const { form, grid } = editFormUi.createForm(area);
+  const initialCategory = getWalletCategory(params.group);
   const inputName = editFormUi.addTextInput(grid, {
     id: 'inputName', label: 'Name', value: params.group ? displayWalletName(params.group.name) : '', maxLength: 25
   });
   const inputCategory = editFormUi.addSelect(grid, {
-    id: 'inputCategory', label: 'Wallet category', value: getWalletCategory(params.group) || '',
-    options: ['', 'Hardware Wallet', 'Software Wallet', 'Other Wallet']
+    id: 'inputCategory', label: 'Vault item type', value: initialCategory, options: ['']
   });
   const metadataControls = walletMetadata.addEditFields(editFormUi, grid, params.group || {});
   const inputTags = editFormUi.addTextInput(grid, {
@@ -301,6 +302,14 @@ const createEditGroup = (params) => {
   });
   const customFieldEditor = customFieldsUi.createEditor(grid, params.group && params.group.customFields);
 
+  vaultItemPresentation.configureEditForm({
+    form,
+    categoryInput: inputCategory,
+    nameInput: inputName,
+    customEditor: customFieldEditor,
+    initialCategory
+  });
+
   const saveGroup = (button) => {
     if (params.saving.state) return alert('Please wait for processing to complete');
     if (!inputName.value) {
@@ -311,7 +320,7 @@ const createEditGroup = (params) => {
 
     const g = params.group || { created: Date() };
     g.name = inputName.value;
-    g.category = inputCategory.value;
+    g.category = vaultItemPresentation.normalizeCategory(g.name, inputCategory.value);
     walletMetadata.applyEditFields(g, metadataControls);
     g.tags = inputTags.value;
     g.password = inputPassword.value;
@@ -342,12 +351,12 @@ const createEditGroup = (params) => {
   if (params.group) {
     actions.push({
       icon: 'fa-times',
-      title: 'Cancel edit wallet',
+      title: 'Cancel edit vault item',
       className: 'detail-action-cancel',
       onClick: () => renderGroupDetail(params)
     });
   }
-  actions.push({ icon: 'fa-save', title: 'Save wallet', className: 'detail-action-save', onClick: (_event, button) => saveGroup(button) });
+  actions.push({ icon: 'fa-save', title: 'Save vault item', className: 'detail-action-save', onClick: (_event, button) => saveGroup(button) });
   detailActions.set(actions);
 };
 
@@ -358,7 +367,7 @@ const renderGroupDetail = (params) => {
   area.innerHTML = '';
   const header = document.createElement('h1');
   header.className = 'wallet-detail-title';
-  header.textContent = displayWalletName(params.group.name) || 'Wallet';
+  header.textContent = displayWalletName(params.group.name) || 'Vault Item';
   area.appendChild(header);
   const category = getWalletCategory(params.group);
   if (category) {
@@ -370,7 +379,9 @@ const renderGroupDetail = (params) => {
   area.appendChild(document.createElement('hr'));
 
   renderReadinessCard(area, params);
-  walletMetadata.appendDetail(area, params.group, appendDetailLine);
+  walletMetadata.appendDetail(area, params.group, appendDetailLine, {
+    informationTitle: vaultItemPresentation.detailInformationTitle(category)
+  });
   appendDetailLine(area, 'Tags', params.group.tags);
 
   securityUi.appendSensitiveField(area, 'Password', params.group.password || '', { allowQr: false });
@@ -396,15 +407,15 @@ const renderGroupDetail = (params) => {
   detailActions.set([
     {
       icon: params.group.pinned === true ? 'fa-star' : 'fa-star-o',
-      title: params.group.pinned === true ? 'Unpin wallet' : 'Pin wallet',
+      title: params.group.pinned === true ? 'Unpin vault item' : 'Pin vault item',
       className: 'detail-action-pin',
       onClick: (_event, button) => persistWalletUpdate(params, { pinned: params.group.pinned !== true }, button)
     },
-    { icon: 'fa-pencil', title: 'Edit wallet', onClick: () => createEditGroup(params) },
+    { icon: 'fa-pencil', title: 'Edit vault item', onClick: () => createEditGroup(params) },
     {
-      icon: 'fa-print', title: 'Print recovery sheet', className: 'detail-action-print',
-      onClick: () => securityUi.printRecoverySheet(`${displayWalletName(params.group.name) || 'Wallet'} Recovery Sheet`, [
-        { label: 'Wallet', value: displayWalletName(params.group.name) },
+      icon: 'fa-print', title: 'Print vault item', className: 'detail-action-print',
+      onClick: () => securityUi.printRecoverySheet(`${displayWalletName(params.group.name) || 'Vault Item'} Recovery Sheet`, [
+        { label: 'Vault Item', value: displayWalletName(params.group.name) },
         { label: 'Category', value: category },
         ...walletMetadata.printFields(params.group),
         { label: 'Tags', value: params.group.tags },
@@ -418,7 +429,7 @@ const renderGroupDetail = (params) => {
         { label: 'Notes', value: getUserWalletNotes(params.group) }
       ], true)
     },
-    { icon: 'fa-trash', title: 'Delete wallet', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
+    { icon: 'fa-trash', title: 'Delete vault item', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
   ]);
 };
 
@@ -426,16 +437,16 @@ const confirmDelete = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
-  header.textContent = `Confirm Delete of wallet: ${displayWalletName(params.group.name)}`;
+  header.textContent = `Confirm Delete of vault item: ${displayWalletName(params.group.name)}`;
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
   const note = document.createElement('p');
-  note.textContent = 'Use the red trash icon below to permanently delete this wallet.';
+  note.textContent = 'Use the red trash icon below to permanently delete this vault item.';
   area.appendChild(note);
   detailActions.set([
-    { icon: 'fa-times', title: 'Cancel delete wallet', className: 'detail-action-cancel', onClick: () => renderGroupDetail(params) },
+    { icon: 'fa-times', title: 'Cancel delete vault item', className: 'detail-action-cancel', onClick: () => renderGroupDetail(params) },
     {
-      icon: 'fa-trash', title: 'Confirm delete wallet', className: 'detail-action-delete',
+      icon: 'fa-trash', title: 'Confirm delete vault item', className: 'detail-action-delete',
       onClick: () => {
         params.vaultData.groups.splice(params.vaultData.groupSelected, 1);
         params.vaultData.groupSelected = null;
@@ -450,4 +461,4 @@ const confirmDelete = (params) => {
   ]);
 };
 
-exports._test = { walletSort, displayWalletName, formatLocalDate };
+exports._test = { walletSort, displayWalletName, formatLocalDate, getWalletCategory };
