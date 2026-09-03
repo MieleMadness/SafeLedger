@@ -33,10 +33,19 @@ assert(templates.every((template) => template.hasIcon === true), 'New Profile pi
 assert(templates.every((template) => profileSetup.iconMatch(template.name)), 'every New Profile wallet template must resolve to local brand artwork');
 
 const rendererEntry = read('src/main/renderer-entry.js');
-assert(rendererEntry.includes("require('./profile-create-cancel-ui.js')"), 'renderer must load the New Profile cancel action');
-const cancelSource = read('src/main/profile-create-cancel-ui.js');
-assert(cancelSource.includes("title = 'Cancel new profile'"), 'New Profile form must expose an explicit Cancel action');
-assert(cancelSource.includes("document.getElementById('dashboardButton')"), 'Cancel new profile should return through the existing Vault Overview navigation');
-assert(cancelSource.includes('data-profile-create-cancel') || cancelSource.includes('profileCreateCancel'), 'New Profile cancel action must be idempotent');
+const rendererSource = read('src/main/renderer.js');
+const profileSource = read('src/main/profile.js');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/profile-create-cancel-ui.js')), false,
+  'The post-render New Profile cancel injector must stay removed.');
+assert(!rendererEntry.includes("require('./profile-create-cancel-ui.js')"),
+  'Renderer entry must not restore the retired New Profile cancel observer.');
+assert(profileSource.includes("title: 'Cancel new profile'"),
+  'New Profile form must render its Cancel action directly.');
+assert(profileSource.includes("!profile && typeof params.onCancel === 'function'"),
+  'New Profile cancellation must be driven by the form owner, not DOM observation.');
+assert(rendererSource.includes('profile.createProfile(profileParams({ onCancel: cancelAddProfile }))'),
+  'The real Add Profile action must provide the direct cancel navigation callback.');
+assert(rendererSource.includes("document.getElementById('dashboardButton')"),
+  'Cancel new profile should continue through the existing Vault Overview navigation action.');
 
-console.log('PASS SafeLedger 2.5.16+ centers the password visibility button and its eye artwork without transform dependency, filters logo-less wallet templates, and adds New Profile cancellation.');
+console.log('PASS SafeLedger 2.5.16+ centers password visibility controls, filters logo-less wallet templates, and renders New Profile cancellation directly.');

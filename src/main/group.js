@@ -355,6 +355,13 @@ const createEditGroup = (params) => {
       className: 'detail-action-cancel',
       onClick: () => renderGroupDetail(params)
     });
+  } else if (typeof params.onCancel === 'function') {
+    actions.push({
+      icon: 'fa-times',
+      title: 'Cancel add vault item',
+      className: 'detail-action-cancel',
+      onClick: params.onCancel
+    });
   }
   actions.push({ icon: 'fa-save', title: 'Save vault item', className: 'detail-action-save', onClick: (_event, button) => saveGroup(button) });
   detailActions.set(actions);

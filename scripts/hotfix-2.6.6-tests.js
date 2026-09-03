@@ -57,28 +57,16 @@ assert.strictEqual(rendererPayload, secondListenerPayload,
 assert.strictEqual(secondListenerPayload.rendererTouched, true,
   'A state change made by the first renderer listener must be visible to later renderer listeners.');
 
-const selection = require(path.join(root, 'src/main/vault-item-selection.js'));
-const repaired = selection.ensureAddAssetSelection(rendererPayload.vaultData);
-assert.strictEqual(repaired.ok, true);
-assert.strictEqual(repaired.changed, true,
-  'Missing Add Asset selection must be repaired directly on the authoritative renderer vaultData object.');
-assert.strictEqual(rendererPayload.vaultData.groupSelected, 0);
-assert.strictEqual(rendererPayload.vaultData.recordSelected, null);
-assert.strictEqual(selection.ensureAddAssetSelection(rendererPayload.vaultData).changed, false,
-  'A valid selection must not be rewritten on later Add Asset requests.');
-
-const selectionSource = read('src/main/vault-item-selection.js');
-assert(!selectionSource.includes('renderer-bridge') && !selectionSource.includes('ipcRenderer'),
-  'Selection state must not keep a duplicate IPC subscription.');
-assert(!selectionSource.includes('document.') && !selectionSource.includes('.click()'),
-  'Selection state must not depend on DOM lookup or synthetic clicks.');
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection-ui.js')), false,
   'The old UI selection guard must remain deleted.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection.js')), false,
+  'The temporary direct auto-selection helper must also remain deleted once explicit selection is required.');
 const rendererSource = read('src/main/renderer.js');
-assert(rendererSource.includes('vaultItemSelection.ensureAddAssetSelection(vaultData)'));
-assert(rendererSource.includes('group.listGroups({ vaultData, saving });'));
-assert(rendererSource.includes('record.listRecords({ vaultData, saving });'));
-assert(rendererSource.includes('record.createRecord({ vaultData, saving });'));
+assert(rendererSource.includes('function selectedVaultItem()'));
+assert(rendererSource.includes("status: 'INFO'"));
+assert(rendererSource.includes("statusMsg: 'Select a Vault Item first, then choose Add Asset.'"));
+assert(rendererSource.includes('record.createRecord({ vaultData, saving, onCancel: showSelectedVaultItemDetail })'));
+assert(!rendererSource.includes('ensureAddAssetSelection'));
 
 // The old 2.6.5/2.6.6 fix prevented multiple DOM observers from mutating each
 // other's Web3/Website dropdowns. The stronger invariant is now that those
@@ -118,4 +106,4 @@ if (originalWindow === undefined) delete global.window;
 else global.window = originalWindow;
 delete require.cache[require.resolve(bridgePath)];
 
-console.log(`PASS SafeLedger ${pkg.version} preserves shared renderer state while Add Asset selection is direct and observer/click free.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves shared renderer state while Add Asset requires explicit user-selected Vault context.`);

@@ -9,8 +9,10 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const assetUi = require(path.join(root, 'src/main/asset-multichain-ui.js'));
 const assetTests = assetUi._test;
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.7', 'SafeLedger Add Asset observer-loop hotfix must report version 2.6.7.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 7,
+  'SafeLedger 2.6.7 regressions must remain active on 2.6.7 and later 2.6.x patches.');
 
 function trackedText(initial) {
   let value = initial;
@@ -79,7 +81,6 @@ const themeCss = read('src/main/css/ui-2.6.7-theme-refinement.css');
 const scaleSource = read('src/main/ui-scale-2.6.7.js');
 const rendererEntry = read('src/main/renderer-entry.js');
 const rendererSource = read('src/main/renderer.js');
-const selectionSource = read('src/main/vault-item-selection.js');
 const appMenuUi = read('src/main/app-menu-ui.js');
 const appMenuMain = read('src/main/app-menu-main.js');
 const mainSource = read('src/main/main.js');
@@ -127,13 +128,11 @@ assert(scaleSource.includes('observer.disconnect();') && scaleSource.includes('p
 
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection-ui.js')), false,
   'The old Add Asset capture-phase selection guard must remain deleted.');
-for (const forbidden of ['renderer-bridge', 'ipcRenderer', 'document.', 'addEventListener', '.click()']) {
-  assert(!selectionSource.includes(forbidden), `Direct Vault Item selection state must not depend on ${forbidden}.`);
-}
-assert(rendererSource.includes("const vaultItemSelection = require('./vault-item-selection');"));
-assert(rendererSource.includes('vaultItemSelection.ensureAddAssetSelection(vaultData)'));
-assert(rendererSource.includes("if (groupSearch) groupSearch.value = '';"),
-  'Auto-selection should reveal its destination rather than leaving a stale filter hiding it.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection.js')), false,
+  'SafeLedger must not silently auto-select a Vault Item for Add Asset.');
+assert(rendererSource.includes('function selectedVaultItem()'));
+assert(rendererSource.includes("statusMsg: 'Select a Vault Item first, then choose Add Asset.'"));
+assert(!rendererSource.includes('ensureAddAssetSelection'));
 assert(!rendererEntry.includes("require('./vault-item-selection-ui.js')"));
 
 assert(themeCss.includes('.app-menu-bar') && themeCss.includes('background: var(--sl-bg);') && themeCss.includes('color: var(--sl-text);'));
@@ -150,4 +149,4 @@ assert(mainSource.includes("if (process.platform !== 'darwin') {") && mainSource
 assert(preloadSource.includes("prepareAppMenu: () => ipcRenderer.invoke('app-menu-prepare')") &&
   preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"));
 
-console.log('PASS SafeLedger 2.6.7 keeps Add Asset reliable with direct selection ownership, preserves Profile detail navigation, and applies the requested interface refinements.');
+console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 Add Asset reliability and interface refinements while requiring explicit Vault Item selection.`);

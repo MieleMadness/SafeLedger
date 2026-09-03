@@ -40,7 +40,7 @@ assert(ledgerAssets.every((asset) => tokenIcons.getIconMatch(asset)), 'every see
 
 const krakenAssets = assetPresets.buildRecords('Kraken', assetPresets.EXCHANGE_CATEGORY, '2026-09-02T00:00:00.000Z');
 assert(krakenAssets.some((asset) => asset.symbol === 'BTC'), 'Kraken Exchange should preload reviewed Bitcoin support.');
-assert(krakenAssets.some((asset) => asset.symbol === 'ETH'), 'Kraken Exchange should preload reviewed Ethereum support.');
+assert(krakenAssets.some((asset) => asset.symbol === 'ETH'), 'Kraken Exchange should preload Ethereum support.');
 assert(krakenAssets.every((asset) => tokenIcons.getIconMatch(asset)), 'every seeded exchange asset must resolve to local artwork.');
 
 const fioAssets = assetPresets.buildRecords('FIO App', assetPresets.SERVICE_CATEGORY, '2026-09-02T00:00:00.000Z');
@@ -55,27 +55,34 @@ assert(forwarderSource.includes("channel === 'process-group'"),
 assert(seedSource.includes("request.type !== 'group-create'"), 'asset seeding must be limited to newly created Vault Items.');
 assert(seedSource.includes('if (!records.length) return 0;'), 'unknown Vault Items must remain empty instead of receiving guessed assets.');
 
-const cancelSource = read('src/main/add-form-cancel-ui.js');
-assert(cancelSource.includes("text === 'add asset'"), 'Add Asset must have an explicit Cancel action.');
-assert(cancelSource.includes("text === 'add vault item'"), 'Add Vault Item must have an explicit Cancel action.');
-assert(cancelSource.includes("#groupArea .nav > li > a.item-selected"), 'Cancel Add Asset should return to the selected Vault Item.');
-assert(cancelSource.includes("#vaultArea .nav > li > a.item-selected"), 'Cancel Add Vault Item should return to the selected Profile.');
+const rendererEntry = read('src/main/renderer-entry.js');
+const rendererSource = read('src/main/renderer.js');
+const groupSource = read('src/main/group.js');
+const recordSource = read('src/main/record.js');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/add-form-cancel-ui.js')), false,
+  'The post-render Add Vault/Add Asset cancel injector must stay removed.');
+assert(!rendererEntry.includes("require('./add-form-cancel-ui.js')"),
+  'Renderer entry must not restore the retired Add-form cancel observer.');
+assert(groupSource.includes("title: 'Cancel add vault item'") && groupSource.includes("typeof params.onCancel === 'function'"),
+  'Add Vault Item must render its Cancel action directly.');
+assert(recordSource.includes("title: 'Cancel add asset'") && recordSource.includes("typeof params.onCancel === 'function'"),
+  'Add Asset must render its Cancel action directly.');
+assert(rendererSource.includes('group.createGroup({ vaultData, saving, onCancel: showSelectedProfileDetail })'),
+  'The real Add Vault action must provide direct cancel navigation.');
+assert(rendererSource.includes('record.createRecord({ vaultData, saving, onCancel: showSelectedVaultItemDetail })'),
+  'The real Add Asset action must provide direct cancel navigation.');
 
 const iconFix = read('src/main/settings-icon-fix-ui.js');
 assert(iconFix.includes('sl-change-password-icon'), 'Change Password should use the local SVG icon replacement.');
 assert(iconFix.includes("button.querySelector('i.fa-lock')"), 'the broken legacy lock icon should be explicitly removed.');
 assert(iconFix.includes('<svg viewBox="0 0 24 24"'), 'Change Password replacement should be a local inline SVG.');
 
-const rendererEntry = read('src/main/renderer-entry.js');
-const groupSource = read('src/main/group.js');
 assert(groupSource.includes("const vaultItemPresentation = require('./vault-item-presentation');"),
   'Vault Item forms must use the canonical direct preset/presentation helper.');
 assert(!rendererEntry.includes("require('./vault-item-wallet-presets-ui.js')"),
   'The retired post-render wallet preset observer must not return to the renderer.');
-for (const moduleName of [
-  'vault-item-asset-seeding-ui.js',
-  'add-form-cancel-ui.js',
-  'settings-icon-fix-ui.js'
-]) assert(rendererEntry.includes(`require('./${moduleName}')`), `${moduleName} must load in the renderer.`);
+for (const moduleName of ['vault-item-asset-seeding-ui.js', 'settings-icon-fix-ui.js']) {
+  assert(rendererEntry.includes(`require('./${moduleName}')`), `${moduleName} must load in the renderer.`);
+}
 
-console.log('PASS SafeLedger 2.5.17+ logo-backed direct Vault Item selectors, reviewed icon-backed asset seeding, Add-form cancellation, and local Change Password icon.');
+console.log('PASS SafeLedger 2.5.17+ logo-backed Vault Item selectors, reviewed asset seeding, direct Add-form cancellation, and local Change Password icon.');

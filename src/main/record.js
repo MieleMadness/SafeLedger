@@ -247,6 +247,13 @@ const createEditRecord = (params) => {
       className: 'detail-action-cancel',
       onClick: () => renderRecordDetail(params)
     });
+  } else if (typeof params.onCancel === 'function') {
+    actions.push({
+      icon: 'fa-times',
+      title: 'Cancel add asset',
+      className: 'detail-action-cancel',
+      onClick: params.onCancel
+    });
   }
   actions.push({ icon: 'fa-save', title: 'Save asset', className: 'detail-action-save', onClick: (_event, button) => saveRecord(button) });
   detailActions.set(actions);
