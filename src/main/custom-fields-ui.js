@@ -13,6 +13,9 @@ const TYPE_OPTIONS = [
   ['checkbox', 'Checkbox']
 ];
 
+const DEFAULT_TITLE = 'Custom Fields';
+const DEFAULT_NOTE = 'Add optional information that does not fit the standard wallet or coin fields. Sensitive values stay encrypted and are excluded from search.';
+
 function makeValueControl(host, type, value, label) {
   host.innerHTML = '';
   if (type === 'checkbox') {
@@ -47,16 +50,16 @@ function makeValueControl(host, type, value, label) {
   return input;
 }
 
-function createEditor(grid, initialFields) {
+function createEditor(grid, initialFields, options = {}) {
   const section = document.createElement('section');
   section.className = 'edit-info-grid-full custom-fields-editor';
   const heading = document.createElement('h3');
   heading.className = 'product-section-title';
-  heading.textContent = 'Custom Fields';
+  heading.textContent = options.title || DEFAULT_TITLE;
   section.appendChild(heading);
   const note = document.createElement('p');
   note.className = 'custom-fields-note';
-  note.textContent = 'Add optional information that does not fit the standard wallet or coin fields. Sensitive values stay encrypted and are excluded from search.';
+  note.textContent = options.note || DEFAULT_NOTE;
   section.appendChild(note);
 
   const rowsHost = document.createElement('div');
@@ -124,17 +127,23 @@ function createEditor(grid, initialFields) {
 
     const rowState = {
       row,
+      labelWrap,
       labelInput,
+      typeWrap,
       typeSelect,
-      getValue: () => valueControl.type === 'checkbox' ? valueControl.checked : valueControl.value
+      valueCaption,
+      valueHost,
+      remove,
+      getValue: () => valueControl.type === 'checkbox' ? valueControl.checked : valueControl.value,
+      rebuildValueControl(type) {
+        const prior = rowState.getValue();
+        valueControl = makeValueControl(valueHost, type, prior, labelInput.value || 'custom field');
+        rowState.getValue = () => valueControl.type === 'checkbox' ? valueControl.checked : valueControl.value;
+      }
     };
     rows.push(rowState);
 
-    typeSelect.addEventListener('change', () => {
-      const prior = rowState.getValue();
-      valueControl = makeValueControl(valueHost, typeSelect.value, prior, labelInput.value || 'custom field');
-      rowState.getValue = () => valueControl.type === 'checkbox' ? valueControl.checked : valueControl.value;
-    });
+    typeSelect.addEventListener('change', () => rowState.rebuildValueControl(typeSelect.value));
     remove.addEventListener('click', () => {
       const index = rows.indexOf(rowState);
       if (index >= 0) rows.splice(index, 1);
@@ -151,7 +160,34 @@ function createEditor(grid, initialFields) {
     return existing || addRow(normalized);
   }
 
+  function lockFixedField(field = {}) {
+    const normalized = customFields.normalize([field])[0];
+    if (!normalized || !normalized.label) return null;
+    const rowState = ensureField(normalized);
+    if (!rowState) return null;
+
+    const prior = rowState.getValue();
+    rowState.labelInput.value = normalized.label;
+    rowState.labelInput.readOnly = true;
+    if (rowState.typeSelect.value !== normalized.type) {
+      rowState.typeSelect.value = normalized.type;
+      rowState.rebuildValueControl(normalized.type);
+      const current = rowState.valueHost.querySelector('input, textarea');
+      if (current && current.type !== 'checkbox') current.value = prior == null ? '' : prior;
+      else if (current && current.type === 'checkbox') current.checked = prior === true || String(prior).toLowerCase() === 'true';
+    }
+    rowState.typeSelect.tabIndex = -1;
+    rowState.valueCaption.textContent = normalized.label;
+    rowState.remove.style.display = 'none';
+    rowState.labelWrap.style.display = 'none';
+    rowState.typeWrap.style.display = 'none';
+    rowState.row.dataset.assetIdentityField = normalized.label;
+    rowState.row.classList.add('asset-identity-field');
+    return rowState;
+  }
+
   for (const field of customFields.normalize(initialFields)) addRow(field);
+  for (const field of customFields.normalize(options.fixedFields)) lockFixedField(field);
 
   const add = document.createElement('button');
   add.type = 'button';
