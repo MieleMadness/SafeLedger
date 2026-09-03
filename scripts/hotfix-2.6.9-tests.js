@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.9', 'This hotfix build must report SafeLedger 2.6.9.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 9,
+  'SafeLedger 2.6.9 regressions must remain active on 2.6.9 and later 2.6.x patches.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.9-tests.js'),
   '2.6.9 regression coverage must stay in the locked suite.');
 
@@ -92,4 +94,4 @@ try {
   else global.document = previousDocument;
 }
 
-console.log('PASS SafeLedger 2.6.9 clears stale form actions before Vault Overview renders, including Add Profile Cancel navigation.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.9 Vault Overview stale-action fix active.`);
