@@ -12,8 +12,13 @@ const uiCurrent = read('src/main/css/ui-current.css');
 const statusCss = read('src/main/css/status-messages.css');
 const index = read('src/main/index.html');
 
-function gitBlobSha(content) {
-  const body = Buffer.from(content, 'utf8');
+function canonicalGitBlobSha(content) {
+  // GitHub stores this text with LF line endings, while a Windows Actions
+  // checkout may materialize the same file with CRLF. Normalize only line
+  // endings before hashing so the visual fingerprint is platform-independent
+  // without ignoring any CSS rule, declaration, whitespace, or comment change.
+  const canonical = String(content || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const body = Buffer.from(canonical, 'utf8');
   return crypto.createHash('sha1')
     .update(Buffer.from(`blob ${body.length}\0`, 'utf8'))
     .update(body)
@@ -49,7 +54,7 @@ function contrast(first, second) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-assert.strictEqual(gitBlobSha(uiCurrent), baseline.uiCurrentGitBlobSha,
+assert.strictEqual(canonicalGitBlobSha(uiCurrent), baseline.uiCurrentGitBlobSha,
   'Canonical ui-current.css changed from the approved visual baseline. Review the visual change and update the baseline intentionally.');
 assert(index.includes('<link href="./css/ui-current.css" rel="stylesheet">'));
 assert(index.includes('<link href="./css/status-messages.css" rel="stylesheet">'));
@@ -74,4 +79,4 @@ for (const mode of [{ name: 'light', vars: light }, { name: 'dark', vars: dark }
   }
 }
 
-console.log('PASS SafeLedger visual contract keeps the approved consolidated UI baseline and readable Light/Dark status-message contrast.');
+console.log('PASS SafeLedger visual contract keeps the approved cross-platform consolidated UI baseline and readable Light/Dark status-message contrast.');
