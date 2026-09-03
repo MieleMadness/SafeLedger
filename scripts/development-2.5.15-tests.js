@@ -25,15 +25,16 @@ const index = read('src/main/index.html');
 assert(index.includes('./css/ui-2.5.15.css'), '2.5.15 UI layer must load after prior refinements');
 
 const rendererEntry = read('src/main/renderer-entry.js');
-assert(rendererEntry.includes("require('./vault-language-ui.js')"), 'renderer must load Vault Item terminology refinements');
+assert(!rendererEntry.includes("require('./vault-language-ui.js')"),
+  'Vault Item terminology must be rendered directly instead of restored by the retired language observer.');
 assert(rendererEntry.includes("require('./recovery-intelligence-vault-overview-ui.js')"), 'Vault Overview must restore optional Recovery Intelligence');
 
-const language = require(path.join(root, 'src/main/vault-language-ui.js'))._test;
-const label = language.buildVaultContentsLabel({
-  hardware: 2,
-  software: 3,
-  other: 1,
-  walletTotal: 6,
+const dashboardUi = require(path.join(root, 'src', 'main', 'dashboard-ui.js'))._test;
+const label = dashboardUi.vaultContentsLabel({
+  hardwareWallets: 2,
+  softwareWallets: 3,
+  otherWallets: 1,
+  wallets: 6,
   exchanges: 2,
   services: 1
 });
@@ -43,26 +44,33 @@ assert(label.includes('3 software wallets'), 'Vault contents must retain useful 
 assert(label.includes('2 exchange accounts'), 'Vault contents must include exchange accounts');
 assert(label.includes('1 Web / Web3 service'), 'Vault contents must include Web / Web3 services');
 assert.strictEqual(
-  language.buildVaultContentsLabel({}),
+  dashboardUi.vaultContentsLabel({}),
   'Add a wallet, exchange account, or Web / Web3 service to begin building your vault inventory.',
   'empty Vault Overview should explain all supported vault-item families'
 );
 
-const languageSource = read('src/main/vault-language-ui.js');
+const groupSource = read('src/main/group.js');
 for (const phrase of [
   'Vault Items appear after a Profile is selected.',
   'No vault items yet',
-  'Add a Vault Item to build this Profile recovery plan.',
-  'Search Profiles, Vault Items, and Assets without indexing secret values.',
-  'Click a vault item below to open it and resolve the recovery gaps.',
-  'Vault Item:'
+  'Add a Vault Item to build this Profile recovery plan.'
 ]) {
-  assert(languageSource.includes(phrase), `missing Vault Item terminology contract: ${phrase}`);
+  assert(groupSource.includes(phrase), `missing direct Vault Item terminology contract: ${phrase}`);
 }
-assert(languageSource.includes("setTextIfChanged(kind, 'VAULT ITEM')"), 'Global Search must display internal wallet results as Vault Items without repeated DOM rewrites');
-assert(languageSource.includes('if (String(node.textContent || \'\') === next) return false;'), 'terminology observer must skip text that is already correct');
+
+const globalSearchSource = read('src/main/global-search-ui.js');
+assert(globalSearchSource.includes('Search Profiles, Vault Items, and Assets without indexing secret values.'),
+  'Global Search introduction must use Vault Item terminology directly.');
+assert(globalSearchSource.includes("return type === 'wallet' ? 'VAULT ITEM'"),
+  'Global Search must display internal wallet results as Vault Items directly.');
+
+const dashboardSource = read('src/main/dashboard-ui.js');
+assert(dashboardSource.includes('Click a vault item below to open it and resolve the recovery gaps.'),
+  'Vault Overview recovery actions must use Vault Item terminology directly.');
+assert(dashboardSource.includes("makeStat('Vault Items', vaultItems)"),
+  'Vault Overview inventory must create the Vault Items stat directly.');
 
 const intelligence = read('src/main/recovery-intelligence-vault-overview-ui.js');
 assert(intelligence.includes("!== 'Vault Overview'"), 'Recovery Intelligence companion must recognize the renamed Vault Overview');
 
-console.log('PASS SafeLedger 2.5.15+ shared button aesthetics and Vault Item terminology/overview coverage.');
+console.log('PASS SafeLedger 2.5.15+ shared button aesthetics and directly rendered Vault Item terminology/overview coverage.');
