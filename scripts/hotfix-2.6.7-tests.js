@@ -29,7 +29,8 @@ assert.strictEqual(fs.existsSync(path.join(root, 'src/main/asset-multichain-ui.j
 const indexSource = read('src/main/index.html');
 const scaleCss = read('src/main/css/ui-current.css');
 const themeCss = scaleCss;
-const scaleSource = read('src/main/ui-scale-2.6.7.js');
+const windowSizingSource = read('src/main/window-sizing-main.js');
+const startupSource = read('src/main/startup.js');
 const groupSource = read('src/main/group.js');
 const rendererEntry = read('src/main/renderer-entry.js');
 const rendererSource = read('src/main/renderer.js');
@@ -37,7 +38,7 @@ const appMenuUi = read('src/main/app-menu-ui.js');
 const appMenuMain = read('src/main/app-menu-main.js');
 const mainSource = read('src/main/main.js');
 const preloadSource = read('src/main/preload.js');
-const visualUi = require(path.join(root, 'src/main/ui-scale-2.6.7.js'));
+const visualUi = require(path.join(root, 'src/main/window-sizing-main.js'));
 
 assert(indexSource.includes('<link href="./css/ui-current.css" rel="stylesheet">'));
 for (const retiredRuntimeLayer of [
@@ -55,7 +56,9 @@ for (const retiredRuntimeLayer of [
   assert(!indexSource.includes(retiredRuntimeLayer), `${retiredRuntimeLayer} should no longer be loaded separately at runtime.`);
 }
 assert(indexSource.includes('<span class="fa fa-plus"></span> Add Vault</button>') && !indexSource.includes('Add Vault Item</button>'));
-assert(rendererEntry.includes("require('./ui-scale-2.6.7.js');"));
+assert(!rendererEntry.includes("require('./ui-scale-2.6.7.js');"));
+assert(startupSource.includes("require('./window-sizing-main')") && startupSource.includes("require('./bootstrap')"),
+  'Preferred startup sizing must be installed by the Electron main-process entry before bootstrap.');
 assert(rendererEntry.includes("require('./app-menu-ui.js');"));
 assert(!rendererEntry.includes("require('./asset-multichain-ui.js');"));
 
@@ -68,32 +71,28 @@ assert(scaleCss.includes('background-color: transparent !important;') && scaleCs
 assert(!scaleCss.includes('--sl-action-size:') && !scaleCss.includes('--sl-top-action-size:'));
 assert(!/\.panic-lock-inline\s*\{[^}]*\bwidth\s*:/s.test(scaleCss));
 
-assert.strictEqual(visualUi.DETAIL_WIDTH, 1400);
-assert.strictEqual(visualUi.DETAIL_HEIGHT, 750);
+assert.strictEqual(visualUi.PREFERRED_WIDTH, 1400);
+assert.strictEqual(visualUi.PREFERRED_HEIGHT, 750);
 let resized = null;
-const normalScreen = {
-  screen: { availWidth: 1920, availHeight: 1080 },
-  outerWidth: 1200,
-  outerHeight: 750,
-  resizeTo(width, height) { resized = { width, height }; }
+const normalWindow = {
+  getBounds: () => ({ width: 1200, height: 750 }),
+  setSize(width, height, animate) { resized = { width, height, animate }; }
 };
-assert.strictEqual(visualUi._test.applyPreferredWindowSize(normalScreen), true);
-assert.deepStrictEqual(resized, { width: 1400, height: 750 });
+assert.strictEqual(visualUi.applyPreferredWindowSize(normalWindow, { width: 1920, height: 1080 }), true);
+assert.deepStrictEqual(resized, { width: 1400, height: 750, animate: false });
 resized = null;
 const alreadyLarge = {
-  screen: { availWidth: 1920, availHeight: 1080 },
-  outerWidth: 1600,
-  outerHeight: 900,
-  resizeTo(width, height) { resized = { width, height }; }
+  getBounds: () => ({ width: 1600, height: 900 }),
+  setSize(width, height, animate) { resized = { width, height, animate }; }
 };
-assert.strictEqual(visualUi._test.applyPreferredWindowSize(alreadyLarge), false);
+assert.strictEqual(visualUi.applyPreferredWindowSize(alreadyLarge, { width: 1920, height: 1080 }), false);
 assert.strictEqual(resized, null);
 assert(groupSource.includes("header.className = 'wallet-detail-header'") &&
   groupSource.includes("icon.classList.add('wallet-detail-brand-image')") &&
   groupSource.includes('appendVaultItemHeader(area, params.group, category);'),
   'Vault Item detail artwork must be created directly by the canonical group renderer.');
-assert(!scaleSource.includes('MutationObserver') && !scaleSource.includes('patchVaultDetail') && !scaleSource.includes('cloneDetailIcon'),
-  'The visual scale helper must not observe or patch Vault Item detail content.');
+assert(!windowSizingSource.includes('MutationObserver') && !windowSizingSource.includes('resizeTo('),
+  'Main-process window sizing must not observe renderer DOM or call renderer window.resizeTo.');
 
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection-ui.js')), false,
   'The old Add Asset capture-phase selection guard must remain deleted.');
@@ -118,4 +117,4 @@ assert(mainSource.includes("if (process.platform !== 'darwin') {") && mainSource
 assert(preloadSource.includes("prepareAppMenu: () => ipcRenderer.invoke('app-menu-prepare')") &&
   preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"));
 
-console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior through the consolidated current UI stylesheet.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior with native main-process preferred window sizing.`);
