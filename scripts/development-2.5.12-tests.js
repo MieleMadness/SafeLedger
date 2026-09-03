@@ -16,7 +16,7 @@ const drill = read('src/main/recovery-drill-ui.js');
 const vaultItemPresentationSource = read('src/main/vault-item-presentation.js');
 const groupSource = read('src/main/group.js');
 const entry = read('src/main/renderer-entry.js');
-const css = read('src/main/css/ui-2.5.12.css');
+const css = read('src/main/css/ui-current.css');
 const index = read('src/main/index.html');
 const web3Icons = require(path.join(root, 'src', 'main', 'web3-icons.js'));
 const dashboardSummary = require(path.join(root, 'src', 'main', 'dashboard-summary.js'));
@@ -104,7 +104,7 @@ function testExchangeAndWebsiteVaultItems() {
   assert(vaultItemPresentationSource.includes('never auto-fills a login URL'));
   assert(index.includes('placeholder="Search vault items..."'));
   assert(index.includes('id="addGroup"'), 'The Vault add action must remain present even if its user-facing label evolves.');
-  assert(index.includes('./css/ui-2.5.12.css'));
+  assert(index.includes('./css/ui-current.css'));
 
   const exchanges = vaultItemPresentation.presetNames(vaultItemPresentation.EXCHANGE_CATEGORY);
   assert.strictEqual(exchanges.length, web3Icons.entries('exchanges').length,
