@@ -18,7 +18,7 @@ const walletCatalog = require(path.join(root, 'src/main/wallet-catalog.js'));
 require(path.join(root, 'src/main/wallet-catalog-extensions.js'));
 const tokenIcons = require(path.join(root, 'src/main/token-icons.js'));
 const assetPresets = require(path.join(root, 'src/main/vault-item-asset-presets.js'));
-const walletPresetUi = require(path.join(root, 'src/main/vault-item-wallet-presets-ui.js'));
+const vaultItemPresentation = require(path.join(root, 'src/main/vault-item-presentation.js'));
 
 const templates = profileSetup.availableTemplates();
 assert(templates.length > 0 && templates.every((template) => template.hasIcon === true),
@@ -29,7 +29,7 @@ for (const wallet of walletCatalog.catalog) {
   }
 }
 for (const category of ['Hardware Wallet', 'Software Wallet', 'Other Wallet']) {
-  assert(walletPresetUi._test.templatesForCategory(category).every((template) => template.hasIcon === true),
+  assert(vaultItemPresentation.walletTemplatesForCategory(category).every((template) => template.hasIcon === true),
     `${category} dropdown must contain only wallets with local artwork.`);
 }
 
@@ -67,11 +67,15 @@ assert(iconFix.includes("button.querySelector('i.fa-lock')"), 'the broken legacy
 assert(iconFix.includes('<svg viewBox="0 0 24 24"'), 'Change Password replacement should be a local inline SVG.');
 
 const rendererEntry = read('src/main/renderer-entry.js');
+const groupSource = read('src/main/group.js');
+assert(groupSource.includes("const vaultItemPresentation = require('./vault-item-presentation');"),
+  'Vault Item forms must use the canonical direct preset/presentation helper.');
+assert(!rendererEntry.includes("require('./vault-item-wallet-presets-ui.js')"),
+  'The retired post-render wallet preset observer must not return to the renderer.');
 for (const moduleName of [
-  'vault-item-wallet-presets-ui.js',
   'vault-item-asset-seeding-ui.js',
   'add-form-cancel-ui.js',
   'settings-icon-fix-ui.js'
 ]) assert(rendererEntry.includes(`require('./${moduleName}')`), `${moduleName} must load in the renderer.`);
 
-console.log('PASS SafeLedger 2.5.17+ logo-backed wallet selectors, reviewed icon-backed asset seeding, Add-form cancellation, and local Change Password icon.');
+console.log('PASS SafeLedger 2.5.17+ logo-backed direct Vault Item selectors, reviewed icon-backed asset seeding, Add-form cancellation, and local Change Password icon.');
