@@ -30,6 +30,7 @@ const indexSource = read('src/main/index.html');
 const scaleCss = read('src/main/css/ui-2.6.7-scale.css');
 const themeCss = read('src/main/css/ui-2.6.7-theme-refinement.css');
 const scaleSource = read('src/main/ui-scale-2.6.7.js');
+const groupSource = read('src/main/group.js');
 const rendererEntry = read('src/main/renderer-entry.js');
 const rendererSource = read('src/main/renderer.js');
 const appMenuUi = read('src/main/app-menu-ui.js');
@@ -75,8 +76,12 @@ const alreadyLarge = {
 };
 assert.strictEqual(visualUi._test.applyPreferredWindowSize(alreadyLarge), false);
 assert.strictEqual(resized, null);
-assert(scaleSource.includes("clone.classList.add('wallet-detail-brand-image')") && scaleSource.includes("header.className = 'wallet-detail-header'"));
-assert(scaleSource.includes('observer.disconnect();') && scaleSource.includes('patchVaultDetail(document);'));
+assert(groupSource.includes("header.className = 'wallet-detail-header'") &&
+  groupSource.includes("icon.classList.add('wallet-detail-brand-image')") &&
+  groupSource.includes('appendVaultItemHeader(area, params.group, category);'),
+  'Vault Item detail artwork must be created directly by the canonical group renderer.');
+assert(!scaleSource.includes('MutationObserver') && !scaleSource.includes('patchVaultDetail') && !scaleSource.includes('cloneDetailIcon'),
+  'The visual scale helper must not observe or patch Vault Item detail content.');
 
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection-ui.js')), false,
   'The old Add Asset capture-phase selection guard must remain deleted.');
@@ -101,4 +106,4 @@ assert(mainSource.includes("if (process.platform !== 'darwin') {") && mainSource
 assert(preloadSource.includes("prepareAppMenu: () => ipcRenderer.invoke('app-menu-prepare')") &&
   preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"));
 
-console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 Add Asset behavior and interface refinements without the retired multichain observer.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior with direct Asset and Vault Item rendering.`);
