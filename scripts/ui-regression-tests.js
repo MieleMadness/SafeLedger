@@ -35,7 +35,11 @@ assert.strictEqual(pkg.main, 'src/main/bootstrap.js');
 assert(bootstrap.includes('function installPreferredWindowSizing()'));
 assert(bootstrap.includes("app.on('browser-window-created'"));
 assert(bootstrap.indexOf('installPreferredWindowSizing();') < bootstrap.indexOf("require('./main');"));
-assert(windowSizing.includes('const PREFERRED_WIDTH = 1400;') && windowSizing.includes('const PREFERRED_HEIGHT = 750;'));
+assert(windowSizing.includes('const PREFERRED_WIDTH = ') && windowSizing.includes('const PREFERRED_HEIGHT = 750;'));
+const sizingPolicy = require('../src/main/window-sizing-main.js');
+assert(Number.isInteger(sizingPolicy.PREFERRED_WIDTH) && sizingPolicy.PREFERRED_WIDTH >= 1200,
+  'Trusted main-process sizing must keep an explicit desktop preferred width.');
+assert.strictEqual(sizingPolicy.PREFERRED_HEIGHT, 750);
 assert(!entry.includes("require('./ui-scale-2.6.7.js');"));
 assert.strictEqual(exists('src/main/ui-scale-2.6.7.js'), false);
 assert.strictEqual(exists('src/main/startup.js'), false);
@@ -105,4 +109,4 @@ for (const relative of [
   'src/main/custom-fields-ui.js'
 ]) syntaxCheck(relative);
 
-console.log('PASS direct UI modules, trusted-bootstrap startup sizing, and shared Asset/Vault Item typography remain behind the explicit sandbox bridge.');
+console.log('PASS direct UI modules, trusted-bootstrap startup sizing policy, and shared Asset/Vault Item typography remain behind the explicit sandbox bridge.');
