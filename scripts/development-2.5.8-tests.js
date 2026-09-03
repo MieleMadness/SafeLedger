@@ -112,9 +112,11 @@ function testSettingsWorkflowOrder() {
 
 function testResponsiveWalletGrid() {
   const css = read('src/main/css/ui-2.5.8.css');
-  const pickerUi = read('src/main/profile-wallet-picker-ui.js');
-  assert(pickerUi.includes("walletIcons.createIconElement({ name }, 'profile-wallet-template-icon')"),
-    'Each wallet checkbox row should render its local wallet artwork.');
+  const profile = read('src/main/profile.js');
+  assert(profile.includes("walletIcons.createIconElement({ name: template.name }, 'profile-wallet-template-icon')"),
+    'Each wallet checkbox row should render its local wallet artwork directly in the Profile renderer.');
+  assert(!profile.includes('MutationObserver'),
+    'Profile wallet artwork must not depend on post-render DOM observation.');
   assert(css.includes('@container (min-width: 360px)'));
   assert(css.includes('grid-template-columns: repeat(2, minmax(0, 1fr));'));
   assert(css.includes('@container (min-width: 680px)'));
@@ -128,4 +130,4 @@ testIconBackedWalletPickerAndStandardSetup();
 testLoginAndSensitiveUiContract();
 testSettingsWorkflowOrder();
 testResponsiveWalletGrid();
-console.log('PASS SafeLedger development login/sensitive controls, Settings order, and logo-backed responsive wallet setup.');
+console.log('PASS SafeLedger development login/sensitive controls, Settings order, and directly rendered logo-backed responsive wallet setup.');
