@@ -15,19 +15,25 @@ assert(read('package.json').includes('node scripts/hotfix-2.6.11-tests.js'),
   '2.6.11 regression coverage must stay in the locked suite.');
 
 const groupSource = read('src/main/group.js');
-const scaleSource = read('src/main/ui-scale-2.6.7.js');
+const windowSizingSource = read('src/main/window-sizing-main.js');
+const startupSource = read('src/main/startup.js');
+const rendererEntry = read('src/main/renderer-entry.js');
 assert(groupSource.includes('function appendVaultItemHeader(area, group, category = getWalletCategory(group))'));
 assert(groupSource.includes("const icon = vaultItemPresentation.createIconElement(group);"));
 assert(groupSource.includes("icon.classList.add('wallet-detail-brand-image');"));
 assert(groupSource.includes("header.className = 'wallet-detail-header';"));
 assert(groupSource.includes("titleWrap.className = 'wallet-detail-title-wrap';"));
 assert(groupSource.includes('appendVaultItemHeader(area, params.group, category);'));
-assert(!scaleSource.includes('MutationObserver'),
+assert(!windowSizingSource.includes('MutationObserver'),
   'Window sizing must not observe Vault Item list/detail DOM changes.');
-assert(!scaleSource.includes('patchVaultDetail'));
-assert(!scaleSource.includes('selectedVaultIcon'));
-assert(!scaleSource.includes('cloneDetailIcon'));
-assert(!scaleSource.includes('cloneNode('));
+assert(!windowSizingSource.includes('patchVaultDetail'));
+assert(!windowSizingSource.includes('selectedVaultIcon'));
+assert(!windowSizingSource.includes('cloneDetailIcon'));
+assert(!windowSizingSource.includes('cloneNode('));
+assert(!rendererEntry.includes("require('./ui-scale-2.6.7.js');"),
+  'Renderer must not own startup window sizing after 2.6.17.');
+assert(startupSource.includes("app.on('browser-window-created'") && startupSource.includes("require('./bootstrap')"),
+  'Electron startup must own preferred window sizing before the established bootstrap runtime loads.');
 
 class FakeClassList {
   constructor() { this.values = new Set(); }
@@ -110,15 +116,13 @@ try {
   else global.document = previousDocument;
 }
 
-const visualUi = require('../src/main/ui-scale-2.6.7.js');
+const windowSizing = require('../src/main/window-sizing-main.js');
 let resized = null;
-assert.strictEqual(visualUi._test.applyPreferredWindowSize({
-  screen: { availWidth: 1920, availHeight: 1080 },
-  outerWidth: 1200,
-  outerHeight: 700,
-  resizeTo(width, height) { resized = { width, height }; }
-}), true);
-assert.deepStrictEqual(resized, { width: 1400, height: 750 },
-  'Retiring the Vault detail patch must not remove the preferred-window sizing behavior.');
+assert.strictEqual(windowSizing.applyPreferredWindowSize({
+  getBounds: () => ({ width: 1200, height: 700 }),
+  setSize(width, height, animate) { resized = { width, height, animate }; }
+}, { width: 1920, height: 1080 }), true);
+assert.deepStrictEqual(resized, { width: 1400, height: 750, animate: false },
+  'Retiring the renderer helper must preserve the preferred-window sizing behavior in the main process.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.11 direct Vault Item detail artwork and window-sizing behavior active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.11 direct Vault Item detail artwork and native window-sizing behavior active.`);
