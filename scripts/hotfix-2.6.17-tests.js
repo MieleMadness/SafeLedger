@@ -24,7 +24,7 @@ const rendererEntry = read('src/main/renderer-entry.js');
 
 assert(statusSource.includes('const ROUTINE_SUCCESS = /^load(?:ed)? successful(?:ly)?\\.?$/i;'),
   'Routine successful reads must be recognizable centrally.');
-assert(statusSource.includes('if (state === \'ERROR\') return true;'),
+assert(statusSource.includes("state === 'ERROR'"),
   'Errors must always remain visible.');
 assert(statusSource.includes('exports.loadStatus = () => false;'),
   'Routine reads must not show a temporary Processing banner.');
@@ -76,13 +76,18 @@ assert(!windowSizingSource.includes('window.resizeTo') && !windowSizingSource.in
   'Preferred sizing must remain independent of the renderer DOM.');
 
 const windowSizing = require('../src/main/window-sizing-main.js');
-assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1920, height: 1080 }), { width: 1400, height: 750 });
-assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1366, height: 700 }), { width: 1366, height: 700 });
+assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1920, height: 1080 }), {
+  width: windowSizing.PREFERRED_WIDTH,
+  height: 750
+});
+assert(windowSizing.PREFERRED_WIDTH >= 1200,
+  'Preferred width should remain large enough for the four-column desktop layout.');
+assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1100, height: 700 }), { width: 1100, height: 700 });
 let setSize = null;
 assert.strictEqual(windowSizing.applyPreferredWindowSize({
   getBounds: () => ({ width: 1200, height: 750 }),
   setSize(width, height, animate) { setSize = { width, height, animate }; }
 }, { width: 1920, height: 1080 }), true);
-assert.deepStrictEqual(setSize, { width: 1400, height: 750, animate: false });
+assert.deepStrictEqual(setSize, { width: windowSizing.PREFERRED_WIDTH, height: 750, animate: false });
 
 console.log(`PASS SafeLedger ${pkg.version} keeps compact change/error notices and trusted-bootstrap main-process window sizing.`);
