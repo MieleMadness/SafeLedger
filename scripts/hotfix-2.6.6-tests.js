@@ -96,6 +96,10 @@ assert(!selectionSource.includes('stopImmediatePropagation'),
   '2.6.6+ must not cancel the real Add Asset click while repairing selection.');
 assert(!selectionSource.includes('addAsset.click()'),
   '2.6.6+ must not rely on a second synthetic Add Asset click.');
+assert(!selectionSource.includes('queueMicrotask(() => ensureVaultItemSelected'),
+  'Loading a Profile must not auto-click the first Vault Item and replace the Profile detail screen.');
+assert(selectionSource.includes('Selection repair happens only when Add Asset is actually requested.'),
+  'Vault Item auto-selection must remain scoped to the Add Asset request path.');
 
 // Verify the Web3/Website grouped-option renderer is idempotent. Re-running the
 // patch over its own already-correct DOM must create no new children/mutations.
@@ -171,4 +175,4 @@ else global.document = originalDocument;
 delete require.cache[require.resolve(bridgePath)];
 delete require.cache[require.resolve(selectionPath)];
 
-console.log(`PASS SafeLedger ${pkg.version} preserves the 2.6.6 shared renderer state and Web3/Website DOM loop protections.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves shared Add Asset state without auto-navigating away from Profile detail, and retains Web3/Website DOM loop protections.`);
