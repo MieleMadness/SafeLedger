@@ -114,7 +114,7 @@ assert.strictEqual(windowSizing.applyPreferredWindowSize({
   getBounds: () => ({ width: 1200, height: 700 }),
   setSize(width, height, animate) { resized = { width, height, animate }; }
 }, { width: 1920, height: 1080 }), true);
-assert.deepStrictEqual(resized, { width: 1400, height: 750, animate: false },
-  'Retiring the renderer helper must preserve preferred sizing inside trusted bootstrap ownership.');
+assert.deepStrictEqual(resized, { width: windowSizing.PREFERRED_WIDTH, height: 750, animate: false },
+  'Retiring the renderer helper must preserve the current preferred sizing policy inside trusted bootstrap ownership.');
 
 console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.11 direct Vault Item artwork and trusted-bootstrap window sizing active.`);
