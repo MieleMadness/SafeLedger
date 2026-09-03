@@ -27,8 +27,8 @@ assert.strictEqual(fs.existsSync(path.join(root, 'src/main/asset-multichain-ui.j
   'The retired Asset multichain MutationObserver helper must stay removed.');
 
 const indexSource = read('src/main/index.html');
-const scaleCss = read('src/main/css/ui-2.6.7-scale.css');
-const themeCss = read('src/main/css/ui-2.6.7-theme-refinement.css');
+const scaleCss = read('src/main/css/ui-current.css');
+const themeCss = scaleCss;
 const scaleSource = read('src/main/ui-scale-2.6.7.js');
 const groupSource = read('src/main/group.js');
 const rendererEntry = read('src/main/renderer-entry.js');
@@ -39,9 +39,21 @@ const mainSource = read('src/main/main.js');
 const preloadSource = read('src/main/preload.js');
 const visualUi = require(path.join(root, 'src/main/ui-scale-2.6.7.js'));
 
-assert(indexSource.includes('<link href="./css/ui-2.6.7-scale.css" rel="stylesheet">'));
-assert(indexSource.includes('<link href="./css/ui-2.6.7-theme-refinement.css" rel="stylesheet">'));
-assert(indexSource.indexOf('./css/ui-2.6.7-theme-refinement.css') > indexSource.indexOf('./css/ui-2.6.7-scale.css'));
+assert(indexSource.includes('<link href="./css/ui-current.css" rel="stylesheet">'));
+for (const retiredRuntimeLayer of [
+  './css/ui-2.5.8.css',
+  './css/ui-2.5.9.css',
+  './css/ui-2.5.11.css',
+  './css/ui-2.5.12.css',
+  './css/ui-2.5.13.css',
+  './css/ui-2.5.14.css',
+  './css/ui-2.5.15.css',
+  './css/ui-2.5.16.css',
+  './css/ui-2.6.7-scale.css',
+  './css/ui-2.6.7-theme-refinement.css'
+]) {
+  assert(!indexSource.includes(retiredRuntimeLayer), `${retiredRuntimeLayer} should no longer be loaded separately at runtime.`);
+}
 assert(indexSource.includes('<span class="fa fa-plus"></span> Add Vault</button>') && !indexSource.includes('Add Vault Item</button>'));
 assert(rendererEntry.includes("require('./ui-scale-2.6.7.js');"));
 assert(rendererEntry.includes("require('./app-menu-ui.js');"));
@@ -106,4 +118,4 @@ assert(mainSource.includes("if (process.platform !== 'darwin') {") && mainSource
 assert(preloadSource.includes("prepareAppMenu: () => ipcRenderer.invoke('app-menu-prepare')") &&
   preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"));
 
-console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior with direct Asset and Vault Item rendering.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior through the consolidated current UI stylesheet.`);
