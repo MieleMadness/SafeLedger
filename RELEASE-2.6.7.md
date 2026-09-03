@@ -30,6 +30,23 @@ A separate selection helper introduced during earlier Add Asset repairs was auto
 
 Historical regressions now protect the Vault add action and on-demand selection behavior without forcing the retired automatic Profile-to-Vault navigation or the older button wording.
 
+## Vault Item renderer consolidation
+
+SafeLedger had accumulated several post-render UI modules for Vault Items. The core `group.js` renderer would build a Wallet/Vault Item screen, then separate MutationObservers would rename terminology, split Web3/Website account types, rebuild preset dropdowns, replace service icons, and adjust the same form after it had already rendered. Those modules required conflict guards because more than one observer could believe it owned the same DOM.
+
+2.6.7 consolidates that behavior into the real Vault Item render path:
+
+- `group.js` now renders Vault Item list wording, detail wording, account categories, icons, and edit-form behavior directly;
+- the passive `vault-item-presentation.js` helper owns category normalization, grouped type options, wallet/exchange/Web3/website presets, known-service icons, and legacy `Web3 / Website Account` interpretation;
+- standard account custom fields use a direct idempotent `ensureField()` editor API instead of programmatically clicking **Add custom field**;
+- Vault Overview, Global Search, Profile empty states, Test Recovery, Recovery Binder, and Recovery Intelligence now create their Vault Item terminology directly rather than relying on a later document-wide text replacement;
+- the five retired post-render modules (`vault-item-ui.js`, `service-catalog-ui.js`, `vault-item-type-split-ui.js`, `vault-item-wallet-presets-ui.js`, and `vault-language-ui.js`) are removed from the repository and renderer bundle;
+- existing legacy combined Web3/Website records remain readable without a vault migration: known Web3 services resolve to **Web3 Account**, while ordinary sites resolve to **Website Account** for presentation/editing.
+
+The canonical presentation helper has no MutationObserver, DOMContentLoaded handler, timer, microtask queue, or synthetic button-click path. Regression coverage requires those retired observer files to remain absent and preserves the existing account types, grouped presets, Chain Games behavior, local service/wallet icons, and legacy-category compatibility.
+
+The separate Vault Item asset-seeding compatibility helper remains unchanged in this cleanup; it will be evaluated independently rather than broadening this renderer consolidation into unrelated save-state behavior.
+
 ## Readability and icon scale
 
 The content interface is scaled modestly while action controls keep their existing dimensions:
