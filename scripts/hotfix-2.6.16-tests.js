@@ -8,11 +8,13 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const baseline = JSON.parse(read('scripts/ui-visual-baseline.json'));
 const uiCurrent = read('src/main/css/ui-current.css');
 const index = read('src/main/index.html');
 
-assert.strictEqual(pkg.version, '2.6.16', 'This workflow candidate must report SafeLedger 2.6.16.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 16,
+  'SafeLedger 2.6.16 cleanup regressions must remain active on 2.6.16 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.16-tests.js'),
   '2.6.16 cleanup coverage must stay in the locked suite.');
 
@@ -66,4 +68,4 @@ for (const legacyName of ['ui-2.5.9.css', 'ui-2.5.11.css', 'ui-2.5.15.css', 'ui-
 assert(index.includes('<link href="./css/ui-current.css" rel="stylesheet">'));
 assert(index.includes('<link href="./css/status-messages.css" rel="stylesheet">'));
 
-console.log('PASS SafeLedger 2.6.16 removes retired CSS fixtures while preserving one cross-platform visual baseline and the readable status component.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.16 retired CSS cleanup and cross-platform visual baseline active.`);
