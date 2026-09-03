@@ -142,14 +142,19 @@ function fieldWrap(input) {
 function setFieldVisible(form, id, visible) {
   const input = form.querySelector(`#${id}`);
   const wrap = fieldWrap(input);
-  if (wrap) wrap.style.display = visible ? '' : 'none';
+  if (!wrap) return;
+  const display = visible ? '' : 'none';
+  if (wrap.style.display !== display) wrap.style.display = display;
+}
+
+function setText(node, text) {
+  if (node && node.textContent !== text) node.textContent = text;
 }
 
 function setLabel(form, id, text) {
   const input = form.querySelector(`#${id}`);
   const wrap = fieldWrap(input);
-  const label = wrap && wrap.querySelector('label');
-  if (label) label.textContent = text;
+  setText(wrap && wrap.querySelector('label'), text);
 }
 
 function customFieldLabels(form) {
@@ -190,20 +195,35 @@ function appendOption(parent, value) {
   return option;
 }
 
+function typeSignature() {
+  return TYPE_GROUPS.map((group) => `${group.label}:${group.values.join('|')}`).join('||');
+}
+
 function rebuildTypeOptions(categoryInput, selectedValue) {
-  categoryInput.innerHTML = '';
-  const blank = appendOption(categoryInput, '');
-  blank.textContent = 'Choose a type…';
-  for (const group of TYPE_GROUPS) {
-    const optgroup = document.createElement('optgroup');
-    optgroup.label = group.label;
-    for (const value of group.values) appendOption(optgroup, value);
-    categoryInput.appendChild(optgroup);
+  const signature = typeSignature();
+  if (categoryInput.dataset.safeLedgerTypeOptionSignature !== signature) {
+    categoryInput.innerHTML = '';
+    const blank = appendOption(categoryInput, '');
+    blank.textContent = 'Choose a type…';
+    for (const group of TYPE_GROUPS) {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = group.label;
+      for (const value of group.values) appendOption(optgroup, value);
+      categoryInput.appendChild(optgroup);
+    }
+    categoryInput.dataset.safeLedgerTypeOptionSignature = signature;
   }
   if ([...categoryInput.options].some((option) => option.value === selectedValue)) categoryInput.value = selectedValue;
 }
 
+function groupedOptionSignature(groups, placeholder) {
+  return `${placeholder}::${groups.map((group) => `${group.label}:${group.names.join('|')}`).join('||')}`;
+}
+
 function renderGroupedOptions(select, groups, placeholder) {
+  const signature = groupedOptionSignature(groups, placeholder);
+  if (select.dataset.safeLedgerGroupedOptionSignature === signature) return false;
+
   select.innerHTML = '';
   const blank = appendOption(select, '');
   blank.textContent = placeholder;
@@ -213,6 +233,8 @@ function renderGroupedOptions(select, groups, placeholder) {
     for (const name of group.names) appendOption(optgroup, name);
     select.appendChild(optgroup);
   }
+  select.dataset.safeLedgerGroupedOptionSignature = signature;
+  return true;
 }
 
 function ensurePresetField(form, categoryInput) {
@@ -251,24 +273,23 @@ function updatePresetField(form, categoryInput) {
   const previous = select && select.value;
   const groups = groupedPresetNames(categoryInput.value);
   const names = groups.flatMap((group) => group.names);
-  wrap.style.display = '';
+  if (wrap.style.display !== '') wrap.style.display = '';
   if (!select) return;
-  renderGroupedOptions(
-    select,
-    groups,
-    categoryInput.value === WEB3_CATEGORY ? 'Choose a Web3 service…' : 'Choose a website…'
-  );
+
+  const placeholder = categoryInput.value === WEB3_CATEGORY ? 'Choose a Web3 service…' : 'Choose a website…';
+  renderGroupedOptions(select, groups, placeholder);
+
   const inputName = form.querySelector('#inputName');
   const preferred = names.includes(previous) ? previous : String(inputName && inputName.value || '').trim();
-  if (names.includes(preferred)) select.value = preferred;
-  const label = wrap.querySelector('label');
-  if (label) label.textContent = categoryInput.value === WEB3_CATEGORY ? 'Known Web3 service (optional)' : 'Known website (optional)';
-  const note = wrap.querySelector('.vault-item-preset-note');
-  if (note) {
-    note.textContent = categoryInput.value === WEB3_CATEGORY
+  if (names.includes(preferred) && select.value !== preferred) select.value = preferred;
+
+  setText(wrap.querySelector('label'), categoryInput.value === WEB3_CATEGORY ? 'Known Web3 service (optional)' : 'Known website (optional)');
+  setText(
+    wrap.querySelector('.vault-item-preset-note'),
+    categoryInput.value === WEB3_CATEGORY
       ? 'Web3 services are grouped by purpose and alphabetized. SafeLedger uses only local recognition/icons and never auto-fills a login URL.'
-      : 'Websites are grouped by purpose and alphabetized. SafeLedger uses only local recognition/icons and never auto-fills a login URL.';
-  }
+      : 'Websites are grouped by purpose and alphabetized. SafeLedger uses only local recognition/icons and never auto-fills a login URL.'
+  );
 }
 
 function updateAccountLayout(form, categoryInput) {
@@ -303,18 +324,11 @@ function patchEditForm(area) {
     desired = inferAccountType(name, lastViewed);
   }
 
-  if (categoryInput.dataset.safeLedgerTypeGroups !== 'true') {
-    rebuildTypeOptions(categoryInput, desired);
-    categoryInput.dataset.safeLedgerTypeGroups = 'true';
-  } else if (desired && categoryInput.value !== desired && [...categoryInput.options].some((option) => option.value === desired)) {
-    categoryInput.value = desired;
-  }
+  rebuildTypeOptions(categoryInput, desired);
 
   if (categoryInput.dataset.safeLedgerTypeSplit !== 'true') {
     categoryInput.dataset.safeLedgerTypeSplit = 'true';
-    categoryInput.addEventListener('change', () => {
-      if ([WEB3_CATEGORY, WEBSITE_CATEGORY].includes(categoryInput.value)) updateAccountLayout(form, categoryInput);
-    });
+    categoryInput.addEventListener('change', () => updateAccountLayout(form, categoryInput));
   }
 
   updateAccountLayout(form, categoryInput);
@@ -325,7 +339,7 @@ function patchListCategories(root = document) {
     const category = anchor.querySelector('.wallet-list-category');
     const name = anchor.querySelector('.wallet-list-name');
     if (!category || String(category.textContent || '').trim() !== LEGACY_SERVICE_CATEGORY) continue;
-    category.textContent = inferAccountType(name && name.textContent, LEGACY_SERVICE_CATEGORY);
+    setText(category, inferAccountType(name && name.textContent, LEGACY_SERVICE_CATEGORY));
   }
 }
 
@@ -336,14 +350,17 @@ function patchDetailCategory(area) {
   let categoryText = String(category.textContent || '').trim();
   if (categoryText === LEGACY_SERVICE_CATEGORY) {
     categoryText = inferAccountType(name && name.textContent, LEGACY_SERVICE_CATEGORY);
-    category.textContent = categoryText;
+    setText(category, categoryText);
   }
   if (![EXCHANGE_CATEGORY, WEB3_CATEGORY, WEBSITE_CATEGORY].includes(categoryText)) return;
   for (const heading of area.querySelectorAll('.product-section-title')) {
-    if (heading.textContent !== 'Wallet information' && heading.textContent !== 'Account / service information') continue;
-    heading.textContent = categoryText === WEB3_CATEGORY
-      ? 'Web3 account information'
-      : categoryText === WEBSITE_CATEGORY ? 'Website account information' : 'Account information';
+    if (heading.textContent !== 'Wallet information' && heading.textContent !== 'Account / service information' && heading.textContent !== 'Web3 account information' && heading.textContent !== 'Website account information' && heading.textContent !== 'Account information') continue;
+    setText(
+      heading,
+      categoryText === WEB3_CATEGORY
+        ? 'Web3 account information'
+        : categoryText === WEBSITE_CATEGORY ? 'Website account information' : 'Account information'
+    );
   }
 }
 
@@ -387,16 +404,20 @@ function patch(root = document) {
 
 function start() {
   patch(document);
-  let queued = false;
-  const observer = new MutationObserver(() => {
-    if (queued) return;
-    queued = true;
-    queueMicrotask(() => {
-      queued = false;
+  let observer;
+  const observe = () => observer.observe(document.body, { childList: true, subtree: true });
+  observer = new MutationObserver(() => {
+    // Never observe DOM changes produced by this patch itself. The 2.6.5
+    // implementation rebuilt labels/options while observing those rebuilds,
+    // creating a self-sustaining Web3/Website render loop.
+    observer.disconnect();
+    try {
       patch(document);
-    });
+    } finally {
+      observe();
+    }
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  observe();
 }
 
 if (typeof window !== 'undefined') window.addEventListener('DOMContentLoaded', start);
@@ -419,7 +440,10 @@ exports._test = {
   customFieldLabels,
   rebuildTypeOptions,
   renderGroupedOptions,
+  updatePresetField,
+  updateAccountLayout,
   patchEditForm,
   patchListCategories,
-  patchDetailCategory
+  patchDetailCategory,
+  groupedOptionSignature
 };
