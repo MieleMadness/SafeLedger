@@ -1,0 +1,18 @@
+/* SafeLedger 2.6.7 login password visibility positioning fix.
+ *
+ * ui-2.5.15 intentionally removes transforms from ordinary buttons on
+ * hover/focus. The password visibility control is also a .btn and a
+ * .field-inline-action, but it relies on translateY(-50%) to stay vertically
+ * centered inside the password field. Preserve that positioning contract for
+ * every interaction state without changing the shared button behavior. */
+.password-visibility-shell > .password-visibility-toggle,
+.password-visibility-shell > .password-visibility-toggle:not(:disabled):hover,
+.password-visibility-shell > .password-visibility-toggle:not(:disabled):focus,
+.password-visibility-shell > .password-visibility-toggle:not(:disabled):focus-visible {
+  position: absolute !important;
+  right: 7px !important;
+  top: 50% !important;
+  margin: 0 !important;
+  transform: translateY(-50%) !important;
+  z-index: 3;
+}
