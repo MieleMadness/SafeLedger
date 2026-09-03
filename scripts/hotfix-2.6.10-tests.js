@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.10', 'This cleanup build must report SafeLedger 2.6.10.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 10,
+  'SafeLedger 2.6.10 regressions must remain active on 2.6.10 and later 2.6.x patches.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.10-tests.js'),
   '2.6.10 regression coverage must stay in the locked suite.');
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/asset-multichain-ui.js')), false,
@@ -163,4 +165,4 @@ try {
   else global.document = previousDocument;
 }
 
-console.log('PASS SafeLedger 2.6.10 renders Asset Network/Contract fields directly, preserves existing values, and fails safely at the custom-field limit.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.10 direct Asset Network/Contract rendering and full-field safety behavior active.`);
