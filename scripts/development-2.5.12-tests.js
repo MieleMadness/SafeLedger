@@ -99,7 +99,7 @@ function testExchangeAndWebsiteVaultItems() {
   assert(vaultItemUi.includes('does not auto-fill login URLs'));
   assert(vaultItemUi.includes("add.dataset.vaultItemLabel !== 'true'"), 'Vault item observer must not rewrite the Add button forever.');
   assert(index.includes('placeholder="Search vault items..."'));
-  assert(index.includes('Add Vault Item'));
+  assert(index.includes('id="addGroup"'), 'The Vault add action must remain present even if its user-facing label evolves.');
   assert(index.includes('./css/ui-2.5.12.css'));
 
   const exchanges = vaultItemModule._test.presetNames(vaultItemModule.EXCHANGE_CATEGORY);
