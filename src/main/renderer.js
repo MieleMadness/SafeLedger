@@ -13,6 +13,7 @@ const settingsUi = require('./settings-ui');
 const securityUi = require('./security-ui');
 const detailActions = require('./detail-actions');
 const globalSearchUi = require('./global-search-ui');
+const vaultItemSelection = require('./vault-item-selection');
 
 let vaultData;
 let vaultList;
@@ -113,8 +114,21 @@ window.addEventListener('DOMContentLoaded', () => {
     event.preventDefault();
     if (saving.state) return alert('Please wait for processing to complete');
     requireUnlocked(() => {
-      if (vaultData && vaultData.groupSelected != null) record.createRecord({ vaultData, saving });
-      else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Vault Item.' });
+      const selection = vaultItemSelection.ensureAddAssetSelection(vaultData);
+      if (!selection.ok) {
+        status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Vault Item.' });
+        return;
+      }
+
+      if (selection.changed) {
+        // Add Asset now owns selection state directly. Clear a stale Vault Item
+        // filter so the auto-selected destination is visible, then refresh the
+        // two navigation columns from the same authoritative vaultData object.
+        if (groupSearch) groupSearch.value = '';
+        group.listGroups({ vaultData, saving });
+        record.listRecords({ vaultData, saving });
+      }
+      record.createRecord({ vaultData, saving });
     });
   });
 

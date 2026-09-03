@@ -78,7 +78,8 @@ const scaleCss = read('src/main/css/ui-2.6.7-scale.css');
 const themeCss = read('src/main/css/ui-2.6.7-theme-refinement.css');
 const scaleSource = read('src/main/ui-scale-2.6.7.js');
 const rendererEntry = read('src/main/renderer-entry.js');
-const selectionSource = read('src/main/vault-item-selection-ui.js');
+const rendererSource = read('src/main/renderer.js');
+const selectionSource = read('src/main/vault-item-selection.js');
 const appMenuUi = read('src/main/app-menu-ui.js');
 const appMenuMain = read('src/main/app-menu-main.js');
 const mainSource = read('src/main/main.js');
@@ -124,9 +125,16 @@ assert.strictEqual(resized, null);
 assert(scaleSource.includes("clone.classList.add('wallet-detail-brand-image')") && scaleSource.includes("header.className = 'wallet-detail-header'"));
 assert(scaleSource.includes('observer.disconnect();') && scaleSource.includes('patchVaultDetail(document);'));
 
-assert(!selectionSource.includes('queueMicrotask(() => ensureVaultItemSelected'),
-  'Profile loading must not auto-click the first Vault Item and replace Profile detail.');
-assert(selectionSource.includes('Selection repair happens only when Add Asset is actually requested.'));
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection-ui.js')), false,
+  'The old Add Asset capture-phase selection guard must remain deleted.');
+for (const forbidden of ['renderer-bridge', 'ipcRenderer', 'document.', 'addEventListener', '.click()']) {
+  assert(!selectionSource.includes(forbidden), `Direct Vault Item selection state must not depend on ${forbidden}.`);
+}
+assert(rendererSource.includes("const vaultItemSelection = require('./vault-item-selection');"));
+assert(rendererSource.includes('vaultItemSelection.ensureAddAssetSelection(vaultData)'));
+assert(rendererSource.includes("if (groupSearch) groupSearch.value = '';"),
+  'Auto-selection should reveal its destination rather than leaving a stale filter hiding it.');
+assert(!rendererEntry.includes("require('./vault-item-selection-ui.js')"));
 
 assert(themeCss.includes('.app-menu-bar') && themeCss.includes('background: var(--sl-bg);') && themeCss.includes('color: var(--sl-text);'));
 assert(themeCss.includes('#addVault,') && themeCss.includes('#addGroup,') && themeCss.includes('#addRecord,') && themeCss.includes('.detail-action-button'));
@@ -142,4 +150,4 @@ assert(mainSource.includes("if (process.platform !== 'darwin') {") && mainSource
 assert(preloadSource.includes("prepareAppMenu: () => ipcRenderer.invoke('app-menu-prepare')") &&
   preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"));
 
-console.log('PASS SafeLedger 2.6.7 keeps Add Asset reliable, preserves Profile detail navigation, shortens Add Vault, and applies the requested readability, icon, themed menu, button, scrollbar, selection, and wider-window refinements.');
+console.log('PASS SafeLedger 2.6.7 keeps Add Asset reliable with direct selection ownership, preserves Profile detail navigation, and applies the requested interface refinements.');

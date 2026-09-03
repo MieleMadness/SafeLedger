@@ -19,16 +19,19 @@ Regression coverage applies the enhancer twice and requires the second identical
 
 ## Profile and Vault navigation
 
-A separate selection helper introduced during earlier Add Asset repairs was automatically clicking the first visible Vault Item after every successful Profile `vault-read`. That meant the Profile detail screen could appear briefly and then be replaced by the first Vault detail even though the status correctly said `Load successful`.
+An earlier Add Asset repair used a separate renderer module that maintained its own `activeVaultData`, subscribed to IPC results, intercepted the Add Asset button in the capture phase, and simulated a Vault Item click before the real Add Asset handler ran. That repaired selection, but it duplicated state ownership and made the Add Asset path depend on DOM event ordering.
 
-2.6.7 removes that post-load automatic navigation:
+2.6.7 removes that patch architecture:
 
 - clicking a Profile keeps the Profile detail panel visible;
 - clicking a Vault shows that Vault's detail panel normally;
-- if Add Asset is requested without a valid Vault selection, SafeLedger repairs the selection only at that moment through the normal Vault click path;
+- the real Add Asset handler in `renderer.js` now owns the complete selection decision using the authoritative `vaultData` object it already maintains;
+- the passive `vault-item-selection.js` helper only validates/updates selection state and has no IPC subscription, DOM lookup, event listener, timer, or synthetic click;
+- when Add Asset is requested without a valid Vault Item selection, the first available Vault Item is selected directly in application state, the stale Vault search filter is cleared so that destination is visible, the Vault/Asset columns refresh, and the normal `record.createRecord()` path opens;
+- the former capture-phase `vault-item-selection-ui.js` module is removed from both the repository and renderer bundle;
 - the bottom action is shortened from **Add Vault Item** to **Add Vault**.
 
-Historical regressions now protect the Vault add action and on-demand selection behavior without forcing the retired automatic Profile-to-Vault navigation or the older button wording.
+The renderer bridge still fans one renderer-world result object to its listeners, but Add Asset reliability no longer depends on a second UI module receiving and mutating that object before the real click handler runs.
 
 ## Vault Item renderer consolidation
 

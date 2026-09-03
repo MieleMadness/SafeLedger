@@ -13,12 +13,8 @@ assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 6,
   'SafeLedger 2.6.6 interaction reliability regressions must remain active on 2.6.6 and later 2.6.x patches.');
 
 const originalWindow = global.window;
-const originalDocument = global.document;
 const bridgePath = path.join(root, 'src/main/renderer-bridge.js');
-const selectionPath = path.join(root, 'src/main/vault-item-selection-ui.js');
-
 delete require.cache[require.resolve(bridgePath)];
-delete require.cache[require.resolve(selectionPath)];
 
 let resultSubscription = null;
 let resultSubscriptionCount = 0;
@@ -34,13 +30,13 @@ global.window = {
 
 const bridge = require(bridgePath);
 let rendererPayload = null;
-let helperPayload = null;
+let secondListenerPayload = null;
 bridge.ipcRenderer.on('result', (_event, payload) => {
   rendererPayload = payload;
   payload.rendererTouched = true;
 });
 bridge.ipcRenderer.on('result', (_event, payload) => {
-  helperPayload = payload;
+  secondListenerPayload = payload;
 });
 
 assert.strictEqual(resultSubscriptionCount, 1,
@@ -56,50 +52,33 @@ const sharedResult = {
   }
 };
 resultSubscription(sharedResult);
-assert.strictEqual(rendererPayload, helperPayload,
-  'Core renderer and UI helpers must receive the same renderer-world result object, not separate structured clones.');
-assert.strictEqual(helperPayload.rendererTouched, true,
-  'A state change made by the first renderer listener must be visible to later UI listeners.');
+assert.strictEqual(rendererPayload, secondListenerPayload,
+  'Renderer listeners must receive the same renderer-world result object, not separate structured clones.');
+assert.strictEqual(secondListenerPayload.rendererTouched, true,
+  'A state change made by the first renderer listener must be visible to later renderer listeners.');
 
-const selectionTests = require(selectionPath)._test;
-selectionTests.setActiveVaultData(sharedResult.vaultData);
-let selectedAnchor = null;
-let firstClicks = 0;
-const firstAnchor = {
-  click() {
-    firstClicks += 1;
-    sharedResult.vaultData.groupSelected = 1;
-    sharedResult.vaultData.recordSelected = null;
-    selectedAnchor = firstAnchor;
-  }
-};
-const fakeDoc = {
-  querySelector(selector) {
-    if (selector === '#groupArea .nav > li > a.item-selected') return selectedAnchor;
-    if (selector === '#groupArea .nav > li > a') return firstAnchor;
-    return null;
-  }
-};
+const selection = require(path.join(root, 'src/main/vault-item-selection.js'));
+const repaired = selection.ensureAddAssetSelection(rendererPayload.vaultData);
+assert.strictEqual(repaired.ok, true);
+assert.strictEqual(repaired.changed, true,
+  'Missing Add Asset selection must be repaired directly on the authoritative renderer vaultData object.');
+assert.strictEqual(rendererPayload.vaultData.groupSelected, 0);
+assert.strictEqual(rendererPayload.vaultData.recordSelected, null);
+assert.strictEqual(selection.ensureAddAssetSelection(rendererPayload.vaultData).changed, false,
+  'A valid selection must not be rewritten on later Add Asset requests.');
 
-assert.strictEqual(selectionTests.repairAddAssetClick({}, fakeDoc, sharedResult.vaultData), true,
-  'Add Asset capture must synchronously repair a missing Vault Item selection.');
-assert.strictEqual(firstClicks, 1, 'Selection repair must use the normal Vault Item click path exactly once.');
-assert.strictEqual(sharedResult.vaultData.groupSelected, 1,
-  'The repaired selection must be visible on the exact vaultData object used by the core renderer.');
-let realAddAssetOpened = false;
-if (rendererPayload.vaultData && rendererPayload.vaultData.groupSelected != null) realAddAssetOpened = true;
-assert.strictEqual(realAddAssetOpened, true,
-  'The original renderer Add Asset handler must see a valid selection on the same click.');
-
-const selectionSource = read('src/main/vault-item-selection-ui.js');
-assert(!selectionSource.includes('stopImmediatePropagation'),
-  '2.6.6+ must not cancel the real Add Asset click while repairing selection.');
-assert(!selectionSource.includes('addAsset.click()'),
-  '2.6.6+ must not rely on a second synthetic Add Asset click.');
-assert(!selectionSource.includes('queueMicrotask(() => ensureVaultItemSelected'),
-  'Loading a Profile must not auto-click the first Vault Item and replace the Profile detail screen.');
-assert(selectionSource.includes('Selection repair happens only when Add Asset is actually requested.'),
-  'Vault Item auto-selection must remain scoped to the Add Asset request path.');
+const selectionSource = read('src/main/vault-item-selection.js');
+assert(!selectionSource.includes('renderer-bridge') && !selectionSource.includes('ipcRenderer'),
+  'Selection state must not keep a duplicate IPC subscription.');
+assert(!selectionSource.includes('document.') && !selectionSource.includes('.click()'),
+  'Selection state must not depend on DOM lookup or synthetic clicks.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection-ui.js')), false,
+  'The old UI selection guard must remain deleted.');
+const rendererSource = read('src/main/renderer.js');
+assert(rendererSource.includes('vaultItemSelection.ensureAddAssetSelection(vaultData)'));
+assert(rendererSource.includes('group.listGroups({ vaultData, saving });'));
+assert(rendererSource.includes('record.listRecords({ vaultData, saving });'));
+assert(rendererSource.includes('record.createRecord({ vaultData, saving });'));
 
 // The old 2.6.5/2.6.6 fix prevented multiple DOM observers from mutating each
 // other's Web3/Website dropdowns. The stronger invariant is now that those
@@ -129,17 +108,14 @@ for (const retired of [
   'service-catalog-ui.js',
   'vault-item-type-split-ui.js',
   'vault-item-wallet-presets-ui.js',
-  'vault-language-ui.js'
+  'vault-language-ui.js',
+  'vault-item-selection-ui.js'
 ]) {
   assert(!rendererEntry.includes(`require('./${retired}')`), `${retired} must remain retired from the renderer bundle.`);
 }
 
 if (originalWindow === undefined) delete global.window;
 else global.window = originalWindow;
-if (originalDocument === undefined) delete global.document;
-else global.document = originalDocument;
-
 delete require.cache[require.resolve(bridgePath)];
-delete require.cache[require.resolve(selectionPath)];
 
-console.log(`PASS SafeLedger ${pkg.version} preserves shared Add Asset state and replaces competing Vault Item DOM observers with deterministic direct rendering.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves shared renderer state while Add Asset selection is direct and observer/click free.`);
