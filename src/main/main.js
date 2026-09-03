@@ -496,7 +496,7 @@ ipc.on('vault-list-delete', (event, params = {}) => {
     .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
     .then(async () => {
       await securityMain.audit(getDataRoot(), 'profile-deleted');
-      sendResult({ type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' });
+      sendResult({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted' });
     })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Delete failed' }));
 });
@@ -514,7 +514,13 @@ ipc.on('process-group', (event, params = {}) => {
   vault.saveVault(path.join(vaultDir, data.file), JSON.stringify(data), key)
     .then(async () => {
       await securityMain.audit(getDataRoot(), groupActivityEvent(params));
-      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: data });
+      const deleted = params.type === 'group-delete';
+      sendResult({
+        status: deleted ? 'DELETED' : 'SUCCESS',
+        statusMsg: deleted ? 'Item Deleted' : 'Save successful',
+        type: params.type,
+        vaultData: data
+      });
     })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
@@ -532,7 +538,13 @@ ipc.on('process-record', (event, params = {}) => {
   vault.saveVault(path.join(vaultDir, data.file), JSON.stringify(data), key)
     .then(async () => {
       await securityMain.audit(getDataRoot(), recordActivityEvent(params));
-      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: data });
+      const deleted = params.action === 'delete';
+      sendResult({
+        status: deleted ? 'DELETED' : 'SUCCESS',
+        statusMsg: deleted ? 'Item Deleted' : 'Save successful',
+        type: 'record',
+        vaultData: data
+      });
     })
     .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
 });
