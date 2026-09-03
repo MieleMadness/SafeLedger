@@ -23,7 +23,7 @@ const legacyPatchFiles = [
   'src/main/css/2.0.44.css'
 ];
 
-const historicalUiFixtures = [
+const retiredHistoricalUiFiles = [
   'src/main/css/ui-2.5.8.css',
   'src/main/css/ui-2.5.9.css',
   'src/main/css/ui-2.5.11.css',
@@ -40,10 +40,10 @@ assert(index.includes('./css/site.css'));
 assert(index.includes('./css/token-icons.css'));
 assert(index.includes('./css/ui-current.css'));
 assert(!index.includes('./css/2.0.'));
-for (const relative of historicalUiFixtures) {
+for (const relative of retiredHistoricalUiFiles) {
   const href = `./css/${path.basename(relative)}`;
-  assert(!index.includes(href), `${href} should remain a historical fixture, not a separate runtime stylesheet.`);
-  assert.strictEqual(exists(relative), true, `${relative} should remain available temporarily for cascade equivalence checks.`);
+  assert(!index.includes(href), `${href} must stay retired from the runtime cascade.`);
+  assert.strictEqual(exists(relative), false, `${relative} should stay deleted after consolidation into ui-current.css.`);
 }
 
 for (const relative of legacyPatchFiles) {
@@ -74,7 +74,12 @@ for (const selector of [
   '.app-menu-bar',
   '::-webkit-scrollbar-thumb'
 ]) {
-  assert(currentUi.includes(selector), `Current UI stylesheet should contain historical cascade behavior for ${selector}`);
+  assert(currentUi.includes(selector), `Current UI stylesheet should preserve consolidated behavior for ${selector}`);
 }
 
-console.log('PASS canonical stylesheet consolidation, one current runtime UI cascade, and legacy CSS patch cleanup.');
+assert(exists('scripts/ui-visual-baseline.json'),
+  'Consolidated UI must keep a fixture-independent visual baseline after historical CSS files are removed.');
+assert(exists('scripts/visual-contract-regression-tests.js'),
+  'Consolidated UI must keep its reusable visual-contract gate.');
+
+console.log('PASS canonical stylesheet consolidation keeps one current UI cascade and no retired versioned CSS fixtures.');
