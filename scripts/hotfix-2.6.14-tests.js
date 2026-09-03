@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('assert');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -16,7 +17,8 @@ assert(read('package.json').includes('node scripts/hotfix-2.6.14-tests.js'),
 
 const index = read('src/main/index.html');
 const currentUi = read('src/main/css/ui-current.css');
-const historicalLayers = [
+const baseline = JSON.parse(read('scripts/ui-visual-baseline.json'));
+const retiredHistoricalLayers = [
   'src/main/css/ui-2.5.8.css',
   'src/main/css/ui-2.5.9.css',
   'src/main/css/ui-2.5.11.css',
@@ -29,31 +31,31 @@ const historicalLayers = [
   'src/main/css/ui-2.6.7-theme-refinement.css'
 ];
 
+function canonicalGitBlobSha(content) {
+  const canonical = String(content || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const body = Buffer.from(canonical, 'utf8');
+  return crypto.createHash('sha1')
+    .update(Buffer.from(`blob ${body.length}\0`, 'utf8'))
+    .update(body)
+    .digest('hex');
+}
+
 assert(index.includes('<link href="./css/ui-current.css" rel="stylesheet">'),
   'SafeLedger must load one current UI cascade.');
 assert.strictEqual((index.match(/\.\/css\/ui-current\.css/g) || []).length, 1,
   'Current UI stylesheet should be loaded exactly once.');
-for (const file of historicalLayers) {
+for (const file of retiredHistoricalLayers) {
   const href = `./css/${path.basename(file)}`;
   assert(!index.includes(href), `${href} must not be loaded separately at runtime.`);
-  assert(fs.existsSync(path.join(root, file)), `${file} should remain as a temporary equivalence fixture until its dedicated cleanup candidate.`);
+  assert.strictEqual(fs.existsSync(path.join(root, file)), false,
+    `${file} should stay deleted after its rules were consolidated into ui-current.css.`);
 }
 
-function normalizedCss(value) {
-  return String(value || '')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/\s+/g, '');
-}
-
-const historicalCascade = historicalLayers.map(read).join('\n');
-assert.strictEqual(
-  normalizedCss(currentUi),
-  normalizedCss(historicalCascade),
-  'ui-current.css must preserve the exact rule order and declarations from the historical runtime cascade.'
-);
+assert.strictEqual(canonicalGitBlobSha(currentUi), baseline.uiCurrentGitBlobSha,
+  'The 2.6.14 consolidated UI must remain identical to its approved fixture-independent visual baseline.');
 
 const currentIndex = index.indexOf('./css/ui-current.css');
 assert(currentIndex > index.indexOf('./css/profile-setup.css'),
   'The consolidated UI cascade must remain after Profile setup styling, matching the former patch-layer position.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.14 single current UI stylesheet with an exactly equivalent historical cascade.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.14 single current UI stylesheet through its approved visual baseline with retired fixtures removed.`);
