@@ -47,7 +47,7 @@ for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-
     'Expanded Profile, Vault Item, and Asset columns must remain equal.');
 }
 assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
-assert(foundation.includes('--sl-compact-nav-column: 104px;'));
+assert(foundation.includes('--sl-compact-nav-column: 98px;'));
 assert(foundation.includes('[data-profile-collapsed="true"]'));
 assert(foundation.includes('[data-vault-collapsed="true"]'));
 assert(foundation.includes('[data-asset-collapsed="true"]'));
@@ -74,4 +74,4 @@ assert(collapseSource.includes("mainCell.addEventListener('mouseover', refreshLa
 assert(!collapseSource.includes('localStorage'),
   'Columns should start expanded on each launch rather than hiding labels by default from a persisted preference.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the rendered recovery icon, safe preset cleanup, and explicit accessible padded compact navigation rails active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the rendered recovery icon, safe preset cleanup, and explicit accessible balanced compact navigation rails active.`);
