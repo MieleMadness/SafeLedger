@@ -26,7 +26,8 @@ assert(gate2615.includes("createMessage('danger', 'Item Deleted', { role: 'statu
   'Historical gate must verify a successful red deletion message remains a polite status.');
 
 assert(statusSource.includes("case 'DELETED': return 'danger';"));
-assert(statusSource.includes("state === 'DELETED' ? { role: 'status', ariaLive: 'polite' } : {}"));
+assert(statusSource.includes("? { role: 'status', ariaLive: 'polite', iconClass: 'fa fa-trash' }"),
+  'Successful deletion notices must stay polite while using their dedicated trash-can icon.');
 assert(main.includes("status: 'DELETED', statusMsg: 'Item Deleted'"));
 
 const windowSizing = require('../src/main/window-sizing-main.js');
@@ -34,4 +35,4 @@ assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283);
 assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 750);
 assert(read('src/main/css/foundation.css').includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr)'));
 
-console.log(`PASS SafeLedger ${pkg.version} keeps true errors assertive, successful red deletion notices polite, and the requested equal-column layout unchanged.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps true errors assertive, successful red deletion notices polite with a trash icon, and the requested equal-column layout unchanged.`);
