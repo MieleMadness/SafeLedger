@@ -238,6 +238,22 @@ function createEditor(grid, initialFields, options = {}) {
     return existing || addRow(normalized);
   }
 
+  // Preset fields have changed over time. This helper lets the canonical Vault
+  // Item presentation retire an obsolete auto-created row only when it is
+  // still blank. A populated legacy value is intentionally preserved.
+  function removeEmptyField(label) {
+    const key = normalizeLabel(label);
+    const index = rows.findIndex((row) => normalizeLabel(row.labelInput.value) === key);
+    if (index < 0) return false;
+    const rowState = rows[index];
+    const value = rowState.getValue();
+    const isEmpty = value == null || (typeof value === 'string' && value.trim() === '');
+    if (!isEmpty) return false;
+    rows.splice(index, 1);
+    rowState.row.remove();
+    return true;
+  }
+
   // Retained for compatibility with older tests/modules that may still call
   // the helper directly. Current Asset rendering takes the fixed-fields path
   // above and no longer uses the generic custom-field row UI for identity.
@@ -278,6 +294,7 @@ function createEditor(grid, initialFields, options = {}) {
 
   return {
     ensureField,
+    removeEmptyField,
     getFields: () => customFields.normalize(rows.map((row) => ({
       label: row.labelInput.value,
       type: row.typeSelect.value,
