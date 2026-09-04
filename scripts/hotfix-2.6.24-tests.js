@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.24', 'This workflow candidate must report SafeLedger 2.6.24.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 24,
+  'SafeLedger 2.6.24 recovery UI refinements must remain active on 2.6.24 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.24-tests.js'),
   '2.6.24 recovery UI coverage must stay in the locked regression suite.');
 
@@ -47,4 +49,4 @@ assert(productCss.includes('.recovery-drill-validation-actions { margin-top: 6px
 assert(priorGate.includes('parts[2] >= 23'),
   'The 2.6.23 UI gate must remain active on later workflow candidates.');
 
-console.log('PASS SafeLedger 2.6.24 uses clearer deletion/recovery icons and moves the BIP39 checker to the top with matched button spacing.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.24 deletion/recovery icons and top-of-page BIP39 layout active.`);
