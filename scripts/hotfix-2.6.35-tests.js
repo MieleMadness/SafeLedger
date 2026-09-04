@@ -7,10 +7,12 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const foundation = read('src/main/css/foundation.css');
 const gate2634 = read('scripts/hotfix-2.6.34-tests.js');
 
-assert.strictEqual(pkg.version, '2.6.35', 'This workflow candidate must report SafeLedger 2.6.35.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 35,
+  'SafeLedger 2.6.35 square compact-selection coverage must remain active on 2.6.35 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.35-tests.js'),
   '2.6.35 square compact-selection coverage must stay in the locked regression suite.');
 
@@ -29,4 +31,4 @@ assert(/\.nav-column-collapsed\s+\.badge-selected\s*\{[\s\S]*?border-color:\s*tr
 assert(gate2634.includes('parts[2] >= 34'),
   'The complete 2.6.34 balanced padding and short-heading behavior must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.35 shrink-wraps compact navigation selections into square icon tiles with no extra side width.');
+console.log(`PASS SafeLedger ${pkg.version} keeps square compact navigation selection tiles with no extra side width.`);
