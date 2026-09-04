@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.22', 'This workflow candidate must report SafeLedger 2.6.22.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 22,
+  'SafeLedger 2.6.22 deletion accessibility regressions must remain active on 2.6.22 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.22-tests.js'),
   '2.6.22 status accessibility coverage must stay in the locked suite.');
 
@@ -32,4 +34,4 @@ assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283);
 assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 750);
 assert(read('src/main/css/foundation.css').includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr)'));
 
-console.log('PASS SafeLedger 2.6.22 keeps true errors assertive, successful red deletion notices polite, and the requested equal-column layout unchanged.');
+console.log(`PASS SafeLedger ${pkg.version} keeps true errors assertive, successful red deletion notices polite, and the requested equal-column layout unchanged.`);
