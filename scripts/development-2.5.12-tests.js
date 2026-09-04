@@ -102,7 +102,9 @@ function testExchangeAndWebsiteVaultItems() {
   assert(vaultItemPresentationSource.includes("const LEGACY_SERVICE_CATEGORY = 'Web3 / Website Account';"));
   assert(vaultItemPresentationSource.includes("['2FA recovery / backup codes', 'sensitive']"));
   assert(vaultItemPresentationSource.includes('never auto-fills a login URL'));
-  assert(index.includes('placeholder="Search vault items..."'));
+  assert(index.includes('id="groupSearch"'), 'The Vault search control must remain present.');
+  assert(index.includes('placeholder="Search vaults..."'), 'The Vault search field should use the current concise wording.');
+  assert(!index.includes('placeholder="Search vault items..."'), 'The retired verbose Vault search wording must stay removed.');
   assert(index.includes('id="addGroup"'), 'The Vault add action must remain present even if its user-facing label evolves.');
   assert(index.includes('./css/ui-current.css'));
 
