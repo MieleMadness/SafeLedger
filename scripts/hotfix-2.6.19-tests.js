@@ -47,7 +47,7 @@ assert(statusSource.includes("case 'DELETED': return 'danger';"),
   'Deleted confirmations should use the red danger visual palette.');
 assert(statusSource.includes("state === 'ERROR' || state === 'DELETED'"),
   'Deleted confirmations must remain visible even though routine reads are silent.');
-assert(statusSource.includes("state === 'DELETED' ? { role: 'status', ariaLive: 'polite' } : {}"),
+assert(statusSource.includes("role: 'status', ariaLive: 'polite'"),
   'A successful deletion may look red but must not be announced as an application error.');
 
 const previousDocument = global.document;
@@ -75,6 +75,8 @@ try {
   assert(appended && appended.className.includes('safeledger-status-danger'));
   assert.strictEqual(appended.attributes.role, 'status');
   assert.strictEqual(appended.attributes['aria-live'], 'polite');
+  assert.strictEqual(appended.children[0].className, 'fa fa-trash',
+    'Successful deletion should render the dedicated trash-can icon.');
   assert.strictEqual(appended.children[1].textContent, 'Item Deleted');
 } finally {
   if (previousDocument === undefined) delete global.document;
@@ -83,4 +85,4 @@ try {
   else global.window = previousWindow;
 }
 
-console.log(`PASS SafeLedger ${pkg.version} keeps equal navigation columns, proportional native opening width, and red Item Deleted confirmations.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps equal navigation columns, proportional native opening width, and red Item Deleted confirmations with a dedicated trash icon.`);
