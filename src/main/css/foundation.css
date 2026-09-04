@@ -11,7 +11,7 @@
   --sl-vault-column: minmax(0, 2fr);
   --sl-asset-column: minmax(0, 2fr);
   --sl-detail-column: minmax(0, 5fr);
-  --sl-compact-nav-column: 56px;
+  --sl-compact-nav-column: 104px;
 }
 
 .app-shell[data-profile-collapsed="true"] { --sl-profile-column: var(--sl-compact-nav-column); }
@@ -47,7 +47,8 @@
 
 /* Navigation columns stay fully labeled by default. The user can deliberately
  * collapse any one into a compact icon rail; the Detail column automatically
- * receives the freed grid space. */
+ * receives the freed grid space. Compact rails deliberately retain the same
+ * outer and item padding as expanded columns so artwork never crowds borders. */
 .nav-column-search {
   display: flex;
   align-items: flex-start;
@@ -71,8 +72,8 @@
 .column-collapse-toggle .fa { margin: 0 !important; }
 
 .nav-column-collapsed {
-  padding-left: 6px !important;
-  padding-right: 6px !important;
+  padding-left: 15px !important;
+  padding-right: 15px !important;
 }
 .nav-column-collapsed.nav-column-search {
   justify-content: center;
@@ -85,8 +86,8 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  padding-left: 2px !important;
-  padding-right: 2px !important;
+  padding-left: 9px !important;
+  padding-right: 9px !important;
 }
 .nav-column-collapsed .profile-list-row,
 .nav-column-collapsed .coin-list-row {
@@ -94,6 +95,12 @@
   display: flex !important;
   align-items: center;
   justify-content: center;
+}
+.nav-column-collapsed .wallet-list-brand-image,
+.nav-column-collapsed .wallet-list-catalog-icon,
+.nav-column-collapsed .wallet-list-icon,
+.nav-column-collapsed .wallet-list-fallback-icon {
+  margin-right: 0 !important;
 }
 .nav-column-collapsed .profile-list-name,
 .nav-column-collapsed .wallet-list-text,
