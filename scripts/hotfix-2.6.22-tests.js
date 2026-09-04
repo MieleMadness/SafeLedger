@@ -33,6 +33,10 @@ assert(main.includes("status: 'DELETED', statusMsg: 'Item Deleted'"));
 const windowSizing = require('../src/main/window-sizing-main.js');
 assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283);
 assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 750);
-assert(read('src/main/css/foundation.css').includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr)'));
+const foundation = read('src/main/css/foundation.css');
+for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-column']) {
+  assert(foundation.includes(`${variable}: minmax(0, 2fr);`));
+}
+assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
 
-console.log(`PASS SafeLedger ${pkg.version} keeps true errors assertive, successful red deletion notices polite with a trash icon, and the requested equal-column layout unchanged.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps true errors assertive, successful red deletion notices polite with a trash icon, and the requested equal expanded-column layout unchanged.`);
