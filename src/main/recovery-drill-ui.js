@@ -43,7 +43,7 @@ function appendOptionalBip39Check(area) {
   section.appendChild(input);
 
   const actions = document.createElement('div');
-  actions.className = 'settings-section-actions';
+  actions.className = 'settings-section-actions recovery-drill-validation-actions';
   const validate = document.createElement('button');
   validate.type = 'button';
   validate.className = 'btn btn-default';
@@ -91,10 +91,12 @@ function render(params = {}) {
   appendText(header, 'p', 'recovery-drill-wallet', `Vault Item: ${params.walletName || 'Vault Item'}`);
   area.appendChild(header);
 
+  appendOptionalBip39Check(area);
+
   const privacy = document.createElement('div');
   privacy.className = 'recovery-drill-privacy';
   const privacyIcon = document.createElement('i');
-  privacyIcon.className = 'fa fa-shield';
+  privacyIcon.className = 'fa fa-lock';
   privacyIcon.setAttribute('aria-hidden', 'true');
   privacy.appendChild(privacyIcon);
   appendText(
@@ -131,8 +133,6 @@ function render(params = {}) {
     list.appendChild(row);
   }
   area.appendChild(list);
-
-  appendOptionalBip39Check(area);
 
   const storageNote = document.createElement('div');
   storageNote.className = 'recovery-drill-storage-note';
