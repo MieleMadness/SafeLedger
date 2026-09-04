@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.32', 'This workflow candidate must report SafeLedger 2.6.32.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 32,
+  'SafeLedger 2.6.32 padded-rail and Activity History icon coverage must remain active on 2.6.32 and later candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.32-tests.js'),
   '2.6.32 padded-rail and Activity History icon coverage must stay in the locked suite.');
 
@@ -19,7 +21,7 @@ const gate2631 = read('scripts/hotfix-2.6.31-tests.js');
 
 assert(foundation.includes('--sl-compact-nav-column: 104px;'),
   'Collapsed Profile/Vault/Asset rails must have enough width for normal padding around artwork.');
-assert(foundation.includes('.nav-column-collapsed {\n  padding-left: 15px !important;\n  padding-right: 15px !important;\n}'),
+assert(/\.nav-column-collapsed\s*\{\s*padding-left:\s*15px\s*!important;\s*padding-right:\s*15px\s*!important;\s*\}/.test(foundation),
   'Collapsed rails must keep the same 15px outer padding as expanded columns.');
 assert(foundation.includes('padding-left: 9px !important;') && foundation.includes('padding-right: 9px !important;'),
   'Collapsed navigation items must keep the normal 9px horizontal item padding.');
@@ -43,4 +45,4 @@ assert(localIcons.includes('#loginBtn .fa-unlock::before') && localIcons.include
 assert(gate2631.includes('parts[2] >= 31'),
   'The corrected 2.6.31 meta-regression must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.32 keeps padded compact navigation rails and correctly rendered local Activity History open/unlock icons.');
+console.log(`PASS SafeLedger ${pkg.version} keeps padded compact navigation rails and correctly rendered local Activity History open/unlock icons.`);
