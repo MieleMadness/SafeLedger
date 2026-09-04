@@ -11,7 +11,7 @@
   --sl-vault-column: minmax(0, 2fr);
   --sl-asset-column: minmax(0, 2fr);
   --sl-detail-column: minmax(0, 5fr);
-  --sl-compact-nav-column: 104px;
+  --sl-compact-nav-column: 98px;
 }
 
 .app-shell[data-profile-collapsed="true"] { --sl-profile-column: var(--sl-compact-nav-column); }
@@ -47,8 +47,9 @@
 
 /* Navigation columns stay fully labeled by default. The user can deliberately
  * collapse any one into a compact icon rail; the Detail column automatically
- * receives the freed grid space. Compact rails deliberately retain the same
- * outer and item padding as expanded columns so artwork never crowds borders. */
+ * receives the freed grid space. Compact rails retain the expanded column's
+ * outer padding, while each compact navigation item uses equal 6px padding on
+ * every side so the artwork has balanced breathing room. */
 .nav-column-search {
   display: flex;
   align-items: flex-start;
@@ -86,8 +87,7 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  padding-left: 9px !important;
-  padding-right: 9px !important;
+  padding: 6px !important;
 }
 .nav-column-collapsed .profile-list-row,
 .nav-column-collapsed .coin-list-row {
@@ -139,6 +139,20 @@
 .nav-column-collapsed.nav-column-button .bottom-space .fa {
   margin: 0 !important;
   font-size: 14px !important;
+}
+
+/* Legacy detail pages often pair a heading with a full-width <hr>. Keep the
+ * visual separator attached to the heading itself so its underline is only as
+ * wide as the heading text, while true standalone separators remain intact. */
+#detailArea .page-header,
+#detailArea h1:has(+ hr) {
+  display: table;
+  width: auto;
+  border-bottom: 1px solid var(--sl-border, #d7dee8);
+}
+#detailArea .page-header + hr,
+#detailArea h1 + hr {
+  display: none !important;
 }
 
 .form-group { margin-bottom: 15px; }
