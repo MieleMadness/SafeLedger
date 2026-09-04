@@ -82,19 +82,39 @@
 .nav-column-collapsed.nav-column-search .search-field-wrap {
   display: none !important;
 }
+.nav-column-collapsed.nav-column-main .nav > li {
+  display: flex;
+  justify-content: center;
+}
 .nav-column-collapsed.nav-column-main .nav > li > a {
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
+  width: fit-content !important;
   min-width: 0;
+  max-width: 100%;
   padding: 6px !important;
 }
 .nav-column-collapsed .profile-list-row,
 .nav-column-collapsed .coin-list-row {
-  width: 100%;
+  width: auto !important;
+  flex: 0 0 auto;
   display: flex !important;
   align-items: center;
   justify-content: center;
+}
+/* Profiles historically put their selection border on the circular initial.
+ * In compact mode the link itself owns the selection state so Profiles, Vault
+ * Items, and Assets all get the same square, shrink-wrapped selection tile. */
+.nav-column-collapsed.nav-column-main .nav > li > a:has(.badge-selected) {
+  background: var(--sl-selected, #0b1220) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, .95) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+.nav-column-collapsed .badge-selected {
+  border-color: transparent !important;
 }
 .nav-column-collapsed .wallet-list-brand-image,
 .nav-column-collapsed .wallet-list-catalog-icon,
