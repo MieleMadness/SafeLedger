@@ -175,6 +175,20 @@
   display: none !important;
 }
 
+/* Vault Item and Asset details wrap their title inside an icon/header row, so
+ * the heading is not directly adjacent to the legacy <hr>. Give the title text
+ * its own underline and hide only that header's old full-width divider. */
+#detailArea .wallet-detail-title,
+#detailArea .coin-detail-title-wrap > h1 {
+  display: table;
+  width: auto;
+  border-bottom: 1px solid var(--sl-border, #d7dee8);
+}
+#detailArea .wallet-detail-header + hr,
+#detailArea .coin-detail-header + hr {
+  display: none !important;
+}
+
 .form-group { margin-bottom: 15px; }
 
 .form-control {
