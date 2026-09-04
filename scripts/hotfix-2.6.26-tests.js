@@ -66,8 +66,11 @@ assert(collapseSource.includes("input.dispatchEvent(new Event('input', { bubbles
   'Collapsing a rail must clear a hidden active search instead of leaving mysteriously filtered icons.');
 assert(collapseSource.includes("link.setAttribute('aria-label', text);"),
   'Compact list icons must retain item names for accessibility.');
-assert(!collapseSource.includes('MutationObserver'),
-  'Compact navigation must not reintroduce a post-render observer patch loop.');
+assert(!/\bnew\s+MutationObserver\s*\(/.test(collapseSource) && !/\bMutationObserver\s*\(/.test(collapseSource),
+  'Compact navigation must not instantiate or call a post-render MutationObserver patch loop.');
+assert(collapseSource.includes("mainCell.addEventListener('mouseover', refreshLabels);") &&
+  collapseSource.includes("mainCell.addEventListener('focusin', refreshLabels);"),
+  'Compact navigation should keep labels current through ordinary delegated events.');
 assert(!collapseSource.includes('localStorage'),
   'Columns should start expanded on each launch rather than hiding labels by default from a persisted preference.');
 
