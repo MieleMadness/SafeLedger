@@ -15,6 +15,7 @@ assert(read('package.json').includes('node scripts/hotfix-2.6.24-tests.js'),
   '2.6.24 recovery UI coverage must stay in the locked regression suite.');
 
 const statusSource = read('src/main/status.js');
+const groupSource = read('src/main/group.js');
 const drillSource = read('src/main/recovery-drill-ui.js');
 const productCss = read('src/main/css/product-features.css');
 const priorGate = read('scripts/hotfix-2.6.23-tests.js');
@@ -24,8 +25,10 @@ assert(statusSource.includes("iconClass: 'fa fa-trash'"),
 assert(statusSource.includes("role: 'status', ariaLive: 'polite'"),
   'Successful deletion must remain a polite status rather than becoming an assertive error.');
 
-assert(productCss.includes('.recovery-readiness-actions .fa-shield::before') && productCss.includes('f046'),
-  'Run recovery drill must display the clearer checklist glyph instead of the old shield/diamond appearance.');
+assert(groupSource.includes("'<i class=\"fa fa-refresh\"></i> Run recovery drill'"),
+  'Run recovery drill must use the bundled refresh/retest glyph that renders in SafeLedger.');
+assert(!productCss.includes('.recovery-readiness-actions .fa-shield::before'),
+  'The unsupported pseudo-glyph override that rendered as a rectangle must stay removed.');
 assert(drillSource.includes("privacyIcon.className = 'fa fa-lock';"),
   'The Test Recovery safety callout must use a clear lock icon.');
 assert(!drillSource.includes("privacyIcon.className = 'fa fa-shield';"),
@@ -49,4 +52,4 @@ assert(productCss.includes('.recovery-drill-validation-actions { margin-top: 6px
 assert(priorGate.includes('parts[2] >= 23'),
   'The 2.6.23 UI gate must remain active on later workflow candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.24 deletion/recovery icons and top-of-page BIP39 layout active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the deletion trash icon, a bundled recovery-drill icon, and top-of-page BIP39 layout active.`);
