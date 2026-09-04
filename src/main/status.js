@@ -76,7 +76,9 @@ exports.showStatus = (params = {}) => {
 
   const state = String(params.status || '').toUpperCase();
   const kind = statusKind(state);
-  const options = state === 'DELETED' ? { role: 'status', ariaLive: 'polite' } : {};
+  const options = state === 'DELETED'
+    ? { role: 'status', ariaLive: 'polite', iconClass: 'fa fa-trash' }
+    : {};
   area.appendChild(createMessage(kind, params.statusMsg, options));
   closeTimer = window.setTimeout(closeStatus, STATUS_TIMEOUT_MS);
   return true;
