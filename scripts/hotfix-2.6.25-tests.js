@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.25', 'This workflow candidate must report SafeLedger 2.6.25.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 25,
+  'SafeLedger 2.6.25 historical-gate correction must remain active on 2.6.25 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.25-tests.js'),
   '2.6.25 historical-gate correction must stay in the locked regression suite.');
 
@@ -27,4 +29,4 @@ assert(statusSource.includes("iconClass: 'fa fa-trash'"),
 assert(gate2624.includes('parts[2] >= 24'),
   'The 2.6.24 recovery UI gate must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.25 modernizes the stale 2.6.19 deletion gate without changing 2.6.24 application behavior.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.25 historical deletion-gate correction active on later candidates.`);
