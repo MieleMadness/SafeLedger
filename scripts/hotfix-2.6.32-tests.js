@@ -19,12 +19,12 @@ const localIcons = read('src/main/css/local-icons.css');
 const activityHistory = require('../src/main/activity-history.js');
 const gate2631 = read('scripts/hotfix-2.6.31-tests.js');
 
-assert(foundation.includes('--sl-compact-nav-column: 104px;'),
-  'Collapsed Profile/Vault/Asset rails must have enough width for normal padding around artwork.');
+assert(foundation.includes('--sl-compact-nav-column: 98px;'),
+  'Collapsed Profile/Vault/Asset rails must keep enough width for balanced artwork padding.');
 assert(/\.nav-column-collapsed\s*\{\s*padding-left:\s*15px\s*!important;\s*padding-right:\s*15px\s*!important;\s*\}/.test(foundation),
   'Collapsed rails must keep the same 15px outer padding as expanded columns.');
-assert(foundation.includes('padding-left: 9px !important;') && foundation.includes('padding-right: 9px !important;'),
-  'Collapsed navigation items must keep the normal 9px horizontal item padding.');
+assert(/\.nav-column-collapsed\.nav-column-main\s+\.nav\s*>\s*li\s*>\s*a\s*\{[\s\S]*?padding:\s*6px\s*!important;[\s\S]*?\}/.test(foundation),
+  'Collapsed navigation items must use equal 6px padding on all four sides.');
 assert(foundation.includes('.nav-column-collapsed .wallet-list-brand-image') &&
   foundation.includes('margin-right: 0 !important;'),
   'Collapsed wallet artwork must be centered without the expanded text-separation margin.');
@@ -45,4 +45,4 @@ assert(localIcons.includes('#loginBtn .fa-unlock::before') && localIcons.include
 assert(gate2631.includes('parts[2] >= 31'),
   'The corrected 2.6.31 meta-regression must remain active on later candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps padded compact navigation rails and correctly rendered local Activity History open/unlock icons.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps balanced compact navigation rails and correctly rendered local Activity History open/unlock icons.`);
