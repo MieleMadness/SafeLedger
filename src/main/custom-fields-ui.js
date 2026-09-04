@@ -15,6 +15,7 @@ const TYPE_OPTIONS = [
 
 const DEFAULT_TITLE = 'Custom Fields';
 const DEFAULT_NOTE = 'Add optional information that does not fit the standard wallet or coin fields. Sensitive values stay encrypted and are excluded from search.';
+const normalizeLabel = (value) => String(value || '').trim().toLowerCase();
 
 function makeValueControl(host, type, value, label) {
   host.innerHTML = '';
@@ -50,7 +51,84 @@ function makeValueControl(host, type, value, label) {
   return input;
 }
 
+/*
+ * Assets historically stored Network and Contract address inside customFields
+ * so older 2.x vaults remain compatible. When a caller supplies fixedFields,
+ * render only those fixed identity values as ordinary form fields. Any older
+ * user-created Asset custom fields stay preserved in the encrypted record but
+ * are intentionally not exposed by the simplified Asset editor.
+ */
+function createFixedFieldsEditor(grid, initialFields, fixedFields) {
+  const existing = customFields.normalize(initialFields);
+  const definitions = customFields.normalize(fixedFields).map((field) => ({
+    label: field.label,
+    type: field.type
+  }));
+  const definitionByKey = new Map(definitions.map((field) => [normalizeLabel(field.label), field]));
+  const controls = new Map();
+
+  for (const definition of definitions) {
+    const key = normalizeLabel(definition.label);
+    const prior = existing.find((field) => normalizeLabel(field.label) === key);
+    const field = document.createElement('div');
+    field.className = 'form-group edit-info-grid-field asset-identity-field';
+    field.dataset.assetIdentityField = definition.label;
+
+    const label = document.createElement('label');
+    label.textContent = definition.label;
+    field.appendChild(label);
+
+    const valueHost = document.createElement('div');
+    const input = makeValueControl(valueHost, definition.type, prior && prior.value, definition.label);
+    field.appendChild(valueHost);
+    grid.appendChild(field);
+
+    controls.set(key, {
+      input,
+      getValue: () => input.type === 'checkbox' ? input.checked : input.value
+    });
+  }
+
+  function getFields() {
+    const result = [];
+    const writtenFixed = new Set();
+
+    for (const field of existing) {
+      const key = normalizeLabel(field.label);
+      const definition = definitionByKey.get(key);
+      const control = controls.get(key);
+      if (!definition || !control || writtenFixed.has(key)) {
+        result.push(field);
+        continue;
+      }
+      result.push({ label: definition.label, type: definition.type, value: control.getValue() });
+      writtenFixed.add(key);
+    }
+
+    for (const definition of definitions) {
+      const key = normalizeLabel(definition.label);
+      if (writtenFixed.has(key) || result.length >= customFields.MAX_FIELDS) continue;
+      const control = controls.get(key);
+      result.push({ label: definition.label, type: definition.type, value: control ? control.getValue() : '' });
+      writtenFixed.add(key);
+    }
+
+    return customFields.normalize(result);
+  }
+
+  return {
+    ensureField(field = {}) {
+      const normalized = customFields.normalize([field])[0];
+      return normalized ? controls.get(normalizeLabel(normalized.label)) || null : null;
+    },
+    getFields
+  };
+}
+
 function createEditor(grid, initialFields, options = {}) {
+  const fixedFields = customFields.normalize(options.fixedFields);
+  if (fixedFields.length) return createFixedFieldsEditor(grid, initialFields, fixedFields);
+
   const section = document.createElement('section');
   section.className = 'edit-info-grid-full custom-fields-editor';
   const heading = document.createElement('h3');
@@ -160,6 +238,9 @@ function createEditor(grid, initialFields, options = {}) {
     return existing || addRow(normalized);
   }
 
+  // Retained for compatibility with older tests/modules that may still call
+  // the helper directly. Current Asset rendering takes the fixed-fields path
+  // above and no longer uses the generic custom-field row UI for identity.
   function lockFixedField(field = {}) {
     const normalized = customFields.normalize([field])[0];
     if (!normalized || !normalized.label) return null;
@@ -187,7 +268,6 @@ function createEditor(grid, initialFields, options = {}) {
   }
 
   for (const field of customFields.normalize(initialFields)) addRow(field);
-  for (const field of customFields.normalize(options.fixedFields)) lockFixedField(field);
 
   const add = document.createElement('button');
   add.type = 'button';
@@ -236,4 +316,4 @@ function appendDetail(parent, fields, addLine) {
   }
 }
 
-module.exports = { createEditor, appendDetail };
+module.exports = { createEditor, appendDetail, _test: { createFixedFieldsEditor } };
