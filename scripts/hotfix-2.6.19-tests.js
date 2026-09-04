@@ -19,10 +19,15 @@ const main = read('src/main/main.js');
 const statusSource = read('src/main/status.js');
 const windowSizingSource = read('src/main/window-sizing-main.js');
 
-const equalColumns = 'grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr)';
-assert(foundation.includes(equalColumns),
-  'Profile, Vault Item, and Asset navigation columns must use equal 2fr widths.');
-assert(!foundation.includes('minmax(0, 2fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 5fr)'),
+for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-column']) {
+  assert(foundation.includes(`${variable}: minmax(0, 2fr);`),
+    `${variable} must preserve the equal expanded navigation width.`);
+}
+assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'),
+  'Detail must preserve its expanded 5fr share.');
+assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column)'),
+  'The runtime grid must derive from the equal navigation-column variables.');
+assert(!foundation.includes('minmax(0, 3fr)'),
   'The old wider 3fr Asset column must not return.');
 
 const windowSizing = require('../src/main/window-sizing-main.js');
@@ -85,4 +90,4 @@ try {
   else global.window = previousWindow;
 }
 
-console.log(`PASS SafeLedger ${pkg.version} keeps equal navigation columns, proportional native opening width, and red Item Deleted confirmations with a dedicated trash icon.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps equal expanded navigation columns, proportional native opening width, and red Item Deleted confirmations with a dedicated trash icon.`);
