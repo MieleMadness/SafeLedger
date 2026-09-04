@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.29', 'This workflow candidate must report SafeLedger 2.6.29.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 29,
+  'SafeLedger 2.6.29 layout-gate correction must remain active on 2.6.29 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.29-tests.js'),
   '2.6.29 layout-gate correction must stay in the locked regression suite.');
 
@@ -40,4 +42,4 @@ assert(foundation.includes('[data-asset-collapsed="true"]'));
 assert(gate2628.includes('parts[2] >= 28'),
   'The 2.6.28 canonical-rendering correction must remain active on later workflow candidates.');
 
-console.log('PASS SafeLedger 2.6.29 modernizes historical layout gates for the equal expanded columns and 56px compact navigation rails.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.29 compact-rail layout regression modernization active.`);
