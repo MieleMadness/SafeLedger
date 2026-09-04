@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.30', 'This workflow candidate must report SafeLedger 2.6.30.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 30,
+  'SafeLedger 2.6.30 observer-gate correction must remain active on 2.6.30 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.30-tests.js'),
   '2.6.30 observer-gate correction must stay in the locked regression suite.');
 
@@ -34,4 +36,4 @@ assert(collapseSource.includes('// MutationObserver or post-render patch loop.')
 assert(gate2629.includes('parts[2] >= 29'),
   'The 2.6.29 compact-rail layout gate must remain active on later workflow candidates.');
 
-console.log('PASS SafeLedger 2.6.30 distinguishes real observer code from comments while keeping event-delegated compact navigation protected.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.30 observer-gate correction active.`);
