@@ -41,7 +41,7 @@ assert(foundation.includes('--sl-vault-column: minmax(0, 2fr);'));
 assert(foundation.includes('--sl-asset-column: minmax(0, 2fr);'));
 assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
 assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column)'));
-assert(foundation.includes('--sl-compact-nav-column: 104px;'));
+assert(foundation.includes('--sl-compact-nav-column: 98px;'));
 
 const mainArea = index.indexOf('id="mainArea"');
 const buttonArea = index.indexOf('id="buttonArea"');
@@ -97,4 +97,4 @@ assert(theme.includes('html[data-theme="dark"] .search-field-wrap .form-control'
 assert(theme.includes('.wallet-list-category { color: rgba(255,255,255,.84) !important;'));
 assert(theme.includes('.column-empty-text { max-width: 180px; font-size: 12px;'));
 
-console.log(`PASS UI polish ${pkg.version} keeps Home/History/Settings/Search in the top utility bar, Emergency Lock fixed bottom-right, equal 2/2/2 navigation columns with a 5fr Detail column plus explicit 104px padded compact rails, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
+console.log(`PASS UI polish ${pkg.version} keeps Home/History/Settings/Search in the top utility bar, Emergency Lock fixed bottom-right, equal 2/2/2 navigation columns with a 5fr Detail column plus explicit 98px balanced compact rails, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
