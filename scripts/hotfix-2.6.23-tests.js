@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.23', 'This workflow candidate must report SafeLedger 2.6.23.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 23,
+  'SafeLedger 2.6.23 UI refinements must remain active on 2.6.23 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.23-tests.js'),
   '2.6.23 UI refinement coverage must stay in the locked regression suite.');
 
@@ -66,4 +68,4 @@ assert(shitCoinUi.includes("node.classList.remove('shit-coin-icon');") &&
 assert(priorGate.includes('parts[2] >= 22'),
   'The approved 2.6.22 deletion/accessibility gate must remain active on later 2.6.x candidates.');
 
-console.log('PASS SafeLedger 2.6.23 removes duplicate dropdown prompts, bounds Recovery Instructions resizing, simplifies Asset identity, and aligns Shit Coin Mode with Settings.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.23 dropdown, Recovery Instructions, Asset identity, and Shit Coin Mode refinements active.`);
