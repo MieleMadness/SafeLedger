@@ -48,6 +48,9 @@ for (const forbidden of ['MutationObserver', 'DOMContentLoaded', 'queueMicrotask
 assert(customFieldsSource.includes('function ensureField(field = {})'));
 assert(customFieldsSource.includes('return existing || addRow(normalized);'),
   'Standard account fields must use the editor API directly instead of clicking Add custom field.');
+assert(customFieldsSource.includes('function removeEmptyField(label)'));
+assert(customFieldsSource.includes('if (!isEmpty) return false;'),
+  'Retired preset cleanup must preserve populated legacy values.');
 
 const labels = presentation.TYPE_GROUPS.map((group) => group.label);
 assert.deepStrictEqual(labels, ['Accounts', 'Wallets']);
@@ -61,8 +64,15 @@ assert.strictEqual(presentation.normalizeCategory('Yahoo', 'Web3 / Website Accou
 assert(presentation.groupedPresetNames('Web3 Account').some((group) => group.label === 'Gaming' && group.names.includes('Chain Games')));
 assert(presentation.groupedPresetNames('Website Account').some((group) => group.names.includes('GitHub')));
 assert(presentation.presetNames('Exchange Account').length >= 20);
-assert(presentation.accountFields('Web3 Account').some(([label]) => label === 'Connected wallet(s)'));
-assert(presentation.accountFields('Website Account').some(([label]) => label === '2FA recovery / backup codes'));
+
+const web3Fields = presentation.accountFields('Web3 Account');
+assert(!web3Fields.some(([label]) => label === 'Connected wallet(s)'),
+  'Canonical Web3 rendering must not force the retired blank Connected wallet(s) row back into new forms.');
+assert(!web3Fields.some(([label]) => label === 'Login method'),
+  'Canonical Web3 rendering must not force the retired blank Login method row back into new forms.');
+assert(web3Fields.some(([label, type]) => label === '2FA recovery / backup codes' && type === 'sensitive'),
+  'Canonical Web3 rendering must retain useful sensitive recovery-code support.');
+assert(presentation.accountFields('Website Account').some(([label, type]) => label === '2FA recovery / backup codes' && type === 'sensitive'));
 
 assert(profileSource.includes('Create a Profile to organize vault items, assets, and recovery plans.'));
 assert(groupSource.includes('Vault Items appear after a Profile is selected.'));
@@ -77,4 +87,4 @@ assert(dashboardSource.includes("makeStat('Vault Items', vaultItems)"));
 assert(dashboardSource.includes('Vault Items include wallets, exchange accounts, and Web / Web3 services.'));
 assert(dashboardSource.includes('function vaultContentsLabel(counts = {})'));
 
-console.log('PASS Vault Item list/detail/edit/preset/icon/terminology rendering has one canonical owner and no retired post-render observer stack.');
+console.log('PASS Vault Item list/detail/edit/preset/icon/terminology rendering has one canonical owner, no retired observer stack, and no retired blank account preset rows.');
