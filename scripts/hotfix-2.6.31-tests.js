@@ -28,9 +28,9 @@ for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-
   assert(foundation.includes(`${variable}: minmax(0, 2fr);`));
 }
 assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
-assert(foundation.includes('--sl-compact-nav-column: 104px;'));
+assert(foundation.includes('--sl-compact-nav-column: 98px;'));
 assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column);'));
 assert(gate2630.includes('parts[2] >= 30'),
   'The 2.6.30 observer-gate correction must remain active on later candidates.');
 
-console.log('PASS SafeLedger keeps compact-layout coverage behavior-based while preserving the 2.6.30 observer correction and current padded compact width.');
+console.log('PASS SafeLedger keeps compact-layout coverage behavior-based while preserving the 2.6.30 observer correction and current balanced compact width.');
