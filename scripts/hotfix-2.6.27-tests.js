@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.27', 'This workflow candidate must report SafeLedger 2.6.27.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 27,
+  'SafeLedger 2.6.27 historical Web3-gate correction must remain active on 2.6.27 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.27-tests.js'),
   '2.6.27 historical Web3-gate correction must stay in the locked suite.');
 
@@ -33,4 +35,4 @@ assert(!presentation.accountFields(presentation.WEB3_CATEGORY).map(([label]) => 
 assert(gate2626.includes('parts[2] >= 26'),
   'The full 2.6.26 compact-navigation and form-cleanup gate must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.27 modernizes the historical Web3 preset gate without changing the 2.6.26 application behavior.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.27 historical Web3 preset correction active on later candidates.`);
