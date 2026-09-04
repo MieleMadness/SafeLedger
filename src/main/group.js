@@ -174,7 +174,7 @@ function renderReadinessCard(area, params) {
   const drill = document.createElement('button');
   drill.type = 'button';
   drill.className = 'btn btn-default btn-sm';
-  drill.innerHTML = '<i class="fa fa-shield"></i> Run recovery drill';
+  drill.innerHTML = '<i class="fa fa-refresh"></i> Run recovery drill';
   drill.addEventListener('click', () => {
     if (params.saving.state) return alert('Please wait for processing to complete');
     recoveryDrillUi.render({
@@ -240,6 +240,8 @@ const renderGroups = (params) => {
 
     const li = document.createElement('LI');
     const href = document.createElement('A');
+    href.title = visibleName;
+    href.setAttribute('aria-label', visibleName);
     href.addEventListener('click', (e) => {
       e.preventDefault();
       if (params.saving.state) return alert('Please wait for processing to complete');
