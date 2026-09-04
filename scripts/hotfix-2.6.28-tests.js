@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.28', 'This workflow candidate must report SafeLedger 2.6.28.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 28,
+  'SafeLedger 2.6.28 canonical-rendering correction must remain active on 2.6.28 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.28-tests.js'),
   '2.6.28 canonical-rendering correction must stay in the locked suite.');
 
@@ -36,4 +38,4 @@ assert(gate2627.includes('parts[2] >= 27'),
 assert(gate2626.includes('parts[2] >= 26'),
   'The complete 2.6.26 runtime/UI gate must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.28 modernizes the canonical Vault Item rendering gate without changing the 2.6.26 runtime behavior.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.28 canonical Vault Item rendering correction active.`);
