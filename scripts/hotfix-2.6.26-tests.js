@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.26', 'This workflow candidate must report SafeLedger 2.6.26.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 26,
+  'SafeLedger 2.6.26 UI behavior must remain active on 2.6.26 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.26-tests.js'),
   '2.6.26 UI behavior coverage must stay in the locked regression suite.');
 
@@ -69,4 +71,4 @@ assert(!collapseSource.includes('MutationObserver'),
 assert(!collapseSource.includes('localStorage'),
   'Columns should start expanded on each launch rather than hiding labels by default from a persisted preference.');
 
-console.log('PASS SafeLedger 2.6.26 uses a rendered recovery icon, retires unnecessary blank account preset rows safely, and adds explicit accessible compact navigation rails.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the rendered recovery icon, safe preset cleanup, and explicit accessible compact navigation rails active.`);
