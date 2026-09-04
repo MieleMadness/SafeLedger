@@ -29,7 +29,12 @@ for (const [name, source] of [['2.6.7', gate267], ['2.6.11', gate2611]]) {
 
 assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283);
 assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 750);
-assert(foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr)'));
+for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-column']) {
+  assert(foundation.includes(`${variable}: minmax(0, 2fr);`));
+}
+assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
+assert(foundation.includes('--sl-compact-nav-column: 56px;'));
+assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column);'));
 assert(main.includes("status: 'DELETED', statusMsg: 'Item Deleted'"),
   'Red Item Deleted feedback must remain carried forward while sizing gates are modernized.');
 
@@ -41,4 +46,4 @@ assert.strictEqual(windowSizing.applyPreferredWindowSize({
 assert.deepStrictEqual(resized, { width: 1283, height: 750, animate: false },
   'Current preferred sizing must still grow a normal desktop window to the 2.6.19 layout target.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps retired 1400px assumptions out of historical sizing gates while preserving the requested layout and deletion feedback.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps retired 1400px assumptions out of historical sizing gates while protecting the current equal expanded columns and compact rails.`);
