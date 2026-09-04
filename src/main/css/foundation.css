@@ -7,11 +7,20 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  --sl-profile-column: minmax(0, 2fr);
+  --sl-vault-column: minmax(0, 2fr);
+  --sl-asset-column: minmax(0, 2fr);
+  --sl-detail-column: minmax(0, 5fr);
+  --sl-compact-nav-column: 56px;
 }
+
+.app-shell[data-profile-collapsed="true"] { --sl-profile-column: var(--sl-compact-nav-column); }
+.app-shell[data-vault-collapsed="true"] { --sl-vault-column: var(--sl-compact-nav-column); }
+.app-shell[data-asset-collapsed="true"] { --sl-asset-column: var(--sl-compact-nav-column); }
 
 .app-grid {
   display: grid !important;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr);
+  grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column);
   width: 100%;
   margin: 0 !important;
 }
@@ -34,6 +43,95 @@
   position: relative;
   padding-left: 15px;
   padding-right: 15px;
+}
+
+/* Navigation columns stay fully labeled by default. The user can deliberately
+ * collapse any one into a compact icon rail; the Detail column automatically
+ * receives the freed grid space. */
+.nav-column-search {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.nav-column-search .search-field-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.column-collapse-toggle {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+}
+.column-collapse-toggle .fa { margin: 0 !important; }
+
+.nav-column-collapsed {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+.nav-column-collapsed.nav-column-search {
+  justify-content: center;
+}
+.nav-column-collapsed.nav-column-search .search-field-wrap {
+  display: none !important;
+}
+.nav-column-collapsed.nav-column-main .nav > li > a {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+.nav-column-collapsed .profile-list-row,
+.nav-column-collapsed .coin-list-row {
+  width: 100%;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+.nav-column-collapsed .profile-list-name,
+.nav-column-collapsed .wallet-list-text,
+.nav-column-collapsed .coin-list-label,
+.nav-column-collapsed .column-empty-title,
+.nav-column-collapsed .column-empty-text {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.nav-column-collapsed .pin-indicator,
+.nav-column-collapsed .wallet-pin-indicator {
+  display: none !important;
+}
+.nav-column-collapsed .column-empty-state {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.nav-column-collapsed .column-empty-icon { margin: 0 !important; }
+.nav-column-collapsed.nav-column-button .bottom-space {
+  width: 38px;
+  min-width: 38px;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  font-size: 0 !important;
+}
+.nav-column-collapsed.nav-column-button .bottom-space .fa {
+  margin: 0 !important;
+  font-size: 14px !important;
 }
 
 .form-group { margin-bottom: 15px; }
