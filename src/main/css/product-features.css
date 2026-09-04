@@ -33,6 +33,10 @@
 .recovery-readiness-meta { margin: 0; color: #667085; font-size: 12px; line-height: 1.45; }
 .recovery-readiness-actions { margin-top: 10px; }
 .recovery-readiness-actions .btn { margin-right: 6px; }
+/* The recovery-drill action used the old shield glyph, which reads like a
+ * diamond at this size. Keep the button wiring unchanged but present a clear
+ * checklist glyph instead. */
+.recovery-readiness-actions .fa-shield::before { content: "\f046"; }
 
 .product-section-title { margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #e2e7ee; font-size: 17px; line-height: 1.3; font-weight: 700; color: #253047; }
 
@@ -86,6 +90,9 @@
 .recovery-drill-header { margin-bottom: 14px; }
 .recovery-drill-header h1 { margin-bottom: 4px !important; }
 .recovery-drill-wallet { margin: 0; color: #667085; font-size: 13px; }
+.recovery-drill-validation { margin-bottom: 14px; }
+.recovery-drill-validation .product-section-title { margin-top: 10px; }
+.recovery-drill-validation-actions { margin-top: 6px; }
 .recovery-drill-privacy {
   display: grid;
   grid-template-columns: 22px 1fr;
