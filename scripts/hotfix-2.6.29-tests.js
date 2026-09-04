@@ -33,7 +33,7 @@ for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-
     `Current foundation must retain equal expanded ${variable} sizing.`);
 }
 assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
-assert(foundation.includes('--sl-compact-nav-column: 56px;'));
+assert(foundation.includes('--sl-compact-nav-column: 104px;'));
 assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column);'));
 assert(foundation.includes('[data-profile-collapsed="true"]'));
 assert(foundation.includes('[data-vault-collapsed="true"]'));
@@ -41,4 +41,4 @@ assert(foundation.includes('[data-asset-collapsed="true"]'));
 assert(gate2628.includes('parts[2] >= 28'),
   'The 2.6.28 canonical-rendering correction must remain active on later workflow candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.29 compact-rail layout regression modernization active without brittle meta-source checks.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.29 compact-rail layout regression modernization active with the current padded compact width.`);
