@@ -32,8 +32,8 @@ for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-
 }
 assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'),
   'Expanded Detail must retain its 5fr share.');
-assert(foundation.includes('--sl-compact-nav-column: 56px;'),
-  'Collapsible navigation must retain its explicit compact-rail width.');
+assert(foundation.includes('--sl-compact-nav-column: 104px;'),
+  'Collapsible navigation must retain its current padded compact-rail width.');
 assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column);'),
   'The current grid must be driven by the collapsible column variables rather than the retired literal declaration.');
 
@@ -43,4 +43,4 @@ assert(layoutGate.includes('windowSizing.PREFERRED_WIDTH, 1283'),
 assert(layoutGate.includes("status: 'DELETED', statusMsg: 'Item Deleted'"),
   'The dedicated 2.6.19 regression must keep red deletion feedback protected.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.20 general sizing gate while validating the current equal expanded columns and 56px compact rails.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.20 general sizing gate while validating the current equal expanded columns and padded compact rails.`);
