@@ -14,24 +14,23 @@ assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 29,
 assert(read('package.json').includes('node scripts/hotfix-2.6.29-tests.js'),
   '2.6.29 layout-gate correction must stay in the locked regression suite.');
 
+const packageSource = read('package.json');
 const gate2620 = read('scripts/hotfix-2.6.20-tests.js');
 const gate2621 = read('scripts/hotfix-2.6.21-tests.js');
 const gate2628 = read('scripts/hotfix-2.6.28-tests.js');
 const foundation = read('src/main/css/foundation.css');
 
+assert(packageSource.includes('node scripts/hotfix-2.6.20-tests.js') &&
+  packageSource.includes('node scripts/hotfix-2.6.21-tests.js'),
+  'The historical sizing/layout gates must remain in the locked suite.');
 for (const [name, source] of [['2.6.20', gate2620], ['2.6.21', gate2621]]) {
   assert(!source.includes("foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr)')"),
     `${name} must not require the retired literal grid declaration.`);
-  for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-column']) {
-    assert(source.includes(`${variable}: minmax(0, 2fr);`),
-      `${name} must protect the equal expanded ${variable} value.`);
-  }
-  assert(source.includes('--sl-detail-column: minmax(0, 5fr);'));
-  assert(source.includes('--sl-compact-nav-column: 56px;'));
 }
 
 for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-column']) {
-  assert(foundation.includes(`${variable}: minmax(0, 2fr);`));
+  assert(foundation.includes(`${variable}: minmax(0, 2fr);`),
+    `Current foundation must retain equal expanded ${variable} sizing.`);
 }
 assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
 assert(foundation.includes('--sl-compact-nav-column: 56px;'));
@@ -42,4 +41,4 @@ assert(foundation.includes('[data-asset-collapsed="true"]'));
 assert(gate2628.includes('parts[2] >= 28'),
   'The 2.6.28 canonical-rendering correction must remain active on later workflow candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.29 compact-rail layout regression modernization active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.29 compact-rail layout regression modernization active without brittle meta-source checks.`);
