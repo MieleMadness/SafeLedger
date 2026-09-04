@@ -25,7 +25,17 @@ assert(uiGate.includes("const sizingPolicy = require('../src/main/window-sizing-
 assert(uiGate.includes('sizingPolicy.PREFERRED_WIDTH >= 1200'),
   'General UI regression should retain a desktop-width safety floor without overriding intentional layout tuning.');
 assert(windowSizingSource.includes('const PREFERRED_WIDTH = 1283;'));
-assert(foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 2fr) minmax(0, 5fr)'));
+
+for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-column']) {
+  assert(foundation.includes(`${variable}: minmax(0, 2fr);`),
+    'Expanded Profile, Vault Item, and Asset columns must remain equal 2fr columns.');
+}
+assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'),
+  'Expanded Detail must retain its 5fr share.');
+assert(foundation.includes('--sl-compact-nav-column: 56px;'),
+  'Collapsible navigation must retain its explicit compact-rail width.');
+assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column);'),
+  'The current grid must be driven by the collapsible column variables rather than the retired literal declaration.');
 
 const layoutGate = read('scripts/hotfix-2.6.19-tests.js');
 assert(layoutGate.includes('windowSizing.PREFERRED_WIDTH, 1283'),
@@ -33,4 +43,4 @@ assert(layoutGate.includes('windowSizing.PREFERRED_WIDTH, 1283'),
 assert(layoutGate.includes("status: 'DELETED', statusMsg: 'Item Deleted'"),
   'The dedicated 2.6.19 regression must keep red deletion feedback protected.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.20 general sizing-gate modernization while preserving the exact 2.6.19 layout and deletion behavior.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.20 general sizing gate while validating the current equal expanded columns and 56px compact rails.`);
