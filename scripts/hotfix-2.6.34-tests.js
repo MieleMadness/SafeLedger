@@ -7,9 +7,11 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const foundation = read('src/main/css/foundation.css');
 
-assert.strictEqual(pkg.version, '2.6.34', 'This workflow candidate must report SafeLedger 2.6.34.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 34,
+  'SafeLedger 2.6.34 rail/heading behavior must remain active on 2.6.34 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.34-tests.js'),
   '2.6.34 rail/heading coverage must stay in the locked regression suite.');
 
@@ -33,4 +35,4 @@ assert(foundation.includes('#detailArea .page-header + hr,') && foundation.inclu
 assert(/#detailArea \.page-header \+ hr,[\s\S]*?#detailArea h1 \+ hr\s*\{\s*display:\s*none\s*!important;\s*\}/.test(foundation),
   'Heading-adjacent full-width divider lines must be hidden while standalone separators remain available.');
 
-console.log('PASS SafeLedger 2.6.34 balances compact item padding, resizes rails proportionally, and keeps heading underlines text-width only.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.34 balanced compact padding and text-width heading underline behavior active.`);
