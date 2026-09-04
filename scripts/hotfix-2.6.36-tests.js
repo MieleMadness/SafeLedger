@@ -7,11 +7,13 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const index = read('src/main/index.html');
 const foundation = read('src/main/css/foundation.css');
 const gate2635 = read('scripts/hotfix-2.6.35-tests.js');
 
-assert.strictEqual(pkg.version, '2.6.36', 'This workflow candidate must report SafeLedger 2.6.36.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 36,
+  'SafeLedger 2.6.36 vault-search and detail-heading coverage must remain active on 2.6.36 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.36-tests.js'),
   '2.6.36 vault-search and detail-heading coverage must stay in the locked regression suite.');
 
@@ -32,4 +34,4 @@ assert(/#detailArea \.wallet-detail-header \+ hr,[\s\S]*?#detailArea \.coin-deta
 assert(gate2635.includes('parts[2] >= 35'),
   'The 2.6.35 square compact-selection behavior must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.36 simplifies Vault search wording and keeps Vault/Asset underlines exactly as wide as their title text.');
+console.log(`PASS SafeLedger ${pkg.version} keeps concise Vault search wording and Vault/Asset underlines exactly as wide as their title text.`);
