@@ -59,6 +59,14 @@
   box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
 }
 
+/* Vault Item selects already have visible labels above them. Hide the empty
+ * instructional row from the opened native dropdown so the same direction is
+ * not repeated inside the option list. */
+#inputCategory > option[value=""],
+#inputVaultItemPreset > option[value=""] {
+  display: none;
+}
+
 .btn {
   display: inline-block;
   margin-bottom: 0;
