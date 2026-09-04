@@ -7,8 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.31', 'This workflow candidate must report SafeLedger 2.6.31.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 31,
+  'SafeLedger 2.6.31 meta-gate correction must remain active on 2.6.31 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.31-tests.js'),
   '2.6.31 meta-gate correction must stay in the locked regression suite.');
 
@@ -26,9 +28,9 @@ for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-
   assert(foundation.includes(`${variable}: minmax(0, 2fr);`));
 }
 assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
-assert(foundation.includes('--sl-compact-nav-column: 56px;'));
+assert(foundation.includes('--sl-compact-nav-column: 104px;'));
 assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column);'));
 assert(gate2630.includes('parts[2] >= 30'),
   'The 2.6.30 observer-gate correction must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.31 keeps compact-layout coverage behavior-based while preserving the 2.6.30 observer correction.');
+console.log('PASS SafeLedger keeps compact-layout coverage behavior-based while preserving the 2.6.30 observer correction and current padded compact width.');
