@@ -34,7 +34,7 @@
 .recovery-readiness-actions { margin-top: 10px; }
 .recovery-readiness-actions .btn { margin-right: 6px; }
 
-.product-section-title { margin: 18px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #e2e7ee; font-size: 17px; line-height: 1.3; font-weight: 700; color: #253047; }
+.product-section-title { margin: 18px 0 10px; padding-bottom: 0; font-size: 17px; line-height: 1.3; font-weight: 700; color: #253047; }
 
 .dashboard-inline { width: 40px; height: 40px; border-radius: 8px; border: 1px solid #b9c4d3; background: #fff; color: #0D47A1; margin-right: 8px; font-size: 18px; }
 .dashboard-inline:hover, .dashboard-inline:focus { background: #eef5ff; outline: 2px solid #1976D2; }
