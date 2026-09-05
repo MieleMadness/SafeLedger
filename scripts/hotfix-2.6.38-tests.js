@@ -7,6 +7,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const index = read('src/main/index.html');
 const foundation = read('src/main/css/foundation.css');
 const localIcons = read('src/main/css/local-icons.css');
@@ -14,7 +15,8 @@ const drill = read('src/main/recovery-drill-ui.js');
 const activityHistory = require('../src/main/activity-history.js');
 const gate2637 = read('scripts/hotfix-2.6.37-tests.js');
 
-assert.strictEqual(pkg.version, '2.6.38', 'This workflow candidate must report SafeLedger 2.6.38.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 38,
+  'SafeLedger 2.6.38 display cleanup and lock-icon behavior must remain active on later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.38-tests.js'),
   '2.6.38 display cleanup and lock-icon coverage must stay in the locked regression suite.');
 
@@ -58,4 +60,4 @@ assert(drill.includes("title: 'Complete Recovery Validation'"));
 assert(gate2637.includes('parts[2] >= 37'),
   'The corrected 2.6.37 historical Vault-search gate must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.38 removes display heading underlines/search ellipses, draws closed-lock icons locally, and renames Test Recovery to Recovery Validation.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.38 no-underline/search/closed-lock/Recovery Validation behavior active.`);
