@@ -16,7 +16,7 @@ const drill = read('src/main/recovery-drill-ui.js');
 const vaultItemPresentationSource = read('src/main/vault-item-presentation.js');
 const groupSource = read('src/main/group.js');
 const entry = read('src/main/renderer-entry.js');
-const css = read('src/main/css/ui-2.5.12.css');
+const css = read('src/main/css/ui-current.css');
 const index = read('src/main/index.html');
 const web3Icons = require(path.join(root, 'src', 'main', 'web3-icons.js'));
 const dashboardSummary = require(path.join(root, 'src', 'main', 'dashboard-summary.js'));
@@ -102,9 +102,12 @@ function testExchangeAndWebsiteVaultItems() {
   assert(vaultItemPresentationSource.includes("const LEGACY_SERVICE_CATEGORY = 'Web3 / Website Account';"));
   assert(vaultItemPresentationSource.includes("['2FA recovery / backup codes', 'sensitive']"));
   assert(vaultItemPresentationSource.includes('never auto-fills a login URL'));
-  assert(index.includes('placeholder="Search vault items..."'));
+  assert(index.includes('id="groupSearch"'), 'The Vault search control must remain present.');
+  assert(index.includes('placeholder="Search vaults"'), 'The Vault search field should use the current concise wording without trailing punctuation.');
+  assert(!index.includes('placeholder="Search vault items'), 'The retired verbose Vault search wording must stay removed.');
+  assert(!index.includes('placeholder="Search vaults..."'), 'Vault search should not restore the retired ellipsis.');
   assert(index.includes('id="addGroup"'), 'The Vault add action must remain present even if its user-facing label evolves.');
-  assert(index.includes('./css/ui-2.5.12.css'));
+  assert(index.includes('./css/ui-current.css'));
 
   const exchanges = vaultItemPresentation.presetNames(vaultItemPresentation.EXCHANGE_CATEGORY);
   assert.strictEqual(exchanges.length, web3Icons.entries('exchanges').length,

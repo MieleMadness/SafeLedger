@@ -65,6 +65,8 @@ function addTextarea(grid, options) {
   input.rows = options.rows || 4;
   input.maxLength = options.maxLength || 500;
   input.value = options.value || '';
+  input.style.maxWidth = '100%';
+  if (options.resize) input.style.resize = options.resize;
   field.appendChild(input);
   return input;
 }

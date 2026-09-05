@@ -64,7 +64,7 @@ assert(group.includes('recoveryDrillUi.render({'));
 assert(group.includes("{ label: 'Last recovery drill'"));
 assert(recoveryDrill.includes("lastRecoveryDrill: completedAt"));
 assert(recoveryDrill.includes("lastVerified: completedAt"));
-assert(recoveryDrillUi.includes("title: 'Complete recovery drill'"));
+assert(recoveryDrillUi.includes("title: 'Complete Recovery Validation'"));
 assert(recoveryDrillUi.includes('Individual checklist answers are not stored.'));
 assert(!recoveryDrillUi.includes('group.seedPhrase'));
 assert(!recoveryDrillUi.includes('group.password'));

@@ -7,11 +7,20 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  --sl-profile-column: minmax(0, 2fr);
+  --sl-vault-column: minmax(0, 2fr);
+  --sl-asset-column: minmax(0, 2fr);
+  --sl-detail-column: minmax(0, 5fr);
+  --sl-compact-nav-column: 98px;
 }
+
+.app-shell[data-profile-collapsed="true"] { --sl-profile-column: var(--sl-compact-nav-column); }
+.app-shell[data-vault-collapsed="true"] { --sl-vault-column: var(--sl-compact-nav-column); }
+.app-shell[data-asset-collapsed="true"] { --sl-asset-column: var(--sl-compact-nav-column); }
 
 .app-grid {
   display: grid !important;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 5fr);
+  grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column);
   width: 100%;
   margin: 0 !important;
 }
@@ -36,6 +45,148 @@
   padding-right: 15px;
 }
 
+/* Navigation columns stay fully labeled by default. The user can deliberately
+ * collapse any one into a compact icon rail; the Detail column automatically
+ * receives the freed grid space. Compact rails retain the expanded column's
+ * outer padding, while each compact navigation item uses equal 6px padding on
+ * every side so the artwork has balanced breathing room. */
+.nav-column-search {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.nav-column-search .search-field-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.column-collapse-toggle {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+}
+.column-collapse-toggle .fa { margin: 0 !important; }
+
+.nav-column-collapsed {
+  padding-left: 15px !important;
+  padding-right: 15px !important;
+}
+.nav-column-collapsed.nav-column-search {
+  justify-content: center;
+}
+.nav-column-collapsed.nav-column-search .search-field-wrap {
+  display: none !important;
+}
+.nav-column-collapsed.nav-column-main .nav > li {
+  display: flex;
+  justify-content: center;
+}
+.nav-column-collapsed.nav-column-main .nav > li > a {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: fit-content !important;
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px !important;
+}
+.nav-column-collapsed .profile-list-row,
+.nav-column-collapsed .coin-list-row {
+  width: auto !important;
+  flex: 0 0 auto;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+/* Profiles historically put their selection border on the circular initial.
+ * In compact mode the link itself owns the selection state so Profiles, Vault
+ * Items, and Assets all get the same square, shrink-wrapped selection tile. */
+.nav-column-collapsed.nav-column-main .nav > li > a:has(.badge-selected) {
+  background: var(--sl-selected, #0b1220) !important;
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, .95) !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+.nav-column-collapsed .badge-selected {
+  border-color: transparent !important;
+}
+.nav-column-collapsed .wallet-list-brand-image,
+.nav-column-collapsed .wallet-list-catalog-icon,
+.nav-column-collapsed .wallet-list-icon,
+.nav-column-collapsed .wallet-list-fallback-icon {
+  margin-right: 0 !important;
+}
+.nav-column-collapsed .profile-list-name,
+.nav-column-collapsed .wallet-list-text,
+.nav-column-collapsed .coin-list-label,
+.nav-column-collapsed .column-empty-title,
+.nav-column-collapsed .column-empty-text {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.nav-column-collapsed .pin-indicator,
+.nav-column-collapsed .wallet-pin-indicator {
+  display: none !important;
+}
+.nav-column-collapsed .column-empty-state {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.nav-column-collapsed .column-empty-icon { margin: 0 !important; }
+.nav-column-collapsed.nav-column-button .bottom-space {
+  width: 38px;
+  min-width: 38px;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  font-size: 0 !important;
+}
+.nav-column-collapsed.nav-column-button .bottom-space .fa {
+  margin: 0 !important;
+  font-size: 14px !important;
+}
+
+/* Detail headings use spacing and type hierarchy only. Retire both the recent
+ * text-width underline treatment and legacy heading-adjacent <hr> dividers so
+ * no H1-H6/page/section title in the display window carries an underline. */
+#detailArea h1,
+#detailArea h2,
+#detailArea h3,
+#detailArea h4,
+#detailArea h5,
+#detailArea h6,
+#detailArea .page-header,
+#detailArea .product-section-title {
+  border-bottom: 0 !important;
+  text-decoration: none !important;
+}
+#detailArea .page-header + hr,
+#detailArea h1 + hr,
+#detailArea h2 + hr,
+#detailArea h3 + hr,
+#detailArea h4 + hr,
+#detailArea h5 + hr,
+#detailArea h6 + hr,
+#detailArea .wallet-detail-header + hr,
+#detailArea .coin-detail-header + hr {
+  display: none !important;
+}
+
 .form-group { margin-bottom: 15px; }
 
 .form-control {
@@ -57,6 +208,14 @@
   border-color: #66afe9;
   outline: 0;
   box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102,175,233,.6);
+}
+
+/* Vault Item selects already have visible labels above them. Hide the empty
+ * instructional row from the opened native dropdown so the same direction is
+ * not repeated inside the option list. */
+#inputCategory > option[value=""],
+#inputVaultItemPreset > option[value=""] {
+  display: none;
 }
 
 .btn {

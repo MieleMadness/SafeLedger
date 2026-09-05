@@ -46,7 +46,8 @@ function testGuidedRecoveryIsEphemeral() {
   assert(drillUi.includes("require('./bip39-validator')"));
   assert(drillUi.includes("input.type = 'password'"));
   assert(drillUi.includes("input.value = ''"), 'temporary BIP39 input must be cleared immediately');
-  assert(drillUi.includes('Test Recovery'));
+  assert(drillUi.includes("appendText(header, 'h1', '', 'Recovery Validation')"));
+  assert(!drillUi.includes("appendText(header, 'h1', '', 'Test Recovery')"));
   assert(!drillUi.includes('clipboard'));
   assert(!drillUi.includes('ipc.send'));
   assert(!drillUi.includes('fetch('));
@@ -86,4 +87,4 @@ testPrivacyModeDefaultsAndPersistence();
 testGuidedRecoveryIsEphemeral();
 testRecoveryIntelligenceBoundary();
 testBip39RendererBoundary();
-console.log('PASS SafeLedger 2.4 Privacy Mode, Guided Test Recovery, renderer-safe BIP39, and sanitized intelligence boundaries.');
+console.log('PASS SafeLedger 2.4 Privacy Mode, guided Recovery Validation, renderer-safe BIP39, and sanitized intelligence boundaries.');

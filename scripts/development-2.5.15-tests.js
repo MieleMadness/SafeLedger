@@ -13,16 +13,16 @@ const atLeast2515 = version[0] > 2 ||
   (version[0] === 2 && version[1] === 5 && version[2] >= 15);
 assert(atLeast2515, 'build must be SafeLedger 2.5.15 or later');
 
-const css = read('src/main/css/ui-2.5.15.css');
+const css = read('src/main/css/ui-current.css');
 assert(css.includes('#loginBtn'), 'login button must receive the shared SafeLedger button treatment');
 assert(css.includes('.btn:not(:disabled):hover'), 'shared button hover styling must cover standard buttons');
 assert(css.includes('outline: 2px solid var(--sl-primary) !important;'), 'button highlight must use the 2px SafeLedger focus frame');
 assert(css.includes('outline-offset: -2px !important;'), 'button highlight must stay inside the button footprint');
 assert(css.includes('box-shadow: var(--sl-shadow-soft) !important;'), 'visual buttons must use the restrained Emergency Lock shadow');
-assert(!css.includes('0 0 0 3px'), '2.5.15 must not reintroduce the old outer glow');
+assert(!css.includes('0 0 0 3px'), 'current UI must not reintroduce the old outer glow');
 
 const index = read('src/main/index.html');
-assert(index.includes('./css/ui-2.5.15.css'), '2.5.15 UI layer must load after prior refinements');
+assert(index.includes('./css/ui-current.css'), 'consolidated current UI layer must load after prior refinements');
 
 const rendererEntry = read('src/main/renderer-entry.js');
 assert(!rendererEntry.includes("require('./vault-language-ui.js')"),

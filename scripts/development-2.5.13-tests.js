@@ -29,13 +29,13 @@ assert(walletIcons.includes('sl-wallet-fallback-svg'), 'Wallet fallback should b
 assert(!walletIcons.includes("fallback.className = 'glyphicon glyphicon-piggy-bank wallet-list-icon'"),
   'Unknown wallets should no longer depend on the old box-like glyph fallback.');
 
-const css = read('src/main/css/ui-2.5.13.css');
+const css = read('src/main/css/ui-current.css');
 assert(css.includes('.compact-qr-area .qr-caption'));
 assert(css.includes('color: #172033 !important;'),
   'QR captions sit on a white QR card and must use an explicit dark foreground in every theme.');
 assert(css.includes('.wallet-list-fallback-icon'));
 
 const index = read('src/main/index.html');
-assert(index.includes('./css/ui-2.5.13.css'), 'SafeLedger must load the 2.5.13 refinement layer after prior UI CSS.');
+assert(index.includes('./css/ui-current.css'), 'SafeLedger must load the consolidated current UI refinement layer.');
 
 console.log('PASS SafeLedger 2.5.13 QR caption contrast, grouped/alphabetized Vault Item platform choices, and visible wallet fallback icon.');

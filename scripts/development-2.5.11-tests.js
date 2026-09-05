@@ -9,7 +9,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 const security = read('src/main/security-ui.js');
 const sensitiveUi = read('src/main/sensitive-control-icons-ui.js');
-const uiCss = read('src/main/css/ui-2.5.11.css');
+const uiCss = read('src/main/css/ui-current.css');
 const dashboardUi = read('src/main/dashboard-ui.js');
 const dashboardSummary = read('src/main/dashboard-summary.js');
 const index = read('src/main/index.html');
@@ -58,7 +58,7 @@ function testVaultOverview() {
   assert(dashboardSummary.includes('otherWallets: 0'));
   assert(index.includes('title="Vault Overview"'));
   assert(index.includes('aria-label="Open Vault Overview"'));
-  assert(index.includes('./css/ui-2.5.11.css'));
+  assert(index.includes('./css/ui-current.css'));
 }
 
 function testFioCatalogSupport() {

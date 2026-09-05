@@ -77,7 +77,13 @@ const firstGroups = presentation.groupedPresetNames('Web3 Account');
 const secondGroups = presentation.groupedPresetNames('Web3 Account');
 assert.deepStrictEqual(secondGroups, firstGroups,
   'Repeated direct Web3 preset reads must remain deterministic without DOM mutation.');
-assert(presentation.accountFields('Web3 Account').some(([label, type]) => label === 'Connected wallet(s)' && type === 'text'));
+const web3Fields = presentation.accountFields('Web3 Account');
+assert(!web3Fields.some(([label]) => label === 'Connected wallet(s)'),
+  'Web3 presets should no longer force an unnecessary blank Connected wallet(s) row.');
+assert(!web3Fields.some(([label]) => label === 'Login method'),
+  'Web3 presets should no longer force an unnecessary blank Login method row.');
+assert(web3Fields.some(([label, type]) => label === '2FA recovery / backup codes' && type === 'sensitive'),
+  'Web3 account presets must retain useful sensitive recovery-code support.');
 assert(presentation.accountFields('Website Account').some(([label, type]) => label === '2FA recovery / backup codes' && type === 'sensitive'));
 
 const presentationSource = read('src/main/vault-item-presentation.js');
@@ -106,4 +112,4 @@ if (originalWindow === undefined) delete global.window;
 else global.window = originalWindow;
 delete require.cache[require.resolve(bridgePath)];
 
-console.log(`PASS SafeLedger ${pkg.version} preserves shared renderer state while Add Asset requires explicit user-selected Vault context.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves shared renderer state, explicit Add Asset selection, and useful Web3 recovery fields without retired blank preset rows.`);

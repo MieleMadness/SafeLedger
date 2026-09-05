@@ -43,7 +43,7 @@ function appendOptionalBip39Check(area) {
   section.appendChild(input);
 
   const actions = document.createElement('div');
-  actions.className = 'settings-section-actions';
+  actions.className = 'settings-section-actions recovery-drill-validation-actions';
   const validate = document.createElement('button');
   validate.type = 'button';
   validate.className = 'btn btn-default';
@@ -74,9 +74,9 @@ function appendOptionalBip39Check(area) {
 function documentationReminder(group = {}) {
   if (recoveryDrill.canComplete(group)) return '';
   if (group.lastRecoveryDrill || group.lastVerified) {
-    return 'Documentation reminder: this Test Recovery may be current, but SafeLedger still does not have a recovery method, recovery location, or recovery instructions documented for this vault item. Completing or verifying a drill records that you tested the process; it does not create the missing recovery documentation. Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Vault Item.';
+    return 'Documentation reminder: this Recovery Validation may be current, but SafeLedger still does not have a recovery method, recovery location, or recovery instructions documented for this vault item. Completing or verifying a drill records that you tested the process; it does not create the missing recovery documentation. Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Vault Item.';
   }
-  return 'Documentation reminder: SafeLedger does not have a recovery method, recovery location, or recovery instructions documented for this vault item yet. You can still complete this Test Recovery checklist, but Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Vault Item.';
+  return 'Documentation reminder: SafeLedger does not have a recovery method, recovery location, or recovery instructions documented for this vault item yet. You can still complete this Recovery Validation checklist, but Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Vault Item.';
 }
 
 function render(params = {}) {
@@ -87,14 +87,16 @@ function render(params = {}) {
 
   const header = document.createElement('div');
   header.className = 'recovery-drill-header';
-  appendText(header, 'h1', '', 'Test Recovery');
+  appendText(header, 'h1', '', 'Recovery Validation');
   appendText(header, 'p', 'recovery-drill-wallet', `Vault Item: ${params.walletName || 'Vault Item'}`);
   area.appendChild(header);
+
+  appendOptionalBip39Check(area);
 
   const privacy = document.createElement('div');
   privacy.className = 'recovery-drill-privacy';
   const privacyIcon = document.createElement('i');
-  privacyIcon.className = 'fa fa-shield';
+  privacyIcon.className = 'fa fa-lock';
   privacyIcon.setAttribute('aria-hidden', 'true');
   privacy.appendChild(privacyIcon);
   appendText(
@@ -132,17 +134,15 @@ function render(params = {}) {
   }
   area.appendChild(list);
 
-  appendOptionalBip39Check(area);
-
   const storageNote = document.createElement('div');
   storageNote.className = 'recovery-drill-storage-note';
   appendText(storageNote, 'strong', '', 'What SafeLedger records: ');
-  storageNote.appendChild(document.createTextNode('only the successful Test Recovery completion time and the refreshed Last Verified time. Individual checklist answers are not stored. Optional BIP39 input and results are also not stored.'));
+  storageNote.appendChild(document.createTextNode('only the successful Recovery Validation completion time and the refreshed Last Verified time. Individual checklist answers are not stored. Optional BIP39 input and results are also not stored.'));
   area.appendChild(storageNote);
 
   const allConfirmed = () => checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
   const complete = (_event, button) => {
-    if (!allConfirmed()) return alert('Confirm every Test Recovery step before marking the test complete.');
+    if (!allConfirmed()) return alert('Confirm every Recovery Validation step before marking the validation complete.');
     if (button) button.disabled = true;
     if (typeof params.onComplete === 'function') params.onComplete(recoveryDrill.completionPatch(), button);
   };
@@ -150,13 +150,13 @@ function render(params = {}) {
   detailActions.set([
     {
       icon: 'fa-times',
-      title: 'Cancel Test Recovery',
+      title: 'Cancel Recovery Validation',
       className: 'detail-action-cancel',
       onClick: () => { if (typeof params.onCancel === 'function') params.onCancel(); }
     },
     {
       icon: 'fa-check-circle',
-      title: 'Complete recovery drill',
+      title: 'Complete Recovery Validation',
       className: 'recovery-drill-complete-action',
       onClick: complete
     }
@@ -164,7 +164,7 @@ function render(params = {}) {
   detailActions.setDetailMode('view');
 
   const dock = document.getElementById('detailActionArea');
-  const completeButton = dock && dock.querySelector('[aria-label="Complete recovery drill"]');
+  const completeButton = dock && dock.querySelector('[aria-label="Complete Recovery Validation"]');
   const syncCompleteState = () => {
     if (completeButton) completeButton.disabled = !allConfirmed();
   };
