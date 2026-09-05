@@ -16,7 +16,7 @@ function testRendererSafeSha256() {
   );
   assert.strictEqual(
     bytesToHex(sha256Bytes(Uint8Array.from([0x61, 0x62, 0x63]))),
-    'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
+    'ba7816bf8f01c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
   );
   const source = read('src/main/sha256.js');
   assert(!source.includes("require('crypto')"));
@@ -46,7 +46,8 @@ function testGuidedRecoveryIsEphemeral() {
   assert(drillUi.includes("require('./bip39-validator')"));
   assert(drillUi.includes("input.type = 'password'"));
   assert(drillUi.includes("input.value = ''"), 'temporary BIP39 input must be cleared immediately');
-  assert(drillUi.includes('Test Recovery'));
+  assert(drillUi.includes("appendText(header, 'h1', '', 'Recovery Validation')"));
+  assert(!drillUi.includes("appendText(header, 'h1', '', 'Test Recovery')"));
   assert(!drillUi.includes('clipboard'));
   assert(!drillUi.includes('ipc.send'));
   assert(!drillUi.includes('fetch('));
@@ -86,4 +87,4 @@ testPrivacyModeDefaultsAndPersistence();
 testGuidedRecoveryIsEphemeral();
 testRecoveryIntelligenceBoundary();
 testBip39RendererBoundary();
-console.log('PASS SafeLedger 2.4 Privacy Mode, Guided Test Recovery, renderer-safe BIP39, and sanitized intelligence boundaries.');
+console.log('PASS SafeLedger 2.4 Privacy Mode, guided Recovery Validation, renderer-safe BIP39, and sanitized intelligence boundaries.');
