@@ -13,25 +13,28 @@ const foundation = read('src/main/css/foundation.css');
 const gate2635 = read('scripts/hotfix-2.6.35-tests.js');
 
 assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 36,
-  'SafeLedger 2.6.36 vault-search and detail-heading coverage must remain active on 2.6.36 and later 2.6.x candidates.');
+  'SafeLedger 2.6.36 Vault-search and detail-heading coverage must remain active on 2.6.36 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.36-tests.js'),
-  '2.6.36 vault-search and detail-heading coverage must stay in the locked regression suite.');
+  '2.6.36 Vault-search and detail-heading coverage must stay in the locked regression suite.');
 
-assert(index.includes('placeholder="Search vaults..."'),
-  'Vault search should use the shorter Search vaults wording.');
-assert(!index.includes('placeholder="Search vault items..."'),
+assert(index.includes('id="groupSearch"'), 'Vault search control must remain present.');
+assert(index.includes('placeholder="Search vaults"'),
+  'Vault search should keep the concise Search vaults wording without trailing punctuation.');
+assert(!index.includes('placeholder="Search vault items'),
   'The redundant word items must stay removed from the Vault search field.');
 assert(index.includes('title="Clear vault search"') && index.includes('aria-label="Clear vault search"'),
   'Vault search clear control should use the same simplified wording.');
 
-for (const selector of ['#detailArea .wallet-detail-title,', '#detailArea .coin-detail-title-wrap > h1']) {
-  assert(foundation.includes(selector), `Missing short underline selector: ${selector}`);
-}
-assert(/#detailArea \.wallet-detail-title,[\s\S]*?#detailArea \.coin-detail-title-wrap > h1\s*\{[\s\S]*?display:\s*table;[\s\S]*?width:\s*auto;[\s\S]*?border-bottom:\s*1px solid var\(--sl-border, #d7dee8\);[\s\S]*?\}/.test(foundation),
-  'Vault and Asset title underlines must shrink to the title text width.');
-assert(/#detailArea \.wallet-detail-header \+ hr,[\s\S]*?#detailArea \.coin-detail-header \+ hr\s*\{\s*display:\s*none\s*!important;\s*\}/.test(foundation),
-  'The old full-width dividers after Vault and Asset header rows must stay hidden.');
+/* 2.6.38 intentionally removed heading underlines everywhere. Preserve the
+ * 2.6.36 structural cleanup by requiring the legacy full-width dividers after
+ * Vault/Asset icon headers to stay hidden. */
+assert(/#detailArea \.wallet-detail-header \+ hr,[\s\S]*?#detailArea \.coin-detail-header \+ hr[\s\S]*?\{[\s\S]*?display:\s*none\s*!important;[\s\S]*?\}/.test(foundation),
+  'Legacy full-width dividers after Vault and Asset header rows must stay hidden.');
+assert(foundation.includes('#detailArea h1,') && foundation.includes('#detailArea h6,'),
+  'Current detail heading policy must cover the complete H1-H6 hierarchy.');
+assert(foundation.includes('border-bottom: 0 !important;'),
+  'Current detail headings must remain free of the retired underline treatment.');
 assert(gate2635.includes('parts[2] >= 35'),
   'The 2.6.35 square compact-selection behavior must remain active on later candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps concise Vault search wording and Vault/Asset underlines exactly as wide as their title text.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps concise Vault search wording, hidden legacy header dividers, and the current no-underline heading design.`);
