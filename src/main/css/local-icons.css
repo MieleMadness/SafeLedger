@@ -80,6 +80,40 @@
   box-sizing: border-box;
 }
 
+/* Closed padlock used for device-security, recovery, and lock status cues.
+ * Drawn with CSS so it stays crisp, fully offline, and never falls back to a
+ * platform-dependent square glyph. */
+.fa-lock {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+}
+.fa-lock::before {
+  content: "";
+  position: absolute;
+  left: .22em;
+  top: .02em;
+  width: .56em;
+  height: .52em;
+  border: .11em solid currentColor;
+  border-bottom: 0;
+  border-radius: .36em .36em 0 0;
+  box-sizing: border-box;
+}
+.fa-lock::after {
+  content: "";
+  position: absolute;
+  left: .12em;
+  right: .12em;
+  bottom: .03em;
+  height: .50em;
+  border: .11em solid currentColor;
+  border-radius: .08em;
+  box-sizing: border-box;
+}
+
 /* Standard external/open affordance: a small square with an arrow leaving it.
  * Drawn locally so the dashboard never depends on an icon font or network. */
 .fa-external-link {
@@ -240,7 +274,6 @@
 .fa-download::before { content: "⇩"; }
 .fa-upload::before { content: "⇧"; }
 .fa-exchange::before { content: "⇄"; }
-.fa-lock::before { content: "■"; }
 .fa-key::before { content: "◆"; }
 .fa-file-text-o::before { content: "▤"; }
 .fa-list::before { content: "☷"; }
