@@ -11,14 +11,14 @@ const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt
 const foundation = read('src/main/css/foundation.css');
 
 assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 34,
-  'SafeLedger 2.6.34 rail/heading behavior must remain active on 2.6.34 and later 2.6.x candidates.');
+  'SafeLedger 2.6.34 compact-rail behavior must remain active on 2.6.34 and later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.34-tests.js'),
-  '2.6.34 rail/heading coverage must stay in the locked regression suite.');
+  '2.6.34 compact-rail coverage must stay in the locked regression suite.');
 
 assert(foundation.includes('--sl-compact-nav-column: 98px;'),
-  'Compact rails must be resized after balancing item padding.');
+  'Compact rails must keep the balanced width introduced after item-padding cleanup.');
 assert(!foundation.includes('--sl-compact-nav-column: 104px;'),
-  'The previous wider compact rail must be retired after the horizontal padding reduction.');
+  'The previous wider compact rail must remain retired.');
 assert(/\.nav-column-collapsed\.nav-column-main\s+\.nav\s*>\s*li\s*>\s*a\s*\{[\s\S]*?padding:\s*6px\s*!important;[\s\S]*?\}/.test(foundation),
   'Collapsed navigation items must use equal 6px padding on top, right, bottom, and left.');
 assert(!foundation.includes('padding-left: 9px !important;') && !foundation.includes('padding-right: 9px !important;'),
@@ -26,13 +26,14 @@ assert(!foundation.includes('padding-left: 9px !important;') && !foundation.incl
 assert(/\.nav-column-collapsed\s*\{\s*padding-left:\s*15px\s*!important;\s*padding-right:\s*15px\s*!important;\s*\}/.test(foundation),
   'The compact rail must keep its existing outer column breathing room.');
 
-assert(foundation.includes('#detailArea .page-header,') && foundation.includes('#detailArea h1:has(+ hr)'),
-  'Legacy detail headings must own their short underline instead of relying on a full-width divider.');
-assert(foundation.includes('border-bottom: 1px solid var(--sl-border, #d7dee8);'),
-  'Heading underline must follow the current theme border color.');
+/* The short heading underline introduced in 2.6.34 was intentionally retired
+ * in 2.6.38. Keep protecting the important part of the earlier cleanup: the
+ * legacy heading-adjacent <hr> must not reappear as a full-width divider. */
 assert(foundation.includes('#detailArea .page-header + hr,') && foundation.includes('#detailArea h1 + hr'),
-  'Full-width divider elements immediately under headings must be retired visually.');
-assert(/#detailArea \.page-header \+ hr,[\s\S]*?#detailArea h1 \+ hr\s*\{\s*display:\s*none\s*!important;\s*\}/.test(foundation),
-  'Heading-adjacent full-width divider lines must be hidden while standalone separators remain available.');
+  'Legacy heading-adjacent divider elements must remain hidden.');
+assert(foundation.includes('border-bottom: 0 !important;'),
+  'Current detail headings must explicitly suppress the retired underline treatment.');
+assert(!foundation.includes('border-bottom: 1px solid var(--sl-border, #d7dee8);'),
+  'The retired text-width heading underline must not return.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.34 balanced compact padding and text-width heading underline behavior active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.34 balanced compact rails while honoring the later no-underline heading design.`);
