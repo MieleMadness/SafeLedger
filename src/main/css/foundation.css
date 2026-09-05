@@ -161,29 +161,27 @@
   font-size: 14px !important;
 }
 
-/* Legacy detail pages often pair a heading with a full-width <hr>. Keep the
- * visual separator attached to the heading itself so its underline is only as
- * wide as the heading text, while true standalone separators remain intact. */
+/* Detail headings use spacing and type hierarchy only. Retire both the recent
+ * text-width underline treatment and legacy heading-adjacent <hr> dividers so
+ * no H1-H6/page/section title in the display window carries an underline. */
+#detailArea h1,
+#detailArea h2,
+#detailArea h3,
+#detailArea h4,
+#detailArea h5,
+#detailArea h6,
 #detailArea .page-header,
-#detailArea h1:has(+ hr) {
-  display: table;
-  width: auto;
-  border-bottom: 1px solid var(--sl-border, #d7dee8);
+#detailArea .product-section-title {
+  border-bottom: 0 !important;
+  text-decoration: none !important;
 }
 #detailArea .page-header + hr,
-#detailArea h1 + hr {
-  display: none !important;
-}
-
-/* Vault Item and Asset details wrap their title inside an icon/header row, so
- * the heading is not directly adjacent to the legacy <hr>. Give the title text
- * its own underline and hide only that header's old full-width divider. */
-#detailArea .wallet-detail-title,
-#detailArea .coin-detail-title-wrap > h1 {
-  display: table;
-  width: auto;
-  border-bottom: 1px solid var(--sl-border, #d7dee8);
-}
+#detailArea h1 + hr,
+#detailArea h2 + hr,
+#detailArea h3 + hr,
+#detailArea h4 + hr,
+#detailArea h5 + hr,
+#detailArea h6 + hr,
 #detailArea .wallet-detail-header + hr,
 #detailArea .coin-detail-header + hr {
   display: none !important;
