@@ -208,8 +208,7 @@ function revealAfterLogin() {
     ],
     {
       duration: OPEN_DURATION_MS,
-      easing: 'cubic-bezier(.22,.61,.36,1)',
-      fill: 'forwards'
+      easing: 'cubic-bezier(.22,.61,.36,1)'
     }
   ));
 
