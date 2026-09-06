@@ -10,6 +10,7 @@ const settingsManager = require('./installManager/installManager/settingsManager
 const cryptoSession = require('./crypto-session-main');
 const securityMain = require('./security-main');
 const profileSetup = require('./profile-setup');
+const profileTransaction = require('./profile-transaction');
 
 let mainWindow;
 let vaultDir;
@@ -391,6 +392,7 @@ ipc.on('read-vaultlist-init', async (event) => {
       await vault.initVaultList(vaultDir, key);
       await initializeModernVault(currentVault, key);
     }
+    await profileTransaction.recoverPending(vaultDir, key, vault.readVaultList);
     let valList;
     try {
       valList = await vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
@@ -423,7 +425,7 @@ ipc.on('read-vaultlist-init', async (event) => {
   }
 });
 
-ipc.on('process-vault-list', (event, params = {}) => {
+ipc.on('process-vault-list', async (event, params = {}) => {
   let nextList;
   let nextProfile;
   let idInfo = null;
@@ -466,17 +468,28 @@ ipc.on('process-vault-list', (event, params = {}) => {
 
   const key = getSessionKey();
   if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key)
-    .then(async (val) => {
-      if (params.action === 'create' && val === 'SUCCESS') {
-        const data = await initializeModernVault(idInfo.fileName, key, newProfileWalletNames);
-        await securityMain.audit(getDataRoot(), 'profile-created');
-        return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: nextList, vaultData: data });
-      }
-      await securityMain.audit(getDataRoot(), 'profile-updated');
-      sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
-    })
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
+  try {
+    if (params.action === 'create') {
+      const data = await profileTransaction.createProfile({
+        vaultDir,
+        nextList,
+        profileFile: idInfo.fileName,
+        cryptoKey: key,
+        walletNames: newProfileWalletNames,
+        initializeProfile: initializeModernVault,
+        saveList: vault.saveVault,
+        readList: vault.readVaultList
+      });
+      await securityMain.audit(getDataRoot(), 'profile-created');
+      return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: nextList, vaultData: data });
+    }
+
+    await vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key);
+    await securityMain.audit(getDataRoot(), 'profile-updated');
+    return sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: (err && (err.message || err.statusMsg)) || 'Save failed' });
+  }
 });
 
 ipc.on('vault-list-delete', (event, params = {}) => {
