@@ -57,6 +57,7 @@ function testTemplateInputValidationHelpers() {
 function testProfileCreationUiAndMainProcessContract() {
   const profile = read('src/main/profile.js');
   const main = read('src/main/main.js');
+  const transaction = read('src/main/profile-transaction.js');
   const css = read('src/main/css/profile-setup.css');
   const index = read('src/main/index.html');
 
@@ -66,7 +67,10 @@ function testProfileCreationUiAndMainProcessContract() {
   assert(profile.includes('payload.profileSetup = selectedSetup'), 'Profile setup choice should be sent separately from persisted profile metadata.');
 
   assert(main.includes('resolveNewProfileWalletNames(params.profileSetup)'), 'Main process should validate the requested setup.');
-  assert(main.includes('initializeModernVault(idInfo.fileName, key, newProfileWalletNames)'), 'New vault should be initialized from the selected templates.');
+  assert(main.includes('walletNames: newProfileWalletNames'), 'Validated selected templates must be passed into the transactional profile creator.');
+  assert(main.includes('initializeProfile: initializeModernVault'), 'Transactional profile creation must still use the modern template-aware vault initializer.');
+  assert(transaction.includes('profileData = await initializeProfile(profileFile, cryptoKey, walletNames);'),
+    'The transaction must initialize the new encrypted profile from the selected templates before publishing it.');
   assert(main.includes("if (mode === 'blank') return [];"), 'Blank mode should create an empty vault-item list.');
 
   assert(css.includes('.profile-wallet-template-grid'), 'Starter template picker should have dedicated layout styling.');
@@ -92,4 +96,4 @@ testSelectedWalletsLoadTheirAssets();
 testTemplateInputValidationHelpers();
 testProfileCreationUiAndMainProcessContract();
 testRecoveryDashboardRowsOpenVaultItems();
-console.log('PASS branch profile setup choices, local-artwork template filtering, reviewed Chain Games starter, and Vault Overview row navigation.');
+console.log('PASS profile setup choices, local-artwork template filtering, transactional template-aware profile creation, reviewed Chain Games starter, and Vault Overview row navigation.');
