@@ -48,7 +48,7 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   recordBackupSuccess: () => invoke('device-record-backup-success'),
   recordBackupVerified: (createdAt) => invoke('device-record-backup-verified', createdAt),
   backupAllData: () => invoke('security-backup-all'),
-  verifyBackup: () => invoke('security-verify-backup'),
+  verifyBackup: (password) => invoke('security-verify-backup', String(password || '')),
   restoreAllData: () => invoke('security-restore-all'),
   selectLegacyImportSource: () => invoke('legacy-import-select-source'),
   importLegacyData: (password) => invoke('legacy-import-run', password),
