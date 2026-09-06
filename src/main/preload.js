@@ -2,9 +2,19 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+const LOCKED_MESSAGE = 'SafeLedger is locked. Please log in again.';
+
 function subscribe(channel, callback) {
   if (typeof callback !== 'function') return;
   ipcRenderer.on(channel, (_event, payload) => callback(payload));
+}
+
+function invoke(channel, ...args) {
+  return ipcRenderer.invoke(channel, ...args).catch((error) => {
+    const message = String(error && error.message || error || '');
+    if (message.includes(LOCKED_MESSAGE)) throw new Error(LOCKED_MESSAGE);
+    throw error;
+  });
 }
 
 contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
@@ -17,33 +27,33 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   processRecord: (params) => ipcRenderer.send('process-record', params),
   saveSettings: (params) => ipcRenderer.send('save-settings', params),
   requestSettings: () => ipcRenderer.send('request-settings'),
-  prepareAppMenu: () => ipcRenderer.invoke('app-menu-prepare'),
+  prepareAppMenu: () => invoke('app-menu-prepare'),
   appMenuCommand: (command) => ipcRenderer.send('app-menu-command', String(command || '')),
-  setSelfDestructProtection: (enabled) => ipcRenderer.invoke('set-self-destruct-protection', enabled === true),
+  setSelfDestructProtection: (enabled) => invoke('set-self-destruct-protection', enabled === true),
   recordPasswordFailure: () => ipcRenderer.send('record-password-failure'),
   panicLock: (params) => ipcRenderer.send('panic-lock', params),
-  cryptoHasEnvelope: () => ipcRenderer.invoke('crypto-v3-has-envelope'),
-  cryptoInitialize: (password) => ipcRenderer.invoke('crypto-v3-initialize', password),
-  cryptoLogin: (password) => ipcRenderer.invoke('crypto-v3-login', password),
-  cryptoChangePassword: (oldPassword, newPassword) => ipcRenderer.invoke('crypto-v3-change-password', oldPassword, newPassword),
-  getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary'),
-  getRecoveryIntelligence: () => ipcRenderer.invoke('recovery-intelligence-summary'),
-  getActivityHistory: (limit) => ipcRenderer.invoke('activity-history', limit),
-  globalSearch: (query) => ipcRenderer.invoke('global-search', query),
-  getRecoveryBinder: (file, options, recordActivity = false) => ipcRenderer.invoke('recovery-binder-model', { file, options, recordActivity: recordActivity === true }),
-  getStorageHealth: () => ipcRenderer.invoke('device-storage-health'),
-  openDataFolder: () => ipcRenderer.invoke('device-open-data-folder'),
-  resetStorageIdentity: () => ipcRenderer.invoke('device-reset-storage-identity'),
-  getBackupHealth: () => ipcRenderer.invoke('device-backup-health'),
-  recordBackupSuccess: () => ipcRenderer.invoke('device-record-backup-success'),
-  recordBackupVerified: (createdAt) => ipcRenderer.invoke('device-record-backup-verified', createdAt),
-  backupAllData: () => ipcRenderer.invoke('security-backup-all'),
-  verifyBackup: () => ipcRenderer.invoke('security-verify-backup'),
-  restoreAllData: () => ipcRenderer.invoke('security-restore-all'),
-  selectLegacyImportSource: () => ipcRenderer.invoke('legacy-import-select-source'),
-  importLegacyData: (password) => ipcRenderer.invoke('legacy-import-run', password),
-  clipboardWrite: (text) => ipcRenderer.invoke('security-clipboard-write', text),
-  clipboardClearIfMatches: (expected) => ipcRenderer.invoke('security-clipboard-clear-if-matches', expected),
+  cryptoHasEnvelope: () => invoke('crypto-v3-has-envelope'),
+  cryptoInitialize: (password) => invoke('crypto-v3-initialize', password),
+  cryptoLogin: (password) => invoke('crypto-v3-login', password),
+  cryptoChangePassword: (oldPassword, newPassword) => invoke('crypto-v3-change-password', oldPassword, newPassword),
+  getDashboardSummary: () => invoke('dashboard-summary'),
+  getRecoveryIntelligence: () => invoke('recovery-intelligence-summary'),
+  getActivityHistory: (limit) => invoke('activity-history', limit),
+  globalSearch: (query) => invoke('global-search', query),
+  getRecoveryBinder: (file, options, recordActivity = false) => invoke('recovery-binder-model', { file, options, recordActivity: recordActivity === true }),
+  getStorageHealth: () => invoke('device-storage-health'),
+  openDataFolder: () => invoke('device-open-data-folder'),
+  resetStorageIdentity: () => invoke('device-reset-storage-identity'),
+  getBackupHealth: () => invoke('device-backup-health'),
+  recordBackupSuccess: () => invoke('device-record-backup-success'),
+  recordBackupVerified: (createdAt) => invoke('device-record-backup-verified', createdAt),
+  backupAllData: () => invoke('security-backup-all'),
+  verifyBackup: () => invoke('security-verify-backup'),
+  restoreAllData: () => invoke('security-restore-all'),
+  selectLegacyImportSource: () => invoke('legacy-import-select-source'),
+  importLegacyData: (password) => invoke('legacy-import-run', password),
+  clipboardWrite: (text) => invoke('security-clipboard-write', text),
+  clipboardClearIfMatches: (expected) => invoke('security-clipboard-clear-if-matches', expected),
   onResult: (callback) => subscribe('result', callback),
   onInitSystem: (callback) => subscribe('result-init-system', callback),
   onSaveSettings: (callback) => subscribe('result-save-settings', callback),
