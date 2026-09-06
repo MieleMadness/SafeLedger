@@ -5,6 +5,7 @@ require('./app-menu-ui.js');
 require('./startup-ui.js');
 require('./renderer.js');
 require('./column-collapse-ui.js');
+require('./login-workspace-ui.js');
 require('./privacy-mode-ui.js');
 require('./dashboard-action-state-ui.js');
 require('./dashboard-ui.js');
