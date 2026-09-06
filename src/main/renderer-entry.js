@@ -14,6 +14,7 @@ require('./recovery-intelligence-dashboard-ui.js');
 require('./recovery-intelligence-vault-overview-ui.js');
 require('./activity-history-ui.js');
 require('./settings-shortcut-ui.js');
+require('./top-action-lock-ui.js');
 require('./self-destruct-settings-ui.js');
 require('./settings-layout-ui.js');
 require('./lockout-ui-enhancements.js');
