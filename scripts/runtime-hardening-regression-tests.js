@@ -52,7 +52,10 @@ assert(!security.includes("require('fs')"));
 assert(!security.includes("require('path')"));
 assert(!security.includes('MutationObserver'));
 assert(security.includes("ipc.invoke('security-backup-all')"));
-assert(security.includes("ipc.invoke('security-verify-backup')"));
+assert(security.includes("ipc.invoke('security-verify-backup', password)"),
+  'Verify Backup must pass the transient backup password to the trusted main-process verifier');
+assert(security.includes('requestBackupPassword()'),
+  'Verify Backup must challenge for the backup password instead of relying on the live session key');
 assert(security.includes("ipc.invoke('security-restore-all')"));
 assert(securityMain.includes("ipc.handle('security-backup-all'"));
 assert(securityMain.includes("ipc.handle('security-verify-backup'"));
@@ -66,10 +69,11 @@ assert(pkg.scripts['test:gui-smoke'].includes('run-gui-smoke.js'));
 
 for (const relative of [
   'src/main/main.js', 'src/main/preload.js', 'src/main/security-main.js',
-  'src/main/security-enhancements.js', 'src/main/renderer-bridge.js',
-  'src/main/renderer-entry.js', 'src/main/atomic-file.js', 'src/main/vault-schema.js',
-  'src/main/legacy-import.js', 'scripts/continuity-hardening-tests.js',
+  'src/main/security-enhancements.js', 'src/main/profile-transaction.js',
+  'src/main/renderer-bridge.js', 'src/main/renderer-entry.js', 'src/main/atomic-file.js',
+  'src/main/vault-schema.js', 'src/main/legacy-import.js',
+  'scripts/continuity-hardening-tests.js', 'scripts/recovery-confidence-tests.js',
   'scripts/build-renderer.js', 'scripts/run-gui-smoke.js', 'scripts/version-bump-check.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger sandbox, Emergency Lock login reset, explicit renderer bridge, real GUI smoke hooks, and main-process security operations.');
+console.log('PASS SafeLedger sandbox, Emergency Lock login reset, independent backup verification bridge, real GUI smoke hooks, and main-process security operations.');
