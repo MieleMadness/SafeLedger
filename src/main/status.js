@@ -8,6 +8,7 @@ const STATUS_ICONS = Object.freeze({
   processing: 'fa fa-refresh fa-spin'
 });
 const ROUTINE_SUCCESS = /^load(?:ed)? successful(?:ly)?\.?$/i;
+const LOGIN_REQUIRED = /^Please login\.?$/i;
 let closeTimer = null;
 
 function statusArea() {
@@ -76,9 +77,12 @@ exports.showStatus = (params = {}) => {
 
   const state = String(params.status || '').toUpperCase();
   const kind = statusKind(state);
-  const options = state === 'DELETED'
-    ? { role: 'status', ariaLive: 'polite', iconClass: 'fa fa-trash' }
-    : {};
+  const message = String(params.statusMsg || '').trim();
+  const options = LOGIN_REQUIRED.test(message)
+    ? { role: 'status', ariaLive: 'polite', iconClass: 'fa fa-user' }
+    : state === 'DELETED'
+      ? { role: 'status', ariaLive: 'polite', iconClass: 'fa fa-trash' }
+      : {};
   area.appendChild(createMessage(kind, params.statusMsg, options));
   closeTimer = window.setTimeout(closeStatus, STATUS_TIMEOUT_MS);
   return true;
@@ -95,6 +99,7 @@ exports._test = {
   STATUS_TIMEOUT_MS,
   STATUS_ICONS,
   ROUTINE_SUCCESS,
+  LOGIN_REQUIRED,
   statusKind,
   shouldDisplayStatus,
   createMessage,
