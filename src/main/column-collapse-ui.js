@@ -3,11 +3,13 @@
 /*
  * SafeLedger compact navigation rails.
  *
- * Profiles, Vault Items, and Assets stay expanded by default so labels remain
- * discoverable. The user may independently collapse any column into a compact
- * icon rail for the current app session. No vault or settings data is changed.
+ * Profiles, Vault Items, and Assets start collapsed while SafeLedger is locked.
+ * After a successful login the login-workspace coordinator reveals all three
+ * columns together. Manual collapse controls still work independently and no
+ * vault/settings data is changed.
  */
 
+const OPEN_DURATION_MS = 420;
 const COLUMNS = Object.freeze([
   Object.freeze({
     key: 'profile',
@@ -37,6 +39,10 @@ const COLUMNS = Object.freeze([
     itemLabelSelector: '.coin-list-label'
   })
 ]);
+
+let columnStates = [];
+let openingAnimations = [];
+let openingGeneration = 0;
 
 function getCell(id) {
   const node = document.getElementById(id);
@@ -85,6 +91,19 @@ function setCollapsed(state, collapsed) {
   return state.collapsed;
 }
 
+function clearOpeningAnimation() {
+  openingGeneration++;
+  for (const animation of openingAnimations) {
+    try { animation.cancel(); } catch (_) {}
+  }
+  openingAnimations = [];
+  const shell = document.querySelector('.app-shell');
+  if (shell) shell.removeAttribute('data-nav-opening');
+  document.querySelectorAll('.app-grid').forEach((grid) => {
+    grid.style.removeProperty('grid-template-columns');
+  });
+}
+
 function setupColumn(config) {
   const shell = document.querySelector('.app-shell');
   const searchCell = getCell(config.searchId);
@@ -106,13 +125,16 @@ function setupColumn(config) {
   toggle.className = 'btn btn-default column-collapse-toggle';
   toggle.setAttribute('aria-controls', config.areaId);
   const icon = document.createElement('i');
-  icon.className = 'fa fa-chevron-left';
+  icon.className = 'fa fa-chevron-right';
   icon.setAttribute('aria-hidden', 'true');
   toggle.appendChild(icon);
   searchCell.appendChild(toggle);
 
-  const state = { config, shell, searchCell, mainCell, buttonCell, toggle, collapsed: false };
-  toggle.addEventListener('click', () => setCollapsed(state, !state.collapsed));
+  const state = { config, shell, searchCell, mainCell, buttonCell, toggle, collapsed: true };
+  toggle.addEventListener('click', () => {
+    clearOpeningAnimation();
+    setCollapsed(state, !state.collapsed);
+  });
 
   // List renderers replace their children as selections change. Event
   // delegation keeps native tooltips/accessibility names current without a
@@ -121,14 +143,100 @@ function setupColumn(config) {
   mainCell.addEventListener('mouseover', refreshLabels);
   mainCell.addEventListener('focusin', refreshLabels);
 
-  setCollapsed(state, false);
+  setCollapsed(state, true);
   return state;
 }
 
 function init() {
-  return COLUMNS.map(setupColumn).filter(Boolean);
+  if (columnStates.length) return columnStates;
+  columnStates = COLUMNS.map(setupColumn).filter(Boolean);
+  return columnStates;
+}
+
+function collapseForLogin() {
+  clearOpeningAnimation();
+  for (const state of init()) setCollapsed(state, true);
+  return columnStates;
+}
+
+function targetExpandedTemplate(shell) {
+  const width = Math.max(0, Number(shell && shell.getBoundingClientRect().width) || 0);
+  if (!width) return '';
+  const unit = width / 11;
+  return `${unit * 2}px ${unit * 2}px ${unit * 2}px ${unit * 5}px`;
+}
+
+function prefersReducedMotion() {
+  try {
+    return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  } catch (_) {
+    return false;
+  }
+}
+
+function revealAfterLogin() {
+  const states = init();
+  const shell = states[0] && states[0].shell;
+  if (!shell) return Promise.resolve();
+
+  clearOpeningAnimation();
+  const grids = Array.from(shell.querySelectorAll('.app-grid'));
+  const canAnimate = grids.length > 0 && grids.every((grid) => typeof grid.animate === 'function');
+  if (!canAnimate || prefersReducedMotion()) {
+    for (const state of states) setCollapsed(state, false);
+    return Promise.resolve();
+  }
+
+  const starts = grids.map((grid) => Array.from(grid.children).slice(0, 4)
+    .map((cell) => `${Math.max(0, cell.getBoundingClientRect().width)}px`)
+    .join(' '));
+  const target = targetExpandedTemplate(shell);
+  if (!target || starts.some((value) => !value)) {
+    for (const state of states) setCollapsed(state, false);
+    return Promise.resolve();
+  }
+
+  grids.forEach((grid, index) => { grid.style.gridTemplateColumns = starts[index]; });
+  for (const state of states) setCollapsed(state, false);
+  shell.setAttribute('data-nav-opening', 'true');
+
+  const generation = ++openingGeneration;
+  openingAnimations = grids.map((grid, index) => grid.animate(
+    [
+      { gridTemplateColumns: starts[index] },
+      { gridTemplateColumns: target }
+    ],
+    {
+      duration: OPEN_DURATION_MS,
+      easing: 'cubic-bezier(.22,.61,.36,1)',
+      fill: 'forwards'
+    }
+  ));
+
+  return Promise.all(openingAnimations.map((animation) => animation.finished.catch(() => null)))
+    .then(() => {
+      if (generation !== openingGeneration) return;
+      openingAnimations = [];
+      shell.removeAttribute('data-nav-opening');
+      grids.forEach((grid) => grid.style.removeProperty('grid-template-columns'));
+    });
 }
 
 if (typeof document !== 'undefined') init();
 
-exports._test = { COLUMNS, getCell, syncItemLabels, clearHiddenSearch, setCollapsed, setupColumn, init };
+exports.collapseForLogin = collapseForLogin;
+exports.revealAfterLogin = revealAfterLogin;
+exports._test = {
+  OPEN_DURATION_MS,
+  COLUMNS,
+  getCell,
+  syncItemLabels,
+  clearHiddenSearch,
+  setCollapsed,
+  setupColumn,
+  init,
+  collapseForLogin,
+  targetExpandedTemplate,
+  prefersReducedMotion,
+  revealAfterLogin
+};
