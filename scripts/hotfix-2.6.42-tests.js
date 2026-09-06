@@ -7,11 +7,13 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const profileSetup = require('../src/main/profile-setup');
 const presets = require('../src/main/vault-item-asset-presets');
 const serviceCatalog = require('../src/main/service-catalog');
 
-assert.strictEqual(pkg.version, '2.6.42', 'This workflow candidate must report SafeLedger 2.6.42.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 42,
+  'SafeLedger 2.6.42 locked-state, QR theme, and Chain Games refinements must remain active on later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.42-tests.js'),
   '2.6.42 locked-state, QR theme, and Chain Games coverage must stay in the locked regression suite.');
 
@@ -81,4 +83,4 @@ assert.deepStrictEqual(networks.sort(), ['Chain Games Supernet', 'Ethereum', 'Po
 assert(priorGate.includes('parts[2] >= 41'),
   'The approved 2.6.41 startup-animation gate must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.42 softens dark-mode QR display, normalizes locked utility behavior, restores Home to Login while locked, and preloads Chain Games with its reviewed CHAIN networks.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.42 dark-mode QR, normalized locked utility behavior, Home-to-Login guard, and Chain Games starter refinements active.`);
