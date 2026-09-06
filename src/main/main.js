@@ -11,6 +11,7 @@ const cryptoSession = require('./crypto-session-main');
 const securityMain = require('./security-main');
 const profileSetup = require('./profile-setup');
 const profileTransaction = require('./profile-transaction');
+const dataWriteService = require('./data-write-service');
 
 let mainWindow;
 let vaultDir;
@@ -41,16 +42,6 @@ function isPlainObject(value) {
 function safeActivityReason(value) {
   const reason = String(value || 'security-event').trim().slice(0, 80);
   return /^[a-z0-9-]+$/i.test(reason) ? reason : 'security-event';
-}
-
-function validateVaultList(list) {
-  if (!vault.validVaultListStructure(list)) throw new Error('Invalid SafeLedger profile list.');
-  return list;
-}
-
-function validateVaultData(data) {
-  if (!isPlainObject(data) || !vault.safeVaultFileName(data.file)) throw new Error('Invalid SafeLedger vault data.');
-  return vaultSchema.prepareForSave(data);
 }
 
 function resolveNewProfileWalletNames(setup) {
@@ -426,42 +417,11 @@ ipc.on('read-vaultlist-init', async (event) => {
 });
 
 ipc.on('process-vault-list', async (event, params = {}) => {
-  let nextList;
-  let nextProfile;
-  let idInfo = null;
-  let newProfileWalletNames = null;
   try {
     assertTrustedEvent(event);
-    if (!isPlainObject(params) || !['create', 'modify'].includes(params.action) || !isPlainObject(params.vault) || !isPlainObject(params.vaultList)) {
+    if (!isPlainObject(params) || !['create', 'modify'].includes(params.action) || !isPlainObject(params.vault)) {
       throw new Error('Invalid profile update.');
     }
-    validateVaultList(params.vaultList);
-    nextList = JSON.parse(JSON.stringify(params.vaultList));
-    nextProfile = JSON.parse(JSON.stringify(params.vault));
-    nextProfile.name = String(nextProfile.name || '').trim().slice(0, 100);
-    if (!nextProfile.name) throw new Error('Profile name is required.');
-
-    if (params.action === 'create') {
-      newProfileWalletNames = resolveNewProfileWalletNames(params.profileSetup);
-      idInfo = vault.nextVaultFileName(nextList);
-      nextProfile.id = idInfo.id;
-      nextProfile.file = idInfo.fileName;
-      nextProfile.path = vaultDir;
-      nextProfile.created = nextProfile.created || new Date().toISOString();
-      nextList.vaults.push(nextProfile);
-    } else {
-      const index = nextList.vaults.findIndex((item) => Number(item && item.id) === Number(nextProfile.id));
-      if (index < 0) throw new Error('Profile was not found.');
-      const existing = nextList.vaults[index];
-      nextProfile.id = existing.id;
-      nextProfile.file = existing.file;
-      nextProfile.path = vaultDir;
-      nextProfile.created = existing.created || nextProfile.created || new Date().toISOString();
-      nextList.vaults[index] = nextProfile;
-    }
-    nextList.vaults.sort(utils.compareIgnoreCase);
-    nextList.vaultSelected = nextList.vaults.indexOf(nextProfile);
-    validateVaultList(nextList);
   } catch (err) {
     return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile update.' });
   }
@@ -469,97 +429,111 @@ ipc.on('process-vault-list', async (event, params = {}) => {
   const key = getSessionKey();
   if (!key) return sendLocked();
   try {
-    if (params.action === 'create') {
-      const data = await profileTransaction.createProfile({
-        vaultDir,
-        nextList,
-        profileFile: idInfo.fileName,
-        cryptoKey: key,
-        walletNames: newProfileWalletNames,
-        initializeProfile: initializeModernVault,
-        saveList: vault.saveVault,
-        readList: vault.readVaultList
-      });
-      await securityMain.audit(getDataRoot(), 'profile-created');
-      return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: nextList, vaultData: data });
+    if (params.action === 'modify') {
+      const nextList = await dataWriteService.modifyProfile({ vault, vaultDir, key, profile: params.vault });
+      await securityMain.audit(getDataRoot(), 'profile-updated');
+      return sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
     }
 
-    await vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key);
-    await securityMain.audit(getDataRoot(), 'profile-updated');
-    return sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
+    const listFile = path.join(vaultDir, 'vaultlist.json');
+    const authoritativeList = await vault.readVaultList(listFile, key);
+    const profilePatch = dataWriteService.normalizeProfilePatch(params.vault);
+    const newProfileWalletNames = resolveNewProfileWalletNames(params.profileSetup);
+    const idInfo = vault.nextVaultFileName(authoritativeList);
+    const nextProfile = Object.assign({}, profilePatch, {
+      id: idInfo.id,
+      file: idInfo.fileName,
+      path: vaultDir,
+      created: new Date().toISOString()
+    });
+    authoritativeList.vaults.push(nextProfile);
+    authoritativeList.vaults.sort(utils.compareIgnoreCase);
+    const selected = authoritativeList.vaults.indexOf(nextProfile);
+    const persistedList = dataWriteService.stripProfileViewState(authoritativeList);
+    const viewList = dataWriteService.withProfileViewState(authoritativeList, selected);
+    const data = await profileTransaction.createProfile({
+      vaultDir,
+      nextList: persistedList,
+      profileFile: idInfo.fileName,
+      cryptoKey: key,
+      walletNames: newProfileWalletNames,
+      initializeProfile: initializeModernVault,
+      saveList: vault.saveVault,
+      readList: vault.readVaultList
+    });
+    await securityMain.audit(getDataRoot(), 'profile-created');
+    return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: viewList, vaultData: data });
   } catch (err) {
     return sendResult({ status: 'ERROR', statusMsg: (err && (err.message || err.statusMsg)) || 'Save failed' });
   }
 });
 
-ipc.on('vault-list-delete', (event, params = {}) => {
-  let nextList;
+ipc.on('vault-list-delete', async (event, params = {}) => {
   try {
     assertTrustedEvent(event);
-    if (!isPlainObject(params) || !vault.safeVaultFileName(params.fileName) || !isPlainObject(params.vaultList)) throw new Error('Invalid profile deletion.');
-    nextList = JSON.parse(JSON.stringify(params.vaultList));
-    validateVaultList(nextList);
-    if (nextList.vaults.some((item) => item.file === params.fileName)) throw new Error('Profile list still references the file being deleted.');
+    if (!isPlainObject(params) || !vault.safeVaultFileName(params.fileName)) throw new Error('Invalid profile deletion.');
   } catch (err) {
     return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile deletion.' });
   }
   const key = getSessionKey();
   if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key)
-    .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
-    .then(async () => {
-      await securityMain.audit(getDataRoot(), 'profile-deleted');
-      sendResult({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted' });
-    })
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Delete failed' }));
+  try {
+    const nextList = await dataWriteService.deleteProfile({ vault, vaultDir, key, fileName: params.fileName });
+    await securityMain.audit(getDataRoot(), 'profile-deleted');
+    return sendResult({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted', vaultList: nextList });
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Delete failed' });
+  }
 });
 
-ipc.on('process-group', (event, params = {}) => {
-  let data;
+ipc.on('process-group', async (event, params = {}) => {
+  let request;
   try {
     assertTrustedEvent(event);
-    data = validateVaultData(params.vaultData);
+    request = dataWriteService.legacyGroupRequest(params);
   } catch (err) {
-    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid wallet update.' });
+    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid vault item update.' });
   }
   const key = getSessionKey();
   if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, data.file), JSON.stringify(data), key)
-    .then(async () => {
-      await securityMain.audit(getDataRoot(), groupActivityEvent(params));
-      const deleted = params.type === 'group-delete';
-      sendResult({
-        status: deleted ? 'DELETED' : 'SUCCESS',
-        statusMsg: deleted ? 'Item Deleted' : 'Save successful',
-        type: params.type,
-        vaultData: data
-      });
-    })
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
+  try {
+    const data = await dataWriteService.mutateGroup({ vault, vaultDir, key, request });
+    await securityMain.audit(getDataRoot(), groupActivityEvent(request));
+    const deleted = request.type === 'group-delete';
+    return sendResult({
+      status: deleted ? 'DELETED' : 'SUCCESS',
+      statusMsg: deleted ? 'Item Deleted' : 'Save successful',
+      type: request.type,
+      vaultData: data
+    });
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
+  }
 });
 
-ipc.on('process-record', (event, params = {}) => {
-  let data;
+ipc.on('process-record', async (event, params = {}) => {
+  let request;
   try {
     assertTrustedEvent(event);
-    data = validateVaultData(params.vaultData);
+    request = dataWriteService.legacyRecordRequest(params);
   } catch (err) {
     return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
   }
   const key = getSessionKey();
   if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, data.file), JSON.stringify(data), key)
-    .then(async () => {
-      await securityMain.audit(getDataRoot(), recordActivityEvent(params));
-      const deleted = params.action === 'delete';
-      sendResult({
-        status: deleted ? 'DELETED' : 'SUCCESS',
-        statusMsg: deleted ? 'Item Deleted' : 'Save successful',
-        type: 'record',
-        vaultData: data
-      });
-    })
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
+  try {
+    const data = await dataWriteService.mutateRecord({ vault, vaultDir, key, request });
+    await securityMain.audit(getDataRoot(), recordActivityEvent(request));
+    const deleted = request.action === 'delete';
+    return sendResult({
+      status: deleted ? 'DELETED' : 'SUCCESS',
+      statusMsg: deleted ? 'Item Deleted' : 'Save successful',
+      type: 'record',
+      vaultData: data
+    });
+  } catch (err) {
+    return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
+  }
 });
 
 ipc.on('init-system', (event) => {
@@ -582,7 +556,7 @@ ipc.on('save-settings', (event, params = {}) => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Invalid settings update.' });
     return;
   }
-  settingsManager.saveSettings(settingsDir, params.newSettings)
+  settingsManager.saveUserSettings(settingsDir, params.newSettings)
     .then(async (val) => {
       currentSettings = val.settings;
       await securityMain.audit(getDataRoot(), 'settings-updated');
