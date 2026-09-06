@@ -23,19 +23,22 @@ for (const contract of [
   "globalSearch: (query) => invoke('global-search', query)"
 ]) {
   assert(preload.includes(contract), `Normalized preload bridge must retain protected channel contract: ${contract}`);
-  assert(roadmap.includes(contract), `Roadmap gate must validate the current normalized preload contract: ${contract}`);
 }
+assert(roadmap.includes("'scripts/dashboard-summary-tests.js'") &&
+  roadmap.includes("'scripts/activity-history-tests.js'") &&
+  roadmap.includes("'scripts/global-search-tests.js'"),
+  'The broad roadmap gate must keep requiring dedicated dashboard/activity/search regression coverage.');
 assert(preload.includes("function invoke(channel, ...args)"),
   'The normalized preload invoke wrapper must remain the single renderer-facing promise boundary.');
 assert(preload.includes("if (message.includes(LOCKED_MESSAGE)) throw new Error(LOCKED_MESSAGE);"),
   'Locked Electron invoke errors must continue surfacing only the clean SafeLedger message.');
-assert(!roadmap.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"),
-  'Roadmap regression must not require the retired direct dashboard invoke source shape.');
-assert(!roadmap.includes("getActivityHistory: (limit) => ipcRenderer.invoke('activity-history', limit)"),
-  'Roadmap regression must not require the retired direct activity invoke source shape.');
-assert(!roadmap.includes("globalSearch: (query) => ipcRenderer.invoke('global-search', query)"),
-  'Roadmap regression must not require the retired direct search invoke source shape.');
+assert(!preload.includes("getDashboardSummary: () => ipcRenderer.invoke('dashboard-summary')"),
+  'Preload must not return to the retired direct dashboard invoke source shape.');
+assert(!preload.includes("getActivityHistory: (limit) => ipcRenderer.invoke('activity-history', limit)"),
+  'Preload must not return to the retired direct activity invoke source shape.');
+assert(!preload.includes("globalSearch: (query) => ipcRenderer.invoke('global-search', query)"),
+  'Preload must not return to the retired direct search invoke source shape.');
 assert(gate2642.includes('parts[2] >= 42'),
   'The 2.6.42 feature gate must remain active on this correction candidate.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.43 normalized preload-boundary regression corrections active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.43 normalized preload-boundary regression corrections active through direct and dedicated coverage.`);
