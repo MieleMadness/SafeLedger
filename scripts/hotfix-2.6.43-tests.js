@@ -7,11 +7,13 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const roadmap = read('scripts/roadmap-regression-tests.js');
 const preload = read('src/main/preload.js');
 const gate2642 = read('scripts/hotfix-2.6.42-tests.js');
 
-assert.strictEqual(pkg.version, '2.6.43', 'This workflow correction candidate must report SafeLedger 2.6.43.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 43,
+  'SafeLedger 2.6.43 preload-boundary correction must remain active on later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.43-tests.js'),
   '2.6.43 preload-boundary correction coverage must stay in the locked regression suite.');
 
@@ -36,4 +38,4 @@ assert(!roadmap.includes("globalSearch: (query) => ipcRenderer.invoke('global-se
 assert(gate2642.includes('parts[2] >= 42'),
   'The 2.6.42 feature gate must remain active on this correction candidate.');
 
-console.log('PASS SafeLedger 2.6.43 modernizes the roadmap preload assertions without changing the 2.6.42 runtime feature set.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.43 normalized preload-boundary regression corrections active.`);
