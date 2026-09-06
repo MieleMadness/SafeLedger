@@ -367,8 +367,9 @@ const showLogin = () => {
 
   for (const message of [
     'Must be at least 8 characters long.',
-    'Must contain at least one number and one lowercase letter.',
-    'Must contain at least one uppercase letter.'
+    'Must contain at least one uppercase letter.',
+    'Must contain one lowercase letter.',
+    'Must contain at least one number'
   ]) {
     const p = document.createElement('p');
     p.textContent = message;
