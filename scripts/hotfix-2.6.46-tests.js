@@ -7,13 +7,15 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const profileSetup = require('../src/main/profile-setup');
 const serviceCatalog = require('../src/main/service-catalog');
 const assetPresets = require('../src/main/vault-item-asset-presets');
 const gate2517 = read('scripts/development-2.5.17-tests.js');
 const gate2645 = read('scripts/hotfix-2.6.45-tests.js');
 
-assert.strictEqual(pkg.version, '2.6.46', 'This workflow correction candidate must report SafeLedger 2.6.46.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 46,
+  'SafeLedger 2.6.46 Chain Games historical-test correction must remain active on later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.46-tests.js'),
   '2.6.46 Chain Games historical-test correction must stay in the locked regression suite.');
 
@@ -33,4 +35,4 @@ assert(gate2517.includes("!categoryTemplates.some((template) => template.name ==
 assert(gate2645.includes('parts[2] >= 45'),
   'The 2.6.45 preload-wrapper correction gate must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.46 aligns the 2.5.17 historical logo rule with the reviewed Chain Games service starter without weakening wallet dropdown requirements.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.46 Chain Games historical logo-rule correction active.`);
