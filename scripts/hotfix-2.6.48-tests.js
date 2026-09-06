@@ -7,6 +7,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const renderer = read('src/main/renderer.js');
 const entry = read('src/main/renderer-entry.js');
 const topActions = read('src/main/top-action-lock-ui.js');
@@ -16,7 +17,8 @@ const loginLayout = read('src/main/login-layout-ui.js');
 const gate2642 = read('scripts/hotfix-2.6.42-tests.js');
 const gate2647 = read('scripts/hotfix-2.6.47-tests.js');
 
-assert.strictEqual(pkg.version, '2.6.48', 'This requested product update must report SafeLedger 2.6.48.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 48,
+  'SafeLedger 2.6.48 locked-action and login-width refinements must remain active on later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.48-tests.js'),
   '2.6.48 coverage must stay in the locked regression suite.');
 
@@ -66,4 +68,4 @@ assert(gate2642.includes("const utilityLockedMessage = 'Please login.';") &&
 assert(gate2647.includes('parts[2] >= 47'),
   'The 2.6.47 password-guidance gate must remain active on 2.6.48 and later patches.');
 
-console.log('PASS SafeLedger 2.6.48 keeps Login as Home, uses top-right Please login notices with the user icon, and aligns password controls to the login-title width.');
+console.log(`PASS SafeLedger ${pkg.version} keeps Login as Home, uses top-right Please login notices with the user icon, and aligns password controls to the login-title width.`);
