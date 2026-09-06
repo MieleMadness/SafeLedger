@@ -25,7 +25,8 @@ function testSelfDestructMovedToSettings() {
   const settings = read('src/main/self-destruct-settings-ui.js');
   assert(!main.includes("label: 'Self-Destruct Protection'"), 'self-destruct must not remain in the application menu');
   assert(main.includes("ipc.handle('set-self-destruct-protection'"));
-  assert(preload.includes("setSelfDestructProtection: (enabled) => ipcRenderer.invoke('set-self-destruct-protection'"));
+  assert(preload.includes("setSelfDestructProtection: (enabled) => invoke('set-self-destruct-protection', enabled === true)"));
+  assert(preload.includes('function invoke(channel, ...args)'), 'Self-Destruct settings must remain behind the normalized preload invoke boundary.');
   assert(settings.includes("heading.textContent = 'Self-Destruct Protection'"));
   assert(settings.includes('Keep a verified backup on separate storage before enabling it.'));
 }
