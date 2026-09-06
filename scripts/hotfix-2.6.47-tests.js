@@ -7,12 +7,14 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const preload = read('src/main/preload.js');
 const renderer = read('src/main/renderer.js');
 const gate267 = read('scripts/hotfix-2.6.7-tests.js');
 const gate2646 = read('scripts/hotfix-2.6.46-tests.js');
 
-assert.strictEqual(pkg.version, '2.6.47', 'This requested-update workflow candidate must report SafeLedger 2.6.47.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 47,
+  'SafeLedger 2.6.47 password guidance and workflow corrections must remain active on later 2.6.x candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.47-tests.js'),
   '2.6.47 coverage must stay in the locked regression suite.');
 assert(preload.includes("prepareAppMenu: () => invoke('app-menu-prepare')"),
@@ -42,4 +44,4 @@ assert(renderer.indexOf(passwordMessages[0]) < renderer.indexOf(passwordMessages
 assert(!renderer.includes('Must contain at least one number and one lowercase letter.'),
   'The retired combined number/lowercase guidance line must stay removed.');
 
-console.log('PASS SafeLedger 2.6.47 keeps the normalized app-menu preload boundary and uses the requested four-line login password guidance.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the normalized app-menu preload boundary and requested four-line login password guidance.`);
