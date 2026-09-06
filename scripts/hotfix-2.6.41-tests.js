@@ -7,6 +7,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 const collapse = read('src/main/column-collapse-ui.js');
 const workspace = read('src/main/login-workspace-ui.js');
 const entry = read('src/main/renderer-entry.js');
@@ -14,7 +15,8 @@ const renderer = read('src/main/renderer.js');
 const foundation = read('src/main/css/foundation.css');
 const gate2640 = read('scripts/hotfix-2.6.40-tests.js');
 
-assert.strictEqual(pkg.version, '2.6.41', 'This workflow candidate must report SafeLedger 2.6.41.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 41,
+  'SafeLedger 2.6.41 startup/login workspace behavior must remain active on 2.6.41 and later candidates.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.41-tests.js'),
   '2.6.41 startup/login workspace coverage must stay in the locked regression suite.');
 
@@ -29,7 +31,7 @@ assert(collapse.includes('setCollapsed(state, true);'),
 assert(collapse.includes('function collapseForLogin()'),
   'The compact startup state must remain reusable for later lock/login transitions.');
 
-assert(collapse.includes("grid.animate("),
+assert(collapse.includes('grid.animate('),
   'Post-login navigation must animate rather than jump directly open when motion is allowed.');
 assert(collapse.includes('gridTemplateColumns: starts[index]') && collapse.includes('gridTemplateColumns: target'),
   'The reveal animation must interpolate the complete grid so all three navigation boundaries slide open together.');
@@ -75,4 +77,4 @@ assert(renderer.includes('group.listGroups({ vaultData, saving });'),
 assert(gate2640.includes('parts[2] >= 40'),
   'The 2.6.40 UI/search gate must remain active on later candidates.');
 
-console.log('PASS SafeLedger 2.6.41 starts with compact navigation, selects the first visible Profile after login, loads unselected Vault Items, and slides the workspace open safely.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.41 compact-startup, first-Profile selection, unselected Vault Items, and animated workspace reveal behavior active.`);
