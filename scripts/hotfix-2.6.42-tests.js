@@ -25,10 +25,11 @@ const qrTheme = read('src/main/css/qr-theme.css');
 const profileSetupSource = read('src/main/profile-setup.js');
 const walletIcons = read('src/main/wallet-icons.js');
 const priorGate = read('scripts/hotfix-2.6.41-tests.js');
-const lockedMessage = 'SafeLedger is locked. Please log in again.';
+const remoteLockedMessage = 'SafeLedger is locked. Please log in again.';
+const utilityLockedMessage = 'Please login.';
 
-assert(preload.includes(`const LOCKED_MESSAGE = '${lockedMessage}';`),
-  'Preload must own the exact user-facing locked message.');
+assert(preload.includes(`const LOCKED_MESSAGE = '${remoteLockedMessage}';`),
+  'Preload must keep the normalized remote-call locked message.');
 assert(preload.includes('if (message.includes(LOCKED_MESSAGE)) throw new Error(LOCKED_MESSAGE);'),
   'Electron remote-invoke prefixes must be normalized before reaching renderer UI.');
 assert(preload.includes("getDashboardSummary: () => invoke('dashboard-summary')") &&
@@ -44,8 +45,12 @@ assert(topActions.includes('event.stopImmediatePropagation();'),
   'Locked utility clicks must stop before privileged existing handlers run.');
 assert(topActions.includes("window.safeLedgerApi.initSystem();"),
   'Home must reuse SafeLedger init-system to restore the canonical login screen while locked.');
-assert(topActions.includes(`const LOCKED_MESSAGE = '${lockedMessage}';`) && topActions.includes('warning.textContent = LOCKED_MESSAGE;'),
-  'Locked non-Home utilities must show only the requested clean message.');
+assert(topActions.includes("const status = require('./status');") &&
+  topActions.includes(`const LOCKED_MESSAGE = '${utilityLockedMessage}';`) &&
+  topActions.includes("status.showStatus({ status: 'ERROR', statusMsg: LOCKED_MESSAGE });"),
+  'Locked non-Home utilities must keep the current page and use the top-right Please login notice.');
+assert(!topActions.includes("area.innerHTML = ''") && !topActions.includes('warning.textContent = LOCKED_MESSAGE;'),
+  'Locked non-Home utilities must not replace the detail panel with an error page.');
 
 assert(index.includes('<link href="./css/qr-theme.css" rel="stylesheet">'),
   'The QR theme refinement must be loaded after the main theme styles.');
