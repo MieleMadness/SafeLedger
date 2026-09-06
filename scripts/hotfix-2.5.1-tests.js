@@ -149,7 +149,8 @@ function testTrustedFolderAction() {
   const dashboardRows = read('src/main/dashboard-row-ui.js');
   const icons = read('src/main/css/local-icons.css');
 
-  assert(preload.includes("openDataFolder: () => ipcRenderer.invoke('device-open-data-folder')"));
+  assert(preload.includes("openDataFolder: () => invoke('device-open-data-folder')"));
+  assert(preload.includes('function invoke(channel, ...args)'), 'trusted folder action should pass through the normalized preload invoke boundary');
   assert(bridge.includes("'device-open-data-folder': 'openDataFolder'"));
   assert(bootstrap.includes("ipc.handle('device-open-data-folder'"));
   assert(bootstrap.includes('shell.openPath(getDataRoot())'));
