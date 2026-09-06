@@ -117,7 +117,8 @@ assert(appMenuMain.includes("const EDIT_COMMANDS = new Set(['undo', 'redo', 'cut
 assert(appMenuMain.includes("ipcMain.handle('app-menu-prepare'") && appMenuMain.includes("ipcMain.on('app-menu-command'"));
 assert(mainSource.includes("if (process.platform !== 'darwin') {") && mainSource.includes('Menu.setApplicationMenu(null);'),
   'Windows/Linux must suppress the unthemeable native menu before showing the SafeLedger-owned menu.');
-assert(preloadSource.includes("prepareAppMenu: () => ipcRenderer.invoke('app-menu-prepare')") &&
-  preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"));
+assert(preloadSource.includes("prepareAppMenu: () => invoke('app-menu-prepare')") &&
+  preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"),
+  'The app-menu prepare request must use the normalized preload invoke wrapper while menu commands remain fire-and-forget sends.');
 
 console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior with trusted-bootstrap main-process window sizing.`);
