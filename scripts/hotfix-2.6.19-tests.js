@@ -39,12 +39,15 @@ assert.strictEqual(Math.round(1400 * 11 / 12), 1283,
 assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1920, height: 1080 }), { width: 1283, height: 750 });
 assert(windowSizingSource.includes('const PREFERRED_WIDTH = 1283;'));
 
-assert(main.includes("sendResult({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted' });"),
-  'Profile deletion should emit the shared red Item Deleted state.');
-assert(main.includes("const deleted = params.type === 'group-delete';"),
-  'Vault Item deletion should select the shared deletion status.');
-assert(main.includes("const deleted = params.action === 'delete';"),
-  'Asset deletion should select the shared deletion status.');
+const profileDeleteBlock = main.slice(main.indexOf("ipc.on('vault-list-delete'"), main.indexOf("ipc.on('process-group'"));
+assert(profileDeleteBlock.includes("type: 'vault-delete'") && profileDeleteBlock.includes("status: 'DELETED'") && profileDeleteBlock.includes("statusMsg: 'Item Deleted'"),
+  'Profile deletion should emit the shared red Item Deleted state even when the authoritative profile list is also returned.');
+assert(profileDeleteBlock.includes('vaultList: nextList'),
+  'Profile deletion should return the authoritative post-delete list to the renderer.');
+assert(main.includes("const deleted = request.type === 'group-delete';"),
+  'Vault Item deletion should select the shared deletion status after the trusted request boundary.');
+assert(main.includes("const deleted = request.action === 'delete';"),
+  'Asset deletion should select the shared deletion status after the trusted request boundary.');
 assert((main.match(/statusMsg: deleted \? 'Item Deleted' : 'Save successful'/g) || []).length >= 2,
   'Vault Item and Asset deletion should both say Item Deleted.');
 
