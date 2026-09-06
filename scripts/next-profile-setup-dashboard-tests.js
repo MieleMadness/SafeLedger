@@ -13,11 +13,12 @@ function testStandardAndBlankProfileModels() {
   assert(standard.includes('Ledger'), 'Ledger should remain in the standard starter setup.');
   assert(standard.includes('MetaMask'), 'MetaMask should remain in the standard starter setup.');
   assert(standard.includes('Exodus'), 'Exodus should remain in the standard starter setup.');
+  assert(standard.includes('Chain Games'), 'The reviewed Chain Games Web3 starter should be preselected in standard setup.');
   assert(!standard.includes('Keystone'), 'Previously excluded optional wallets should not become standard by accident.');
   assert(!standard.includes('Rabby Wallet'), 'Previously excluded optional wallets should not become standard by accident.');
 
   const blank = profileSetup.buildGroups('2026-09-01T00:00:00.000Z', []);
-  assert.deepStrictEqual(blank, [], 'Blank Profile must contain no wallets.');
+  assert.deepStrictEqual(blank, [], 'Blank Profile must contain no vault items.');
 }
 
 function testSelectedWalletsLoadTheirAssets() {
@@ -31,12 +32,26 @@ function testSelectedWalletsLoadTheirAssets() {
   assert(ledger.records.some((record) => record.symbol === 'BTC'), 'Ledger template should preload Bitcoin.');
   assert(ledger.records.some((record) => record.symbol === 'ETH'), 'Ledger template should preload Ethereum.');
   assert(!groups.some((group) => group.name === 'Electrum'), 'Logo-less wallets must not be created through New Profile templates.');
+
+  const chainGames = profileSetup.buildGroups('2026-09-01T00:00:00.000Z', ['Chain Games'])[0];
+  assert(chainGames && chainGames.category === 'Web3 Account', 'Chain Games starter must remain a Web3 Account, not a generic wallet.');
+  assert(chainGames.records.length > 0 && chainGames.records.every((record) => record.symbol === 'CHAIN'),
+    'Chain Games starter should preload its reviewed CHAIN network entries.');
 }
 
 function testTemplateInputValidationHelpers() {
   assert.deepStrictEqual(profileSetup.resolveNames(['ledger', 'LEDGER', 'Electrum']), ['Ledger']);
   assert.deepStrictEqual(profileSetup.unknownNames(['Ledger', 'Electrum', 'Not A Real Wallet']), ['electrum', 'not a real wallet']);
-  assert(profileSetup.availableTemplates().every((wallet) => wallet.hasIcon === true), 'Every New Profile wallet template must have local logo artwork.');
+
+  const templates = profileSetup.availableTemplates();
+  const walletTemplates = templates.filter((template) => template.service !== true);
+  const serviceTemplates = templates.filter((template) => template.service === true);
+  assert(walletTemplates.every((template) => template.hasIcon === true),
+    'Conventional New Profile wallet templates must still have local Web3Icons artwork.');
+  assert(serviceTemplates.every((template) => template.standard === true && template.category === 'Web3 Account'),
+    'Any New Profile service template must be a deliberate reviewed standard Web3 starter.');
+  assert(serviceTemplates.some((template) => template.name === 'Chain Games'),
+    'Chain Games must be exposed through the deliberate reviewed service-template path.');
 }
 
 function testProfileCreationUiAndMainProcessContract() {
@@ -47,14 +62,14 @@ function testProfileCreationUiAndMainProcessContract() {
 
   assert(profile.includes("'Standard setup'"), 'Add Profile should offer Standard setup.');
   assert(profile.includes("'Blank Profile'"), 'Add Profile should offer Blank Profile.');
-  assert(profile.includes("checkbox.type = 'checkbox'"), 'Wallet templates should be selectable with checkboxes.');
+  assert(profile.includes("checkbox.type = 'checkbox'"), 'Starter templates should be selectable with checkboxes.');
   assert(profile.includes('payload.profileSetup = selectedSetup'), 'Profile setup choice should be sent separately from persisted profile metadata.');
 
   assert(main.includes('resolveNewProfileWalletNames(params.profileSetup)'), 'Main process should validate the requested setup.');
   assert(main.includes('initializeModernVault(idInfo.fileName, key, newProfileWalletNames)'), 'New vault should be initialized from the selected templates.');
-  assert(main.includes("if (mode === 'blank') return [];"), 'Blank mode should create an empty wallet list.');
+  assert(main.includes("if (mode === 'blank') return [];"), 'Blank mode should create an empty vault-item list.');
 
-  assert(css.includes('.profile-wallet-template-grid'), 'Wallet template picker should have dedicated layout styling.');
+  assert(css.includes('.profile-wallet-template-grid'), 'Starter template picker should have dedicated layout styling.');
   assert(index.includes('./css/profile-setup.css'), 'Profile setup styles should load in the application.');
 }
 
@@ -77,4 +92,4 @@ testSelectedWalletsLoadTheirAssets();
 testTemplateInputValidationHelpers();
 testProfileCreationUiAndMainProcessContract();
 testRecoveryDashboardRowsOpenVaultItems();
-console.log('PASS branch profile setup choices, logo-backed template filtering, and Vault Overview row navigation.');
+console.log('PASS branch profile setup choices, local-artwork template filtering, reviewed Chain Games starter, and Vault Overview row navigation.');
