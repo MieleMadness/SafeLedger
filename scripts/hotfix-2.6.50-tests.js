@@ -13,8 +13,10 @@ const preload = read('src/main/preload.js');
 const main = read('src/main/main.js');
 const profileTransaction = read('src/main/profile-transaction.js');
 const gate2649 = read('scripts/hotfix-2.6.49-tests.js');
+const parts = String(pkg.version || '').split('.').map(Number);
 
-assert.strictEqual(pkg.version, '2.6.50', 'Phase 2 Recovery Confidence must report SafeLedger 2.6.50.');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 50,
+  'Phase 2 Recovery Confidence coverage must stay active on SafeLedger 2.6.50 and later patches.');
 assert(read('package.json').includes('node scripts/recovery-confidence-tests.js'),
   'Behavioral Recovery Confidence tests must run in the full regression suite.');
 assert(read('package.json').includes('node scripts/hotfix-2.6.50-tests.js'),
@@ -51,7 +53,7 @@ assert(main.includes('const data = await profileTransaction.createProfile({'),
 assert(profileTransaction.includes("const MARKER_FILE = '.profile-create.pending.json';"),
   'Interrupted profile creation must leave a minimal recovery journal.');
 assert(profileTransaction.includes('instead of deleting potentially recoverable data'),
-  'Ambiguous profile commits must favor retaining recoverable encrypted data over destructive cleanup.');
+  'Ambiguous profile commits must favor retaining encrypted recoverable data over destructive cleanup.');
 
 assert(securityUi.includes("input.type = 'password';") && securityUi.includes("dialog.showModal();"),
   'Backup recovery verification must collect the password through a masked modal control.');
@@ -60,6 +62,6 @@ assert(securityUi.includes("ipc.invoke('security-verify-backup', password)"),
 assert(preload.includes("verifyBackup: (password) => invoke('security-verify-backup', String(password || ''))"),
   'The sandbox preload API must support independent backup verification without exposing Node.js.');
 assert(gate2649.includes('parts[2] >= 49'),
-  '2.6.49 platform-candidate protections must remain active on 2.6.50.');
+  '2.6.49 platform-candidate protections must remain active on later patches.');
 
-console.log('PASS SafeLedger 2.6.50 Recovery Confidence locks independent backup unlock, verified restore staging/rollback, and recoverable profile creation.');
+console.log('PASS SafeLedger Phase 2 Recovery Confidence remains locked on 2.6.50 and later patches.');
