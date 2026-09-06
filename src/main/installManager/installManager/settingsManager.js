@@ -9,6 +9,17 @@ const { atomicWriteJson } = require('../../atomic-file');
 
 const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance, normalizePrivacyMode, normalizeBoolean } = settingsSchema;
 
+const USER_EDITABLE_KEYS = Object.freeze([
+  'appearance',
+  'privacyMode',
+  'shitCoinMode',
+  'numFailAttempts',
+  'numLockoutRetries',
+  'minutesToWaitBetweenLockout',
+  'backupReminderDays'
+]);
+const USER_EDITABLE_SET = new Set(USER_EDITABLE_KEYS);
+
 const defaults = () => ({
   formatVersion: 2,
   created: new Date().toISOString(),
@@ -72,6 +83,26 @@ function normalizeSettings(settings, now = Date.now()) {
   return next;
 }
 
+function pickUserSettingsPatch(request) {
+  if (!request || typeof request !== 'object' || Array.isArray(request)) throw new Error('Invalid settings update.');
+  const knownKeys = new Set(Object.keys(defaults()));
+  const patch = {};
+  for (const [key, value] of Object.entries(request)) {
+    if (USER_EDITABLE_SET.has(key)) {
+      patch[key] = value;
+      continue;
+    }
+    // Older renderer builds send the complete settings snapshot. Security-
+    // owned fields are accepted as context but deliberately ignored here so a
+    // renderer cannot rewrite retry counters, lock state, backup evidence, or
+    // self-destruct state through the generic settings path.
+    if (knownKeys.has(key)) continue;
+    throw new Error(`Unsupported SafeLedger setting: ${key}`);
+  }
+  if (!Object.keys(patch).length) throw new Error('No user-editable settings were provided.');
+  return patch;
+}
+
 const settingsPath = (dir) => path.join(dir, 'settings.json');
 
 exports.loadSettings = async (dir) => {
@@ -96,4 +127,21 @@ exports.saveSettings = async (dir, settings) => {
   return { status: 'SUCCESS', settings: next };
 };
 
-exports._test = { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeCounter, normalizeSettings, defaults };
+exports.saveUserSettings = async (dir, request) => {
+  const patch = pickUserSettingsPatch(request);
+  const loaded = await exports.loadSettings(dir);
+  const current = loaded.settings;
+  const next = Object.assign({}, current, patch);
+  return exports.saveSettings(dir, next);
+};
+
+exports.USER_EDITABLE_KEYS = USER_EDITABLE_KEYS;
+exports._test = {
+  BRUTE_FORCE_MIN,
+  BRUTE_FORCE_MAX,
+  clampBruteForceValue,
+  normalizeCounter,
+  normalizeSettings,
+  defaults,
+  pickUserSettingsPatch
+};
