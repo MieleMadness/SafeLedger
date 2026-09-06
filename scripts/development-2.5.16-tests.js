@@ -28,9 +28,18 @@ assert(index.includes('./css/ui-current.css'), 'consolidated current UI correcti
 
 const profileSetup = require(path.join(root, 'src/main/profile-setup.js'));
 const templates = profileSetup.availableTemplates();
-assert(templates.length > 0, 'New Profile setup should still offer logo-backed wallet templates');
-assert(templates.every((template) => template.hasIcon === true), 'New Profile picker must omit wallets that do not have a local logo');
-assert(templates.every((template) => profileSetup.iconMatch(template.name)), 'every New Profile wallet template must resolve to local brand artwork');
+assert(templates.length > 0, 'New Profile setup should still offer local-artwork starter templates');
+const walletTemplates = templates.filter((template) => template.service !== true);
+const serviceTemplates = templates.filter((template) => template.service === true);
+assert(walletTemplates.every((template) => template.hasIcon === true),
+  'Conventional New Profile wallets that do not have a local logo must stay omitted.');
+assert(walletTemplates.every((template) => profileSetup.iconMatch(template.name)),
+  'Every conventional New Profile wallet template must resolve to local Web3Icons brand artwork.');
+assert(serviceTemplates.every((template) => template.standard === true && template.category === 'Web3 Account'),
+  'Service templates may bypass Web3Icons only when they are deliberate reviewed standard Web3 starters.');
+const walletIconsSource = read('src/main/wallet-icons.js');
+assert(walletIconsSource.includes('serviceCatalog.createIcon(name, brandClass)'),
+  'Reviewed service starters must still resolve to local SafeLedger artwork rather than a generic placeholder.');
 
 const rendererEntry = read('src/main/renderer-entry.js');
 const rendererSource = read('src/main/renderer.js');
@@ -48,4 +57,4 @@ assert(rendererSource.includes('profile.createProfile(profileParams({ onCancel: 
 assert(rendererSource.includes("document.getElementById('dashboardButton')"),
   'Cancel new profile should continue through the existing Vault Overview navigation action.');
 
-console.log('PASS SafeLedger 2.5.16+ centers password visibility controls, filters logo-less wallet templates, and renders New Profile cancellation directly.');
+console.log('PASS SafeLedger 2.5.16+ centers password visibility controls, keeps conventional wallet templates logo-backed, permits reviewed local-artwork service starters, and renders New Profile cancellation directly.');
