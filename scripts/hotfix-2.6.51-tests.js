@@ -10,7 +10,8 @@ const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const main = read('src/main/main.js');
 const service = read('src/main/data-write-service.js');
-const settingsManager = read('src/main/installManager/installManager/settingsManager.js');
+const settingsSource = read('src/main/installManager/installManager/settingsManager.js');
+const settingsModule = require(path.join(root, 'src/main/installManager/installManager/settingsManager.js'));
 const gate2650 = read('scripts/hotfix-2.6.50-tests.js');
 
 assert.strictEqual(pkg.version, '2.6.51', 'Phase 3 Data Ownership must report SafeLedger 2.6.51.');
@@ -50,18 +51,21 @@ assert(service.includes('findSingleDeletionIndex(data.groups, request.submittedG
   'Compatibility delete requests must prove exactly one unchanged vault item was removed.');
 assert(service.includes('findSingleDeletionIndex(group.records, request.submittedRecords)'),
   'Compatibility delete requests must prove exactly one unchanged asset was removed.');
-assert(!service.includes("patch.records ="),
+assert(!service.includes('patch.records ='),
   'A vault-item edit must never gain authority to replace its asset collection.');
 
-assert(settingsManager.includes('const USER_EDITABLE_KEYS = Object.freeze(['),
+assert(settingsSource.includes('const USER_EDITABLE_KEYS = Object.freeze(['),
   'Settings must define an explicit user-editable allowlist.');
-assert(settingsManager.includes('exports.saveUserSettings = async (dir, request) =>'),
+assert(settingsSource.includes('exports.saveUserSettings = async (dir, request) =>'),
   'Generic settings writes must load authoritative settings and apply only a user patch.');
 assert(main.includes('settingsManager.saveUserSettings(settingsDir, params.newSettings)'),
   'The renderer-facing settings IPC path must use the user-settings boundary.');
-for (const protectedField of ['failAttemptCount', 'lockOutCount', 'lockLogin', 'lockLoginTime', 'scrubContentAfterRetries', 'lastBackupAt', 'lastVerifiedBackupAt']) {
-  assert(!settingsManager.USER_EDITABLE_KEYS || true);
-  assert(!['appearance','privacyMode','shitCoinMode','numFailAttempts','numLockoutRetries','minutesToWaitBetweenLockout','backupReminderDays'].includes(protectedField));
+const allowed = new Set(settingsModule.USER_EDITABLE_KEYS);
+for (const expected of ['appearance','privacyMode','shitCoinMode','numFailAttempts','numLockoutRetries','minutesToWaitBetweenLockout','backupReminderDays']) {
+  assert(allowed.has(expected), `${expected} should remain a supported user setting.`);
+}
+for (const protectedField of ['failAttemptCount', 'lockOutCount', 'lockLogin', 'lockLoginTime', 'scrubContentAfterRetries', 'lastBackupAt', 'lastVerifiedBackupAt', 'lastVerifiedBackupCreatedAt']) {
+  assert(!allowed.has(protectedField), `${protectedField} must remain main/security-owned.`);
 }
 assert(gate2650.includes('parts[2] >= 50'),
   'Phase 2 Recovery Confidence must remain active on the Phase 3 candidate.');
