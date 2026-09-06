@@ -19,19 +19,35 @@ require(path.join(root, 'src/main/wallet-catalog-extensions.js'));
 const tokenIcons = require(path.join(root, 'src/main/token-icons.js'));
 const assetPresets = require(path.join(root, 'src/main/vault-item-asset-presets.js'));
 const vaultItemPresentation = require(path.join(root, 'src/main/vault-item-presentation.js'));
+const serviceCatalog = require(path.join(root, 'src/main/service-catalog.js'));
 
 const templates = profileSetup.availableTemplates();
-assert(templates.length > 0 && templates.every((template) => template.hasIcon === true),
-  'wallet preset dropdown must be built only from logo-backed templates');
+assert(templates.length > 0, 'starter preset picker must contain reviewed local-artwork templates');
+for (const template of templates) {
+  if (template.service === true) {
+    assert(serviceCatalog.find(template.name), `${template.name} service starter must resolve to SafeLedger-owned local artwork.`);
+    assert(assetPresets.hasAssetPreset(template.name, assetPresets.WEB3_CATEGORY),
+      `${template.name} service starter must have a reviewed Web3 asset preset.`);
+  } else {
+    assert.strictEqual(template.hasIcon, true, `${template.name} conventional wallet template must remain logo-backed.`);
+  }
+}
 for (const wallet of walletCatalog.catalog) {
   if (!profileSetup.iconMatch(wallet.name)) {
     assert(!templates.some((template) => template.name === wallet.name), `${wallet.name} must stay out of logo-backed wallet selectors.`);
   }
 }
 for (const category of ['Hardware Wallet', 'Software Wallet', 'Other Wallet']) {
-  assert(vaultItemPresentation.walletTemplatesForCategory(category).every((template) => template.hasIcon === true),
-    `${category} dropdown must contain only wallets with local artwork.`);
+  const categoryTemplates = vaultItemPresentation.walletTemplatesForCategory(category);
+  assert(categoryTemplates.every((template) => template.hasIcon === true && template.service !== true),
+    `${category} dropdown must contain only conventional wallets with local artwork.`);
+  assert(!categoryTemplates.some((template) => template.name === 'Chain Games'),
+    'The Chain Games Web3 service starter must not appear in Wallet-type preset dropdowns.');
 }
+
+const chainTemplate = templates.find((template) => template.name === 'Chain Games');
+assert(chainTemplate && chainTemplate.service === true,
+  'Chain Games must remain explicitly identified as the reviewed service starter in Profile setup.');
 
 const ledgerAssets = assetPresets.buildRecords('Ledger', 'Hardware Wallet', '2026-09-02T00:00:00.000Z');
 assert(ledgerAssets.some((asset) => asset.symbol === 'BTC'), 'Ledger should preload Bitcoin when created as a Vault Item.');
@@ -85,4 +101,4 @@ for (const moduleName of ['vault-item-asset-seeding-ui.js', 'settings-icon-fix-u
   assert(rendererEntry.includes(`require('./${moduleName}')`), `${moduleName} must load in the renderer.`);
 }
 
-console.log('PASS SafeLedger 2.5.17+ logo-backed Vault Item selectors, reviewed asset seeding, direct Add-form cancellation, and local Change Password icon.');
+console.log(`PASS SafeLedger ${pkg.version} keeps conventional wallet selectors logo-backed, permits the reviewed Chain Games service starter, preserves reviewed asset seeding, direct Add-form cancellation, and the local Change Password icon.`);
