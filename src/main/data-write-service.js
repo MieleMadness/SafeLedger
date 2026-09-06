@@ -110,10 +110,22 @@ function stripViewState(data) {
   return clean;
 }
 
+function stripProfileViewState(list) {
+  const clean = clone(list);
+  delete clean.vaultSelected;
+  return clean;
+}
+
 function withViewState(data, groupSelected = null, recordSelected = null) {
   const view = clone(data);
   view.groupSelected = groupSelected;
   view.recordSelected = recordSelected;
+  return view;
+}
+
+function withProfileViewState(list, vaultSelected = null) {
+  const view = clone(list);
+  view.vaultSelected = vaultSelected;
   return view;
 }
 
@@ -296,9 +308,9 @@ async function modifyProfile({ vault, vaultDir, key, profile }) {
   updated.created = existing.created;
   list.vaults[index] = updated;
   list.vaults.sort(compareByName);
-  list.vaultSelected = list.vaults.indexOf(updated);
-  await vault.saveVault(listFile, JSON.stringify(list), key);
-  return list;
+  const selected = list.vaults.indexOf(updated);
+  await vault.saveVault(listFile, JSON.stringify(stripProfileViewState(list)), key);
+  return withProfileViewState(list, selected);
 }
 
 async function deleteProfile({ vault, vaultDir, key, fileName }) {
@@ -308,10 +320,9 @@ async function deleteProfile({ vault, vaultDir, key, fileName }) {
   const index = list.vaults.findIndex((item) => item && item.file === fileName);
   if (index < 0) throw new Error('Profile was not found.');
   list.vaults.splice(index, 1);
-  list.vaultSelected = null;
-  await vault.saveVault(listFile, JSON.stringify(list), key);
+  await vault.saveVault(listFile, JSON.stringify(stripProfileViewState(list)), key);
   await vault.deleteVault(path.join(vaultDir, fileName));
-  return list;
+  return withProfileViewState(list, null);
 }
 
 module.exports = {
@@ -325,7 +336,9 @@ module.exports = {
   modifyProfile,
   deleteProfile,
   stripViewState,
+  stripProfileViewState,
   withViewState,
+  withProfileViewState,
   findSingleDeletionIndex,
   resolveExistingIndex,
   _test: { clone, text, normalizeTimestamp, compareByName, exactEqual }
