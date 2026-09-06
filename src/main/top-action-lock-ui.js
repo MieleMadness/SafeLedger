@@ -1,18 +1,13 @@
 'use strict';
 
 const { ipcRenderer: ipc } = require('./renderer-bridge');
+const status = require('./status');
 
-const LOCKED_MESSAGE = 'SafeLedger is locked. Please log in again.';
+const LOCKED_MESSAGE = 'Please login.';
 let unlocked = false;
 
 function showLockedMessage() {
-  const area = document.getElementById('detailArea');
-  if (!area) return;
-  area.innerHTML = '';
-  const warning = document.createElement('p');
-  warning.className = 'alert alert-warning';
-  warning.textContent = LOCKED_MESSAGE;
-  area.appendChild(warning);
+  status.showStatus({ status: 'ERROR', statusMsg: LOCKED_MESSAGE });
 }
 
 function openLogin() {
