@@ -19,6 +19,7 @@ require('./self-destruct-settings-ui.js');
 require('./settings-layout-ui.js');
 require('./lockout-ui-enhancements.js');
 require('./security-enhancements.js');
+require('./login-layout-ui.js');
 require('./crypto-ui-bridge.js');
 require('./search-enhancements.js');
 require('./sensitive-control-icons-ui.js');
