@@ -28,7 +28,7 @@ assert(statusSource.includes("role: 'status', ariaLive: 'polite'"),
 assert(groupSource.includes("'<i class=\"fa fa-refresh\"></i> Run recovery drill'"),
   'Run recovery drill must use the bundled refresh/retest glyph that renders in SafeLedger.');
 assert(!productCss.includes('.recovery-readiness-actions .fa-shield::before'),
-  'The unsupported pseudo-glyph override that rendered as a rectangle must stay removed.');
+  'The unsupported recovery pseudo-glyph that rendered as a rectangle must stay removed.');
 assert(drillSource.includes("privacyIcon.className = 'fa fa-lock';"),
   'The Recovery Validation safety callout must use a clear lock icon.');
 assert(!drillSource.includes("privacyIcon.className = 'fa fa-shield';"),
@@ -54,8 +54,8 @@ assert(!drillSource.includes('localStorage') && !drillSource.includes('sessionSt
   'Recovery Validation must not persist BIP39 input or checklist state in renderer storage.');
 assert(drillSource.includes("actions.className = 'settings-section-actions recovery-drill-validation-actions';"),
   'BIP39 validation actions must have a dedicated spacing hook.');
-assert(productCss.includes('.recovery-drill-validation-actions { margin-top: 6px; }'),
-  'BIP39 field-to-button spacing must match the six-pixel login field/button rhythm.');
+assert(/\.recovery-drill-validation-actions\s*\{[^}]*margin-top\s*:\s*6px\s*;?[^}]*\}/.test(productCss),
+  'BIP39 field-to-button spacing must remain six pixels without depending on CSS whitespace formatting.');
 
 assert(priorGate.includes('parts[2] >= 23'),
   'The 2.6.23 UI gate must remain active on later workflow candidates.');
