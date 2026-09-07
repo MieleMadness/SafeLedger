@@ -48,9 +48,14 @@ function testCopyControlFoundation() {
 
 function testVaultOverview() {
   assert(dashboardUi.includes("heading.textContent = 'Vault Overview';"));
-  assert(dashboardUi.includes("makeSection('Vault Inventory'"));
-  assert(dashboardUi.includes("makeSection('Recovery Health'"));
-  assert(dashboardUi.includes("makeSection('Device & Backup Health'"));
+  for (const [title, className] of [
+    ['Vault Inventory', 'vault-inventory-section'],
+    ['Recovery Health', 'vault-recovery-section'],
+    ['Device & Backup Health', 'device-health-section']
+  ]) {
+    assert(dashboardUi.includes(`'${title}'`), `Vault Overview should retain the ${title} section.`);
+    assert(dashboardUi.includes(`'${className}'`), `${title} should retain its canonical section class.`);
+  }
   assert(dashboardUi.includes("makeSection('Recovery Needs Attention')"));
   assert(dashboardUi.includes("makeSection('Recently Verified')"));
   assert(dashboardSummary.includes('hardwareWallets: 0'));
