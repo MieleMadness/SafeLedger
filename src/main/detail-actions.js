@@ -1,5 +1,7 @@
 'use strict';
 
+const motion = require('./motion-ui');
+
 const DETAIL_MODE_CLASSES = ['wallet-coin-detail', 'wallet-coin-view', 'wallet-coin-edit'];
 
 function getDock() {
@@ -26,8 +28,8 @@ function setDetailMode(mode = '') {
 function modeForActions(actions) {
   const titles = (Array.isArray(actions) ? actions : [])
     .map((action) => String(action && action.title || '').trim().toLowerCase());
-  if (titles.some((title) => ['save coin', 'save wallet', 'save profile'].includes(title))) return 'edit';
-  if (titles.some((title) => ['edit coin', 'edit wallet', 'edit profile'].includes(title))) return 'view';
+  if (titles.some((title) => ['save coin', 'save wallet', 'save profile', 'save asset', 'save vault item'].includes(title))) return 'edit';
+  if (titles.some((title) => ['edit coin', 'edit wallet', 'edit profile', 'edit asset', 'edit vault item'].includes(title))) return 'view';
   return '';
 }
 
@@ -46,6 +48,7 @@ function makeIconButton(action) {
   button.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
+    if (String(action.className || '').split(/\s+/).includes('detail-action-save')) motion.rememberSave(button);
     if (typeof action.onClick === 'function') action.onClick(event, button);
   });
   return button;
