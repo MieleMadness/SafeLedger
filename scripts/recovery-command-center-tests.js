@@ -48,20 +48,20 @@ assert.deepStrictEqual(facts, {
   profileCount: 1,
   vaultItemCount: 1,
   assetCount: 1,
-  addressDocumentedCount: 1,
-  recoveryMethodCount: 1,
-  recoveryLocationCount: 1,
-  recoveryInstructionCount: 1,
-  beneficiaryCount: 1,
-  separateLocationCount: 1,
-  deviceLocationCount: 1,
+  addressCoverageCount: 1,
+  methodCoverageCount: 1,
+  locationCoverageCount: 1,
+  instructionCoverageCount: 1,
+  beneficiaryCoverageCount: 1,
+  separateLocationCoverageCount: 1,
+  devicePlacementCount: 1,
   exchangeCount: 0,
-  exchangeRecoveryPlanCount: 0,
+  exchangePlanCoverageCount: 0,
   walletCount: 1
 });
 const factsJson = JSON.stringify(facts);
 for (const sensitiveFieldName of ['seedPhrase', 'password', 'privateAddress', 'recoveryLocation', 'publicAddress', 'backupPath']) {
-  assert(!factsJson.includes(`\"${sensitiveFieldName}\"`), `Simulation facts must not expose a raw sensitive-field key: ${sensitiveFieldName}`);
+  assert(!factsJson.includes(sensitiveFieldName), `Simulation facts must not expose a raw sensitive-field name: ${sensitiveFieldName}`);
 }
 
 for (const scenario of simulator.SCENARIOS) {
@@ -102,6 +102,9 @@ assert.strictEqual(summary.simulationFacts.vaultItemCount, 1);
 const summaryJson = JSON.stringify(summary);
 for (const secret of ['timeline-must-never-show-this-secret', 'bc1q-timeline-private-metadata']) {
   assert(!summaryJson.includes(secret), 'Dashboard summary must remain aggregate/metadata-only.');
+}
+for (const sensitiveFieldName of ['seedPhrase', 'password', 'privateAddress', 'recoveryLocation', 'publicAddress', 'backupPath']) {
+  assert(!summaryJson.includes(sensitiveFieldName), `Dashboard summary must not expose a raw sensitive-field name: ${sensitiveFieldName}`);
 }
 
 console.log('PASS SafeLedger Recovery Command Center derives redacted timeline facts, explainable scenario results, scorecards, and network-aware duplicate identities locally.');
