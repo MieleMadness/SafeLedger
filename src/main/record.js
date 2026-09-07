@@ -4,7 +4,6 @@
 
 const { ipcRenderer: ipc } = require('./renderer-bridge');
 const statusMgr = require('./status');
-const utils = require('./utils');
 const securityUi = require('./security-ui');
 const walletCatalog = require('./wallet-catalog');
 const tokenIcons = require('./token-icons');
@@ -22,6 +21,32 @@ const ASSET_IDENTITY_FIELDS = Object.freeze([
 ]);
 const ASSET_CUSTOM_FIELDS_TITLE = 'Network & Additional Fields';
 const ASSET_CUSTOM_FIELDS_NOTE = 'Network and Contract address stay as standard Asset identity fields. Add, edit, or remove your own optional custom fields below them.';
+
+function cloneValue(value) {
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+function exactRecordIndex(records, originalRecord, requestedIndex) {
+  if (!Array.isArray(records) || !originalRecord) return -1;
+  const requested = Number(requestedIndex);
+  if (Number.isInteger(requested) && requested >= 0 && requested < records.length) {
+    try {
+      if (JSON.stringify(records[requested]) === JSON.stringify(originalRecord)) return requested;
+    } catch (_) {}
+  }
+  let match = -1;
+  let count = 0;
+  for (let index = 0; index < records.length; index++) {
+    try {
+      if (JSON.stringify(records[index]) !== JSON.stringify(originalRecord)) continue;
+    } catch (_) {
+      continue;
+    }
+    match = index;
+    count++;
+  }
+  return count === 1 ? match : -1;
+}
 
 const getUserCoinNotes = (vaultData, rec) => {
   const wallet = vaultData && vaultData.groupSelected != null ? vaultData.groups[vaultData.groupSelected] : null;
@@ -185,6 +210,7 @@ exports.createRecord = (params) => createEditRecord(params);
 const createEditRecord = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
+  const originalRecord = cloneValue(params.record);
   const header = document.createElement('h1');
   header.textContent = params.record ? 'Modify Asset' : 'Add Asset';
   area.appendChild(header);
@@ -228,10 +254,17 @@ const createEditRecord = (params) => {
       return;
     }
     if (button) button.disabled = true;
-    params.saving.state = true;
-    statusMgr.loadStatus();
 
-    const rec = params.record || { created: Date() };
+    const submittedVaultData = cloneValue(params.vaultData);
+    const groupIndex = Number(submittedVaultData && submittedVaultData.groupSelected);
+    const submittedGroup = Number.isInteger(groupIndex) && submittedVaultData.groups ? submittedVaultData.groups[groupIndex] : null;
+    const records = submittedGroup && Array.isArray(submittedGroup.records) ? submittedGroup.records : null;
+    if (!submittedGroup || !records) {
+      if (button) button.disabled = false;
+      return alert('SafeLedger could not identify the selected Vault Item. Reload the Profile and try again.');
+    }
+
+    const rec = originalRecord ? cloneValue(originalRecord) : { created: Date() };
     rec.name = inputName.value;
     rec.symbol = inputSymbol.value;
     rec.publicAddress = inputPublicAddress.value;
@@ -241,17 +274,27 @@ const createEditRecord = (params) => {
     rec.balanceUpdated = inputBalance.value ? new Date().toISOString() : (rec.balanceUpdated || '');
     rec.notes = inputNotes.value;
     rec.customFields = customFieldEditor.getFields();
-    if (params.record) rec.modified = Date();
+    if (originalRecord) rec.modified = Date();
 
-    const records = params.vaultData.groups[params.vaultData.groupSelected].records ||
-      (params.vaultData.groups[params.vaultData.groupSelected].records = []);
-    if (params.record) records[params.vaultData.recordSelected] = rec;
-    else records.push(rec);
-    records.sort(utils.compareIgnoreCase);
-    params.vaultData.recordSelected = records.indexOf(rec);
+    if (originalRecord) {
+      const recordIndex = exactRecordIndex(records, originalRecord, params.vaultData.recordSelected);
+      if (recordIndex < 0) {
+        if (button) button.disabled = false;
+        return alert('The selected Asset changed or is no longer available. Reload the Vault Item and try again.');
+      }
+      records[recordIndex] = rec;
+      submittedVaultData.recordSelected = recordIndex;
+    } else {
+      records.push(rec);
+      submittedVaultData.recordSelected = records.length - 1;
+    }
+
+    params.saving.state = true;
+    statusMgr.loadStatus();
     ipc.send('process-record', {
-      action: params.record ? 'modify' : 'create',
-      vaultData: params.vaultData
+      action: originalRecord ? 'modify' : 'create',
+      vaultData: submittedVaultData,
+      originalRecord
     });
   };
 
@@ -281,14 +324,21 @@ const createEditRecord = (params) => {
 
 function persistRecordUpdate(params, updates, button) {
   if (params.saving.state) return alert('Please wait for processing to complete');
-  Object.assign(params.record, updates || {});
-  params.record.modified = Date();
-  const records = params.vaultData.groups[params.vaultData.groupSelected].records;
-  records[params.vaultData.recordSelected] = params.record;
+  const originalRecord = cloneValue(params.record);
+  const submittedVaultData = cloneValue(params.vaultData);
+  const groupIndex = Number(submittedVaultData && submittedVaultData.groupSelected);
+  const submittedGroup = Number.isInteger(groupIndex) && submittedVaultData.groups ? submittedVaultData.groups[groupIndex] : null;
+  const records = submittedGroup && Array.isArray(submittedGroup.records) ? submittedGroup.records : null;
+  const recordIndex = exactRecordIndex(records, originalRecord, params.vaultData.recordSelected);
+  if (recordIndex < 0) return alert('The selected Asset changed or is no longer available. Reload the Vault Item and try again.');
+
+  const nextRecord = Object.assign({}, originalRecord, updates || {}, { modified: Date() });
+  records[recordIndex] = nextRecord;
+  submittedVaultData.recordSelected = recordIndex;
   params.saving.state = true;
   if (button) button.disabled = true;
   statusMgr.loadStatus();
-  ipc.send('process-record', { action: 'modify', vaultData: params.vaultData });
+  ipc.send('process-record', { action: 'modify', vaultData: submittedVaultData, originalRecord });
 }
 
 exports.showRecordDetail = (params) => renderRecordDetail(params);
@@ -407,6 +457,7 @@ const confirmDelete = (params) => {
 
 exports._test = {
   assetSort,
+  exactRecordIndex,
   getUserCoinNotes,
   formatLocalDate,
   applyGenericAssetFallback,
