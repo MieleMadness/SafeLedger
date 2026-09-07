@@ -57,6 +57,7 @@ async function handlePasswordChange(button) {
   if (!oldInput || !newInput || !confirmInput) return failButton(button, 'Password fields are unavailable');
   const oldPassword = oldInput.value;
   const newPassword = newInput.value;
+  if (newPassword && !oldPassword) return failButton(button, 'Old Password Must Be Specified');
   const validation = passwordPolicy.validatePassword(newPassword);
   if (validation) return failButton(button, validation);
   if (oldPassword === newPassword) return failButton(button, 'Old password cannot match new password');
