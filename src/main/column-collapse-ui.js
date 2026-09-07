@@ -2,6 +2,7 @@
 
 /* SafeLedger compact navigation rails. */
 
+const motion = require('./motion-ui');
 const OPEN_DURATION_MS = 420;
 const COLUMNS = Object.freeze([
   Object.freeze({ key: 'profile', label: 'Profiles', searchId: 'profileSearch', areaId: 'vaultArea', addId: 'addVault', addLabel: 'Add Profile', itemLabelSelector: '.profile-list-name' }),
@@ -74,6 +75,25 @@ function clearOpeningAnimation() {
   document.querySelectorAll('.app-grid').forEach((grid) => grid.style.removeProperty('grid-template-columns'));
 }
 
+function animateCollapsedState(state, collapsed) {
+  if (!state || !state.shell) return Promise.resolve(false);
+  const grids = Array.from(state.shell.querySelectorAll('.app-grid'));
+  const canAnimate = grids.length && grids.every((grid) => typeof grid.animate === 'function');
+  if (!canAnimate || motion.prefersReducedMotion()) {
+    setCollapsed(state, collapsed);
+    return Promise.resolve(false);
+  }
+
+  const starts = grids.map((grid) => getComputedStyle(grid).gridTemplateColumns);
+  setCollapsed(state, collapsed);
+  const targets = grids.map((grid) => getComputedStyle(grid).gridTemplateColumns);
+  const transitions = grids.map((grid, index) => motion.animate(grid, [
+    { gridTemplateColumns: starts[index] },
+    { gridTemplateColumns: targets[index] }
+  ], { duration: motion.DURATIONS.nav, easing: 'cubic-bezier(.22,.61,.36,1)', fill: 'none' }));
+  return Promise.all(transitions).then(() => true);
+}
+
 function setupColumn(config) {
   const shell = document.querySelector('.app-shell');
   const searchCell = getCell(config.searchId);
@@ -102,7 +122,7 @@ function setupColumn(config) {
   const state = { config, shell, searchCell, mainCell, buttonCell, toggle, collapsed: true };
   toggle.addEventListener('click', () => {
     clearOpeningAnimation();
-    setCollapsed(state, !state.collapsed);
+    animateCollapsedState(state, !state.collapsed);
   });
 
   const refreshLabels = () => syncItemLabels(config, mainCell);
@@ -133,11 +153,7 @@ function targetExpandedTemplate(shell) {
 }
 
 function prefersReducedMotion() {
-  try {
-    return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch (_) {
-    return false;
-  }
+  return motion.prefersReducedMotion();
 }
 
 function revealAfterLogin() {
@@ -185,4 +201,4 @@ if (typeof document !== 'undefined') init();
 exports.configure = configure;
 exports.collapseForLogin = collapseForLogin;
 exports.revealAfterLogin = revealAfterLogin;
-exports._test = { OPEN_DURATION_MS, COLUMNS, getCell, syncItemLabels, clearHiddenSearch, setCollapsed, setupColumn, init, collapseForLogin, targetExpandedTemplate, prefersReducedMotion, revealAfterLogin };
+exports._test = { OPEN_DURATION_MS, COLUMNS, getCell, syncItemLabels, clearHiddenSearch, setCollapsed, animateCollapsedState, setupColumn, init, collapseForLogin, targetExpandedTemplate, prefersReducedMotion, revealAfterLogin };
