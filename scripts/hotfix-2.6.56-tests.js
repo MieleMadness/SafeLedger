@@ -88,7 +88,10 @@ assert(actions.includes("split(/\\s+/).includes('detail-action-save')") && actio
 assert(columns.includes('function animateCollapsedState(state, collapsed)'));
 assert(columns.includes('duration: motion.DURATIONS.nav'));
 assert(security.includes('if (details.open) motion.reveal(content);'));
-assert(css.includes('@media (prefers-reduced-motion: reduce)'));
+assert(/@media\s*\(prefers-reduced-motion\s*:\s*reduce\)/.test(css),
+  'Product-feature motion styles must honor the OS reduced-motion media query without depending on CSS whitespace formatting.');
+assert(/\.recovery-drill-progress-fill\s*\{[^}]*transition\s*:\s*none\s*!important/.test(css),
+  'Reduced-motion styling must disable wizard progress transitions.');
 
 execFileSync(process.execPath, [path.join(root, 'scripts/hotfix-2.6.55-tests.js')], { stdio: 'pipe' });
 
