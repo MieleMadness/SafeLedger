@@ -48,7 +48,7 @@ const dataWrite = require('../src/main/data-write-service');
       vault, vaultDir, key,
       request: {
         action: 'create', file: 'zvault-0.json', groupIndex: 0, groupCreated,
-        userConfirmedDuplicate: true,
+        duplicateConfirmed: true,
         record: { name: 'Bitcoin', symbol: 'BTC', publicAddress: 'bc1q-second' }
       }
     });
