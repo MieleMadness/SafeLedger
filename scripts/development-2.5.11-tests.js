@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
 const security = read('src/main/security-ui.js');
 const uiCss = read('src/main/css/ui-current.css');
@@ -51,12 +51,12 @@ function testVaultOverview() {
   for (const [title, className] of [
     ['Vault Inventory', 'vault-inventory-section'],
     ['Recovery Health', 'vault-recovery-section'],
-    ['Device & Backup Health', 'device-health-section']
+    ['Device & Backup Health', 'device-health-section'],
+    ['Recovery Needs Attention', 'recovery-needs-attention-section']
   ]) {
     assert(dashboardUi.includes(`'${title}'`), `Vault Overview should retain the ${title} section.`);
     assert(dashboardUi.includes(`'${className}'`), `${title} should retain its canonical section class.`);
   }
-  assert(dashboardUi.includes("makeSection('Recovery Needs Attention')"));
   assert(dashboardUi.includes("makeSection('Recently Verified')"));
   assert(dashboardSummary.includes('hardwareWallets: 0'));
   assert(dashboardSummary.includes('softwareWallets: 0'));
