@@ -2,6 +2,7 @@
 
 const recoveryHealth = require('./recovery-health');
 const walletCatalog = require('./wallet-catalog');
+const commandCenter = require('./recovery-command-center');
 require('./wallet-catalog-extensions');
 
 const STALE_VERIFICATION_DAYS = 180;
@@ -78,6 +79,7 @@ function summarize(profileEntries = [], options = {}) {
   };
   const needsAttention = [];
   const recentlyVerified = [];
+  const scorecards = [];
   let profileReadErrors = 0;
   let scoreTotal = 0;
 
@@ -139,15 +141,15 @@ function summarize(profileEntries = [], options = {}) {
         checks,
         actions: health.actions.map((entry) => ({ id: entry.id, action: entry.action }))
       };
+      scorecards.push(item);
       if (health.status !== 'Ready') needsAttention.push(item);
       if (item.lastVerified) recentlyVerified.push(item);
     }
   }
 
-  needsAttention.sort((a, b) => {
-    const rank = (status) => status === 'Incomplete' ? 0 : status === 'Needs Review' ? 1 : 2;
-    return rank(a.status) - rank(b.status) || a.score - b.score || a.walletName.localeCompare(b.walletName);
-  });
+  const statusRank = (status) => status === 'Incomplete' ? 0 : status === 'Needs Review' ? 1 : 2;
+  needsAttention.sort((a, b) => statusRank(a.status) - statusRank(b.status) || a.score - b.score || a.walletName.localeCompare(b.walletName));
+  scorecards.sort((a, b) => a.score - b.score || statusRank(a.status) - statusRank(b.status) || a.walletName.localeCompare(b.walletName));
   recentlyVerified.sort((a, b) => new Date(b.lastVerified).getTime() - new Date(a.lastVerified).getTime());
 
   return {
@@ -157,7 +159,10 @@ function summarize(profileEntries = [], options = {}) {
     readinessPercent: counts.vaultItems ? Math.round(scoreTotal / counts.vaultItems) : 0,
     profileReadErrors,
     needsAttention: needsAttention.slice(0, 8),
-    recentlyVerified: recentlyVerified.slice(0, 6)
+    recentlyVerified: recentlyVerified.slice(0, 6),
+    scorecards: scorecards.slice(0, 24),
+    securityTimeline: commandCenter.buildSecurityTimeline(profileEntries, 18),
+    simulationFacts: commandCenter.buildSimulationFacts(profileEntries)
   };
 }
 
