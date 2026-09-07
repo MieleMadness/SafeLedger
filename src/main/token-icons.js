@@ -1,7 +1,8 @@
 'use strict';
 
-const web3Icons = require('./web3-icons');
 const serviceCatalog = require('./service-catalog');
+let web3IconsModule;
+function web3Icons() { return web3IconsModule || (web3IconsModule = require('./web3-icons')); }
 
 function isChainGames(record) {
   const item = record || {};
@@ -15,7 +16,7 @@ function getIconMatch(record) {
   const item = record || {};
   const name = String(item.name || '').trim();
   const symbol = String(item.symbol || '').trim();
-  return web3Icons.matchFirst([
+  return web3Icons().matchFirst([
     { category: 'tokens', values: [symbol, name] },
     { category: 'networks', values: [name, symbol] }
   ]);
@@ -33,5 +34,5 @@ exports.createIconElement = (record, className = 'token-brand-image') => {
   const match = getIconMatch(record);
   if (!match) return null;
   const label = record && (record.name || record.symbol) ? (record.name || record.symbol) : 'Web3 asset';
-  return web3Icons.createImage(match.src, label, className);
+  return web3Icons().createImage(match.src, label, className);
 };
