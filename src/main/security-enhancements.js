@@ -1,7 +1,6 @@
 'use strict';
 
 const { ipcRenderer: ipc } = require('./renderer-bridge');
-const passwordControls = require('./password-controls');
 
 const AUTO_LOCK_MINUTES = 5;
 let idleTimer = null;
@@ -58,8 +57,6 @@ function panicLock(reason = 'panic-lock') {
   clearTimeout(idleTimer);
   try { clearVisibleSensitiveFields(); } catch (_) {}
   try { ipc.send('panic-lock', { reason }); } catch (_) {}
-  // SafeLedger 2.3 routes every non-password lock through the trusted main
-  // process lock controller. Emergency/inactivity locks minimize and reload.
 }
 
 function resetIdleTimer() {
@@ -73,25 +70,16 @@ function resetIdleTimer() {
   window.addEventListener(eventName, resetIdleTimer, { passive: true });
 });
 
-function enhanceLoginPassword() {
-  const input = document.getElementById('masterCryptoInput');
-  if (!input || input.dataset.safeledgerEnhanced === '1') return;
-  input.dataset.safeledgerEnhanced = '1';
-  passwordControls.configure(input, { autocomplete: 'off', strength: true });
-}
-
-ipc.on('result-init-system', () => setTimeout(enhanceLoginPassword, 0));
 ipc.on('result', (_evt, params) => {
   if (params && params.status === 'SUCCESS' && params.type === 'vaultlist-init') {
     unlockedSession = true;
     panicRunning = false;
-    setTimeout(resetIdleTimer, 0);
+    resetIdleTimer();
   }
   if (params && params.type === 'session-locked') {
     unlockedSession = false;
     clearTimeout(idleTimer);
   }
-  setTimeout(enhanceLoginPassword, 0);
 });
 ipc.on('security-session-locked', (_evt, payload) => handleSecuritySessionLocked(payload));
 ipc.on('result-lockout-destroy', () => {
@@ -100,7 +88,6 @@ ipc.on('result-lockout-destroy', () => {
 });
 
 window.addEventListener('DOMContentLoaded', () => {
-  enhanceLoginPassword();
   resetIdleTimer();
   const panic = document.getElementById('panicLockButton');
   if (panic) panic.addEventListener('click', () => panicLock('emergency-lock'));
@@ -183,7 +170,7 @@ function requestBackupPassword() {
 
     document.body.appendChild(dialog);
     dialog.showModal();
-    setTimeout(() => input.focus(), 0);
+    input.focus();
   });
 }
 
@@ -222,10 +209,6 @@ async function restoreEncryptedBackup() {
     const result = await ipc.invoke('security-restore-all');
     if (!result || result.canceled) return;
     if (!result.ok) return alert(result.message || 'Restore failed.');
-    // A backup can originate from another SafeLedgerData location. Rotate the
-    // restored storage identity so the current physical storage becomes the
-    // trusted identity for the next session instead of inheriting another
-    // drive's local marker.
     try { await ipc.invoke('device-reset-storage-identity'); } catch (_) {}
     alert(`Complete SafeLedger backup restored.${result.safetyDir ? ` Safety copy: ${result.safetyDir}` : ''}\n\nSafeLedger will now lock and reload.`);
     panicLock('post-restore-lock');
@@ -259,4 +242,4 @@ exports.verifyEncryptedBackup = verifyEncryptedBackup;
 exports.restoreEncryptedBackup = restoreEncryptedBackup;
 exports.selectLegacyImportSource = selectLegacyImportSource;
 exports.importLegacyData = importLegacyData;
-exports._test = { AUTO_LOCK_MINUTES, clearVisibleSensitiveFields, handleSecuritySessionLocked, renderRestartRequiredLock, requestBackupPassword };
+exports._test = { AUTO_LOCK_MINUTES, clearVisibleSensitiveFields, handleSecuritySessionLocked, renderRestartRequiredLock, requestBackupPassword, resetIdleTimer };
