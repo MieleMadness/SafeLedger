@@ -189,6 +189,55 @@ async function testRecordOwnership(root, key) {
   assert.deepStrictEqual(deleted.groups[0].records.map((item) => item.name), ['Bitcoin Main']);
 }
 
+async function testSharedStarterTimestampRecordOwnership(root, key) {
+  const { vaultDir, profile } = await makeVaultFixture(path.join(root, 'shared-starter-record-time'), key);
+  const sharedCreated = '2026-09-07T12:00:00.000Z';
+  profile.groups[0].records = [
+    { name: 'Ethereum', symbol: 'ETH', created: sharedCreated, publicAddress: '' },
+    { name: 'Bitcoin', symbol: 'BTC', created: sharedCreated, publicAddress: '' }
+  ];
+  await saveEncrypted(path.join(vaultDir, 'zvault-0.json'), profile, key);
+
+  const originalBitcoin = JSON.parse(JSON.stringify(profile.groups[0].records[1]));
+  const rendererState = JSON.parse(JSON.stringify(profile));
+  rendererState.groupSelected = 0;
+  rendererState.recordSelected = 0;
+  rendererState.groups[0].records = [
+    Object.assign({}, originalBitcoin, { publicAddress: 'bc1q-selected-bitcoin' }),
+    JSON.parse(JSON.stringify(profile.groups[0].records[0]))
+  ];
+
+  const request = dataWrite.legacyRecordRequest({
+    action: 'modify',
+    vaultData: rendererState,
+    originalRecord: originalBitcoin
+  });
+  const result = await dataWrite.mutateRecord({ vault: robustVault, vaultDir, key, request });
+  assert.strictEqual(result.groupSelected, 0);
+
+  const persisted = await robustVault.readVault(path.join(vaultDir, 'zvault-0.json'), key);
+  const records = persisted.groups[0].records;
+  assert.strictEqual(records.length, 2, 'Editing a seeded Asset must not create or transform a sibling into a duplicate Asset.');
+  assert.strictEqual(records.filter((item) => item.name === 'Bitcoin').length, 1, 'Bitcoin must remain exactly one Asset after editing its public address.');
+  assert.strictEqual(records.filter((item) => item.name === 'Ethereum').length, 1, 'Ethereum must remain intact when Bitcoin is edited.');
+  assert.strictEqual(records.find((item) => item.name === 'Bitcoin').publicAddress, 'bc1q-selected-bitcoin');
+  assert.strictEqual(records.find((item) => item.name === 'Ethereum').publicAddress, '');
+
+  const staleRendererState = dataWrite.withViewState(persisted, 0, 0);
+  const staleOriginal = Object.assign({}, originalBitcoin, { publicAddress: 'not-current' });
+  staleRendererState.groups[0].records[0] = Object.assign({}, staleRendererState.groups[0].records[0], { publicAddress: 'should-not-save' });
+  await assert.rejects(
+    dataWrite.mutateRecord({
+      vault: robustVault,
+      vaultDir,
+      key,
+      request: dataWrite.legacyRecordRequest({ action: 'modify', vaultData: staleRendererState, originalRecord: staleOriginal })
+    }),
+    /asset changed or no longer exists/i,
+    'A stale Asset edit must fail closed instead of falling back to a potentially wrong sibling index.'
+  );
+}
+
 async function testSettingsOwnership(root) {
   const settingsDir = path.join(root, 'settings');
   await fs.promises.mkdir(settingsDir, { recursive: true });
@@ -245,8 +294,9 @@ async function testSettingsOwnership(root) {
     await testProfileOwnership(root, key);
     await testGroupOwnership(root, key);
     await testRecordOwnership(root, key);
+    await testSharedStarterTimestampRecordOwnership(root, key);
     await testSettingsOwnership(root);
-    console.log('PASS SafeLedger data ownership: main-owned profile/vault-item/asset/settings mutations preserve unrelated data and reject renderer authority escalation.');
+    console.log('PASS SafeLedger data ownership: main-owned profile/vault-item/asset/settings mutations preserve unrelated data, exact selected-Asset targeting, and reject renderer authority escalation.');
   } finally {
     key.fill(0);
     await fs.promises.rm(root, { recursive: true, force: true });
