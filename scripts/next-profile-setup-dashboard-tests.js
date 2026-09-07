@@ -79,16 +79,24 @@ function testProfileCreationUiAndMainProcessContract() {
 
 function testRecoveryDashboardRowsOpenVaultItems() {
   const dashboard = read('src/main/dashboard-ui.js');
-  const rowUi = read('src/main/dashboard-row-ui.js');
 
   assert(dashboard.includes("const badge = document.createElement('span');"), 'Recovery status pills should be informational spans, not links/buttons.');
   assert(!dashboard.includes('dashboard-status-action'), 'Status pills should no longer carry their own navigation action.');
-  assert(dashboard.includes("document.createElement(actionable ? 'button' : 'div')"), 'The vault-item description should remain the explicit action target.');
+  assert(dashboard.includes("row.className = `dashboard-list-row${actionable ? ' dashboard-list-row-action' : ''}`;"),
+    'Actionable vault-item rows should be created directly by the canonical dashboard renderer.');
+  assert(dashboard.includes("main.className = `dashboard-list-main${actionable ? ' dashboard-list-main-action' : ''}`;"),
+    'The vault-item description should retain its explicit action styling.');
   assert(dashboard.includes("source: 'dashboard'"), 'Dashboard navigation should identify itself as a direct vault-item action.');
   assert(dashboard.includes('profileIndex: Number(item.profileIndex)'), 'Dashboard navigation should retain an exact profile index target.');
   assert(dashboard.includes('walletIndex: Number(item.walletIndex)'), 'Dashboard navigation should retain the exact vault-item index.');
-  assert(rowUi.includes("row.querySelector('.dashboard-list-main-action')"), 'The full Needs Attention row should forward to its vault-item action.');
-  assert(rowUi.includes("row.setAttribute('role', 'button')"), 'Full-row navigation should remain keyboard accessible.');
+  assert(dashboard.includes("row.addEventListener('click', () => openWallet(item));"),
+    'The full Needs Attention row should directly open its exact vault item.');
+  assert(dashboard.includes("row.setAttribute('role', 'button');"), 'Full-row navigation should remain keyboard accessible.');
+  assert(dashboard.includes("event.key !== 'Enter' && event.key !== ' '"), 'Keyboard activation must remain available for actionable rows.');
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/dashboard-row-ui.js')), false,
+    'The retired post-render dashboard row forwarding helper must not return.');
+  assert(!dashboard.includes('MutationObserver') && !dashboard.includes('.click()'),
+    'Dashboard navigation should remain directly state-driven instead of repaired after rendering.');
 }
 
 testStandardAndBlankProfileModels();
@@ -96,4 +104,4 @@ testSelectedWalletsLoadTheirAssets();
 testTemplateInputValidationHelpers();
 testProfileCreationUiAndMainProcessContract();
 testRecoveryDashboardRowsOpenVaultItems();
-console.log('PASS profile setup choices, local-artwork template filtering, transactional template-aware profile creation, reviewed Chain Games starter, and Vault Overview row navigation.');
+console.log('PASS profile setup choices, local-artwork template filtering, transactional template-aware profile creation, reviewed Chain Games starter, and directly rendered Vault Overview row navigation.');
