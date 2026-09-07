@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n');
 const exists = (relative) => fs.existsSync(path.join(root, relative));
 
 const presentationPath = 'src/main/vault-item-presentation.js';
@@ -84,7 +84,10 @@ assert(drillSource.includes('Edit Vault Item'));
 assert(binderSource.includes('vault item${safeBinder.walletCount === 1'));
 assert(intelligenceSource.includes('Repeated Vault Item recovery metadata'));
 assert(dashboardSource.includes("makeStat('Vault Items', vaultItems)"));
-assert(dashboardSource.includes('Vault Items include wallets, exchange accounts, and Web / Web3 services.'));
-assert(dashboardSource.includes('function vaultContentsLabel(counts = {})'));
+assert(dashboardSource.includes('function vaultContentsLabel(counts = {})'),
+  'Vault Overview must keep one canonical owner for dynamic Vault Item inventory terminology.');
+for (const term of ['hardware wallet', 'exchange account', 'Web / Web3 service']) {
+  assert(dashboardSource.includes(term), `Vault contents guidance must continue explaining ${term} inventory.`);
+}
 
 console.log('PASS Vault Item list/detail/edit/preset/icon/terminology rendering has one canonical owner, no retired observer stack, and no retired blank account preset rows.');
