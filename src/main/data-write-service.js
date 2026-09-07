@@ -3,6 +3,7 @@
 const path = require('path');
 const customFields = require('./custom-fields');
 const vaultSchema = require('./vault-schema');
+const assetPresets = require('./vault-item-asset-presets');
 
 const MAX_SECRET_LENGTH = 20000;
 const MAX_ADDRESS_LENGTH = 10000;
@@ -219,14 +220,21 @@ async function saveAuthoritativeVault(vault, vaultDir, file, key, data) {
   return prepared;
 }
 
+function buildTrustedStarterRecords(group, created) {
+  if (!group || !group.name) return [];
+  return assetPresets.buildRecords(group.name, group.category, created);
+}
+
 async function mutateGroup({ vault, vaultDir, key, request }) {
   const data = await readAuthoritativeVault(vault, vaultDir, request.file, key);
   if (!Array.isArray(data.groups)) data.groups = [];
   let selected = null;
 
   if (request.type === 'group-create') {
-    const group = Object.assign({ created: new Date().toISOString(), records: [] }, normalizeGroupPatch(request.group));
-    if (!group.name) throw new Error('Vault item name is required.');
+    const created = new Date().toISOString();
+    const patch = normalizeGroupPatch(request.group);
+    if (!patch.name) throw new Error('Vault item name is required.');
+    const group = Object.assign({ created, records: buildTrustedStarterRecords(patch, created) }, patch);
     data.groups.push(group);
     data.groups.sort(compareByName);
     selected = data.groups.indexOf(group);
@@ -341,5 +349,6 @@ module.exports = {
   withProfileViewState,
   findSingleDeletionIndex,
   resolveExistingIndex,
+  buildTrustedStarterRecords,
   _test: { clone, text, normalizeTimestamp, compareByName, exactEqual }
 };
