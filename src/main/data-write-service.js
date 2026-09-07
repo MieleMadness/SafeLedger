@@ -40,6 +40,7 @@ function normalizeProfilePatch(input) {
     if (!patch.name) throw new Error('Profile name is required.');
   }
   if (Object.prototype.hasOwnProperty.call(input, 'notes')) patch.notes = text(input.notes, 500);
+  if (Object.prototype.hasOwnProperty.call(input, 'customFields')) patch.customFields = customFields.normalize(input.customFields);
   if (Object.prototype.hasOwnProperty.call(input, 'pinned')) patch.pinned = normalizeBoolean(input.pinned);
   return patch;
 }
