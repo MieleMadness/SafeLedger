@@ -2,9 +2,17 @@
 
 const walletCatalog = require('./wallet-catalog');
 require('./wallet-catalog-extensions');
-const web3Icons = require('./web3-icons');
-const serviceCatalog = require('./service-catalog');
-const vaultItemAssetPresets = require('./vault-item-asset-presets');
+
+// Keep the application's pre-window startup path light. Profile template
+// selection is not needed until after the window is visible and the user is
+// creating/unlocking data, so the large local icon/preset catalogs are loaded
+// on first use instead of while Electron is still trying to create its window.
+let web3IconsModule;
+let serviceCatalogModule;
+let vaultItemAssetPresetsModule;
+function web3Icons() { return web3IconsModule || (web3IconsModule = require('./web3-icons')); }
+function serviceCatalog() { return serviceCatalogModule || (serviceCatalogModule = require('./service-catalog')); }
+function vaultItemAssetPresets() { return vaultItemAssetPresetsModule || (vaultItemAssetPresetsModule = require('./vault-item-asset-presets')); }
 
 // This is the deliberate SafeLedger starter set. Wallet starters use local
 // Web3Icons artwork. Chain Games is the one standard Web3-service starter and
@@ -26,13 +34,16 @@ const STANDARD_STARTER_NAMES = Object.freeze([
 const normalizeName = (value) => String(value || '').trim().toLowerCase();
 
 function iconMatch(name) {
-  return web3Icons.matchFirst([
+  return web3Icons().matchFirst([
     { category: 'wallets', values: [name] },
     { category: 'exchanges', values: [name] }
   ]);
 }
 
 function availableTemplates() {
+  const icons = web3Icons();
+  const services = serviceCatalog();
+  const presets = vaultItemAssetPresets();
   const templates = [];
   const claimedIcons = new Set();
   const claimedNames = new Set();
@@ -65,16 +76,16 @@ function availableTemplates() {
   for (const name of STANDARD_STARTER_NAMES) {
     const normalized = normalizeName(name);
     if (claimedNames.has(normalized)) continue;
-    const service = serviceCatalog.find(name);
+    const service = services.find(name);
     if (!service) continue;
-    if (!vaultItemAssetPresets.hasAssetPreset(service.name, vaultItemAssetPresets.WEB3_CATEGORY)) continue;
+    if (!presets.hasAssetPreset(service.name, presets.WEB3_CATEGORY)) continue;
     templates.push({
       name: service.name,
       type: '',
       standard: true,
       hasIcon: false,
       service: true,
-      category: vaultItemAssetPresets.WEB3_CATEGORY,
+      category: presets.WEB3_CATEGORY,
       catalog: false
     });
     claimedNames.add(normalized);
@@ -83,7 +94,7 @@ function availableTemplates() {
   // Add every wallet represented by the pinned local Web3Icons wallet catalog.
   // These icon-only choices intentionally start with no seeded assets because
   // SafeLedger has not reviewed a network-support catalog for them yet.
-  for (const entry of web3Icons.entries('wallets')) {
+  for (const entry of icons.entries('wallets')) {
     const iconId = `wallets:${entry.key}`;
     const normalized = normalizeName(entry.name);
     if (!entry.name || claimedIcons.has(iconId) || claimedNames.has(normalized)) continue;
@@ -133,6 +144,8 @@ function unknownNames(values) {
 }
 
 function buildGroups(today, walletNames) {
+  const services = serviceCatalog();
+  const presets = vaultItemAssetPresets();
   const selectedNames = resolveNames(walletNames);
   if (!selectedNames.length) return [];
 
@@ -143,14 +156,14 @@ function buildGroups(today, walletNames) {
     const catalogGroup = catalogGroups.get(normalizeName(name));
     if (catalogGroup) return catalogGroup;
 
-    const service = serviceCatalog.find(name);
-    if (service && vaultItemAssetPresets.hasAssetPreset(service.name, vaultItemAssetPresets.WEB3_CATEGORY)) {
+    const service = services.find(name);
+    if (service && presets.hasAssetPreset(service.name, presets.WEB3_CATEGORY)) {
       return {
         name: service.name,
-        category: vaultItemAssetPresets.WEB3_CATEGORY,
+        category: presets.WEB3_CATEGORY,
         created: today,
         notes: 'Web3 account starter template with SafeLedger-reviewed Chain Games network/token entries. Add your own account and recovery details.',
-        records: vaultItemAssetPresets.buildRecords(service.name, vaultItemAssetPresets.WEB3_CATEGORY, today)
+        records: presets.buildRecords(service.name, presets.WEB3_CATEGORY, today)
       };
     }
 
