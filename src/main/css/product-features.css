@@ -63,6 +63,41 @@
 .dashboard-empty, .dashboard-loading { color: #667085; font-size: 13px; }
 .dashboard-warning { margin-top: 10px; }
 
+/* 2.6.54 keeps Maintenance Snapshot vertically scannable instead of laying
+ * three dense cards across the Detail column. Primary topics are bullets and
+ * multi-value topics use a short nested list. */
+.dashboard-maintenance-list {
+  display: grid;
+  gap: 11px;
+  margin: 8px 0 0 20px;
+  padding: 0;
+}
+.dashboard-maintenance-item {
+  padding-left: 2px;
+  color: var(--sl-text, #253047);
+  line-height: 1.45;
+}
+.dashboard-maintenance-item > strong,
+.dashboard-maintenance-item > span {
+  display: block;
+}
+.dashboard-maintenance-item > strong {
+  margin-bottom: 3px;
+  color: var(--sl-text-strong, #172033);
+  font-size: 13px;
+}
+.dashboard-maintenance-item > span,
+.dashboard-maintenance-details {
+  color: var(--sl-muted, #667085);
+  font-size: 12px;
+}
+.dashboard-maintenance-details {
+  display: grid;
+  gap: 3px;
+  margin: 5px 0 0 18px;
+  padding: 0;
+}
+
 .custom-fields-editor { margin-top: 8px; }
 .custom-fields-note { margin: -2px 0 12px; color: #667085; font-size: 12px; line-height: 1.45; }
 .custom-fields-rows { display: grid; gap: 10px; margin-bottom: 10px; }
