@@ -25,23 +25,14 @@ const entries = [{
       deviceLocation: 'Desk safe',
       lastVerified: '2026-09-03T12:00:00.000Z',
       lastRecoveryDrill: '2026-09-04T12:00:00.000Z',
-      seedPhrase: 'timeline-must-never-show-this-secret',
+      seedPhrase: 'simulator-must-never-show-this-secret',
       records: [{
-        name: 'Bitcoin', symbol: 'BTC', publicAddress: 'bc1q-timeline-private-metadata',
+        name: 'Bitcoin', symbol: 'BTC', publicAddress: 'bc1q-simulator-private-metadata',
         created: '2026-08-03T12:00:00.000Z', modified: '2026-09-05T12:00:00.000Z'
       }]
     }]
   }
 }];
-
-const timeline = commandCenter.buildSecurityTimeline(entries, 20);
-assert(timeline.length >= 6, 'Security Timeline should derive meaningful milestones from existing local timestamps.');
-assert.strictEqual(timeline[0].title, 'Asset updated');
-const timelineJson = JSON.stringify(timeline);
-assert(!timelineJson.includes('timeline-must-never-show-this-secret'), 'Security Timeline must never include seed/private recovery values.');
-assert(!timelineJson.includes('bc1q-timeline-private-metadata'), 'Security Timeline must not copy public-address values into milestone text.');
-assert(timeline.some((item) => item.title === 'Recovery Validation completed'));
-assert(timeline.some((item) => item.title === 'Recovery information verified'));
 
 const facts = commandCenter.buildSimulationFacts(entries);
 assert.deepStrictEqual(facts, {
@@ -62,6 +53,9 @@ assert.deepStrictEqual(facts, {
 const factsJson = JSON.stringify(facts);
 for (const sensitiveFieldName of ['seedPhrase', 'password', 'privateAddress', 'recoveryLocation', 'publicAddress', 'backupPath']) {
   assert(!factsJson.includes(sensitiveFieldName), `Simulation facts must not expose a raw sensitive-field name: ${sensitiveFieldName}`);
+}
+for (const secret of ['simulator-must-never-show-this-secret', 'bc1q-simulator-private-metadata']) {
+  assert(!factsJson.includes(secret), 'Simulation facts must remain aggregate-only.');
 }
 
 for (const scenario of simulator.SCENARIOS) {
@@ -94,17 +88,16 @@ const summary = dashboardSummary.summarize(entries, {
   backupHealth: { backup: { state: 'current' }, verified: { state: 'current' } }
 });
 assert.strictEqual(summary.counts.vaultItems, 1);
-assert.strictEqual(summary.scorecards.length, 1);
-assert.strictEqual(summary.scorecards[0].walletName, 'Ledger');
 assert(Number.isInteger(summary.readinessPercent));
-assert(Array.isArray(summary.securityTimeline) && summary.securityTimeline.length > 0);
 assert.strictEqual(summary.simulationFacts.vaultItemCount, 1);
+assert(!Object.prototype.hasOwnProperty.call(summary, 'scorecards'), 'Recovery scores should be consolidated into Recovery Needs Attention, not a second scorecard collection.');
+assert(!Object.prototype.hasOwnProperty.call(summary, 'securityTimeline'), 'Activity History is the only timeline surface; dashboard summary must not create a duplicate timeline.');
 const summaryJson = JSON.stringify(summary);
-for (const secret of ['timeline-must-never-show-this-secret', 'bc1q-timeline-private-metadata']) {
+for (const secret of ['simulator-must-never-show-this-secret', 'bc1q-simulator-private-metadata']) {
   assert(!summaryJson.includes(secret), 'Dashboard summary must remain aggregate/metadata-only.');
 }
 for (const sensitiveFieldName of ['seedPhrase', 'password', 'privateAddress', 'recoveryLocation', 'publicAddress', 'backupPath']) {
   assert(!summaryJson.includes(sensitiveFieldName), `Dashboard summary must not expose a raw sensitive-field name: ${sensitiveFieldName}`);
 }
 
-console.log('PASS SafeLedger Recovery Command Center derives redacted timeline facts, explainable scenario results, scorecards, and network-aware duplicate identities locally.');
+console.log('PASS SafeLedger recovery command center keeps redacted scenario facts, consolidated attention scoring, accordion-ready scenarios, and network-aware duplicate identities local.');
