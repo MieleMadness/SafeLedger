@@ -66,8 +66,11 @@ assert(profileSetup.STANDARD_STARTER_NAMES.includes('Chain Games'),
   'Chain Games must be part of the deliberate standard starter selection.');
 assert(profileSetup.standardNames().includes('Chain Games'),
   'Chain Games must be preselected for new standard Profile setup.');
-assert(profileSetupSource.includes('vaultItemAssetPresets.buildRecords(service.name, vaultItemAssetPresets.WEB3_CATEGORY, today)'),
-  'Chain Games starter creation must reuse the canonical reviewed Web3 asset preset.');
+assert(profileSetupSource.includes("function vaultItemAssetPresets() { return vaultItemAssetPresetsModule || (vaultItemAssetPresetsModule = require('./vault-item-asset-presets')); }"),
+  'Profile setup must retain the canonical reviewed preset module while allowing it to load lazily after startup.');
+assert(profileSetupSource.includes('const presets = vaultItemAssetPresets();') &&
+  profileSetupSource.includes('records: presets.buildRecords(service.name, presets.WEB3_CATEGORY, today)'),
+  'Chain Games starter creation must reuse the canonical reviewed Web3 asset preset through the lazy feature owner.');
 assert(walletIcons.includes('serviceCatalog.createIcon(name, brandClass)'),
   'The starter picker must use SafeLedger local Chain Games artwork rather than a missing/generic brand icon.');
 assert(serviceCatalog.find('Chain Games'), 'SafeLedger must retain local Chain Games service artwork.');
@@ -88,4 +91,4 @@ assert.deepStrictEqual(networks.sort(), ['Chain Games Supernet', 'Ethereum', 'Po
 assert(priorGate.includes('parts[2] >= 41'),
   'The approved 2.6.41 startup-animation gate must remain active on later candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.42 dark-mode QR, normalized locked utility behavior, Home-to-Login guard, and Chain Games starter refinements active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps dark-mode QR, normalized locked utility behavior, Home-to-Login guard, and lazy canonical Chain Games starter refinements active.`);
