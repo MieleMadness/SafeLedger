@@ -14,6 +14,10 @@ const lock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'u
 const sbom = trust.buildSbom(pkg, lock);
 assert.strictEqual(sbom.bomFormat, 'CycloneDX');
 assert.strictEqual(sbom.specVersion, '1.5');
+assert(/^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sbom.serialNumber),
+  'CycloneDX SBOM must include the serialNumber required by GitHub SBOM attestations.');
+assert.strictEqual(sbom.serialNumber, trust.buildSbom(pkg, lock).serialNumber,
+  'CycloneDX serialNumber must be deterministic for the same locked dependency graph.');
 assert.strictEqual(sbom.metadata.component.name, 'SafeLedger');
 assert(Array.isArray(sbom.components) && sbom.components.length > 10,
   'SBOM must enumerate the locked dependency graph rather than only top-level packages.');
@@ -45,10 +49,12 @@ try {
 
   const writtenSbom = JSON.parse(fs.readFileSync(result.sbomFile, 'utf8'));
   assert.strictEqual(writtenSbom.bomFormat, 'CycloneDX');
+  assert.strictEqual(writtenSbom.specVersion, '1.5');
+  assert.strictEqual(writtenSbom.serialNumber, sbom.serialNumber);
   assert.strictEqual(writtenSbom.metadata.component.version, pkg.version);
   assert(writtenSbom.components.length === sbom.components.length);
 
-  console.log('PASS SafeLedger Phase 5 release trust: artifact SHA-256, source-bound manifest, and CycloneDX SBOM are generated from locked dependencies.');
+  console.log('PASS SafeLedger Phase 5 release trust: artifact SHA-256, source-bound manifest, GitHub-attestable CycloneDX SBOM, and locked dependencies are deterministic.');
 } finally {
   fs.rmSync(temp, { recursive: true, force: true });
 }
