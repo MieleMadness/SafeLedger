@@ -10,6 +10,14 @@ function sha256File(file) {
   return hash.digest('hex');
 }
 
+function deterministicUuid(value) {
+  const bytes = Buffer.from(crypto.createHash('sha256').update(String(value)).digest().subarray(0, 16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 function packageNameFromPath(packagePath) {
   const normalized = String(packagePath || '').replace(/\\/g, '/');
   const marker = '/node_modules/';
@@ -39,9 +47,16 @@ function buildSbom(pkg, lock) {
     });
   }
   components.sort((a, b) => `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`));
+  const identity = JSON.stringify({
+    name: pkg.name || pkg.productName || 'SafeLedger',
+    version: String(pkg.version || ''),
+    lockfileVersion: lock && lock.lockfileVersion,
+    packages: (lock && lock.packages) || {}
+  });
   return {
     bomFormat: 'CycloneDX',
     specVersion: '1.5',
+    serialNumber: `urn:uuid:${deterministicUuid(identity)}`,
     version: 1,
     metadata: {
       component: {
@@ -101,4 +116,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { sha256File, packageNameFromPath, buildSbom, generate };
+module.exports = { sha256File, deterministicUuid, packageNameFromPath, buildSbom, generate };
