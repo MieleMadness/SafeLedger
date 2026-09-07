@@ -30,10 +30,13 @@ assert(gate2626.includes("mainCell.addEventListener('mouseover', refreshLabels);
 assert(!/\bnew\s+MutationObserver\s*\(/.test(collapseSource) && !/\bMutationObserver\s*\(/.test(collapseSource),
   'Compact navigation must still contain no actual MutationObserver constructor/call.');
 assert(collapseSource.includes("mainCell.addEventListener('mouseover', refreshLabels);") &&
-  collapseSource.includes("mainCell.addEventListener('focusin', refreshLabels);"));
-assert(collapseSource.includes('// MutationObserver or post-render patch loop.'),
-  'A harmless explanatory comment may mention MutationObserver without causing a false regression failure.');
+  collapseSource.includes("mainCell.addEventListener('focusin', refreshLabels);"),
+  'Compact navigation must keep ordinary delegated events for refreshing accessible item labels.');
+assert(collapseSource.includes('if (onSearchClear) onSearchClear(config.key);'),
+  'Collapsed rails must clear hidden searches through the configured renderer callback rather than synthetic DOM events.');
+assert(!collapseSource.includes('dispatchEvent(new Event('),
+  'Compact navigation must not reintroduce fake input/keyup events to refresh hidden searches.');
 assert(gate2629.includes('parts[2] >= 29'),
   'The 2.6.29 compact-rail layout gate must remain active on later workflow candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.30 observer-gate correction active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.30 observer-gate correction active without coupling to explanatory comment text.`);
