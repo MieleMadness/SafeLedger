@@ -92,42 +92,42 @@ function locationsAppearSeparate(group = {}) {
 
 function buildSimulationFacts(profileEntries = []) {
   const facts = {
-    profiles: profileEntries.length,
-    vaultItems: 0,
-    assets: 0,
-    assetsWithPublicAddress: 0,
-    recoveryMethod: 0,
-    recoveryLocation: 0,
-    recoveryInstructions: 0,
-    beneficiary: 0,
-    separateLocations: 0,
-    deviceLocation: 0,
-    exchanges: 0,
-    exchangesWithRecoveryPlan: 0,
-    wallets: 0
+    profileCount: profileEntries.length,
+    vaultItemCount: 0,
+    assetCount: 0,
+    addressDocumentedCount: 0,
+    recoveryMethodCount: 0,
+    recoveryLocationCount: 0,
+    recoveryInstructionCount: 0,
+    beneficiaryCount: 0,
+    separateLocationCount: 0,
+    deviceLocationCount: 0,
+    exchangeCount: 0,
+    exchangeRecoveryPlanCount: 0,
+    walletCount: 0
   };
 
   for (const entry of profileEntries) {
     const groups = entry && entry.vaultData && Array.isArray(entry.vaultData.groups) ? entry.vaultData.groups : [];
     for (const group of groups) {
-      facts.vaultItems++;
+      facts.vaultItemCount++;
       const kind = vaultItemKind(group);
-      if (kind === 'exchange') facts.exchanges++;
-      else facts.wallets++;
+      if (kind === 'exchange') facts.exchangeCount++;
+      else facts.walletCount++;
       const method = hasRecoveryMethod(group);
       const location = hasRecoveryLocation(group);
       const instructions = hasInstructions(group);
-      if (method) facts.recoveryMethod++;
-      if (location) facts.recoveryLocation++;
-      if (instructions) facts.recoveryInstructions++;
-      if (text(group && group.beneficiary)) facts.beneficiary++;
-      if (locationsAppearSeparate(group)) facts.separateLocations++;
-      if (text(group && group.deviceLocation)) facts.deviceLocation++;
-      if (kind === 'exchange' && (method || instructions || text(group && group.recoveryLink))) facts.exchangesWithRecoveryPlan++;
+      if (method) facts.recoveryMethodCount++;
+      if (location) facts.recoveryLocationCount++;
+      if (instructions) facts.recoveryInstructionCount++;
+      if (text(group && group.beneficiary)) facts.beneficiaryCount++;
+      if (locationsAppearSeparate(group)) facts.separateLocationCount++;
+      if (text(group && group.deviceLocation)) facts.deviceLocationCount++;
+      if (kind === 'exchange' && (method || instructions || text(group && group.recoveryLink))) facts.exchangeRecoveryPlanCount++;
 
       const records = Array.isArray(group && group.records) ? group.records : [];
-      facts.assets += records.length;
-      facts.assetsWithPublicAddress += records.reduce((count, record) => count + (text(record && record.publicAddress) ? 1 : 0), 0);
+      facts.assetCount += records.length;
+      facts.addressDocumentedCount += records.reduce((count, record) => count + (text(record && record.publicAddress) ? 1 : 0), 0);
     }
   }
 
