@@ -35,8 +35,12 @@ assert(!dashboard.includes('MutationObserver') && !dashboard.includes('setTimeou
 
 assert(detailActions.includes("dock.innerHTML = '';"),
   'Shared detail-action cleanup must remove stale Save/Cancel controls.');
-assert(detailActions.includes("area.classList.remove('wallet-coin-detail', 'wallet-coin-edit');"),
-  'Shared detail-action cleanup must leave stale detail/edit modes.');
+assert(detailActions.includes("const DETAIL_MODE_CLASSES = ['wallet-coin-detail', 'wallet-coin-view', 'wallet-coin-edit'];"),
+  'Shared detail-action ownership must define all view/edit mode classes in one place.');
+assert(detailActions.includes('detail.classList.remove(...DETAIL_MODE_CLASSES);'),
+  'Shared detail-action cleanup must remove every stale detail/view/edit mode.');
+assert(detailActions.includes("function clear() {\n  clearDockOnly();\n  setDetailMode('');\n}"),
+  'Clearing detail actions must synchronously clear both the action dock and detail mode.');
 
 assert(renderer.includes('function cancelAddProfile()'));
 assert(renderer.includes('clearUtilitySelections();'));
