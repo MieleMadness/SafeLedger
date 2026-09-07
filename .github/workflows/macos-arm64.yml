@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 jobs:
   build-macos-arm64:
@@ -67,18 +69,43 @@ jobs:
           ZIP_COUNT=$(find dist -maxdepth 1 -type f -name 'SafeLedger-*-macOS-arm64.zip' | wc -l | tr -d ' ')
           test "$ZIP_COUNT" = "1"
 
-      - name: Stage Apple Silicon ZIP, checksum, SBOM, and manifest
+      - name: Stage clean download and verification files
+        id: stage
         run: |
-          mkdir -p release/macos
+          mkdir -p release/macos/app release/macos/verification
           ARTIFACT=$(find dist -maxdepth 1 -type f -name 'SafeLedger-*-macOS-arm64.zip' | head -n 1)
           test -n "$ARTIFACT"
-          cp "$ARTIFACT" release/macos/
-          STAGED="release/macos/$(basename "$ARTIFACT")"
-          node scripts/generate-release-trust.js "$STAGED" release/macos macos arm64 "${{ github.event.pull_request.head.sha || github.sha }}"
+          STAGED="release/macos/app/$(basename "$ARTIFACT")"
+          cp "$ARTIFACT" "$STAGED"
+          node scripts/generate-release-trust.js "$STAGED" release/macos/verification macos arm64 "${{ github.sha }}"
+          SBOM=$(find release/macos/verification -maxdepth 1 -type f -name '*-SBOM.cdx.json' | head -n 1)
+          test -n "$SBOM"
+          echo "artifact=$STAGED" >> "$GITHUB_OUTPUT"
+          echo "sbom=$SBOM" >> "$GITHUB_OUTPUT"
 
-      - name: Upload verified Apple Silicon test bundle
+      - name: Attest macOS build provenance
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.stage.outputs.artifact }}
+
+      - name: Attest macOS SBOM
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.stage.outputs.artifact }}
+          sbom-path: ${{ steps.stage.outputs.sbom }}
+
+      - name: Upload clean Apple Silicon test build
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: SafeLedger-macOS-arm64
-          path: release/macos/*
+          path: release/macos/app/*
+          if-no-files-found: error
+
+      - name: Upload macOS verification files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: SafeLedger-macOS-arm64-Verification
+          path: release/macos/verification/*
           if-no-files-found: error
