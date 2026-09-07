@@ -3,6 +3,7 @@
 const { clipboard } = require('./renderer-bridge');
 const QRCode = require('qrcode');
 const eyeIcon = require('./eye-icon');
+const motion = require('./motion-ui');
 
 const CLIPBOARD_CLEAR_MS = 30000;
 let privacyMode = true;
@@ -197,6 +198,7 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
   details.addEventListener('toggle', () => {
     syncSensitiveSummary(details, summary, stateIcon);
     if (privacyMode) actions.style.display = details.open ? '' : 'none';
+    if (details.open) motion.reveal(content);
     if (!details.open && qrArea.style.display !== 'none') qrArea.style.display = 'none';
   });
   details.appendChild(content);
