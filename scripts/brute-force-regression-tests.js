@@ -66,12 +66,25 @@ async function run() {
     assert(!ui.includes('cloneNode'));
     assert(!ui.includes('Activation Code'));
 
-    const passwordSection = ui.indexOf("makeSection('Password')");
-    const backupSection = ui.indexOf("makeSection('Backup & Recovery')");
-    const bruteSection = ui.indexOf("makeSection('Brute Force Protection')");
-    assert(passwordSection >= 0 && backupSection > passwordSection && bruteSection > backupSection);
+    const canonicalOrder = [
+      'renderAppearanceSection(area, params);',
+      'renderBackupSection(area);',
+      'renderDeviceSection(area, params);',
+      'renderLegacyImportSection(area);',
+      'renderBruteForceSection(area, params);',
+      'renderSelfDestructSection(area, params);',
+      'renderAssetDisplaySection(area, params);',
+      'renderPrivacySection(area, params);',
+      'renderPasswordSection(area);'
+    ];
+    let previous = -1;
+    for (const call of canonicalOrder) {
+      const index = ui.indexOf(call);
+      assert(index > previous, `Canonical Settings order must include ${call} after the preceding section.`);
+      previous = index;
+    }
 
-    console.log('PASS shared brute-force schema, retired settings cleanup, and direct Settings section order.');
+    console.log('PASS shared brute-force schema, retired settings cleanup, and canonical one-pass Settings section order.');
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
