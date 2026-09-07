@@ -66,15 +66,36 @@ The replacement keeps the stronger parts of the 2.6.10 design:
 
 This is implemented directly in the canonical editor; no MutationObserver, synthetic click, or post-render repair helper was reintroduced.
 
+## Selected Asset edit targeting
+
+A hands-on 2.6.54 test exposed a bug when editing a seeded Asset such as Bitcoin: adding a public address could leave the original Bitcoin entry in place while changing a sibling Asset into another Bitcoin entry.
+
+The root cause was identity ambiguity, not the public-address field itself. Reviewed starter Assets can share the same creation timestamp. The renderer also sorted its submitted Asset collection before the main process resolved which authoritative encrypted record should be modified. If more than one starter Asset shared that timestamp, the compatibility resolver could fall back to a renderer index that no longer matched the authoritative record order.
+
+The fix removes that ambiguity instead of adding another index workaround:
+
+- the Asset editor captures the original selected Asset before any edits;
+- it sends a cloned submission without sorting or mutating the live renderer Asset collection first;
+- the original selected Asset snapshot is carried only as a target selector, not as authoritative persisted data;
+- the main process requires that original record to exactly match one authoritative encrypted Asset before applying the normalized edit;
+- if the target changed while the edit screen was open, the update fails closed and asks the user to reload instead of guessing by index;
+- older renderer compatibility remains available when no original-record selector is supplied.
+
+A Data Ownership regression reproduces the exact problematic shape: Ethereum and Bitcoin share one creation timestamp, the submitted renderer order differs from encrypted authoritative order, and Bitcoin's public address is edited. The test requires exactly one Bitcoin and one Ethereum to remain, with only Bitcoin receiving the new address.
+
+This also strengthens the Phase 3 rule: the renderer requests a change, while the main process decides which authoritative encrypted record is eligible to receive it.
+
 ## Test modernization
 
 Historical tests were updated where the old implementation requirement conflicts with the new product behavior:
 
-- the 2.6.19 window test now protects the established width and prevents height regression without freezing all future releases to exactly 750px;
-- the 2.5.12 dashboard test now protects `Last Backup` and the vertical Maintenance Snapshot structure;
-- the 2.6.10 Asset test now protects fixed Network/Contract identity while requiring user custom fields to remain visible/editable;
-- the 2.6.53 Phase 5 test now remains active on 2.6.53 and later 2.6.x candidates instead of treating 2.6.53 as the only valid version;
-- a dedicated `hotfix-2.6.54-tests.js` gate protects the complete requested behavior.
+- historical 2.6.x window-sizing gates now follow the current trusted main-process preferred-height policy instead of freezing later patches to exactly 750px;
+- historical Asset gates now protect fixed Network/Contract identity while requiring user custom fields to remain visible/editable;
+- dashboard/device-health tests protect current behavior without depending on one exact multiline source formatting style;
+- the 2.5.12 dashboard regression normalizes CRLF/LF line endings so the same behavior is tested on Windows, Linux, and macOS;
+- the 2.6.54 gate executes the real 2.6.53 Phase 5 contract rather than matching one internal variable name;
+- the 2.6.54 gate now also protects exact selected-Asset targeting and forbids renderer-side pre-save Asset sorting from returning;
+- Data Ownership now tests shared-timestamp starter Assets and requires stale edit targets to fail closed.
 
 These changes follow the stabilization rule: tests should enforce current behavior and security boundaries, not pressure production code to restore retired implementation constraints.
 
@@ -106,4 +127,4 @@ SafeLedger 2.6.54 does not weaken or replace:
 
 ## Promotion gate
 
-**Do not merge this candidate to `master` yet.** Promotion requires the complete Windows/Linux/macOS CI matrix to pass and hands-on testing of the packaged 2.6.54 candidate, especially QR visibility, Change Password validation, Vault Overview layout, Profile custom fields, Asset custom fields, and the taller default window.
+**Do not merge this candidate to `master` yet.** Promotion requires the complete Windows/Linux/macOS CI matrix to pass and hands-on testing of the packaged 2.6.54 candidate, especially the selected-Asset public-address update, QR visibility, Change Password validation, Vault Overview layout, Profile custom fields, Asset custom fields, and the taller default window.
