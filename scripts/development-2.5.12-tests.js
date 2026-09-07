@@ -9,7 +9,6 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 const dashboard = read('src/main/dashboard-ui.js');
 const summarySource = read('src/main/dashboard-summary.js');
-const rowUi = read('src/main/dashboard-row-ui.js');
 const renderer = read('src/main/renderer.js');
 const security = read('src/main/security-ui.js');
 const drill = read('src/main/recovery-drill-ui.js');
@@ -27,13 +26,19 @@ function testDashboardNavigationAndInsights() {
   assert(dashboard.includes('profileIndex: Number(item.profileIndex)'));
   assert(renderer.includes('let profileIndex = Number(target.profileIndex);'));
   assert(renderer.includes("target.source === 'dashboard'"));
-  assert(rowUi.includes("row.setAttribute('role', 'button')"));
+  assert(dashboard.includes("row.setAttribute('role', 'button');"));
+  assert(dashboard.includes("row.addEventListener('click', () => openWallet(item));"));
+  assert(dashboard.includes("event.key !== 'Enter' && event.key !== ' '"));
   assert(dashboard.includes("const badge = document.createElement('span');"));
   assert(!dashboard.includes('dashboard-status-action'));
   assert(dashboard.includes('Click a vault item below to open it and resolve the recovery gaps.'));
   assert(dashboard.includes('Click a recently verified vault item below to open it.'));
   assert(dashboard.includes("appendWalletList(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true, true)"),
     'Recently Verified rows should use the same direct row navigation as Recovery Needs Attention.');
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/dashboard-row-ui.js')), false,
+    'The old post-render row-forwarding helper must stay retired.');
+  assert(!dashboard.includes('MutationObserver') && !dashboard.includes('.click()'),
+    'Vault Overview navigation must remain correct on first render without synthetic forwarding.');
 
   assert(dashboard.includes("makeSection('Maintenance Snapshot'"));
   assert(dashboard.includes("'Stale information'"));
@@ -131,4 +136,4 @@ testDashboardNavigationAndInsights();
 testCopyAndQrArtwork();
 testRecoveryDrillReminderAndContrast();
 testExchangeAndWebsiteVaultItems();
-console.log('PASS SafeLedger 2.5.12 Vault Overview navigation, maintenance insight, revised copy/QR artwork, recovery drill clarity, and directly rendered exchange/service Vault Items.');
+console.log('PASS SafeLedger 2.5.12 directly rendered Vault Overview navigation, maintenance insight, revised copy/QR artwork, recovery drill clarity, and directly rendered exchange/service Vault Items.');
