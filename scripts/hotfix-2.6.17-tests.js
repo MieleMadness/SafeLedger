@@ -78,16 +78,22 @@ assert(!windowSizingSource.includes('window.resizeTo') && !windowSizingSource.in
 const windowSizing = require('../src/main/window-sizing-main.js');
 assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1920, height: 1080 }), {
   width: windowSizing.PREFERRED_WIDTH,
-  height: 750
+  height: windowSizing.PREFERRED_HEIGHT
 });
 assert(windowSizing.PREFERRED_WIDTH >= 1200,
   'Preferred width should remain large enough for the four-column desktop layout.');
+assert(windowSizing.PREFERRED_HEIGHT >= 750,
+  'Later patches may add vertical workspace, but trusted startup sizing must not shrink below the established 750px baseline.');
 assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1100, height: 700 }), { width: 1100, height: 700 });
 let setSize = null;
 assert.strictEqual(windowSizing.applyPreferredWindowSize({
   getBounds: () => ({ width: 1200, height: 750 }),
   setSize(width, height, animate) { setSize = { width, height, animate }; }
 }, { width: 1920, height: 1080 }), true);
-assert.deepStrictEqual(setSize, { width: windowSizing.PREFERRED_WIDTH, height: 750, animate: false });
+assert.deepStrictEqual(setSize, {
+  width: windowSizing.PREFERRED_WIDTH,
+  height: windowSizing.PREFERRED_HEIGHT,
+  animate: false
+});
 
 console.log(`PASS SafeLedger ${pkg.version} keeps compact change/error notices and trusted-bootstrap main-process window sizing.`);
