@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 jobs:
   build-linux:
@@ -56,18 +58,43 @@ jobs:
       - name: Build AppImage
         run: npm run dist:linux
 
-      - name: Stage AppImage, checksum, SBOM, and manifest
+      - name: Stage clean download and verification files
+        id: stage
         run: |
-          mkdir -p release/linux
+          mkdir -p release/linux/app release/linux/verification
           ARTIFACT=$(find dist -maxdepth 1 -type f -name 'SafeLedger-*-x86_64.AppImage' | head -n 1)
           test -n "$ARTIFACT"
-          cp "$ARTIFACT" release/linux/
-          STAGED="release/linux/$(basename "$ARTIFACT")"
-          node scripts/generate-release-trust.js "$STAGED" release/linux linux x64 "${{ github.event.pull_request.head.sha || github.sha }}"
+          STAGED="release/linux/app/$(basename "$ARTIFACT")"
+          cp "$ARTIFACT" "$STAGED"
+          node scripts/generate-release-trust.js "$STAGED" release/linux/verification linux x64 "${{ github.sha }}"
+          SBOM=$(find release/linux/verification -maxdepth 1 -type f -name '*-SBOM.cdx.json' | head -n 1)
+          test -n "$SBOM"
+          echo "artifact=$STAGED" >> "$GITHUB_OUTPUT"
+          echo "sbom=$SBOM" >> "$GITHUB_OUTPUT"
 
-      - name: Upload verified AppImage bundle
+      - name: Attest Linux build provenance
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.stage.outputs.artifact }}
+
+      - name: Attest Linux SBOM
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.stage.outputs.artifact }}
+          sbom-path: ${{ steps.stage.outputs.sbom }}
+
+      - name: Upload clean AppImage
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: SafeLedger-Linux-AppImage
-          path: release/linux/*
+          path: release/linux/app/*
+          if-no-files-found: error
+
+      - name: Upload Linux verification files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: SafeLedger-Linux-Verification
+          path: release/linux/verification/*
           if-no-files-found: error
