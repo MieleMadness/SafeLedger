@@ -37,17 +37,20 @@ assert(editFormUi.includes('if (options.resize) input.style.resize = options.res
 assert(walletMetadata.includes("resize: 'vertical'"),
   'Recovery Instructions should remain vertically resizable without horizontal overflow.');
 
-assert(customFieldsUi.includes('function createFixedFieldsEditor(grid, initialFields, fixedFields)'),
-  'Asset Network and Contract address should use a simple fixed-field renderer.');
-assert(customFieldsUi.includes('if (fixedFields.length) return createFixedFieldsEditor(grid, initialFields, fixedFields);'),
-  'Fixed Asset identity fields must bypass the generic Additional Fields editor.');
-assert(customFieldsUi.includes("field.className = 'form-group edit-info-grid-field asset-identity-field';"),
-  'Network and Contract address should visually follow ordinary Asset form fields.');
-assert(customFieldsUi.includes('result.push(field);'),
-  'Legacy additional Asset data must stay preserved even when it is no longer exposed in the simplified editor.');
 assert(record.includes("Object.freeze({ label: 'Network', type: 'text' })") &&
   record.includes("Object.freeze({ label: 'Contract address', type: 'text' })"),
   'Multichain identity must retain Network and Contract address without changing the vault schema.');
+assert(record.includes('const customFieldEditor = customFieldsUi.createEditor(') &&
+  record.includes('for (const identityField of ASSET_IDENTITY_FIELDS) customFieldEditor.lockFixedField(identityField);'),
+  'The canonical Asset editor must expose user custom fields while locking Network and Contract address directly.');
+assert(record.includes('rec.customFields = customFieldEditor.getFields();'),
+  'Asset saves must persist the complete normalized custom-field list, including user-defined fields.');
+assert(customFieldsUi.includes('function lockFixedField(field = {})') &&
+  customFieldsUi.includes("rowState.row.dataset.assetIdentityField = normalized.label;") &&
+  customFieldsUi.includes("add.innerHTML = '<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add custom field';"),
+  'The shared custom-field editor must protect identity controls while keeping Add custom field available.');
+assert(!record.includes('fixedFields: ASSET_IDENTITY_FIELDS'),
+  'Asset rendering must not return to the retired fixed-only editor that hid user custom fields.');
 assert(record.includes('displayPreferences.genericAssetFallback(symbol, maxLength)'),
   'Unknown Asset artwork must be selected directly by the Asset renderer.');
 assert(presets.includes("{network:'Polygon',contractAddress:"),
@@ -84,4 +87,4 @@ assert.strictEqual(fs.existsSync(path.join(root, 'src/main/shitcoin-mode-ui.js')
 assert(priorGate.includes('parts[2] >= 22'),
   'The approved 2.6.22 deletion/accessibility gate must remain active on later 2.6.x candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.23 dropdown, Recovery Instructions, Asset identity, and directly rendered Shit Coin Mode refinements active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.23 dropdown, Recovery Instructions, editable protected Asset identity/custom fields, and directly rendered Shit Coin Mode refinements active.`);
