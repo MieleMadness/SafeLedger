@@ -61,8 +61,10 @@ for (const phrase of [
 }
 assert(dashboardSource.includes("makeStat('Vault Items', vaultItems)"),
   'Vault Overview inventory must create the Vault Items stat directly.');
-assert(dashboardSource.includes('Click a vault item below to open it and resolve the recovery gaps.'),
+assert(dashboardSource.includes('Click a Vault Item to resolve them.'),
   'Vault Overview recovery actions must use Vault Item terminology directly.');
+assert(dashboardSource.includes("list.className = 'dashboard-attention-gaps';"),
+  'Recovery Needs Attention must expose recovery gaps directly rather than relying on a separate scorecard section.');
 
 const groupSource = read('src/main/group.js');
 for (const phrase of [
@@ -79,4 +81,4 @@ assert(globalSearchSource.includes('Search Profiles, Vault Items, and Assets wit
 assert(globalSearchSource.includes("return type === 'wallet' ? 'VAULT ITEM'"),
   'Global Search must display internal wallet results as Vault Items directly.');
 
-console.log('PASS SafeLedger 2.5.15+ shared button aesthetics, directly rendered Vault Item terminology, and direct Recovery Intelligence dashboard ownership.');
+console.log('PASS SafeLedger 2.5.15+ shared button aesthetics, directly rendered Vault Item terminology, consolidated Recovery Needs Attention gaps, and direct Recovery Intelligence dashboard ownership.');
