@@ -11,6 +11,7 @@ const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const customFields = require('./custom-fields');
 const customFieldsUi = require('./custom-fields-ui');
+const duplicateAsset = require('./duplicate-asset');
 const emptyState = require('./empty-state-ui');
 const displayPreferences = require('./display-preferences');
 
@@ -124,22 +125,14 @@ const renderRecords = (params) => {
   recordArea.innerHTML = '';
 
   if (!params.vaultData || params.vaultData.groupSelected == null) {
-    emptyState.renderColumn(recordArea, {
-      icon: 'fa-circle-o',
-      title: 'Select a wallet',
-      text: 'Assets appear after a Wallet is selected.'
-    });
+    emptyState.renderColumn(recordArea, { icon: 'fa-circle-o', title: 'Select a wallet', text: 'Assets appear after a Wallet is selected.' });
     return;
   }
 
   const wallet = params.vaultData.groups[params.vaultData.groupSelected];
   const records = wallet && Array.isArray(wallet.records) ? wallet.records : [];
   if (!records.length) {
-    emptyState.renderColumn(recordArea, {
-      icon: 'fa-circle-o',
-      title: 'No assets yet',
-      text: 'Add an Asset to document addresses, keys, and recovery details.'
-    });
+    emptyState.renderColumn(recordArea, { icon: 'fa-circle-o', title: 'No assets yet', text: 'Add an Asset to document addresses, keys, and recovery details.' });
     return;
   }
 
@@ -195,11 +188,7 @@ const renderRecords = (params) => {
   }
 
   if (!visibleCount) {
-    emptyState.renderColumn(recordArea, {
-      icon: 'fa-search',
-      title: 'No matching assets',
-      text: 'Try a different asset search term.'
-    });
+    emptyState.renderColumn(recordArea, { icon: 'fa-search', title: 'No matching assets', text: 'Try a different asset search term.' });
     return;
   }
   recordArea.appendChild(ul);
@@ -217,42 +206,19 @@ const createEditRecord = (params) => {
   area.appendChild(document.createElement('hr'));
 
   const { form, grid } = editFormUi.createForm(area);
-  const inputName = editFormUi.addTextInput(grid, {
-    id: 'inputName', label: 'Asset', value: params.record && params.record.name, maxLength: 25
-  });
-  const inputSymbol = editFormUi.addTextInput(grid, {
-    id: 'inputSymbol', label: 'Symbol', value: params.record && params.record.symbol, maxLength: 30
-  });
-  const inputPublicAddress = editFormUi.addTextInput(grid, {
-    id: 'inputPublicAddress', label: 'Public address', value: params.record && params.record.publicAddress
-  });
-  const inputPrivateAddress = editFormUi.addTextInput(grid, {
-    id: 'inputPrivateAddress', label: 'Private key', value: params.record && params.record.privateAddress,
-    sensitive: true, revealLabel: 'private key'
-  });
-  const inputTags = editFormUi.addTextInput(grid, {
-    id: 'inputTags', label: 'Tags (comma separated)', value: params.record && params.record.tags, maxLength: 250
-  });
-  const inputBalance = editFormUi.addTextInput(grid, {
-    id: 'inputManualBalance', label: 'Balance', value: params.record && params.record.manualBalance,
-    maxLength: 100, sensitive: true, revealLabel: 'balance'
-  });
-  const inputNotes = editFormUi.addTextarea(grid, {
-    id: 'inputNotes', label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record),
-    rows: 4, maxLength: 500, className: 'detail-notes-input', full: true
-  });
-  const customFieldEditor = customFieldsUi.createEditor(grid, params.record && params.record.customFields, {
-    title: ASSET_CUSTOM_FIELDS_TITLE,
-    note: ASSET_CUSTOM_FIELDS_NOTE
-  });
+  const inputName = editFormUi.addTextInput(grid, { id: 'inputName', label: 'Asset', value: params.record && params.record.name, maxLength: 25 });
+  const inputSymbol = editFormUi.addTextInput(grid, { id: 'inputSymbol', label: 'Symbol', value: params.record && params.record.symbol, maxLength: 30 });
+  const inputPublicAddress = editFormUi.addTextInput(grid, { id: 'inputPublicAddress', label: 'Public address', value: params.record && params.record.publicAddress });
+  const inputPrivateAddress = editFormUi.addTextInput(grid, { id: 'inputPrivateAddress', label: 'Private key', value: params.record && params.record.privateAddress, sensitive: true, revealLabel: 'private key' });
+  const inputTags = editFormUi.addTextInput(grid, { id: 'inputTags', label: 'Tags (comma separated)', value: params.record && params.record.tags, maxLength: 250 });
+  const inputBalance = editFormUi.addTextInput(grid, { id: 'inputManualBalance', label: 'Balance', value: params.record && params.record.manualBalance, maxLength: 100, sensitive: true, revealLabel: 'balance' });
+  const inputNotes = editFormUi.addTextarea(grid, { id: 'inputNotes', label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record), rows: 4, maxLength: 500, className: 'detail-notes-input', full: true });
+  const customFieldEditor = customFieldsUi.createEditor(grid, params.record && params.record.customFields, { title: ASSET_CUSTOM_FIELDS_TITLE, note: ASSET_CUSTOM_FIELDS_NOTE });
   for (const identityField of ASSET_IDENTITY_FIELDS) customFieldEditor.lockFixedField(identityField);
 
   const saveRecord = (button) => {
     if (params.saving.state) return alert('Please wait for processing to complete');
-    if (!inputName.value) {
-      if (button) button.disabled = false;
-      return;
-    }
+    if (!inputName.value) { if (button) button.disabled = false; return; }
     if (button) button.disabled = true;
 
     const submittedVaultData = cloneValue(params.vaultData);
@@ -276,12 +242,24 @@ const createEditRecord = (params) => {
     rec.customFields = customFieldEditor.getFields();
     if (originalRecord) rec.modified = Date();
 
+    let recordIndex = -1;
     if (originalRecord) {
-      const recordIndex = exactRecordIndex(records, originalRecord, params.vaultData.recordSelected);
+      recordIndex = exactRecordIndex(records, originalRecord, params.vaultData.recordSelected);
       if (recordIndex < 0) {
         if (button) button.disabled = false;
         return alert('The selected Asset changed or is no longer available. Reload the Vault Item and try again.');
       }
+    }
+
+    const identityChanged = !originalRecord || !duplicateAsset.sameIdentity(originalRecord, rec);
+    const duplicateWarning = identityChanged ? duplicateAsset.warning(records, rec, recordIndex) : null;
+    const duplicateConfirmed = !!duplicateWarning;
+    if (duplicateWarning && !confirm(duplicateWarning.message)) {
+      if (button) button.disabled = false;
+      return;
+    }
+
+    if (originalRecord) {
       records[recordIndex] = rec;
       submittedVaultData.recordSelected = recordIndex;
     } else {
@@ -294,30 +272,15 @@ const createEditRecord = (params) => {
     ipc.send('process-record', {
       action: originalRecord ? 'modify' : 'create',
       vaultData: submittedVaultData,
-      originalRecord
+      originalRecord,
+      duplicateConfirmed
     });
   };
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    saveRecord(null);
-  });
+  form.addEventListener('submit', (e) => { e.preventDefault(); saveRecord(null); });
   const actions = [];
-  if (params.record) {
-    actions.push({
-      icon: 'fa-times',
-      title: 'Cancel edit asset',
-      className: 'detail-action-cancel',
-      onClick: () => renderRecordDetail(params)
-    });
-  } else if (typeof params.onCancel === 'function') {
-    actions.push({
-      icon: 'fa-times',
-      title: 'Cancel add asset',
-      className: 'detail-action-cancel',
-      onClick: params.onCancel
-    });
-  }
+  if (params.record) actions.push({ icon: 'fa-times', title: 'Cancel edit asset', className: 'detail-action-cancel', onClick: () => renderRecordDetail(params) });
+  else if (typeof params.onCancel === 'function') actions.push({ icon: 'fa-times', title: 'Cancel add asset', className: 'detail-action-cancel', onClick: params.onCancel });
   actions.push({ icon: 'fa-save', title: 'Save asset', className: 'detail-action-save', onClick: (_event, button) => saveRecord(button) });
   detailActions.set(actions);
 };
@@ -338,7 +301,7 @@ function persistRecordUpdate(params, updates, button) {
   params.saving.state = true;
   if (button) button.disabled = true;
   statusMgr.loadStatus();
-  ipc.send('process-record', { action: 'modify', vaultData: submittedVaultData, originalRecord });
+  ipc.send('process-record', { action: 'modify', vaultData: submittedVaultData, originalRecord, duplicateConfirmed: false });
 }
 
 exports.showRecordDetail = (params) => renderRecordDetail(params);
@@ -365,65 +328,32 @@ const renderRecordDetail = (params) => {
   addLine('Symbol', params.record.symbol);
   addLine('Tags', params.record.tags);
   if (String(params.record.manualBalance || '').trim()) {
-    securityUi.appendSensitiveField(area, 'Balance', params.record.manualBalance, {
-      allowQr: false,
-      meta: params.record.balanceUpdated ? {
-        label: 'Balance updated',
-        value: formatLocalDate(params.record.balanceUpdated)
-      } : null
-    });
+    securityUi.appendSensitiveField(area, 'Balance', params.record.manualBalance, { allowQr: false, meta: params.record.balanceUpdated ? { label: 'Balance updated', value: formatLocalDate(params.record.balanceUpdated) } : null });
   }
 
   securityUi.appendPublicAddressField(area, params.record.publicAddress || '', params.record.symbol || '');
   if (!params.record.publicAddress) {
     const placeholder = area.querySelector('.public-address-field .public-address-value');
-    if (placeholder) {
-      placeholder.textContent = 'Use edit button to update asset.';
-      placeholder.classList.add('public-address-placeholder');
-    }
+    if (placeholder) { placeholder.textContent = 'Use edit button to update asset.'; placeholder.classList.add('public-address-placeholder'); }
   }
-  if (String(params.record.privateAddress || '').trim()) {
-    securityUi.appendSensitiveField(area, 'Private key', params.record.privateAddress);
-  }
+  if (String(params.record.privateAddress || '').trim()) securityUi.appendSensitiveField(area, 'Private key', params.record.privateAddress);
   customFieldsUi.appendDetail(area, params.record.customFields, addLine);
 
   const notesWrap = document.createElement('div');
   notesWrap.className = 'detail-notes-section';
-  const notesLabel = document.createElement('b');
-  notesLabel.textContent = 'Notes:';
-  notesWrap.appendChild(notesLabel);
-  const notesValue = document.createElement('div');
-  notesValue.className = 'outData detail-notes-value';
-  notesValue.textContent = getUserCoinNotes(params.vaultData, params.record);
-  notesWrap.appendChild(notesValue);
-  area.appendChild(notesWrap);
+  const notesLabel = document.createElement('b'); notesLabel.textContent = 'Notes:'; notesWrap.appendChild(notesLabel);
+  const notesValue = document.createElement('div'); notesValue.className = 'outData detail-notes-value'; notesValue.textContent = getUserCoinNotes(params.vaultData, params.record); notesWrap.appendChild(notesValue); area.appendChild(notesWrap);
 
   addLine('Created', params.record.created, formatLocalDate);
   addLine('Modified', params.record.modified, formatLocalDate);
 
   const printIncludesSensitive = !!String(params.record.privateAddress || '').trim() || !!String(params.record.manualBalance || '').trim() || customFields.hasSensitive(params.record.customFields);
   detailActions.set([
-    {
-      icon: params.record.pinned === true ? 'fa-star' : 'fa-star-o',
-      title: params.record.pinned === true ? 'Unpin asset' : 'Pin asset',
-      className: 'detail-action-pin',
-      onClick: (_event, button) => persistRecordUpdate(params, { pinned: params.record.pinned !== true }, button)
-    },
+    { icon: params.record.pinned === true ? 'fa-star' : 'fa-star-o', title: params.record.pinned === true ? 'Unpin asset' : 'Pin asset', className: 'detail-action-pin', onClick: (_event, button) => persistRecordUpdate(params, { pinned: params.record.pinned !== true }, button) },
     { icon: 'fa-pencil', title: 'Edit asset', onClick: () => createEditRecord(params) },
-    {
-      icon: 'fa-print', title: 'Print asset sheet', className: 'detail-action-print',
-      onClick: () => securityUi.printRecoverySheet(`${params.record.name || 'Asset'} Recovery Sheet`, [
-        { label: 'Asset', value: params.record.name },
-        { label: 'Symbol', value: params.record.symbol },
-        { label: 'Tags', value: params.record.tags },
-        { label: 'Public address', value: params.record.publicAddress },
-        { label: 'Private key', value: params.record.privateAddress },
-        { label: 'Balance', value: params.record.manualBalance },
-        { label: 'Balance updated', value: params.record.balanceUpdated ? formatLocalDate(params.record.balanceUpdated) : '' },
-        ...customFields.printFields(params.record.customFields),
-        { label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record) }
-      ], printIncludesSensitive)
-    },
+    { icon: 'fa-print', title: 'Print asset sheet', className: 'detail-action-print', onClick: () => securityUi.printRecoverySheet(`${params.record.name || 'Asset'} Recovery Sheet`, [
+      { label: 'Asset', value: params.record.name }, { label: 'Symbol', value: params.record.symbol }, { label: 'Tags', value: params.record.tags }, { label: 'Public address', value: params.record.publicAddress }, { label: 'Private key', value: params.record.privateAddress }, { label: 'Balance', value: params.record.manualBalance }, { label: 'Balance updated', value: params.record.balanceUpdated ? formatLocalDate(params.record.balanceUpdated) : '' }, ...customFields.printFields(params.record.customFields), { label: 'Notes', value: getUserCoinNotes(params.vaultData, params.record) }
+    ], printIncludesSensitive) },
     { icon: 'fa-trash', title: 'Delete asset', className: 'detail-action-delete', onClick: () => confirmDelete(params) }
   ]);
 };
@@ -431,37 +361,20 @@ const renderRecordDetail = (params) => {
 const confirmDelete = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
-  const header = document.createElement('h1');
-  header.textContent = `Confirm Delete of asset: ${params.record.name}`;
-  area.appendChild(header);
-  area.appendChild(document.createElement('hr'));
-  const note = document.createElement('p');
-  note.textContent = 'Use the red trash icon below to permanently delete this asset from the wallet.';
-  area.appendChild(note);
+  const header = document.createElement('h1'); header.textContent = `Confirm Delete of asset: ${params.record.name}`; area.appendChild(header); area.appendChild(document.createElement('hr'));
+  const note = document.createElement('p'); note.textContent = 'Use the red trash icon below to permanently delete this asset from the wallet.'; area.appendChild(note);
   detailActions.set([
     { icon: 'fa-times', title: 'Cancel delete asset', className: 'detail-action-cancel', onClick: () => renderRecordDetail(params) },
-    {
-      icon: 'fa-trash', title: 'Confirm delete asset', className: 'detail-action-delete',
-      onClick: () => {
-        params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected, 1);
-        params.vaultData.recordSelected = null;
-        params.saving.state = true;
-        statusMgr.loadStatus();
-        ipc.send('process-record', { action: 'delete', vaultData: params.vaultData });
-        area.innerHTML = '';
-        detailActions.clear();
-      }
-    }
+    { icon: 'fa-trash', title: 'Confirm delete asset', className: 'detail-action-delete', onClick: () => {
+      params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected, 1);
+      params.vaultData.recordSelected = null;
+      params.saving.state = true;
+      statusMgr.loadStatus();
+      ipc.send('process-record', { action: 'delete', vaultData: params.vaultData });
+      area.innerHTML = '';
+      detailActions.clear();
+    } }
   ]);
 };
 
-exports._test = {
-  assetSort,
-  exactRecordIndex,
-  getUserCoinNotes,
-  formatLocalDate,
-  applyGenericAssetFallback,
-  ASSET_IDENTITY_FIELDS,
-  ASSET_CUSTOM_FIELDS_TITLE,
-  ASSET_CUSTOM_FIELDS_NOTE
-};
+exports._test = { assetSort, exactRecordIndex, getUserCoinNotes, formatLocalDate, applyGenericAssetFallback, ASSET_IDENTITY_FIELDS, ASSET_CUSTOM_FIELDS_TITLE, ASSET_CUSTOM_FIELDS_NOTE };
