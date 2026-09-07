@@ -22,13 +22,16 @@ function testTopShortcutOrder() {
 function testSelfDestructMovedToSettings() {
   const main = read('src/main/main.js');
   const preload = read('src/main/preload.js');
-  const settings = read('src/main/self-destruct-settings-ui.js');
+  const settings = read('src/main/settings-ui.js');
   assert(!main.includes("label: 'Self-Destruct Protection'"), 'self-destruct must not remain in the application menu');
   assert(main.includes("ipc.handle('set-self-destruct-protection'"));
   assert(preload.includes("setSelfDestructProtection: (enabled) => invoke('set-self-destruct-protection', enabled === true)"));
-  assert(preload.includes('function invoke(channel, ...args)'), 'Self-Destruct settings must remain behind the normalized preload invoke boundary.');
-  assert(settings.includes("heading.textContent = 'Self-Destruct Protection'"));
+  assert(preload.includes('function invoke(channel, ...args)'));
+  assert(settings.includes("const section = makeSection('Self-Destruct Protection');"));
   assert(settings.includes('Keep a verified backup on separate storage before enabling it.'));
+  assert(settings.includes('window.safeLedgerApi.setSelfDestructProtection(desired)'));
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/self-destruct-settings-ui.js')), false,
+    'The old delayed Self-Destruct settings injector must stay retired.');
 }
 
 function testRecoveryDrillCanCompleteAfterChecklist() {
@@ -41,14 +44,11 @@ function testRecoveryDrillCanCompleteAfterChecklist() {
 
 function testDashboardNavigationTargets() {
   const summary = dashboardSummary.summarize([{
-    profileName: 'Primary Profile',
-    profileFile: 'zvault-7.json',
-    vaultData: { groups: [{ name: 'Test Wallet', records: [] }] }
+    profileName: 'Primary Profile', profileFile: 'zvault-7.json', vaultData: { groups: [{ name: 'Test Wallet', records: [] }] }
   }], { now: Date.now() });
   assert.strictEqual(summary.needsAttention.length, 1);
   assert.strictEqual(summary.needsAttention[0].profileFile, 'zvault-7.json');
   assert.strictEqual(summary.needsAttention[0].walletIndex, 0);
-
   const dashboard = read('src/main/dashboard-ui.js');
   const css = read('src/main/css/ui-dock-refinement.css');
   assert(dashboard.includes("type: 'wallet'"));
@@ -74,4 +74,4 @@ testSelfDestructMovedToSettings();
 testRecoveryDrillCanCompleteAfterChecklist();
 testDashboardNavigationTargets();
 testVersionChecksAreNotHardCoded();
-console.log('PASS SafeLedger navigation, Settings self-destruct, recovery drill completion, dashboard routing, and patch-version continuity checks.');
+console.log('PASS SafeLedger navigation, direct Settings Self-Destruct, recovery drill completion, dashboard routing, and patch-version continuity checks.');
