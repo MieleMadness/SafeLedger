@@ -21,7 +21,7 @@ const ASSET_IDENTITY_FIELDS = Object.freeze([
   Object.freeze({ label: 'Contract address', type: 'text' })
 ]);
 const ASSET_CUSTOM_FIELDS_TITLE = 'Network & Additional Fields';
-const ASSET_CUSTOM_FIELDS_NOTE = 'Network and Contract address are standard SafeLedger asset identity fields. Add other optional fields below as needed.';
+const ASSET_CUSTOM_FIELDS_NOTE = 'Network and Contract address stay as standard Asset identity fields. Add, edit, or remove your own optional custom fields below them.';
 
 const getUserCoinNotes = (vaultData, rec) => {
   const wallet = vaultData && vaultData.groupSelected != null ? vaultData.groups[vaultData.groupSelected] : null;
@@ -217,9 +217,9 @@ const createEditRecord = (params) => {
   });
   const customFieldEditor = customFieldsUi.createEditor(grid, params.record && params.record.customFields, {
     title: ASSET_CUSTOM_FIELDS_TITLE,
-    note: ASSET_CUSTOM_FIELDS_NOTE,
-    fixedFields: ASSET_IDENTITY_FIELDS
+    note: ASSET_CUSTOM_FIELDS_NOTE
   });
+  for (const identityField of ASSET_IDENTITY_FIELDS) customFieldEditor.lockFixedField(identityField);
 
   const saveRecord = (button) => {
     if (params.saving.state) return alert('Please wait for processing to complete');
