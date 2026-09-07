@@ -29,12 +29,18 @@ function makeStat(label, value) {
   return card;
 }
 
-function makeSection(titleText, className = '') {
+function makeSection(titleText, className = '', helpText = '') {
   const section = document.createElement('section');
   section.className = `dashboard-section${className ? ` ${className}` : ''}`;
   const title = document.createElement('h2');
   title.textContent = titleText;
   section.appendChild(title);
+  if (helpText) {
+    const help = document.createElement('p');
+    help.className = 'dashboard-section-help';
+    help.textContent = helpText;
+    section.appendChild(help);
+  }
   return section;
 }
 
@@ -207,7 +213,7 @@ function vaultContentsLabel(counts = {}) {
   const exchanges = Number(counts.exchanges) || 0;
   const services = Number(counts.services) || 0;
   const total = wallets + exchanges + services;
-  if (!total) return 'Add a wallet, exchange account, or Web / Web3 service to begin building your vault inventory.';
+  if (!total) return 'Vault contents: Add a wallet, exchange account, or Web / Web3 service to begin building your vault inventory.';
 
   const parts = [];
   if (hardware) parts.push(quantity(hardware, 'hardware wallet'));
@@ -221,7 +227,7 @@ function vaultContentsLabel(counts = {}) {
 
 function renderInventory(area, summary) {
   const counts = summary.counts || {};
-  const section = makeSection('Vault Inventory', 'vault-inventory-section');
+  const section = makeSection('Vault Inventory', 'vault-inventory-section', vaultContentsLabel(counts));
   const stats = document.createElement('div');
   stats.className = 'dashboard-stats vault-inventory-stats';
   const vaultItems = Number(counts.wallets || 0) + Number(counts.exchanges || 0) + Number(counts.services || 0);
@@ -231,16 +237,15 @@ function renderInventory(area, summary) {
   stats.appendChild(makeStat('Services', counts.services || 0));
   stats.appendChild(makeStat('Assets', counts.assets || 0));
   section.appendChild(stats);
-
-  const meta = document.createElement('p');
-  meta.className = 'dashboard-inventory-meta';
-  meta.textContent = vaultContentsLabel(counts);
-  section.appendChild(meta);
   area.appendChild(section);
 }
 
 function renderRecoveryHealth(area, summary) {
-  const section = makeSection('Recovery Health', 'vault-recovery-section');
+  const section = makeSection(
+    'Recovery Health',
+    'vault-recovery-section',
+    'See how many Vault Items are recovery-ready, need a review, or still have incomplete recovery documentation.'
+  );
   const stats = document.createElement('div');
   stats.className = 'dashboard-stats recovery-health-stats';
   stats.appendChild(makeStat('Ready', summary.counts.ready));
@@ -250,55 +255,79 @@ function renderRecoveryHealth(area, summary) {
   area.appendChild(section);
 }
 
+function appendMaintenanceItem(list, titleText, lines) {
+  const item = document.createElement('li');
+  item.className = 'dashboard-maintenance-item';
+  const title = document.createElement('strong');
+  title.textContent = titleText;
+  item.appendChild(title);
+  const values = Array.isArray(lines) ? lines.filter(Boolean) : [lines].filter(Boolean);
+  if (values.length === 1) {
+    const text = document.createElement('span');
+    text.textContent = values[0];
+    item.appendChild(text);
+  } else if (values.length) {
+    const details = document.createElement('ul');
+    details.className = 'dashboard-maintenance-details';
+    for (const value of values) {
+      const detail = document.createElement('li');
+      detail.textContent = value;
+      details.appendChild(detail);
+    }
+    item.appendChild(details);
+  }
+  list.appendChild(item);
+}
+
 function renderMaintenanceSnapshot(area, summary, device = {}) {
-  const section = makeSection('Maintenance Snapshot', 'vault-maintenance-section');
-  const grid = document.createElement('div');
-  grid.className = 'dashboard-maintenance-grid';
+  const section = makeSection(
+    'Maintenance Snapshot',
+    'vault-maintenance-section',
+    'Review stale recovery information, documentation coverage, and the latest local backup activity.'
+  );
+  const list = document.createElement('ul');
+  list.className = 'dashboard-maintenance-list';
 
-  const stale = document.createElement('div');
-  stale.className = 'dashboard-maintenance-card';
-  const staleTitle = document.createElement('strong');
-  staleTitle.textContent = 'Stale information';
-  const staleText = document.createElement('span');
   const staleInfo = summary.stale || {};
-  staleText.textContent = staleInfo.count
-    ? `${staleInfo.count} vault item${staleInfo.count === 1 ? '' : 's'} ${staleInfo.neverVerified ? `(${staleInfo.neverVerified} never verified) ` : ''}need a verification review.`
-    : 'All vault items have been verified within the last 6 months.';
-  stale.appendChild(staleTitle);
-  stale.appendChild(staleText);
-  grid.appendChild(stale);
+  appendMaintenanceItem(
+    list,
+    'Stale information',
+    staleInfo.count
+      ? `${staleInfo.count} vault item${staleInfo.count === 1 ? '' : 's'} ${staleInfo.neverVerified ? `(${staleInfo.neverVerified} never verified) ` : ''}need a verification review.`
+      : 'All vault items have been verified within the last 6 months.'
+  );
 
-  const coverage = document.createElement('div');
-  coverage.className = 'dashboard-maintenance-card';
-  const coverageTitle = document.createElement('strong');
-  coverageTitle.textContent = 'Recovery coverage';
-  const coverageText = document.createElement('span');
   const rc = summary.recoveryCoverage || { total: 0, method: 0, location: 0, drills: 0 };
-  coverageText.textContent = rc.total
-    ? `${rc.method}/${rc.total} methods • ${rc.location}/${rc.total} locations • ${rc.drills}/${rc.total} recovery drills`
-    : 'No vault items are available for recovery coverage yet.';
-  coverage.appendChild(coverageTitle);
-  coverage.appendChild(coverageText);
-  grid.appendChild(coverage);
+  appendMaintenanceItem(
+    list,
+    'Recovery coverage',
+    rc.total
+      ? [
+          `${rc.method}/${rc.total} recovery methods documented`,
+          `${rc.location}/${rc.total} recovery locations documented`,
+          `${rc.drills}/${rc.total} recovery drills completed`
+        ]
+      : 'No vault items are available for recovery coverage yet.'
+  );
 
-  const dates = document.createElement('div');
-  dates.className = 'dashboard-maintenance-card';
-  const datesTitle = document.createElement('strong');
-  datesTitle.textContent = 'Last maintenance';
-  const datesText = document.createElement('span');
   const backupHealth = device.backupHealth || {};
   const activity = Array.isArray(device.activity) ? device.activity[0] : null;
-  datesText.textContent = `Backup: ${backupAgeLabel(backupHealth.backup)} • Verified backup: ${backupAgeLabel(backupHealth.verified)} • Vault activity: ${formatActivityTime(activity)}`;
-  dates.appendChild(datesTitle);
-  dates.appendChild(datesText);
-  grid.appendChild(dates);
+  appendMaintenanceItem(list, 'Last Backup', [
+    `Backup: ${backupAgeLabel(backupHealth.backup)}`,
+    `Verified backup: ${backupAgeLabel(backupHealth.verified)}`,
+    `Vault activity: ${formatActivityTime(activity)}`
+  ]);
 
-  section.appendChild(grid);
+  section.appendChild(list);
   area.appendChild(section);
 }
 
 function renderDeviceHealth(area, device = {}) {
-  const section = makeSection('Device & Backup Health', 'device-health-section');
+  const section = makeSection(
+    'Device & Backup Health',
+    'device-health-section',
+    'Check SafeLedgerData storage availability and encrypted-backup freshness. These checks stay local to this device.'
+  );
 
   const storage = device.storage;
   if (storage) {
@@ -437,6 +466,7 @@ exports._test = {
   openPortableStorageFolder,
   openWallet,
   appendWalletList,
+  appendMaintenanceItem,
   quantity,
   vaultContentsLabel
 };
