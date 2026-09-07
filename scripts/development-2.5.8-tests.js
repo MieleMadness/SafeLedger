@@ -74,7 +74,6 @@ function testIconBackedWalletPickerAndStandardSetup() {
 function testLoginAndSensitiveUiContract() {
   const password = read('src/main/password-controls.js');
   const security = read('src/main/security-ui.js');
-  const sensitive = read('src/main/sensitive-control-icons-ui.js');
   const css = read('src/main/css/ui-current.css');
   const index = read('src/main/index.html');
 
@@ -88,7 +87,7 @@ function testLoginAndSensitiveUiContract() {
 
   assert(/\.login-password-shell,\s*\.login-password-strength,\s*#loginSecurityControls/.test(css),
     'Login password, meter, and action row should share the compact width contract.');
-  assert(css.includes('width: 50% !important;'), 'Login password and meter should use half the detail width.');
+  assert(css.includes('width: 50% !important;'), 'Login password and meter should keep the historical fallback width before title-width sync is applied.');
   assert(css.includes('.form-control:focus,'));
   assert(css.includes('box-shadow: none !important;'));
   assert(css.includes('outline: 2px solid var(--sl-primary) !important;'),
@@ -96,33 +95,42 @@ function testLoginAndSensitiveUiContract() {
 
   assert(security.includes('control.innerHTML = eyeIcon.markup(hidden);'),
     'Editable sensitive fields should use the shared eye icon.');
-  assert(security.includes("stateIcon.className = details.open ? 'fa fa-minus' : 'fa fa-plus';"),
-    'View-mode sensitive rows should use plus/minus disclosure icons.');
-  assert(sensitive.includes("icon.className = 'sl-qr-icon'"),
-    'QR actions should use the simplified SafeLedger QR glyph.');
-  assert(css.includes('.sl-qr-icon-part-4'), 'The simplified QR glyph should have dedicated low-noise styling.');
+  assert(security.includes("stateIcon.className = open ? 'fa fa-minus' : 'fa fa-plus';"),
+    'View-mode sensitive rows should update plus/minus disclosure icons directly in their owner.');
+  assert(security.includes("details.addEventListener('toggle', () =>"),
+    'Sensitive disclosure state should update from the real details toggle event.');
+  assert(security.includes('button.innerHTML = qrIconMarkup();'),
+    'QR actions should render the SafeLedger QR glyph directly in the canonical security control owner.');
+  assert(security.includes('class="sl-qr-svg"'), 'The canonical QR action should use the current simplified local SVG.');
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/sensitive-control-icons-ui.js')), false,
+    'The old MutationObserver icon repair module must stay retired.');
+  assert(!security.includes('MutationObserver'),
+    'Sensitive-control correctness must not depend on post-render DOM observation.');
   assert(index.includes('./css/ui-current.css'), 'The consolidated current UI stylesheet must load in the app.');
 }
 
 function testSettingsWorkflowOrder() {
-  const source = read('src/main/settings-layout-ui.js');
-  const titles = [
-    'Appearance',
-    'Backup & Recovery',
-    'Device & Storage Security',
-    'Import SafeLedger 1.x Data',
-    'Brute Force Protection',
-    'Self-Destruct Protection',
-    'Password'
+  const source = read('src/main/settings-ui.js');
+  const calls = [
+    'renderAppearanceSection(area, params);',
+    'renderBackupSection(area);',
+    'renderDeviceSection(area, params);',
+    'renderLegacyImportSection(area);',
+    'renderBruteForceSection(area, params);',
+    'renderSelfDestructSection(area, params);',
+    'renderAssetDisplaySection(area, params);',
+    'renderPrivacySection(area, params);',
+    'renderPasswordSection(area);'
   ];
   let previous = -1;
-  for (const title of titles) {
-    const index = source.indexOf(`'${title}'`);
-    assert(index > previous, `${title} should appear in the requested Settings order.`);
+  for (const call of calls) {
+    const index = source.indexOf(call);
+    assert(index > previous, `${call} should remain in the canonical one-pass Settings order.`);
     previous = index;
   }
-  assert(source.includes("const ORDER = Object.freeze(["), 'Settings layout should keep one explicit workflow order.');
-  assert(source.includes("const password = byTitle.get('Password');"), 'Password section should remain the final insertion anchor.');
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/settings-layout-ui.js')), false,
+    'The old post-render Settings reorder module must stay retired.');
+  assert(!source.includes('MutationObserver'), 'Settings order must be correct on first render.');
 }
 
 function testResponsiveWalletGrid() {
@@ -145,4 +153,4 @@ testIconBackedWalletPickerAndStandardSetup();
 testLoginAndSensitiveUiContract();
 testSettingsWorkflowOrder();
 testResponsiveWalletGrid();
-console.log('PASS SafeLedger development login/sensitive controls, Settings order, local-artwork starter setup, and reviewed Chain Games service starter.');
+console.log('PASS SafeLedger development login/sensitive controls, canonical Settings order, local-artwork starter setup, and reviewed Chain Games service starter.');
