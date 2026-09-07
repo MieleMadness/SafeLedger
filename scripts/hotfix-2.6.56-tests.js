@@ -6,7 +6,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
-const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const pkg = JSON.parse(read('package.json'));
 
 assert.strictEqual(pkg.version, '2.6.56', 'This feature candidate must package as SafeLedger 2.6.56.');
@@ -83,7 +83,8 @@ assert(motion.includes('function signalSaveSuccess()'));
 assert(motion.includes('function dashboardEntrance(area)'));
 assert(motion.includes('function animateReadiness(circle, targetPercent)'));
 assert(actions.includes("const motion = require('./motion-ui');"));
-assert(actions.includes("if (action && action.className === 'detail-action-save') motion.rememberSave(button);"));
+assert(actions.includes("split(/\\s+/).includes('detail-action-save')") && actions.includes('motion.rememberSave(button);'),
+  'Any action carrying the detail-action-save class must register its button with the shared Save-success motion owner.');
 assert(columns.includes('function animateCollapsedState(state, collapsed)'));
 assert(columns.includes('duration: motion.DURATIONS.nav'));
 assert(security.includes('if (details.open) motion.reveal(content);'));
