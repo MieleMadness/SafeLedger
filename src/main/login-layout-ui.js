@@ -1,7 +1,5 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
-
 const LOGIN_TITLE = 'Welcome to SafeLedger';
 const WIDTH_TARGETS = Object.freeze([
   '.login-password-shell',
@@ -26,7 +24,6 @@ function syncLoginControlWidths() {
   const input = document.getElementById('masterCryptoInput');
   const area = document.getElementById('detailArea');
   if (!input || !area) return false;
-
   const header = area.querySelector('h1');
   const width = measureTitleText(header);
   if (!(width > 0)) return false;
@@ -42,24 +39,4 @@ function syncLoginControlWidths() {
   return updated >= 2;
 }
 
-function scheduleSync() {
-  if (typeof window === 'undefined') return;
-  window.setTimeout(syncLoginControlWidths, 0);
-  window.setTimeout(syncLoginControlWidths, 50);
-}
-
-ipc.on('result-init-system', scheduleSync);
-ipc.on('result', scheduleSync);
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', scheduleSync);
-  window.addEventListener('resize', scheduleSync);
-}
-
-exports._test = {
-  LOGIN_TITLE,
-  WIDTH_TARGETS,
-  measureTitleText,
-  syncLoginControlWidths,
-  scheduleSync
-};
+module.exports = { LOGIN_TITLE, WIDTH_TARGETS, measureTitleText, syncLoginControlWidths, _test: { measureTitleText, syncLoginControlWidths } };
