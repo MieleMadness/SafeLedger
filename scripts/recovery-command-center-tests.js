@@ -45,20 +45,24 @@ assert(timeline.some((item) => item.title === 'Recovery information verified'));
 
 const facts = commandCenter.buildSimulationFacts(entries);
 assert.deepStrictEqual(facts, {
-  profiles: 1,
-  vaultItems: 1,
-  assets: 1,
-  assetsWithPublicAddress: 1,
-  recoveryMethod: 1,
-  recoveryLocation: 1,
-  recoveryInstructions: 1,
-  beneficiary: 1,
-  separateLocations: 1,
-  deviceLocation: 1,
-  exchanges: 0,
-  exchangesWithRecoveryPlan: 0,
-  wallets: 1
+  profileCount: 1,
+  vaultItemCount: 1,
+  assetCount: 1,
+  addressDocumentedCount: 1,
+  recoveryMethodCount: 1,
+  recoveryLocationCount: 1,
+  recoveryInstructionCount: 1,
+  beneficiaryCount: 1,
+  separateLocationCount: 1,
+  deviceLocationCount: 1,
+  exchangeCount: 0,
+  exchangeRecoveryPlanCount: 0,
+  walletCount: 1
 });
+const factsJson = JSON.stringify(facts);
+for (const sensitiveFieldName of ['seedPhrase', 'password', 'privateAddress', 'recoveryLocation', 'publicAddress', 'backupPath']) {
+  assert(!factsJson.includes(`\"${sensitiveFieldName}\"`), `Simulation facts must not expose a raw sensitive-field key: ${sensitiveFieldName}`);
+}
 
 for (const scenario of simulator.SCENARIOS) {
   const result = simulator.simulate(scenario.id, facts, {
@@ -94,6 +98,10 @@ assert.strictEqual(summary.scorecards.length, 1);
 assert.strictEqual(summary.scorecards[0].walletName, 'Ledger');
 assert(Number.isInteger(summary.readinessPercent));
 assert(Array.isArray(summary.securityTimeline) && summary.securityTimeline.length > 0);
-assert.strictEqual(summary.simulationFacts.vaultItems, 1);
+assert.strictEqual(summary.simulationFacts.vaultItemCount, 1);
+const summaryJson = JSON.stringify(summary);
+for (const secret of ['timeline-must-never-show-this-secret', 'bc1q-timeline-private-metadata']) {
+  assert(!summaryJson.includes(secret), 'Dashboard summary must remain aggregate/metadata-only.');
+}
 
 console.log('PASS SafeLedger Recovery Command Center derives redacted timeline facts, explainable scenario results, scorecards, and network-aware duplicate identities locally.');
