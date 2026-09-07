@@ -13,6 +13,7 @@ const editFormUi = require('./edit-form-ui');
 const customFields = require('./custom-fields');
 const customFieldsUi = require('./custom-fields-ui');
 const emptyState = require('./empty-state-ui');
+const displayPreferences = require('./display-preferences');
 
 const normalize = (v) => String(v || '').trim().toLowerCase();
 const ASSET_IDENTITY_FIELDS = Object.freeze([
@@ -47,6 +48,15 @@ const formatLocalDate = (value) => {
   }
 };
 
+function applyGenericAssetFallback(node, symbol, maxLength) {
+  const fallback = displayPreferences.genericAssetFallback(symbol, maxLength);
+  node.textContent = fallback.text;
+  if (fallback.className) node.classList.add(fallback.className);
+  if (fallback.title) node.title = fallback.title;
+  if (fallback.ariaLabel) node.setAttribute('aria-label', fallback.ariaLabel);
+  return node;
+}
+
 const appendCoinHeader = (area, record) => {
   const header = document.createElement('div');
   header.className = 'coin-detail-header';
@@ -56,7 +66,7 @@ const appendCoinHeader = (area, record) => {
   else {
     const fallback = document.createElement('div');
     fallback.className = 'coin-brand-icon coin-brand-generic';
-    fallback.textContent = symbol ? symbol.slice(0, 3) : '•';
+    applyGenericAssetFallback(fallback, symbol, 3);
     header.appendChild(fallback);
   }
   const titleWrap = document.createElement('div');
@@ -140,7 +150,7 @@ const renderRecords = (params) => {
     else {
       const generic = document.createElement('span');
       generic.className = 'coin-list-generic-icon';
-      generic.textContent = String(coin.symbol || '').toUpperCase().slice(0, 2) || '•';
+      applyGenericAssetFallback(generic, coin.symbol, 2);
       row.appendChild(generic);
     }
     const text = document.createElement('span');
@@ -399,6 +409,7 @@ exports._test = {
   assetSort,
   getUserCoinNotes,
   formatLocalDate,
+  applyGenericAssetFallback,
   ASSET_IDENTITY_FIELDS,
   ASSET_CUSTOM_FIELDS_TITLE,
   ASSET_CUSTOM_FIELDS_NOTE
