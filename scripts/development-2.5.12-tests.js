@@ -32,10 +32,13 @@ function testDashboardNavigationAndInsights() {
   assert(dashboard.includes("event.key !== 'Enter' && event.key !== ' '"));
   assert(dashboard.includes("const badge = document.createElement('span');"));
   assert(!dashboard.includes('dashboard-status-action'));
-  assert(dashboard.includes('Click a vault item below to open it and resolve the recovery gaps.'));
-  assert(dashboard.includes('Click a recently verified vault item below to open it.'));
-  assert(dashboard.includes("appendWalletList(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true, true)"),
+  assert(dashboard.includes('Each item shows its readiness score and the most important recovery gaps.'),
+    'Recovery Needs Attention guidance should explain the consolidated readiness score/gaps.');
+  assert(dashboard.includes('Click a recently verified Vault Item below to open it.'));
+  assert(dashboard.includes("appendWalletList(recent, summary.recentlyVerified || [], 'No Vault Item recovery plans have been verified yet.', true, true)"),
     'Recently Verified rows should use the same direct row navigation as Recovery Needs Attention.');
+  assert(dashboard.includes("className = 'dashboard-attention-gaps'"),
+    'Recovery Needs Attention must retain the actionable recovery gaps formerly shown in separate scorecards.');
   assert.strictEqual(fs.existsSync(path.join(root, 'src/main/dashboard-row-ui.js')), false,
     'The old post-render row-forwarding helper must stay retired.');
   assert(!dashboard.includes('MutationObserver') && !dashboard.includes('.click()'),
@@ -75,6 +78,7 @@ function testDashboardNavigationAndInsights() {
   assert.strictEqual(result.recoveryCoverage.method, 2);
   assert.strictEqual(result.recoveryCoverage.location, 2);
   assert.strictEqual(result.needsAttention[0].profileIndex, 0);
+  assert(Array.isArray(result.needsAttention[0].actions));
 }
 
 function testCopyAndQrArtwork() {
@@ -84,22 +88,23 @@ function testCopyAndQrArtwork() {
   assert(security.includes('class="sl-qr-svg"'));
   assert(security.includes('button.innerHTML = qrIconMarkup();'));
   assert(!security.includes("makeIconButton('fa-qrcode'"), 'QR button should use centered local SVG artwork instead of an icon-font glyph.');
-  assert(!security.includes('sl-copy-arrow'), 'Copy button should no longer look like circular arrows.');
-  assert(!security.includes('sl-copy-plus'), 'Copy button should no longer contain the accidentally supplied plus sign.');
+  assert(!security.includes('sl-copy-arrow'));
+  assert(!security.includes('sl-copy-plus'));
   assert(css.includes('.sl-copy-sheet'));
   assert(css.includes('.qr-inline-button'));
   assert(css.includes('.sl-qr-svg'));
   assert(css.includes('.public-address-field .address-qr'));
   assert(css.includes('margin: 0 auto !important;'));
   assert(css.includes('.compact-qr-area .qr-caption'));
-  assert(css.includes('color: var(--sl-text-strong) !important;'), 'QR caption should use high-contrast theme text.');
+  assert(css.includes('color: var(--sl-text-strong) !important;'));
 }
 
 function testRecoveryDrillReminderAndContrast() {
   assert(drill.includes('Documentation reminder:'));
-  assert(drill.includes('Completing or verifying a drill records that you tested the process; it does not create the missing recovery documentation.'));
+  assert(drill.includes('it does not create the missing recovery documentation.'));
   assert(drill.includes('documentationReminder'));
   assert(drill.includes('Edit Vault Item'));
+  assert(drill.includes('Individual checklist answers are not stored.'));
   assert(css.includes('.recovery-drill-step-title'));
   assert(css.includes('color: var(--sl-text-strong) !important;'));
   assert(css.includes('.recovery-drill-step-text'));
@@ -107,41 +112,30 @@ function testRecoveryDrillReminderAndContrast() {
 }
 
 function testExchangeAndWebsiteVaultItems() {
-  assert(groupSource.includes("require('./vault-item-presentation')"),
-    'The canonical group renderer must own Vault Item presentation behavior.');
-  assert(!entry.includes("require('./vault-item-ui.js')"),
-    'The legacy Vault Item observer must not return to the renderer bundle.');
+  assert(groupSource.includes("require('./vault-item-presentation')"));
+  assert(!entry.includes("require('./vault-item-ui.js')"));
   assert(vaultItemPresentationSource.includes("const EXCHANGE_CATEGORY = 'Exchange Account';"));
   assert(vaultItemPresentationSource.includes("const LEGACY_SERVICE_CATEGORY = 'Web3 / Website Account';"));
   assert(vaultItemPresentationSource.includes("['2FA recovery / backup codes', 'sensitive']"));
   assert(vaultItemPresentationSource.includes('never auto-fills a login URL'));
-  assert(index.includes('id="groupSearch"'), 'The Vault search control must remain present.');
-  assert(index.includes('placeholder="Search vaults"'), 'The Vault search field should use the current concise wording without trailing punctuation.');
-  assert(!index.includes('placeholder="Search vault items'), 'The retired verbose Vault search wording must stay removed.');
-  assert(!index.includes('placeholder="Search vaults..."'), 'Vault search should not restore the retired ellipsis.');
-  assert(index.includes('id="addGroup"'), 'The Vault add action must remain present even if its user-facing label evolves.');
+  assert(index.includes('id="groupSearch"'));
+  assert(index.includes('placeholder="Search vaults"'));
+  assert(!index.includes('placeholder="Search vault items'));
+  assert(!index.includes('placeholder="Search vaults..."'));
+  assert(index.includes('id="addGroup"'));
   assert(index.includes('./css/ui-current.css'));
 
   const exchanges = vaultItemPresentation.presetNames(vaultItemPresentation.EXCHANGE_CATEGORY);
-  assert.strictEqual(exchanges.length, web3Icons.entries('exchanges').length,
-    'Exchange presets should automatically cover the complete pinned local Web3Icons exchange catalog.');
-  assert(exchanges.length >= 20, 'SafeLedger should offer a useful exchange preset catalog.');
+  assert.strictEqual(exchanges.length, web3Icons.entries('exchanges').length);
+  assert(exchanges.length >= 20);
   assert(vaultItemPresentation.presetNames(vaultItemPresentation.WEB3_CATEGORY).includes('FIO App'));
   assert(vaultItemPresentation.presetNames(vaultItemPresentation.WEB3_CATEGORY).includes('OpenSea'));
-  assert.strictEqual(
-    vaultItemPresentation.normalizeCategory('FIO App', vaultItemPresentation.LEGACY_SERVICE_CATEGORY),
-    vaultItemPresentation.WEB3_CATEGORY,
-    'Legacy combined service records must still resolve to the appropriate modern account type.'
-  );
-  assert.strictEqual(
-    vaultItemPresentation.normalizeCategory('Facebook', vaultItemPresentation.LEGACY_SERVICE_CATEGORY),
-    vaultItemPresentation.WEBSITE_CATEGORY,
-    'Legacy website records must remain compatible without a data migration.'
-  );
+  assert.strictEqual(vaultItemPresentation.normalizeCategory('FIO App', vaultItemPresentation.LEGACY_SERVICE_CATEGORY), vaultItemPresentation.WEB3_CATEGORY);
+  assert.strictEqual(vaultItemPresentation.normalizeCategory('Facebook', vaultItemPresentation.LEGACY_SERVICE_CATEGORY), vaultItemPresentation.WEBSITE_CATEGORY);
 }
 
 testDashboardNavigationAndInsights();
 testCopyAndQrArtwork();
 testRecoveryDrillReminderAndContrast();
 testExchangeAndWebsiteVaultItems();
-console.log('PASS SafeLedger dashboard navigation, vertical maintenance insight, revised copy/QR artwork, recovery drill clarity, and directly rendered exchange/service Vault Items.');
+console.log('PASS SafeLedger dashboard navigation, consolidated Recovery Needs Attention gaps, vertical maintenance insight, QR artwork, recovery validation clarity, and directly rendered exchange/service Vault Items.');
