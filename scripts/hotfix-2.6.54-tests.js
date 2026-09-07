@@ -9,6 +9,7 @@ const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n');
 const pkg = JSON.parse(read('package.json'));
 const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
+const dataWrite = require('../src/main/data-write-service.js');
 
 assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 54,
   'SafeLedger 2.6.54 requested UI/custom-field regressions must remain active on 2.6.54 and later 2.6.x candidates.');
@@ -76,7 +77,7 @@ assert(profile.includes('nextProfile.customFields = customFieldEditor.getFields(
 assert(profile.includes('customFieldsUi.appendDetail(area, profile.customFields'));
 assert(dataWriteSource.includes("if (Object.prototype.hasOwnProperty.call(input, 'customFields')) patch.customFields = customFields.normalize(input.customFields);"),
   'Main-owned Profile mutation must normalize and allow custom fields.');
-const normalizedProfile = require('../src/main/data-write-service.js').normalizeProfilePatch({
+const normalizedProfile = dataWrite.normalizeProfilePatch({
   name: 'Primary',
   customFields: [
     { label: 'Advisor', type: 'text', value: 'Alice' },
@@ -97,6 +98,37 @@ assert(customFieldsUi.includes('function lockFixedField(field = {})'));
 assert(customFieldsUi.includes("add.innerHTML = '<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add custom field';"));
 assert(!customFieldsUi.includes('MutationObserver') && !customFieldsUi.includes('.click()'),
   'Custom-field ownership must remain direct and state-driven.');
+
+// Editing a seeded Asset must target the exact selected authoritative record.
+// Starter Assets can legitimately share one creation timestamp, so the old
+// created-timestamp + renderer-index fallback could update a sibling after the
+// renderer sorted its list, producing duplicate Bitcoin entries.
+assert(record.includes('const originalRecord = cloneValue(params.record);'));
+assert(record.includes('const submittedVaultData = cloneValue(params.vaultData);'));
+assert(record.includes("originalRecord\n    });") || record.includes('originalRecord });'),
+  'Asset modify requests must carry the original selected record identity into the main process.');
+assert(!record.includes('records.sort(utils.compareIgnoreCase)'),
+  'The renderer must not reorder the Asset collection before the authoritative save resolves its target.');
+assert(dataWriteSource.includes('function resolveRecordModifyIndex(items, requestedIndex, originalRecord, candidate)'));
+assert(dataWriteSource.includes('.filter(({ item }) => exactEqual(item, originalRecord))'));
+
+const sharedCreated = '2026-09-07T12:00:00.000Z';
+const authoritativeAssets = [
+  { name: 'Ethereum', symbol: 'ETH', created: sharedCreated, publicAddress: '' },
+  { name: 'Bitcoin', symbol: 'BTC', created: sharedCreated, publicAddress: '' }
+];
+const originalBitcoin = JSON.parse(JSON.stringify(authoritativeAssets[1]));
+const editedBitcoin = Object.assign({}, originalBitcoin, { publicAddress: 'bc1q-safeledger-test' });
+assert.strictEqual(
+  dataWrite.resolveRecordModifyIndex(authoritativeAssets, 0, originalBitcoin, editedBitcoin),
+  1,
+  'A Bitcoin edit must resolve Bitcoin by its original authoritative record even if a sorted renderer index points at Ethereum.'
+);
+assert.strictEqual(
+  dataWrite.resolveRecordModifyIndex(authoritativeAssets, 0, Object.assign({}, originalBitcoin, { publicAddress: 'stale' }), editedBitcoin),
+  -1,
+  'A stale original Asset snapshot must fail closed instead of falling back to a potentially wrong renderer index.'
+);
 
 // Phase 5 release trust remains inherited rather than weakened by this UI patch.
 // Run the actual Phase 5 gate instead of coupling 2.6.54 to one variable name
@@ -119,4 +151,4 @@ for (const relative of [
   'scripts/hotfix-2.6.54-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} keeps QR available, clarifies Change Password, opens taller, improves Vault Overview, and supports authoritative Profile/Asset custom fields.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps QR available, clarifies Change Password, opens taller, improves Vault Overview, supports authoritative custom fields, and updates the exact selected Asset without creating duplicates.`);
