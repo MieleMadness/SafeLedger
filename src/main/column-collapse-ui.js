@@ -1,48 +1,22 @@
 'use strict';
 
-/*
- * SafeLedger compact navigation rails.
- *
- * Profiles, Vault Items, and Assets start collapsed while SafeLedger is locked.
- * After a successful login the login-workspace coordinator reveals all three
- * columns together. Manual collapse controls still work independently and no
- * vault/settings data is changed.
- */
+/* SafeLedger compact navigation rails. */
 
 const OPEN_DURATION_MS = 420;
 const COLUMNS = Object.freeze([
-  Object.freeze({
-    key: 'profile',
-    label: 'Profiles',
-    searchId: 'profileSearch',
-    areaId: 'vaultArea',
-    addId: 'addVault',
-    addLabel: 'Add Profile',
-    itemLabelSelector: '.profile-list-name'
-  }),
-  Object.freeze({
-    key: 'vault',
-    label: 'Vault Items',
-    searchId: 'groupSearch',
-    areaId: 'groupArea',
-    addId: 'addGroup',
-    addLabel: 'Add Vault Item',
-    itemLabelSelector: '.wallet-list-name'
-  }),
-  Object.freeze({
-    key: 'asset',
-    label: 'Assets',
-    searchId: 'recordSearch',
-    areaId: 'recordArea',
-    addId: 'addRecord',
-    addLabel: 'Add Asset',
-    itemLabelSelector: '.coin-list-label'
-  })
+  Object.freeze({ key: 'profile', label: 'Profiles', searchId: 'profileSearch', areaId: 'vaultArea', addId: 'addVault', addLabel: 'Add Profile', itemLabelSelector: '.profile-list-name' }),
+  Object.freeze({ key: 'vault', label: 'Vault Items', searchId: 'groupSearch', areaId: 'groupArea', addId: 'addGroup', addLabel: 'Add Vault Item', itemLabelSelector: '.wallet-list-name' }),
+  Object.freeze({ key: 'asset', label: 'Assets', searchId: 'recordSearch', areaId: 'recordArea', addId: 'addRecord', addLabel: 'Add Asset', itemLabelSelector: '.coin-list-label' })
 ]);
 
 let columnStates = [];
 let openingAnimations = [];
 let openingGeneration = 0;
+let onSearchClear = null;
+
+function configure(options = {}) {
+  onSearchClear = typeof options.onSearchClear === 'function' ? options.onSearchClear : null;
+}
 
 function getCell(id) {
   const node = document.getElementById(id);
@@ -62,12 +36,10 @@ function syncItemLabels(config, mainCell) {
 
 function clearHiddenSearch(config) {
   const input = document.getElementById(config.searchId);
-  if (!input || !input.value) return;
+  if (!input || !input.value) return false;
   input.value = '';
-  if (typeof Event === 'function') {
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('keyup', { bubbles: true }));
-  }
+  if (onSearchClear) onSearchClear(config.key);
+  return true;
 }
 
 function setCollapsed(state, collapsed) {
@@ -99,9 +71,7 @@ function clearOpeningAnimation() {
   openingAnimations = [];
   const shell = document.querySelector('.app-shell');
   if (shell) shell.removeAttribute('data-nav-opening');
-  document.querySelectorAll('.app-grid').forEach((grid) => {
-    grid.style.removeProperty('grid-template-columns');
-  });
+  document.querySelectorAll('.app-grid').forEach((grid) => grid.style.removeProperty('grid-template-columns'));
 }
 
 function setupColumn(config) {
@@ -115,7 +85,6 @@ function setupColumn(config) {
   searchCell.classList.add('nav-column', `nav-column-${config.key}`, 'nav-column-search');
   mainCell.classList.add('nav-column', `nav-column-${config.key}`, 'nav-column-main');
   buttonCell.classList.add('nav-column', `nav-column-${config.key}`, 'nav-column-button');
-
   addButton.title = config.addLabel;
   addButton.setAttribute('aria-label', config.addLabel);
 
@@ -136,9 +105,6 @@ function setupColumn(config) {
     setCollapsed(state, !state.collapsed);
   });
 
-  // List renderers replace their children as selections change. Event
-  // delegation keeps native tooltips/accessibility names current without a
-  // MutationObserver or post-render patch loop.
   const refreshLabels = () => syncItemLabels(config, mainCell);
   mainCell.addEventListener('mouseover', refreshLabels);
   mainCell.addEventListener('focusin', refreshLabels);
@@ -188,8 +154,7 @@ function revealAfterLogin() {
   }
 
   const starts = grids.map((grid) => Array.from(grid.children).slice(0, 4)
-    .map((cell) => `${Math.max(0, cell.getBoundingClientRect().width)}px`)
-    .join(' '));
+    .map((cell) => `${Math.max(0, cell.getBoundingClientRect().width)}px`).join(' '));
   const target = targetExpandedTemplate(shell);
   if (!target || starts.some((value) => !value)) {
     for (const state of states) setCollapsed(state, false);
@@ -201,16 +166,10 @@ function revealAfterLogin() {
   shell.setAttribute('data-nav-opening', 'true');
 
   const generation = ++openingGeneration;
-  openingAnimations = grids.map((grid, index) => grid.animate(
-    [
-      { gridTemplateColumns: starts[index] },
-      { gridTemplateColumns: target }
-    ],
-    {
-      duration: OPEN_DURATION_MS,
-      easing: 'cubic-bezier(.22,.61,.36,1)'
-    }
-  ));
+  openingAnimations = grids.map((grid, index) => grid.animate([
+    { gridTemplateColumns: starts[index] },
+    { gridTemplateColumns: target }
+  ], { duration: OPEN_DURATION_MS, easing: 'cubic-bezier(.22,.61,.36,1)' }));
 
   return Promise.all(openingAnimations.map((animation) => animation.finished.catch(() => null)))
     .then(() => {
@@ -223,19 +182,7 @@ function revealAfterLogin() {
 
 if (typeof document !== 'undefined') init();
 
+exports.configure = configure;
 exports.collapseForLogin = collapseForLogin;
 exports.revealAfterLogin = revealAfterLogin;
-exports._test = {
-  OPEN_DURATION_MS,
-  COLUMNS,
-  getCell,
-  syncItemLabels,
-  clearHiddenSearch,
-  setCollapsed,
-  setupColumn,
-  init,
-  collapseForLogin,
-  targetExpandedTemplate,
-  prefersReducedMotion,
-  revealAfterLogin
-};
+exports._test = { OPEN_DURATION_MS, COLUMNS, getCell, syncItemLabels, clearHiddenSearch, setCollapsed, setupColumn, init, collapseForLogin, targetExpandedTemplate, prefersReducedMotion, revealAfterLogin };
