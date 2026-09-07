@@ -146,7 +146,6 @@ function testTrustedFolderAction() {
   const bridge = read('src/main/renderer-bridge.js');
   const bootstrap = read('src/main/bootstrap.js');
   const dashboard = read('src/main/dashboard-ui.js');
-  const dashboardRows = read('src/main/dashboard-row-ui.js');
   const icons = read('src/main/css/local-icons.css');
 
   assert(preload.includes("openDataFolder: () => invoke('device-open-data-folder')"));
@@ -160,8 +159,17 @@ function testTrustedFolderAction() {
   assert(dashboard.includes('fa-external-link'));
   assert(dashboard.includes("const badge = document.createElement('span');"), 'recovery status pills should remain informational');
   assert(!dashboard.includes('dashboard-status-action'), 'status pills should not carry a competing wallet navigation action');
-  assert(dashboardRows.includes("row.querySelector('.dashboard-list-main-action')"), 'wallet recovery rows should open the exact vault item needing attention');
-  assert(dashboardRows.includes("row.setAttribute('role', 'button')"), 'wallet recovery rows should remain keyboard accessible');
+  assert(dashboard.includes("main.className = `dashboard-list-main${actionable ? ' dashboard-list-main-action' : ''}`;"),
+    'canonical dashboard rows should retain the actionable main-row affordance');
+  assert(dashboard.includes("row.setAttribute('role', 'button');"), 'wallet recovery rows should remain keyboard accessible');
+  assert(dashboard.includes("row.addEventListener('click', () => openWallet(item));"),
+    'wallet recovery rows should directly open the exact vault item needing attention');
+  assert(dashboard.includes("event.key !== 'Enter' && event.key !== ' '"),
+    'wallet recovery rows should support keyboard activation without a repair helper');
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/dashboard-row-ui.js')), false,
+    'the old post-render dashboard row repair module must stay retired');
+  assert(!dashboard.includes('MutationObserver') && !dashboard.includes('.click()'),
+    'dashboard interaction must remain direct rather than observer/synthetic-click driven');
   assert(dashboard.includes('window.safeLedgerApi.openDataFolder()'));
   assert(icons.includes('.fa-external-link'));
 }
@@ -192,7 +200,7 @@ function testSemanticContrast() {
   await testStaleOsSignalsCannotKillFreshSession();
   testTrustedFolderAction();
   testSemanticContrast();
-  console.log('PASS SafeLedger same-process re-login, stale OS signal protection, accessible semantic controls, and trusted SafeLedgerData folder action.');
+  console.log('PASS SafeLedger same-process re-login, stale OS signal protection, directly accessible dashboard controls, and trusted SafeLedgerData folder action.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
