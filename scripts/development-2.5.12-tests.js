@@ -16,6 +16,7 @@ const vaultItemPresentationSource = read('src/main/vault-item-presentation.js');
 const groupSource = read('src/main/group.js');
 const entry = read('src/main/renderer-entry.js');
 const css = read('src/main/css/ui-current.css');
+const productCss = read('src/main/css/product-features.css');
 const index = read('src/main/index.html');
 const web3Icons = require(path.join(root, 'src', 'main', 'web3-icons.js'));
 const dashboardSummary = require(path.join(root, 'src', 'main', 'dashboard-summary.js'));
@@ -40,10 +41,16 @@ function testDashboardNavigationAndInsights() {
   assert(!dashboard.includes('MutationObserver') && !dashboard.includes('.click()'),
     'Vault Overview navigation must remain correct on first render without synthetic forwarding.');
 
-  assert(dashboard.includes("makeSection('Maintenance Snapshot'"));
+  assert(dashboard.includes("makeSection(\n    'Maintenance Snapshot'"));
   assert(dashboard.includes("'Stale information'"));
   assert(dashboard.includes("'Recovery coverage'"));
-  assert(dashboard.includes("'Last maintenance'"));
+  assert(dashboard.includes("'Last Backup'"), 'Maintenance Snapshot should use the clearer Last Backup label.');
+  assert(dashboard.includes("list.className = 'dashboard-maintenance-list';"),
+    'Maintenance Snapshot should render as one vertical bullet list rather than horizontal cards.');
+  assert(dashboard.includes("details.className = 'dashboard-maintenance-details';"),
+    'Multi-value maintenance information should be listed downward as nested bullets.');
+  assert(productCss.includes('.dashboard-maintenance-list') && productCss.includes('.dashboard-maintenance-details'),
+    'Vertical Maintenance Snapshot bullets must have canonical product-feature styling.');
   assert(dashboard.includes('window.safeLedgerApi.getActivityHistory(1)'));
   assert(summarySource.includes('STALE_VERIFICATION_DAYS = 180'));
   assert(summarySource.includes('recoveryCoverage'));
@@ -136,4 +143,4 @@ testDashboardNavigationAndInsights();
 testCopyAndQrArtwork();
 testRecoveryDrillReminderAndContrast();
 testExchangeAndWebsiteVaultItems();
-console.log('PASS SafeLedger 2.5.12 directly rendered Vault Overview navigation, maintenance insight, revised copy/QR artwork, recovery drill clarity, and directly rendered exchange/service Vault Items.');
+console.log('PASS SafeLedger dashboard navigation, vertical maintenance insight, revised copy/QR artwork, recovery drill clarity, and directly rendered exchange/service Vault Items.');
