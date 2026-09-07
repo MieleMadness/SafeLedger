@@ -35,6 +35,14 @@ jobs:
         shell: pwsh
         run: npm run test:regression
 
+      - name: Run encrypted lifecycle behavioral test
+        shell: pwsh
+        run: node scripts/behavioral-lifecycle-tests.js
+
+      - name: Test release trust metadata generator
+        shell: pwsh
+        run: node scripts/release-trust-tests.js
+
       - name: Run Electron crypto smoke test
         shell: pwsh
         run: npm run test:electron-crypto
@@ -47,7 +55,7 @@ jobs:
         shell: pwsh
         run: npm run dist:win
 
-      - name: Stage portable EXE and PDF README
+      - name: Stage portable EXE, PDF README, checksum, SBOM, and manifest
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release/windows | Out-Null
@@ -56,8 +64,10 @@ jobs:
           Copy-Item $exe.FullName -Destination release/windows/
           npm run docs:pdf -- release/windows/README.pdf
           if (-not (Test-Path 'release/windows/README.pdf')) { throw 'README.pdf was not generated.' }
+          $staged = Get-ChildItem -Path release/windows -Filter 'SafeLedger-*-Portable.exe' | Select-Object -First 1
+          node scripts/generate-release-trust.js $staged.FullName release/windows windows x64 "${{ github.event.pull_request.head.sha || github.sha }}"
 
-      - name: Upload flat portable download
+      - name: Upload verified portable download bundle
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: SafeLedger-Windows-Portable
