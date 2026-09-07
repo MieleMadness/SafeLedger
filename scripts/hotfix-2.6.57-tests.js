@@ -8,8 +8,10 @@ const { execFileSync } = require('child_process');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const pkg = JSON.parse(read('package.json'));
+const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.57');
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 57,
+  'SafeLedger 2.6.57 Recovery UX refinements must remain active on 2.6.57 and later 2.6.x candidates.');
 assert(pkg.scripts['test:regression'].includes('node scripts/hotfix-2.6.57-tests.js'));
 
 const drill = read('src/main/recovery-drill-ui.js');
@@ -83,4 +85,4 @@ for (const relative of [
   'src/main/activity-history-ui.js', 'scripts/hotfix-2.6.57-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger 2.6.57 uses space-separated BIP39 guidance, simplified Recovery Validation, consolidated recovery gaps, Activity History timeline styling, accordion scenarios, and no Save checkmark animation.');
+console.log(`PASS SafeLedger ${pkg.version} carries forward 2.6.57 space-separated BIP39 guidance, simplified Recovery Validation, consolidated recovery gaps, Activity History timeline styling, accordion scenarios, and no Save checkmark animation.`);
