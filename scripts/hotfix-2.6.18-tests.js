@@ -17,8 +17,9 @@ assert(read('package.json').includes('node scripts/hotfix-2.6.18-tests.js'),
   '2.6.18 trusted-bootstrap sizing coverage must stay in the locked suite.');
 
 const bootstrap = read('src/main/bootstrap.js');
-const windowSizing = read('src/main/window-sizing-main.js');
+const windowSizingSource = read('src/main/window-sizing-main.js');
 const rendererEntry = read('src/main/renderer-entry.js');
+const windowSizing = require('../src/main/window-sizing-main.js');
 
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/startup.js')), false,
   'The temporary wrapper that bypassed the package bootstrap entry must stay removed.');
@@ -35,9 +36,11 @@ assert(bootstrap.indexOf('if (startupStorageStatus.allowed)') < bootstrap.indexO
   'Preferred sizing must only be installed after portable-storage startup is approved.');
 assert(bootstrap.indexOf('installPreferredWindowSizing();') < bootstrap.indexOf("require('./main');"),
   'Preferred sizing must be installed before main.js creates the primary BrowserWindow.');
-assert(windowSizing.includes('const PREFERRED_WIDTH = '));
-assert(windowSizing.includes('const PREFERRED_HEIGHT = 750;'));
-assert(!windowSizing.includes('window.resizeTo'));
-assert(!windowSizing.includes('DOMContentLoaded'));
+assert(windowSizingSource.includes('const PREFERRED_WIDTH = '));
+assert(windowSizingSource.includes('const PREFERRED_HEIGHT = '));
+assert(Number.isInteger(windowSizing.PREFERRED_HEIGHT) && windowSizing.PREFERRED_HEIGHT >= 750,
+  'Trusted-bootstrap sizing must retain at least the established 750px vertical workspace while allowing intentional later increases.');
+assert(!windowSizingSource.includes('window.resizeTo'));
+assert(!windowSizingSource.includes('DOMContentLoaded'));
 
-console.log(`PASS SafeLedger ${pkg.version} preserves the portable-storage bootstrap boundary while owning startup window sizing in the main process.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves the portable-storage bootstrap boundary while owning current startup window sizing in the main process.`);
