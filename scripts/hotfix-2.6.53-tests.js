@@ -16,8 +16,10 @@ const windows = read('.github/workflows/windows-portable.yml');
 const linux = read('.github/workflows/linux-appimage.yml');
 const mac = read('.github/workflows/macos-arm64.yml');
 const ATTEST_ACTION = 'actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6';
+const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
-assert.strictEqual(pkg.version, '2.6.53', 'Phase 5 Behavioral Testing & Release Trust must report SafeLedger 2.6.53.');
+assert(versionParts[0] === 2 && versionParts[1] === 6 && versionParts[2] >= 53,
+  'Phase 5 Behavioral Testing & Release Trust must remain active on SafeLedger 2.6.53 and later 2.6.x candidates.');
 assert(gate2652.includes('parts[2] >= 52'), 'Phase 4 UI Consolidation must remain active on the Phase 5 candidate.');
 assert(pkg.scripts['test:behavioral-lifecycle'] === 'node scripts/behavioral-lifecycle-tests.js');
 assert(pkg.scripts['test:release-trust'] === 'node scripts/release-trust-tests.js');
@@ -62,4 +64,4 @@ for (const relative of [
   'scripts/hotfix-2.6.53-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger 2.6.53 Phase 5 keeps encrypted reopen behavior, clean user downloads, separate verification files, and GitHub-native provenance/SBOM attestations.');
+console.log(`PASS SafeLedger ${pkg.version} keeps Phase 5 encrypted reopen behavior, clean user downloads, separate verification files, and GitHub-native provenance/SBOM attestations.`);
