@@ -79,7 +79,6 @@ function summarize(profileEntries = [], options = {}) {
   };
   const needsAttention = [];
   const recentlyVerified = [];
-  const scorecards = [];
   let profileReadErrors = 0;
   let scoreTotal = 0;
 
@@ -127,7 +126,6 @@ function summarize(profileEntries = [], options = {}) {
       else if (health.status === 'Needs Review') counts.needsReview++;
       else counts.incomplete++;
 
-      const checks = safeHealthChecks(health);
       const item = {
         profileName,
         profileFile,
@@ -138,10 +136,9 @@ function summarize(profileEntries = [], options = {}) {
         status: health.status,
         score: health.score,
         lastVerified: group && group.lastVerified ? String(group.lastVerified) : '',
-        checks,
+        checks: safeHealthChecks(health),
         actions: health.actions.map((entry) => ({ id: entry.id, action: entry.action }))
       };
-      scorecards.push(item);
       if (health.status !== 'Ready') needsAttention.push(item);
       if (item.lastVerified) recentlyVerified.push(item);
     }
@@ -149,7 +146,6 @@ function summarize(profileEntries = [], options = {}) {
 
   const statusRank = (status) => status === 'Incomplete' ? 0 : status === 'Needs Review' ? 1 : 2;
   needsAttention.sort((a, b) => statusRank(a.status) - statusRank(b.status) || a.score - b.score || a.walletName.localeCompare(b.walletName));
-  scorecards.sort((a, b) => a.score - b.score || statusRank(a.status) - statusRank(b.status) || a.walletName.localeCompare(b.walletName));
   recentlyVerified.sort((a, b) => new Date(b.lastVerified).getTime() - new Date(a.lastVerified).getTime());
 
   return {
@@ -158,10 +154,8 @@ function summarize(profileEntries = [], options = {}) {
     stale,
     readinessPercent: counts.vaultItems ? Math.round(scoreTotal / counts.vaultItems) : 0,
     profileReadErrors,
-    needsAttention: needsAttention.slice(0, 8),
+    needsAttention: needsAttention.slice(0, 12),
     recentlyVerified: recentlyVerified.slice(0, 6),
-    scorecards: scorecards.slice(0, 24),
-    securityTimeline: commandCenter.buildSecurityTimeline(profileEntries, 18),
     simulationFacts: commandCenter.buildSimulationFacts(profileEntries)
   };
 }
