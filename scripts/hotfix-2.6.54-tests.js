@@ -22,7 +22,6 @@ const profile = read('src/main/profile.js');
 const record = read('src/main/record.js');
 const customFieldsUi = read('src/main/custom-fields-ui.js');
 const dataWriteSource = read('src/main/data-write-service.js');
-const phase5 = read('scripts/hotfix-2.6.53-tests.js');
 
 // Change Password must report the missing prerequisite before new-password
 // policy checks obscure the actual error.
@@ -100,7 +99,9 @@ assert(!customFieldsUi.includes('MutationObserver') && !customFieldsUi.includes(
   'Custom-field ownership must remain direct and state-driven.');
 
 // Phase 5 release trust remains inherited rather than weakened by this UI patch.
-assert(phase5.includes('parts[2] >= 53'));
+// Run the actual Phase 5 gate instead of coupling 2.6.54 to one variable name
+// or exact source phrase inside that historical test.
+execFileSync(process.execPath, [path.join(root, 'scripts/hotfix-2.6.53-tests.js')], { stdio: 'pipe' });
 for (const workflow of ['windows-portable.yml', 'linux-appimage.yml', 'macos-arm64.yml']) {
   const source = read(`.github/workflows/${workflow}`);
   assert(source.includes('actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6'));
