@@ -164,6 +164,16 @@ function resolveExistingIndex(items, requestedIndex, candidate) {
   return Number.isInteger(index) && index >= 0 && index < items.length ? index : -1;
 }
 
+function resolveRecordModifyIndex(items, requestedIndex, originalRecord, candidate) {
+  if (!Array.isArray(items) || !items.length) return -1;
+  if (isPlainObject(originalRecord)) {
+    const matches = items.map((item, index) => ({ item, index }))
+      .filter(({ item }) => exactEqual(item, originalRecord));
+    return matches.length === 1 ? matches[0].index : -1;
+  }
+  return resolveExistingIndex(items, requestedIndex, candidate);
+}
+
 function legacyGroupRequest(params) {
   if (!isPlainObject(params) || !isPlainObject(params.vaultData)) throw new Error('Invalid vault item update.');
   const type = String(params.type || '');
@@ -206,7 +216,8 @@ function legacyRecordRequest(params) {
     groupIndex,
     groupCreated: String(submittedGroup.created || ''),
     recordIndex,
-    record: clone(record)
+    record: clone(record),
+    originalRecord: action === 'modify' && isPlainObject(params.originalRecord) ? clone(params.originalRecord) : null
   };
 }
 
@@ -278,7 +289,7 @@ async function mutateRecord({ vault, vaultDir, key, request }) {
     group.records.sort(compareByName);
     recordSelected = group.records.indexOf(record);
   } else if (request.action === 'modify') {
-    const index = resolveExistingIndex(group.records, request.recordIndex, request.record);
+    const index = resolveRecordModifyIndex(group.records, request.recordIndex, request.originalRecord, request.record);
     if (index < 0) throw new Error('The asset changed or no longer exists. Reload the vault item and try again.');
     const existing = group.records[index];
     const patch = normalizeRecordPatch(request.record);
@@ -350,6 +361,7 @@ module.exports = {
   withProfileViewState,
   findSingleDeletionIndex,
   resolveExistingIndex,
+  resolveRecordModifyIndex,
   buildTrustedStarterRecords,
   _test: { clone, text, normalizeTimestamp, compareByName, exactEqual }
 };
