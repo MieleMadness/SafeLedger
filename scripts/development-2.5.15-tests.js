@@ -27,12 +27,26 @@ assert(index.includes('./css/ui-current.css'), 'consolidated current UI layer mu
 const rendererEntry = read('src/main/renderer-entry.js');
 assert(!rendererEntry.includes("require('./vault-language-ui.js')"),
   'Vault Item terminology must be rendered directly instead of restored by the retired language observer.');
-assert(rendererEntry.includes("require('./recovery-intelligence-vault-overview-ui.js')"), 'Vault Overview must restore optional Recovery Intelligence');
+assert(!rendererEntry.includes("require('./recovery-intelligence-vault-overview-ui.js')"),
+  'Recovery Intelligence must not return as a post-render Vault Overview observer.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/recovery-intelligence-vault-overview-ui.js')), false,
+  'The retired Recovery Intelligence Vault Overview repair module must stay removed.');
 
-// Keep this historical regression renderer-free. dashboard-ui.js imports the
-// live renderer for navigation, so requiring it from plain Node would boot
-// browser-only modules and make this terminology check depend on window.
+// Keep this historical regression renderer-free. dashboard-ui.js imports live
+// renderer-adjacent code, so source contracts are used here instead of requiring
+// the browser-facing module from plain Node.
 const dashboardSource = read('src/main/dashboard-ui.js');
+assert(dashboardSource.includes("const recoveryIntelligenceUi = require('./recovery-intelligence-dashboard-ui');"),
+  'Vault Overview must own the Recovery Intelligence renderer directly.');
+assert(dashboardSource.includes('typeof window.safeLedgerApi.getRecoveryIntelligence'),
+  'Vault Overview must request Recovery Intelligence in the same dashboard data flow.');
+assert(dashboardSource.includes('const [result, storage, backupResult, activityResult, intelligenceResult] = await Promise.all(['),
+  'Recovery Intelligence should load with the rest of the dashboard state rather than in a later repair pass.');
+assert(dashboardSource.includes('if (intelligence) recoveryIntelligenceUi.renderIntelligence(area, intelligence);'),
+  'Vault Overview must render optional Recovery Intelligence directly during its canonical render.');
+assert(!dashboardSource.includes('MutationObserver'),
+  'Vault Overview must not depend on a DOM observer to restore Recovery Intelligence.');
+
 assert(dashboardSource.includes('function vaultContentsLabel(counts = {})'),
   'Vault Overview must own its inventory summary directly.');
 for (const phrase of [
@@ -65,7 +79,4 @@ assert(globalSearchSource.includes('Search Profiles, Vault Items, and Assets wit
 assert(globalSearchSource.includes("return type === 'wallet' ? 'VAULT ITEM'"),
   'Global Search must display internal wallet results as Vault Items directly.');
 
-const intelligence = read('src/main/recovery-intelligence-vault-overview-ui.js');
-assert(intelligence.includes("!== 'Vault Overview'"), 'Recovery Intelligence companion must recognize the renamed Vault Overview');
-
-console.log('PASS SafeLedger 2.5.15+ shared button aesthetics and directly rendered Vault Item terminology/overview coverage.');
+console.log('PASS SafeLedger 2.5.15+ shared button aesthetics, directly rendered Vault Item terminology, and direct Recovery Intelligence dashboard ownership.');
