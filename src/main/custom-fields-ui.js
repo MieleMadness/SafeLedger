@@ -52,11 +52,10 @@ function makeValueControl(host, type, value, label) {
 }
 
 /*
- * Assets historically stored Network and Contract address inside customFields
- * so older 2.x vaults remain compatible. When a caller supplies fixedFields,
- * render only those fixed identity values as ordinary form fields. Any older
- * user-created Asset custom fields stay preserved in the encrypted record but
- * are intentionally not exposed by the simplified Asset editor.
+ * Retained for callers that need a fixed-only custom-field presentation.
+ * The current Asset editor uses the generic editor plus lockFixedField() so
+ * Network and Contract address remain standard identity controls while user
+ * custom fields are visible and editable again.
  */
 function createFixedFieldsEditor(grid, initialFields, fixedFields) {
   const existing = customFields.normalize(initialFields);
@@ -254,9 +253,10 @@ function createEditor(grid, initialFields, options = {}) {
     return true;
   }
 
-  // Retained for compatibility with older tests/modules that may still call
-  // the helper directly. Current Asset rendering takes the fixed-fields path
-  // above and no longer uses the generic custom-field row UI for identity.
+  // Keep standard identity fields inside the same editor without exposing
+  // their label/type/remove controls. This lets Assets show Network and
+  // Contract address as ordinary fixed values while still allowing additional
+  // user-defined custom fields below them.
   function lockFixedField(field = {}) {
     const normalized = customFields.normalize([field])[0];
     if (!normalized || !normalized.label) return null;
@@ -295,6 +295,7 @@ function createEditor(grid, initialFields, options = {}) {
   return {
     ensureField,
     removeEmptyField,
+    lockFixedField,
     getFields: () => customFields.normalize(rows.map((row) => ({
       label: row.labelInput.value,
       type: row.typeSelect.value,
