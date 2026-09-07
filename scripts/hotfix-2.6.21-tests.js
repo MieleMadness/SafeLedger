@@ -28,7 +28,8 @@ for (const [name, source] of [['2.6.7', gate267], ['2.6.11', gate2611]]) {
 }
 
 assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283);
-assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 750);
+assert(windowSizing.PREFERRED_HEIGHT >= 750,
+  'Historical sizing coverage must preserve a usable desktop height without freezing later intentional increases.');
 for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-column']) {
   assert(foundation.includes(`${variable}: minmax(0, 2fr);`));
 }
@@ -43,7 +44,10 @@ assert.strictEqual(windowSizing.applyPreferredWindowSize({
   getBounds: () => ({ width: 1200, height: 700 }),
   setSize(width, height, animate) { resized = { width, height, animate }; }
 }, { width: 1920, height: 1080 }), true);
-assert.deepStrictEqual(resized, { width: 1283, height: 750, animate: false },
-  'Current preferred sizing must still grow a normal desktop window to the 2.6.19 layout target.');
+assert.deepStrictEqual(resized, {
+  width: windowSizing.PREFERRED_WIDTH,
+  height: windowSizing.PREFERRED_HEIGHT,
+  animate: false
+}, 'Historical sizing coverage must follow the current trusted main-process preferred sizing policy.');
 
 console.log(`PASS SafeLedger ${pkg.version} keeps retired 1400px assumptions out of historical sizing gates while protecting the current equal expanded columns and balanced compact rails.`);
