@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
+const mainRoot = path.join(root, 'src', 'main');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
@@ -28,6 +29,14 @@ assert(!profileSource.includes('MutationObserver'),
   'Profile creation must not watch the DOM to add wallet-template artwork.');
 assert(!entrySource.includes("require('./profile-wallet-picker-ui.js')"),
   'The renderer entry must not reload the retired Profile wallet-picker helper.');
+
+function isPackagedLocalIcon(value) {
+  const source = String(value || '');
+  if (!source.startsWith('./assets/token-icons/') || !source.endsWith('.svg')) return false;
+  const absolute = path.resolve(mainRoot, source);
+  const iconRoot = path.resolve(mainRoot, 'assets', 'token-icons');
+  return absolute.startsWith(iconRoot + path.sep) && fs.existsSync(absolute);
+}
 
 class FakeElement {
   constructor(tagName) {
@@ -65,7 +74,8 @@ try {
   assert(icon, 'A reviewed Ledger template must receive local artwork during Profile form rendering.');
   assert.strictEqual(icon.tagName, 'IMG');
   assert.strictEqual(icon.className, 'profile-wallet-template-icon');
-  assert(icon.src.startsWith('data:'), 'Profile wallet-template artwork must remain local/offline.');
+  assert(isPackagedLocalIcon(icon.src),
+    'Profile wallet-template artwork must remain packaged locally/offline while loading SVG bytes on demand.');
   assert(/Ledger icon/i.test(icon.alt), 'Directly rendered template artwork must retain accessible alt text.');
   assert.strictEqual(icon.draggable, false);
   assert.strictEqual(profile._test.createWalletTemplateIcon(null), null,
@@ -75,4 +85,4 @@ try {
   else global.document = previousDocument;
 }
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.12 direct Add Profile wallet-template artwork behavior active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps direct Add Profile wallet-template artwork local/offline with on-demand packaged SVGs.`);
