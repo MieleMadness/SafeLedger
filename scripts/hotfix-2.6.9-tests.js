@@ -30,7 +30,7 @@ assert(dashboard.includes('detailActions.clear();'),
   'Opening Vault Overview must clear the prior detail action dock before rendering.');
 assert(dashboard.includes('async function showDashboard()'),
   'Vault Overview must have one direct show path.');
-assert(dashboard.includes('async function showDashboard() { detailActions.clear(); const area = clearArea();'),
+assert(/async function showDashboard\(\)\s*\{\s*detailActions\.clear\(\);\s*const area = clearArea\(\);/.test(dashboard),
   'Dashboard action cleanup must remain direct and synchronous before any asynchronous dashboard work begins.');
 assert(!dashboard.includes('MutationObserver'),
   'Dashboard action cleanup must not return to an observer-based repair layer.');
@@ -51,4 +51,4 @@ assert(renderer.includes('dashboardUi.show();'),
 assert(!renderer.includes('dashboardButton.click();'),
   'Cancel Add Profile must not recreate the old synthetic-click navigation bandaid.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.9 Vault Overview stale-action fix through direct synchronous dashboard/detail-action ownership while allowing presentation-only motion timing.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.9 Vault Overview stale-action fix through direct synchronous dashboard/detail-action ownership while allowing presentation-only source formatting changes.`);
