@@ -95,15 +95,15 @@ function buildSimulationFacts(profileEntries = []) {
     profileCount: profileEntries.length,
     vaultItemCount: 0,
     assetCount: 0,
-    addressDocumentedCount: 0,
-    recoveryMethodCount: 0,
-    recoveryLocationCount: 0,
-    recoveryInstructionCount: 0,
-    beneficiaryCount: 0,
-    separateLocationCount: 0,
-    deviceLocationCount: 0,
+    addressCoverageCount: 0,
+    methodCoverageCount: 0,
+    locationCoverageCount: 0,
+    instructionCoverageCount: 0,
+    beneficiaryCoverageCount: 0,
+    separateLocationCoverageCount: 0,
+    devicePlacementCount: 0,
     exchangeCount: 0,
-    exchangeRecoveryPlanCount: 0,
+    exchangePlanCoverageCount: 0,
     walletCount: 0
   };
 
@@ -117,17 +117,17 @@ function buildSimulationFacts(profileEntries = []) {
       const method = hasRecoveryMethod(group);
       const location = hasRecoveryLocation(group);
       const instructions = hasInstructions(group);
-      if (method) facts.recoveryMethodCount++;
-      if (location) facts.recoveryLocationCount++;
-      if (instructions) facts.recoveryInstructionCount++;
-      if (text(group && group.beneficiary)) facts.beneficiaryCount++;
-      if (locationsAppearSeparate(group)) facts.separateLocationCount++;
-      if (text(group && group.deviceLocation)) facts.deviceLocationCount++;
-      if (kind === 'exchange' && (method || instructions || text(group && group.recoveryLink))) facts.exchangeRecoveryPlanCount++;
+      if (method) facts.methodCoverageCount++;
+      if (location) facts.locationCoverageCount++;
+      if (instructions) facts.instructionCoverageCount++;
+      if (text(group && group.beneficiary)) facts.beneficiaryCoverageCount++;
+      if (locationsAppearSeparate(group)) facts.separateLocationCoverageCount++;
+      if (text(group && group.deviceLocation)) facts.devicePlacementCount++;
+      if (kind === 'exchange' && (method || instructions || text(group && group.recoveryLink))) facts.exchangePlanCoverageCount++;
 
       const records = Array.isArray(group && group.records) ? group.records : [];
       facts.assetCount += records.length;
-      facts.addressDocumentedCount += records.reduce((count, record) => count + (text(record && record.publicAddress) ? 1 : 0), 0);
+      facts.addressCoverageCount += records.reduce((count, record) => count + (text(record && record.publicAddress) ? 1 : 0), 0);
     }
   }
 
