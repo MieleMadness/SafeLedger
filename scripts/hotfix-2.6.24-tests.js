@@ -39,19 +39,25 @@ assert(renderStart >= 0, 'Recovery Validation render function must remain presen
 const renderSource = drillSource.slice(renderStart);
 const bipIndex = renderSource.indexOf('appendOptionalBip39Check(area);');
 const privacyIndex = renderSource.indexOf("privacy.className = 'recovery-drill-privacy';");
-const wizardIndex = renderSource.indexOf("wizard.className = 'recovery-drill-wizard';");
-assert(bipIndex >= 0 && privacyIndex >= 0 && wizardIndex >= 0,
-  'Recovery Validation must retain the privacy callout, guided wizard, and optional BIP39 checker.');
-assert(privacyIndex < wizardIndex && wizardIndex < bipIndex,
-  'Recovery Validation Wizard 2.0 should present safety guidance and the guided checklist before the optional one-time BIP39 checker.');
+const checklistIndex = renderSource.indexOf("checklist.className = 'recovery-drill-wizard recovery-drill-checklist';");
+assert(bipIndex >= 0 && privacyIndex >= 0 && checklistIndex >= 0,
+  'Recovery Validation must retain the privacy callout, all-visible recovery checklist, and optional BIP39 checker.');
+assert(privacyIndex < checklistIndex && checklistIndex < bipIndex,
+  'Recovery Validation should present safety guidance and the complete checklist before the optional one-time BIP39 checker.');
 assert.strictEqual((renderSource.match(/appendOptionalBip39Check\(area\);/g) || []).length, 1,
   'The BIP39 checker must render exactly once.');
 assert(drillSource.includes("input.type = 'password';") && drillSource.includes("input.autocomplete = 'off';"),
   'The optional mnemonic field must remain a non-autofilled password-style input.');
+assert(drillSource.includes('separated by spaces') && drillSource.includes('Do not use commas or join the words together.'),
+  'BIP39 guidance must clearly require space-separated mnemonic words.');
 assert(drillSource.includes("input.value = '';"),
   'The temporary BIP39 value must be cleared immediately after local validation.');
 assert(!drillSource.includes('localStorage') && !drillSource.includes('sessionStorage'),
   'Recovery Validation must not persist BIP39 input or checklist state in renderer storage.');
+assert(drillSource.includes("checkboxes.every((checkbox) => checkbox.checked)"),
+  'Completion must remain gated until every visible recovery check is confirmed.');
+assert(!drillSource.includes("title: 'Previous step'") && !drillSource.includes("title: 'Next step'"),
+  'Retired Previous/Next wizard navigation must not return.');
 assert(drillSource.includes("actions.className = 'settings-section-actions recovery-drill-validation-actions';"),
   'BIP39 validation actions must have a dedicated spacing hook.');
 assert(/\.recovery-drill-validation-actions\s*\{[^}]*margin-top\s*:\s*6px\s*;?[^}]*\}/.test(productCss),
@@ -60,4 +66,4 @@ assert(/\.recovery-drill-validation-actions\s*\{[^}]*margin-top\s*:\s*6px\s*;?[^
 assert(priorGate.includes('parts[2] >= 23'),
   'The 2.6.23 UI gate must remain active on later workflow candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the deletion trash icon, bundled recovery-drill icon, guided Recovery Validation order, and local-only BIP39 safety active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the deletion trash icon, bundled recovery-validation icon, all-visible gated Recovery Validation checklist, and local-only space-separated BIP39 safety active.`);
