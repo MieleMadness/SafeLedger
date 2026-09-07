@@ -1,7 +1,7 @@
 {
   "name": "safe-ledger",
   "productName": "SafeLedger",
-  "version": "2.6.52",
+  "version": "2.6.53",
   "description": "Free, offline and portable encrypted information vault",
   "main": "src/main/bootstrap.js",
   "scripts": {
@@ -13,6 +13,9 @@
     "test:device-security": "node scripts/device-security-tests.js && node scripts/device-dashboard-health-tests.js && node scripts/hotfix-2.5.1-tests.js",
     "test:recovery-intelligence": "node scripts/recovery-intelligence-tests.js && node scripts/recovery-intelligence-ui-tests.js",
     "test:distribution-trust": "node scripts/distribution-trust-tests.js",
+    "test:behavioral-lifecycle": "node scripts/behavioral-lifecycle-tests.js",
+    "test:release-trust": "node scripts/release-trust-tests.js",
+    "release:trust": "node scripts/generate-release-trust.js",
     "test:electron-crypto": "node scripts/run-electron-crypto-smoke.js",
     "test:gui-smoke": "npm run prepare:renderer && node scripts/run-gui-smoke.js",
     "docs:pdf": "electron scripts/readme-to-pdf.js",
