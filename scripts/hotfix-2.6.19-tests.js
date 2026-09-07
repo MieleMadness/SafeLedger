@@ -33,10 +33,14 @@ assert(!foundation.includes('minmax(0, 3fr)'),
 const windowSizing = require('../src/main/window-sizing-main.js');
 assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283,
   'Preferred opening width should remove one former 1400/12 grid unit after the Asset column changes from 3fr to 2fr.');
-assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 750);
+assert(windowSizing.PREFERRED_HEIGHT >= 750,
+  'Later patches may intentionally add vertical workspace, but must not shrink below the established 750px opening height.');
 assert.strictEqual(Math.round(1400 * 11 / 12), 1283,
-  'The new native width should preserve approximately the old per-grid-unit width.');
-assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1920, height: 1080 }), { width: 1283, height: 750 });
+  'The native width should preserve approximately the old per-grid-unit width.');
+assert.deepStrictEqual(
+  windowSizing.preferredWindowSize({ width: 1920, height: 1080 }),
+  { width: 1283, height: windowSizing.PREFERRED_HEIGHT }
+);
 assert(windowSizingSource.includes('const PREFERRED_WIDTH = 1283;'));
 
 const profileDeleteBlock = main.slice(main.indexOf("ipc.on('vault-list-delete'"), main.indexOf("ipc.on('process-group'"));
@@ -93,4 +97,4 @@ try {
   else global.window = previousWindow;
 }
 
-console.log(`PASS SafeLedger ${pkg.version} keeps equal expanded navigation columns, proportional native opening width, and red Item Deleted confirmations with a dedicated trash icon.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps equal expanded navigation columns, proportional native opening width, a non-shrinking preferred height, and red Item Deleted confirmations with a dedicated trash icon.`);
