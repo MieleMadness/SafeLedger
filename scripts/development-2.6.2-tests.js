@@ -37,39 +37,36 @@ assert(polygon.customFields.some((field) => field.label === 'Network' && field.v
 assert(polygon.customFields.some((field) => field.label === 'Contract address' && field.value === '0xd55fce7cdab84d84f2ef3f99816d765a2a94a509'));
 
 const rendererEntry = read('src/main/renderer-entry.js');
-assert(rendererEntry.includes('shitcoin-mode-ui.js'));
-assert(!rendererEntry.includes('asset-multichain-ui.js'),
-  'Multichain Asset identity fields must be rendered directly rather than through the retired observer helper.');
-assert(!rendererEntry.includes('service-catalog-ui.js'),
-  'Known-service icons must be rendered directly by the canonical Vault Item presenter, not a retired observer.');
-const shitCoinUi = read('src/main/shitcoin-mode-ui.js');
-assert(shitCoinUi.includes('💩'));
-assert(shitCoinUi.includes('visual-only joke setting'));
-assert(shitCoinUi.includes('.coin-list-generic-icon, .coin-brand-generic'));
+assert(!rendererEntry.includes('shitcoin-mode-ui.js'), 'Shit Coin Mode must no longer depend on a document-wide repair observer.');
+assert(!rendererEntry.includes('asset-multichain-ui.js'));
+assert(!rendererEntry.includes('service-catalog-ui.js'));
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/shitcoin-mode-ui.js')), false,
+  'The retired Shit Coin Mode DOM repair module must stay removed.');
+const displayPreferences = require('../src/main/display-preferences');
+displayPreferences.setSettings({ shitCoinMode: true });
+assert.strictEqual(displayPreferences.genericAssetFallback('ABC', 2).text, '💩');
+displayPreferences.setSettings({ shitCoinMode: false });
+assert.strictEqual(displayPreferences.genericAssetFallback('ABC', 2).text, 'AB');
+const settingsUi = read('src/main/settings-ui.js');
+assert(settingsUi.includes('visual-only joke setting'));
+assert(settingsUi.includes("makeSection('Asset Display')"));
 
-assert.strictEqual(fs.existsSync(path.join(root, 'src/main/asset-multichain-ui.js')), false,
-  'The retired multichain post-render helper must stay removed.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/asset-multichain-ui.js')), false);
 const recordSource = read('src/main/record.js');
 const customFieldsUiSource = read('src/main/custom-fields-ui.js');
-assert(recordSource.includes("Object.freeze({ label: 'Network', type: 'text' })") &&
-  recordSource.includes("Object.freeze({ label: 'Contract address', type: 'text' })"),
-  'The canonical Asset renderer must retain Network and Contract address identity fields.');
-assert(recordSource.includes('fixedFields: ASSET_IDENTITY_FIELDS'),
-  'Asset forms must request their identity fields directly from the shared editor.');
-assert(customFieldsUiSource.includes('function lockFixedField(field = {})'),
-  'The shared custom-field editor must retain direct fixed-field support.');
+assert(recordSource.includes("Object.freeze({ label: 'Network', type: 'text' })") && recordSource.includes("Object.freeze({ label: 'Contract address', type: 'text' })"));
+assert(recordSource.includes('fixedFields: ASSET_IDENTITY_FIELDS'));
+assert(recordSource.includes('displayPreferences.genericAssetFallback(symbol, maxLength)'));
+assert(customFieldsUiSource.includes('function lockFixedField(field = {})'));
 
 const presentationSource = read('src/main/vault-item-presentation.js');
-assert(presentationSource.includes("const serviceCatalog = require('./service-catalog');"),
-  'Canonical Vault Item presentation must retain the local known-service catalog.');
-assert(presentationSource.includes('known-service-brand-image'),
-  'Known Web3/website Vault Items must retain their local branded service artwork.');
-assert(presentationSource.includes('serviceCatalog.createIcon(service.name'),
-  'Known service icons must be created directly during Vault Item rendering.');
+assert(presentationSource.includes("const serviceCatalog = require('./service-catalog');"));
+assert(presentationSource.includes('known-service-brand-image'));
+assert(presentationSource.includes('serviceCatalog.createIcon(service.name'));
 
 const release = read('RELEASE-2.6.2.md');
 assert(release.includes('Shit Coin Mode'));
 assert(release.includes('Chain Games'));
 assert(release.includes('known website'));
 
-console.log(`PASS SafeLedger ${pkg.version} preserves the 2.6.2 Shit Coin Mode, Chain Games, direct multichain asset identity, and known-site icon catalog gates.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves Shit Coin Mode, Chain Games, direct multichain Asset identity, and local known-site artwork without a DOM repair observer.`);
