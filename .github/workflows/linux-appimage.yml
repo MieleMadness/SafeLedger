@@ -33,6 +33,12 @@ jobs:
       - name: Run regression tests
         run: npm run test:regression
 
+      - name: Run encrypted lifecycle behavioral test
+        run: node scripts/behavioral-lifecycle-tests.js
+
+      - name: Test release trust metadata generator
+        run: node scripts/release-trust-tests.js
+
       - name: Run Electron crypto smoke test
         run: npm run test:electron-crypto
 
@@ -47,9 +53,18 @@ jobs:
       - name: Build AppImage
         run: npm run dist:linux
 
-      - name: Upload AppImage
+      - name: Stage AppImage, checksum, SBOM, and manifest
+        run: |
+          mkdir -p release/linux
+          ARTIFACT=$(find dist -maxdepth 1 -type f -name 'SafeLedger-*-x86_64.AppImage' | head -n 1)
+          test -n "$ARTIFACT"
+          cp "$ARTIFACT" release/linux/
+          STAGED="release/linux/$(basename "$ARTIFACT")"
+          node scripts/generate-release-trust.js "$STAGED" release/linux linux x64 "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Upload verified AppImage bundle
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: SafeLedger-Linux-AppImage
-          path: dist/*.AppImage
+          path: release/linux/*
           if-no-files-found: error
