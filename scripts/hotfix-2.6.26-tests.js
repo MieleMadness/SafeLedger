@@ -16,6 +16,7 @@ assert(read('package.json').includes('node scripts/hotfix-2.6.26-tests.js'),
 
 const foundation = read('src/main/css/foundation.css');
 const rendererEntry = read('src/main/renderer-entry.js');
+const rendererSource = read('src/main/renderer.js');
 const collapseSource = read('src/main/column-collapse-ui.js');
 const groupSource = read('src/main/group.js');
 const productCss = read('src/main/css/product-features.css');
@@ -61,9 +62,44 @@ assert(collapseSource.includes("toggle.setAttribute('aria-label', `${action} ${c
   'Each compact-rail control must expose an explicit Collapse/Expand accessible label.');
 assert(collapseSource.includes("toggle.setAttribute('aria-expanded', state.collapsed ? 'false' : 'true');"));
 assert(collapseSource.includes("fa-chevron-${state.collapsed ? 'right' : 'left'}"));
-assert(collapseSource.includes("input.dispatchEvent(new Event('input', { bubbles: true }));") &&
-  collapseSource.includes("input.dispatchEvent(new Event('keyup', { bubbles: true }));"),
-  'Collapsing a rail must clear a hidden active search instead of leaving mysteriously filtered icons.');
+
+assert(collapseSource.includes("if (onSearchClear) onSearchClear(config.key);"),
+  'Collapsing a rail with an active hidden search must call the canonical renderer search-clear callback.');
+assert(rendererSource.includes('columnCollapseUi.configure({ onSearchClear: refreshSearch });'),
+  'The renderer must provide the compact-rail helper a direct list-refresh callback.');
+assert(rendererSource.includes("function refreshSearch(key)"),
+  'Search refresh behavior must have one direct renderer owner.');
+assert(!collapseSource.includes("dispatchEvent(new Event('input'") &&
+  !collapseSource.includes("dispatchEvent(new Event('keyup'"),
+  'Compact rail search clearing must not recreate synthetic input/key events.');
+
+const previousDocument = global.document;
+let refreshed = [];
+const fakeInputs = {
+  profileSearch: { value: 'btc' },
+  groupSearch: { value: '' },
+  recordSearch: { value: 'eth' }
+};
+global.document = {
+  getElementById(id) { return fakeInputs[id] || null; }
+};
+try {
+  collapseUi.configure({ onSearchClear: (key) => refreshed.push(key) });
+  assert.strictEqual(collapseUi._test.clearHiddenSearch(collapseUi._test.COLUMNS[0]), true);
+  assert.strictEqual(fakeInputs.profileSearch.value, '');
+  assert.deepStrictEqual(refreshed, ['profile']);
+  assert.strictEqual(collapseUi._test.clearHiddenSearch(collapseUi._test.COLUMNS[1]), false,
+    'An already-clear hidden search should not trigger a needless re-render.');
+  assert.deepStrictEqual(refreshed, ['profile']);
+  assert.strictEqual(collapseUi._test.clearHiddenSearch(collapseUi._test.COLUMNS[2]), true);
+  assert.strictEqual(fakeInputs.recordSearch.value, '');
+  assert.deepStrictEqual(refreshed, ['profile', 'asset']);
+} finally {
+  collapseUi.configure({});
+  if (previousDocument === undefined) delete global.document;
+  else global.document = previousDocument;
+}
+
 assert(collapseSource.includes("link.setAttribute('aria-label', text);"),
   'Compact list icons must retain item names for accessibility.');
 assert(!/\bnew\s+MutationObserver\s*\(/.test(collapseSource) && !/\bMutationObserver\s*\(/.test(collapseSource),
@@ -74,4 +110,4 @@ assert(collapseSource.includes("mainCell.addEventListener('mouseover', refreshLa
 assert(!collapseSource.includes('localStorage'),
   'Columns should start expanded on each launch rather than hiding labels by default from a persisted preference.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the rendered recovery icon, safe preset cleanup, and explicit accessible balanced compact navigation rails active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the rendered recovery icon, safe preset cleanup, and explicit accessible compact rails with direct hidden-search clearing.`);
