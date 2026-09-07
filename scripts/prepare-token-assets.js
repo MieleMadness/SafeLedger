@@ -48,16 +48,27 @@ const safeLedgerAliases = {
   }
 };
 
-function toDataUrl(svg) {
-  return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
+function decodeSvgDataUrl(value) {
+  const source = String(value || '');
+  const comma = source.indexOf(',');
+  if (comma < 0) return null;
+  const header = source.slice(0, comma);
+  const payload = source.slice(comma + 1);
+  try {
+    return /;base64/i.test(header)
+      ? Buffer.from(payload, 'base64').toString('utf8')
+      : decodeURIComponent(payload);
+  } catch (_) {
+    return null;
+  }
 }
 
-function normalizeIconSource(value) {
+function normalizeSvgSource(value) {
   if (!value) return null;
-  if (typeof value === 'object') return normalizeIconSource(value.default || value.src);
+  if (typeof value === 'object') return normalizeSvgSource(value.default || value.src);
   if (typeof value !== 'string') return null;
-  if (value.startsWith('data:image/')) return value;
-  if (/<svg[\s>]/i.test(value)) return toDataUrl(value);
+  if (/^data:image\/svg\+xml/i.test(value)) return decodeSvgDataUrl(value);
+  if (/<svg[\s>]/i.test(value)) return value;
   return null;
 }
 
@@ -104,7 +115,7 @@ function availableKeys(svgCategory) {
 
 function bestSource(svgCategory, key, category) {
   for (const variant of preferredVariants(category)) {
-    const source = normalizeIconSource(svgCategory && svgCategory[variant] && svgCategory[variant][key]);
+    const source = normalizeSvgSource(svgCategory && svgCategory[variant] && svgCategory[variant][key]);
     if (source) return source;
   }
   return null;
@@ -112,6 +123,18 @@ function bestSource(svgCategory, key, category) {
 
 function outputKey(category, key) {
   return category === 'tokens' ? String(key).toUpperCase() : String(key);
+}
+
+function iconFileName(canonical) {
+  return `${Buffer.from(String(canonical || ''), 'utf8').toString('base64url')}.svg`;
+}
+
+function writeLocalIcon(category, canonical, svg) {
+  const categoryDir = path.join(outputRoot, category);
+  fs.mkdirSync(categoryDir, { recursive: true });
+  const fileName = iconFileName(canonical);
+  fs.writeFileSync(path.join(categoryDir, fileName), svg, 'utf8');
+  return `./assets/token-icons/${category}/${fileName}`;
 }
 
 function metadataCanonical(category, entry) {
@@ -142,7 +165,7 @@ function buildCategory(manifest, svgCatalog, category) {
     const source = bestSource(svgCategory, key, category);
     if (!source) continue;
     const canonical = outputKey(category, key);
-    manifest[category][canonical] = source;
+    manifest[category][canonical] = writeLocalIcon(category, canonical, source);
     addAlias(manifest.aliases[category], key, canonical);
     addAlias(manifest.aliases[category], canonical, canonical);
   }
@@ -181,11 +204,22 @@ function ensureDisplayNames(manifest) {
   }
 }
 
+function assertLocalIcon(manifest, category, key) {
+  const relative = String(manifest[category] && manifest[category][key] || '');
+  if (!relative.startsWith(`./assets/token-icons/${category}/`) || !relative.endsWith('.svg')) {
+    throw new Error(`SafeLedger Web3Icons preparation failed for required ${category} icon: ${key}`);
+  }
+  const absolute = path.resolve(projectRoot, 'src', 'main', relative);
+  if (!absolute.startsWith(path.join(projectRoot, 'src', 'main', 'assets', 'token-icons')) || !fs.existsSync(absolute)) {
+    throw new Error(`SafeLedger local icon file is missing for required ${category} icon: ${key}`);
+  }
+}
+
 async function main() {
-  // Importing the generated Web3Icons catalog once is substantially faster than
-  // importing thousands of individual SVG modules. The catalog is generated
-  // from Web3Icons metadata and already includes tokens, networks, wallets and
-  // exchanges, including entries that intentionally reuse another icon type.
+  // Import the upstream catalog only at build/test time. Runtime SafeLedger now
+  // keeps a lightweight lookup manifest and loads individual local SVG files on
+  // demand instead of parsing thousands of base64 SVG payloads at application
+  // startup.
   const core = await import('@web3icons/core');
   const metadata = await import('@web3icons/common/metadata');
   const svgCatalog = core && core.svgs;
@@ -194,14 +228,19 @@ async function main() {
   fs.rmSync(outputRoot, { recursive: true, force: true });
   fs.mkdirSync(outputRoot, { recursive: true });
 
-  // Keep the wallet-aware v2 shape for backward compatibility and add exchange
-  // artwork plus metadata aliases as additive fields. Display names let the
-  // profile picker expose every locally available wallet icon without keeping
-  // a second hand-maintained list of brand names.
-  const manifest = { version: 2, tokens: {}, networks: {}, wallets: {} };
-  manifest.exchanges = {};
-  manifest.aliases = { tokens: {}, networks: {}, wallets: {}, exchanges: {} };
-  manifest.displayNames = { wallets: {}, exchanges: {} };
+  // Version 3 replaces inline base64 artwork with local SVG paths. The lookup
+  // and alias shape remains compatible with web3-icons.js while dramatically
+  // reducing renderer/main-process parse work before the login screen appears.
+  const manifest = {
+    version: 3,
+    assetMode: 'local-svg-files',
+    tokens: {},
+    networks: {},
+    wallets: {},
+    exchanges: {},
+    aliases: { tokens: {}, networks: {}, wallets: {}, exchanges: {} },
+    displayNames: { wallets: {}, exchanges: {} }
+  };
 
   for (const category of categories) buildCategory(manifest, svgCatalog, category);
   for (const category of categories) applyMetadataAliases(manifest, metadata, category);
@@ -221,20 +260,16 @@ async function main() {
     ['networks', 'ethereum'], ['networks', 'binance-smart-chain'],
     ['wallets', 'coinbase'], ['wallets', 'ledger'], ['wallets', 'metamask'],
     ['exchanges', 'binance'], ['exchanges', 'kraken']
-  ]) {
-    const [category, key] = required;
-    if (!String(manifest[category][key] || '').startsWith('data:image/')) {
-      throw new Error(`SafeLedger Web3Icons preparation failed for required ${category} icon: ${key}`);
-    }
-  }
+  ]) assertLocalIcon(manifest, required[0], required[1]);
 
   fs.writeFileSync(manifestPath, JSON.stringify(manifest), 'utf8');
+  const manifestKb = Math.round(fs.statSync(manifestPath).size / 1024);
   console.log(
-    `Prepared complete Web3Icons catalog for SafeLedger: ` +
+    `Prepared lazy local Web3Icons catalog for SafeLedger: ` +
     `${Object.keys(manifest.tokens).length} tokens, ` +
     `${Object.keys(manifest.networks).length} networks, ` +
     `${Object.keys(manifest.wallets).length} wallets, ` +
-    `${Object.keys(manifest.exchanges).length} exchanges.`
+    `${Object.keys(manifest.exchanges).length} exchanges; lookup manifest ${manifestKb} KiB.`
   );
 }
 
