@@ -20,7 +20,9 @@ const walletMetadata = read('src/main/wallet-metadata.js');
 const customFieldsUi = read('src/main/custom-fields-ui.js');
 const record = read('src/main/record.js');
 const presets = read('src/main/vault-item-asset-presets.js');
-const shitCoinUi = read('src/main/shitcoin-mode-ui.js');
+const settingsUi = read('src/main/settings-ui.js');
+const displayPreferences = require('../src/main/display-preferences');
+const displayPreferencesSource = read('src/main/display-preferences.js');
 const tokenCss = read('src/main/css/token-icons.css');
 const priorGate = read('scripts/hotfix-2.6.22-tests.js');
 
@@ -46,6 +48,8 @@ assert(customFieldsUi.includes('result.push(field);'),
 assert(record.includes("Object.freeze({ label: 'Network', type: 'text' })") &&
   record.includes("Object.freeze({ label: 'Contract address', type: 'text' })"),
   'Multichain identity must retain Network and Contract address without changing the vault schema.');
+assert(record.includes('displayPreferences.genericAssetFallback(symbol, maxLength)'),
+  'Unknown Asset artwork must be selected directly by the Asset renderer.');
 assert(presets.includes("{network:'Polygon',contractAddress:"),
   'Reviewed multichain presets must continue to demonstrate why Asset network identity is required.');
 
@@ -56,16 +60,28 @@ assert(tokenCss.includes('.coin-list-generic-icon.shit-coin-icon') &&
 assert(tokenCss.includes('.coin-brand-generic.shit-coin-icon') && tokenCss.includes('font-size: 42px !important;'),
   'Detail Shit Coin artwork should be large enough to match other detail icons.');
 
-assert(shitCoinUi.includes("label.className = 'privacy-mode-toggle settings-field-label shit-coin-mode-option';"),
+assert(settingsUi.includes("label.className = 'privacy-mode-toggle settings-field-label shit-coin-mode-option';"),
   'Shit Coin Mode should use the same checkbox treatment as other Settings toggles.');
-assert(shitCoinUi.includes("save.className = 'btn btn-default settings-section-save';") &&
-  shitCoinUi.includes("save.textContent = 'Save Shit Coin Mode';"),
+assert(settingsUi.includes("save.className = 'btn btn-default settings-section-save';") &&
+  settingsUi.includes("save.textContent = 'Save Shit Coin Mode';"),
   'Shit Coin Mode should use the standard Settings save-button treatment.');
-assert(shitCoinUi.includes("node.classList.remove('shit-coin-icon');") &&
-  shitCoinUi.includes("node.textContent = node.dataset.originalText || '';"),
-  'Turning Shit Coin Mode off must restore the original local ticker fallback.');
+assert(settingsUi.includes('saveUserSetting(params, { shitCoinMode: input.checked === true }, save)'),
+  'Shit Coin Mode must save through the canonical narrow Settings mutation path.');
+
+assert(displayPreferencesSource.includes("text: '💩'"));
+assert(displayPreferencesSource.includes("className: 'shit-coin-icon'"));
+displayPreferences.setSettings({ shitCoinMode: true });
+const jokeFallback = displayPreferences.genericAssetFallback('ABC', 2);
+assert.strictEqual(jokeFallback.text, '💩');
+assert.strictEqual(jokeFallback.className, 'shit-coin-icon');
+displayPreferences.setSettings({ shitCoinMode: false });
+const normalFallback = displayPreferences.genericAssetFallback('ABC', 2);
+assert.strictEqual(normalFallback.text, 'AB', 'Turning Shit Coin Mode off must restore the normal local ticker fallback.');
+assert.strictEqual(normalFallback.className, '');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/shitcoin-mode-ui.js')), false,
+  'The retired document-wide Shit Coin Mode repair observer must stay removed.');
 
 assert(priorGate.includes('parts[2] >= 22'),
   'The approved 2.6.22 deletion/accessibility gate must remain active on later 2.6.x candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.23 dropdown, Recovery Instructions, Asset identity, and Shit Coin Mode refinements active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.23 dropdown, Recovery Instructions, Asset identity, and directly rendered Shit Coin Mode refinements active.`);
