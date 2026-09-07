@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const pkg = JSON.parse(read('package.json'));
 const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
@@ -30,8 +30,10 @@ assert(dashboard.includes('detailActions.clear();'),
   'Opening Vault Overview must clear the prior detail action dock before rendering.');
 assert(dashboard.includes('async function showDashboard()'),
   'Vault Overview must have one direct show path.');
-assert(!dashboard.includes('MutationObserver') && !dashboard.includes('setTimeout('),
-  'Dashboard action cleanup must remain direct and synchronous.');
+assert(dashboard.includes('async function showDashboard() { detailActions.clear(); const area = clearArea();'),
+  'Dashboard action cleanup must remain direct and synchronous before any asynchronous dashboard work begins.');
+assert(!dashboard.includes('MutationObserver'),
+  'Dashboard action cleanup must not return to an observer-based repair layer.');
 
 assert(detailActions.includes("dock.innerHTML = '';"),
   'Shared detail-action cleanup must remove stale Save/Cancel controls.');
@@ -49,4 +51,4 @@ assert(renderer.includes('dashboardUi.show();'),
 assert(!renderer.includes('dashboardButton.click();'),
   'Cancel Add Profile must not recreate the old synthetic-click navigation bandaid.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.9 Vault Overview stale-action fix through direct dashboard/detail-action ownership.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.9 Vault Overview stale-action fix through direct synchronous dashboard/detail-action ownership while allowing presentation-only motion timing.`);
