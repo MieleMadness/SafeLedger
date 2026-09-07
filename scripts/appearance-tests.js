@@ -41,12 +41,16 @@ const appAppearance = require('../src/main/app-appearance');
   assert(theme.includes('.workspace-empty-card'));
   assert(theme.includes('.appearance-options'));
   assert(settingsUi.includes("makeSection('Appearance')"));
-  assert(settingsUi.includes("addAppearanceOption(appearanceOptions, 'system'"));
-  assert(settingsUi.includes("addAppearanceOption(appearanceOptions, 'light'"));
-  assert(settingsUi.includes("addAppearanceOption(appearanceOptions, 'dark'"));
+  assert(settingsUi.includes("addAppearanceOption(options, 'system', 'System'"));
+  assert(settingsUi.includes("addAppearanceOption(options, 'light', 'Light'"));
+  assert(settingsUi.includes("addAppearanceOption(options, 'dark', 'Dark'"));
+  assert(settingsUi.includes("saveUserSetting(params, { appearance });"),
+    'Appearance changes must save through the canonical narrow Settings mutation path.');
+  assert(!settingsUi.includes('MutationObserver') && !settingsUi.includes('setTimeout('),
+    'Appearance rendering must not depend on post-render repair timing.');
   assert(profile.includes("title: 'No profiles yet'"));
   assert(!profile.includes("area.textContent = 'No items'"));
-  console.log('PASS Light/Dark/System appearance persists safely and the modern visual system uses direct empty states without new dependencies.');
+  console.log('PASS Light/Dark/System appearance persists safely and the canonical Settings renderer owns appearance without post-render repair.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
