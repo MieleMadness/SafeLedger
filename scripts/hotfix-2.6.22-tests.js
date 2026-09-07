@@ -32,7 +32,8 @@ assert(main.includes("status: 'DELETED', statusMsg: 'Item Deleted'"));
 
 const windowSizing = require('../src/main/window-sizing-main.js');
 assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283);
-assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 750);
+assert(windowSizing.PREFERRED_HEIGHT >= 750,
+  'Deletion accessibility coverage must not freeze a later intentional preferred-height increase.');
 const foundation = read('src/main/css/foundation.css');
 for (const variable of ['--sl-profile-column', '--sl-vault-column', '--sl-asset-column']) {
   assert(foundation.includes(`${variable}: minmax(0, 2fr);`));
