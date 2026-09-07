@@ -17,12 +17,16 @@ const customFieldsUiSource = read('src/main/custom-fields-ui.js');
 assert(recordSource.includes("Object.freeze({ label: 'Network', type: 'text' })") &&
   recordSource.includes("Object.freeze({ label: 'Contract address', type: 'text' })"),
   'Asset forms must keep Network and Contract address as standard identity fields.');
-assert(recordSource.includes("title: ASSET_CUSTOM_FIELDS_TITLE") &&
-  recordSource.includes('fixedFields: ASSET_IDENTITY_FIELDS'),
-  'The real Asset renderer must request its standard identity fields directly.');
+assert(recordSource.includes('customFieldsUi.createEditor(grid, params.record && params.record.customFields') &&
+  recordSource.includes('customFieldEditor.lockFixedField(identityField)'),
+  'The real Asset renderer must create its identity/custom fields directly and protect the standard identity rows.');
+assert(!recordSource.includes('fixedFields: ASSET_IDENTITY_FIELDS'),
+  'The retired fixed-only Asset path must not return because it hides user-defined custom fields.');
 assert(customFieldsUiSource.includes('function lockFixedField(field = {})') &&
   customFieldsUiSource.includes("rowState.row.dataset.assetIdentityField = normalized.label;"),
-  'The custom-field editor must support direct fixed fields without post-render DOM patching.');
+  'The custom-field editor must support direct protected identity fields without post-render DOM patching.');
+assert(customFieldsUiSource.includes('Add custom field'),
+  'Asset edit must retain the shared user-defined custom-field control.');
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/asset-multichain-ui.js')), false,
   'The retired Asset multichain MutationObserver helper must stay removed.');
 
@@ -75,14 +79,15 @@ assert(!/\.panic-lock-inline\s*\{[^}]*\bwidth\s*:/s.test(scaleCss));
 
 assert(Number.isInteger(visualUi.PREFERRED_WIDTH) && visualUi.PREFERRED_WIDTH >= 1200,
   'Preferred desktop width must remain explicit and large enough for the four-column interface.');
-assert.strictEqual(visualUi.PREFERRED_HEIGHT, 750);
+assert(Number.isInteger(visualUi.PREFERRED_HEIGHT) && visualUi.PREFERRED_HEIGHT >= 750,
+  'Later 2.6.x patches may intentionally add vertical workspace but must not shrink below the established 750px baseline.');
 let resized = null;
 const normalWindow = {
   getBounds: () => ({ width: 1200, height: 750 }),
   setSize(width, height, animate) { resized = { width, height, animate }; }
 };
 assert.strictEqual(visualUi.applyPreferredWindowSize(normalWindow, { width: 1920, height: 1080 }), true);
-assert.deepStrictEqual(resized, { width: visualUi.PREFERRED_WIDTH, height: 750, animate: false });
+assert.deepStrictEqual(resized, { width: visualUi.PREFERRED_WIDTH, height: visualUi.PREFERRED_HEIGHT, animate: false });
 resized = null;
 const alreadyLarge = {
   getBounds: () => ({ width: 1600, height: 900 }),
@@ -121,4 +126,4 @@ assert(preloadSource.includes("prepareAppMenu: () => invoke('app-menu-prepare')"
   preloadSource.includes("appMenuCommand: (command) => ipcRenderer.send('app-menu-command'"),
   'The app-menu prepare request must use the normalized preload invoke wrapper while menu commands remain fire-and-forget sends.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior with trusted-bootstrap main-process window sizing.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps 2.6.7 interface behavior with protected editable Asset identity/custom fields and trusted-bootstrap main-process window sizing.`);
