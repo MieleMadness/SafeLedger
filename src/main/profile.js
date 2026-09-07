@@ -5,6 +5,7 @@ const status = require('./status');
 const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
 const securityUi = require('./security-ui');
+const customFieldsUi = require('./custom-fields-ui');
 const recoveryBinderUi = require('./recovery-binder-ui');
 const emptyState = require('./empty-state-ui');
 const profileSetup = require('./profile-setup');
@@ -35,6 +36,17 @@ function appendDateLine(area, label, value) {
   strong.textContent = `${label}: `;
   p.appendChild(strong);
   p.appendChild(document.createTextNode(formatDate(value)));
+  area.appendChild(p);
+}
+
+function appendProfileLine(area, label, value) {
+  if (value == null || value === '') return;
+  const p = document.createElement('p');
+  p.className = 'detail-info-line';
+  const strong = document.createElement('b');
+  strong.textContent = `${label}: `;
+  p.appendChild(strong);
+  p.appendChild(document.createTextNode(String(value)));
   area.appendChild(p);
 }
 
@@ -296,6 +308,10 @@ function createEditProfile(params) {
     className: 'detail-notes-input',
     full: true
   });
+  const customFieldEditor = customFieldsUi.createEditor(grid, profile && profile.customFields, {
+    title: 'Profile Custom Fields',
+    note: 'Add optional Profile-level information that does not belong to one Vault Item or Asset. Sensitive values stay encrypted and are excluded from search.'
+  });
   const setupControls = profile ? null : createProfileSetupControls(grid);
 
   const saveProfile = (button) => {
@@ -316,6 +332,7 @@ function createEditProfile(params) {
     const nextProfile = profile || { created: Date() };
     nextProfile.name = name;
     nextProfile.notes = inputNotes.value;
+    nextProfile.customFields = customFieldEditor.getFields();
     if (profile) nextProfile.modified = Date();
 
     params.saving.state = true;
@@ -394,6 +411,7 @@ function showProfileDetail(params) {
     area.appendChild(location);
   }
   appendProfileNotes(area, profile);
+  customFieldsUi.appendDetail(area, profile.customFields, (label, value) => appendProfileLine(area, label, value));
 
   detailActions.set([
     {
@@ -465,4 +483,4 @@ function confirmDelete(params) {
 exports.listProfiles = listProfiles;
 exports.createProfile = (params) => createEditProfile(params);
 exports.showProfileDetail = showProfileDetail;
-exports._test = { normalize, appendDateLine, appendProfileNotes, formatDate, pinnedSort, createProfileSetupControls, createWalletTemplateIcon };
+exports._test = { normalize, appendDateLine, appendProfileLine, appendProfileNotes, formatDate, pinnedSort, createProfileSetupControls, createWalletTemplateIcon };
