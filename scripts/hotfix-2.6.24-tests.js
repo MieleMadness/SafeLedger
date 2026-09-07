@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const pkg = JSON.parse(read('package.json'));
 const parts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
@@ -30,20 +30,28 @@ assert(groupSource.includes("'<i class=\"fa fa-refresh\"></i> Run recovery drill
 assert(!productCss.includes('.recovery-readiness-actions .fa-shield::before'),
   'The unsupported pseudo-glyph override that rendered as a rectangle must stay removed.');
 assert(drillSource.includes("privacyIcon.className = 'fa fa-lock';"),
-  'The Test Recovery safety callout must use a clear lock icon.');
+  'The Recovery Validation safety callout must use a clear lock icon.');
 assert(!drillSource.includes("privacyIcon.className = 'fa fa-shield';"),
   'The old shield/diamond safety icon must not return.');
 
 const renderStart = drillSource.indexOf('function render(params = {})');
-assert(renderStart >= 0, 'Recovery drill render function must remain present.');
+assert(renderStart >= 0, 'Recovery Validation render function must remain present.');
 const renderSource = drillSource.slice(renderStart);
 const bipIndex = renderSource.indexOf('appendOptionalBip39Check(area);');
 const privacyIndex = renderSource.indexOf("privacy.className = 'recovery-drill-privacy';");
-const listIndex = renderSource.indexOf("list.className = 'recovery-drill-list';");
-assert(bipIndex >= 0 && privacyIndex >= 0 && listIndex >= 0 && bipIndex < privacyIndex && bipIndex < listIndex,
-  'The optional BIP39 checker must render at the top of Test Recovery before the safety callout and checklist.');
+const wizardIndex = renderSource.indexOf("wizard.className = 'recovery-drill-wizard';");
+assert(bipIndex >= 0 && privacyIndex >= 0 && wizardIndex >= 0,
+  'Recovery Validation must retain the privacy callout, guided wizard, and optional BIP39 checker.');
+assert(privacyIndex < wizardIndex && wizardIndex < bipIndex,
+  'Recovery Validation Wizard 2.0 should present safety guidance and the guided checklist before the optional one-time BIP39 checker.');
 assert.strictEqual((renderSource.match(/appendOptionalBip39Check\(area\);/g) || []).length, 1,
   'The BIP39 checker must render exactly once.');
+assert(drillSource.includes("input.type = 'password';") && drillSource.includes("input.autocomplete = 'off';"),
+  'The optional mnemonic field must remain a non-autofilled password-style input.');
+assert(drillSource.includes("input.value = '';"),
+  'The temporary BIP39 value must be cleared immediately after local validation.');
+assert(!drillSource.includes('localStorage') && !drillSource.includes('sessionStorage'),
+  'Recovery Validation must not persist BIP39 input or checklist state in renderer storage.');
 assert(drillSource.includes("actions.className = 'settings-section-actions recovery-drill-validation-actions';"),
   'BIP39 validation actions must have a dedicated spacing hook.');
 assert(productCss.includes('.recovery-drill-validation-actions { margin-top: 6px; }'),
@@ -52,4 +60,4 @@ assert(productCss.includes('.recovery-drill-validation-actions { margin-top: 6px
 assert(priorGate.includes('parts[2] >= 23'),
   'The 2.6.23 UI gate must remain active on later workflow candidates.');
 
-console.log(`PASS SafeLedger ${pkg.version} keeps the deletion trash icon, a bundled recovery-drill icon, and top-of-page BIP39 layout active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the deletion trash icon, bundled recovery-drill icon, guided Recovery Validation order, and local-only BIP39 safety active.`);
