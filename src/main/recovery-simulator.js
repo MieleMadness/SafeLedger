@@ -2,10 +2,10 @@
 
 const SCENARIOS = Object.freeze([
   Object.freeze({ id: 'device-lost', title: 'I lose a hardware wallet or device', icon: 'fa-mobile', description: 'Checks whether documented recovery material, location, and instructions are sufficient to replace a lost device.' }),
-  Object.freeze({ id: 'safeledger-device-lost', title: 'My SafeLedgerData device fails', icon: 'fa-usb', description: 'Checks whether a separately verified encrypted backup exists.' }),
-  Object.freeze({ id: 'location-unavailable', title: 'My primary recovery location is unavailable', icon: 'fa-home', description: 'Checks whether recovery and backup locations are documented separately enough to avoid one physical point of failure.' }),
+  Object.freeze({ id: 'safeledger-device-lost', title: 'My SafeLedgerData device fails', icon: 'fa-database', description: 'Checks whether a separately verified encrypted backup exists.' }),
+  Object.freeze({ id: 'location-unavailable', title: 'My primary recovery location is unavailable', icon: 'fa-map-marker', description: 'Checks whether recovery and backup locations are documented separately enough to avoid one physical point of failure.' }),
   Object.freeze({ id: 'family-access', title: 'My family needs to recover without me', icon: 'fa-users', description: 'Checks beneficiary/contact coverage plus recovery instructions and locations.' }),
-  Object.freeze({ id: 'exchange-lockout', title: 'I lose access to an exchange account', icon: 'fa-exchange', description: 'Checks whether exchange accounts have documented recovery paths.' })
+  Object.freeze({ id: 'exchange-lockout', title: 'I lose access to an exchange account', icon: 'fa-unlock-alt', description: 'Checks whether exchange accounts have documented recovery paths.' })
 ]);
 
 function ratio(done, total) {
