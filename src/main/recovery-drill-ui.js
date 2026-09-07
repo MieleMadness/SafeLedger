@@ -26,15 +26,15 @@ function appendOptionalBip39Check(area) {
   const section = document.createElement('section');
   section.className = 'recovery-drill-validation';
   appendText(section, 'h3', 'product-section-title', 'Optional BIP39 Check');
-  appendText(section, 'p', 'recovery-drill-intro', 'If this vault item uses a BIP39 seed phrase, you may validate its word list and checksum locally. SafeLedger does not save, log, copy, or transmit what you enter here.');
+  appendText(section, 'p', 'recovery-drill-intro', 'Enter the mnemonic words in their original order, separated by spaces — for example: word1 word2 word3. Do not use commas or join the words together. SafeLedger validates the word list and checksum locally and does not save, log, copy, or transmit what you enter here.');
   const input = document.createElement('input');
   input.type = 'password';
   input.className = 'form-control';
   input.autocomplete = 'off';
   input.spellcheck = false;
   input.maxLength = 4096;
-  input.placeholder = 'Enter BIP39 words for this one-time check';
-  input.setAttribute('aria-label', 'Temporary BIP39 mnemonic');
+  input.placeholder = 'Enter 12–24 BIP39 words separated by spaces';
+  input.setAttribute('aria-label', 'Temporary BIP39 mnemonic, words separated by spaces');
   section.appendChild(input);
   const actions = document.createElement('div');
   actions.className = 'settings-section-actions recovery-drill-validation-actions';
@@ -50,7 +50,10 @@ function appendOptionalBip39Check(area) {
   section.appendChild(resultText);
   validate.addEventListener('click', () => {
     const temporaryMnemonic = input.value;
-    if (!temporaryMnemonic.trim()) { resultText.textContent = 'Enter a mnemonic to run the optional local check.'; return; }
+    if (!temporaryMnemonic.trim()) {
+      resultText.textContent = 'Enter a mnemonic with each word separated by a space.';
+      return;
+    }
     const result = bip39.validateMnemonic(temporaryMnemonic);
     input.value = '';
     resultText.textContent = bip39Message(result);
@@ -62,7 +65,7 @@ function appendOptionalBip39Check(area) {
 
 function documentationReminder(group = {}) {
   if (recoveryDrill.canComplete(group)) return '';
-  if (group.lastRecoveryDrill || group.lastVerified) return 'Documentation reminder: this Recovery Validation may be current, but SafeLedger still does not have a recovery method, recovery location, or recovery instructions documented for this vault item. Completing or verifying a drill records that you tested the process; it does not create the missing recovery documentation. Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Vault Item.';
+  if (group.lastRecoveryDrill || group.lastVerified) return 'Documentation reminder: this Recovery Validation may be current, but SafeLedger still does not have a recovery method, recovery location, or recovery instructions documented for this vault item. Completing or verifying a validation records that you tested the process; it does not create the missing recovery documentation. Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Vault Item.';
   return 'Documentation reminder: SafeLedger does not have a recovery method, recovery location, or recovery instructions documented for this vault item yet. You can still complete this Recovery Validation checklist, but Recovery Readiness will remain incomplete until at least one part of the recovery plan is documented from Edit Vault Item.';
 }
 
@@ -84,36 +87,34 @@ function render(params = {}) {
   privacyIcon.className = 'fa fa-lock';
   privacyIcon.setAttribute('aria-hidden', 'true');
   privacy.appendChild(privacyIcon);
-  appendText(privacy, 'div', '', 'This guided test does not require you to reveal recovery phrases, private keys, passwords, PINs, or sensitive custom-field values. Confirm the checklist using your real-world recovery plan.');
+  appendText(privacy, 'div', '', 'This guided test does not require you to reveal recovery phrases, private keys, passwords, PINs, or sensitive custom-field values. Confirm each item using your real-world recovery plan.');
   area.appendChild(privacy);
 
   const reminder = documentationReminder(group);
   if (reminder) appendText(area, 'div', 'recovery-drill-warning', reminder);
 
   const steps = recoveryDrill.buildSteps(group);
-  const wizard = document.createElement('section');
-  wizard.className = 'recovery-drill-wizard';
+  const checklist = document.createElement('section');
+  checklist.className = 'recovery-drill-wizard recovery-drill-checklist';
   const progressHead = document.createElement('div');
   progressHead.className = 'recovery-drill-progress-head';
-  const progressLabel = appendText(progressHead, 'strong', 'recovery-drill-progress-label', 'Step 1');
+  appendText(progressHead, 'strong', 'recovery-drill-progress-label', 'Recovery checklist');
   const progressPercent = appendText(progressHead, 'span', 'recovery-drill-progress-percent', '0% confirmed');
-  wizard.appendChild(progressHead);
+  checklist.appendChild(progressHead);
   const track = document.createElement('div');
   track.className = 'recovery-drill-progress-track';
   const fill = document.createElement('span');
   fill.className = 'recovery-drill-progress-fill';
   track.appendChild(fill);
-  wizard.appendChild(track);
-  appendText(wizard, 'p', 'recovery-drill-intro', 'Work through one recovery check at a time. Confirm a step only after you have physically or operationally verified it.');
+  checklist.appendChild(track);
+  appendText(checklist, 'p', 'recovery-drill-intro', 'Review each recovery check below. Mark an item only after you have physically or operationally verified it.');
 
   const list = document.createElement('div');
-  list.className = 'recovery-drill-list recovery-drill-wizard-list';
+  list.className = 'recovery-drill-list recovery-drill-checklist-list';
   const checkboxes = [];
-  const rows = [];
   steps.forEach((step, index) => {
     const row = document.createElement('label');
-    row.className = 'recovery-drill-step recovery-drill-wizard-step';
-    row.dataset.stepIndex = String(index);
+    row.className = 'recovery-drill-step recovery-drill-checklist-step';
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.setAttribute('aria-label', step.title);
@@ -121,53 +122,26 @@ function render(params = {}) {
     row.appendChild(checkbox);
     const body = document.createElement('span');
     body.className = 'recovery-drill-step-body';
-    appendText(body, 'span', 'recovery-drill-step-number', `Step ${index + 1} of ${steps.length}`);
+    appendText(body, 'span', 'recovery-drill-step-number', `Check ${index + 1} of ${steps.length}`);
     appendText(body, 'strong', 'recovery-drill-step-title', step.title);
     appendText(body, 'span', 'recovery-drill-step-text', step.text);
     row.appendChild(body);
     list.appendChild(row);
-    rows.push(row);
   });
-  wizard.appendChild(list);
+  checklist.appendChild(list);
+  area.appendChild(checklist);
 
-  const controls = document.createElement('div');
-  controls.className = 'recovery-drill-wizard-controls';
-  const previous = document.createElement('button');
-  previous.type = 'button';
-  previous.className = 'btn btn-default';
-  previous.innerHTML = '<i class="fa fa-chevron-left" aria-hidden="true"></i> Previous';
-  const next = document.createElement('button');
-  next.type = 'button';
-  next.className = 'btn btn-default';
-  next.innerHTML = 'Next <i class="fa fa-chevron-right" aria-hidden="true"></i>';
-  controls.appendChild(previous);
-  controls.appendChild(next);
-  wizard.appendChild(controls);
-  area.appendChild(wizard);
-
-  let activeIndex = 0;
   const allConfirmed = () => checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
-  const confirmedCount = () => checkboxes.filter((checkbox) => checkbox.checked).length;
-  const syncWizard = (animateStep = false) => {
-    rows.forEach((row, index) => { row.hidden = index !== activeIndex; row.classList.toggle('is-active', index === activeIndex); });
-    progressLabel.textContent = `Step ${Math.min(activeIndex + 1, steps.length)} of ${steps.length}`;
-    const confirmed = confirmedCount();
+  const syncChecklist = () => {
+    const confirmed = checkboxes.filter((checkbox) => checkbox.checked).length;
     const percent = steps.length ? Math.round((confirmed / steps.length) * 100) : 0;
     progressPercent.textContent = `${percent}% confirmed`;
     fill.style.width = `${percent}%`;
-    previous.disabled = activeIndex === 0;
-    next.disabled = activeIndex >= steps.length - 1;
-    if (animateStep && rows[activeIndex]) motion.reveal(rows[activeIndex]);
     const dock = document.getElementById('detailActionArea');
     const completeButton = dock && dock.querySelector('[aria-label="Complete Recovery Validation"]');
     if (completeButton) completeButton.disabled = !allConfirmed();
   };
-  previous.addEventListener('click', () => { if (activeIndex > 0) { activeIndex--; syncWizard(true); } });
-  next.addEventListener('click', () => { if (activeIndex < rows.length - 1) { activeIndex++; syncWizard(true); } });
-  checkboxes.forEach((checkbox, index) => checkbox.addEventListener('change', () => {
-    syncWizard(false);
-    if (checkbox.checked && index === activeIndex && activeIndex < rows.length - 1) { activeIndex++; syncWizard(true); }
-  }));
+  checkboxes.forEach((checkbox) => checkbox.addEventListener('change', syncChecklist));
 
   const storageNote = document.createElement('div');
   storageNote.className = 'recovery-drill-storage-note';
@@ -178,7 +152,7 @@ function render(params = {}) {
   appendOptionalBip39Check(area);
 
   const complete = (_event, button) => {
-    if (!allConfirmed()) return alert('Confirm every Recovery Validation step before marking the validation complete.');
+    if (!allConfirmed()) return alert('Confirm every Recovery Validation check before marking the validation complete.');
     if (button) button.disabled = true;
     if (typeof params.onComplete === 'function') params.onComplete(recoveryDrill.completionPatch(), button);
   };
@@ -187,7 +161,7 @@ function render(params = {}) {
     { icon: 'fa-check-circle', title: 'Complete Recovery Validation', className: 'recovery-drill-complete-action', onClick: complete }
   ]);
   detailActions.setDetailMode('view');
-  syncWizard(false);
+  syncChecklist();
 }
 
 exports.render = render;
