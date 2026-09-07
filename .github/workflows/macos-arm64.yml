@@ -41,6 +41,12 @@ jobs:
       - name: Run regression tests
         run: npm run test:regression
 
+      - name: Run encrypted lifecycle behavioral test
+        run: node scripts/behavioral-lifecycle-tests.js
+
+      - name: Test release trust metadata generator
+        run: node scripts/release-trust-tests.js
+
       - name: Run Electron crypto smoke test
         run: npm run test:electron-crypto
 
@@ -58,9 +64,18 @@ jobs:
           ZIP_COUNT=$(find dist -maxdepth 1 -type f -name 'SafeLedger-*-macOS-arm64.zip' | wc -l | tr -d ' ')
           test "$ZIP_COUNT" = "1"
 
-      - name: Upload unsigned Apple Silicon test build
+      - name: Stage Apple Silicon ZIP, checksum, SBOM, and manifest
+        run: |
+          mkdir -p release/macos
+          ARTIFACT=$(find dist -maxdepth 1 -type f -name 'SafeLedger-*-macOS-arm64.zip' | head -n 1)
+          test -n "$ARTIFACT"
+          cp "$ARTIFACT" release/macos/
+          STAGED="release/macos/$(basename "$ARTIFACT")"
+          node scripts/generate-release-trust.js "$STAGED" release/macos macos arm64 "${{ github.event.pull_request.head.sha || github.sha }}"
+
+      - name: Upload verified Apple Silicon test bundle
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: SafeLedger-macOS-arm64
-          path: dist/SafeLedger-*-macOS-arm64.zip
+          path: release/macos/*
           if-no-files-found: error
