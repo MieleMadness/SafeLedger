@@ -21,13 +21,15 @@ const entrySource = read('src/main/renderer-entry.js');
 const editorSource = read('src/main/custom-fields-ui.js');
 assert(recordSource.includes("Object.freeze({ label: 'Network', type: 'text' })"));
 assert(recordSource.includes("Object.freeze({ label: 'Contract address', type: 'text' })"));
-assert(recordSource.includes('fixedFields: ASSET_IDENTITY_FIELDS'));
+assert(recordSource.includes('customFieldsUi.createEditor(grid, params.record && params.record.customFields'));
+assert(recordSource.includes('customFieldEditor.lockFixedField(identityField)'),
+  'Asset identity fields should be protected inside the canonical custom-field editor.');
 assert(!entrySource.includes("require('./asset-multichain-ui.js')"));
 assert(!editorSource.includes('MutationObserver'));
-assert(!editorSource.includes(".click()"),
-  'Asset identity fields must be created directly rather than by synthetic Add custom field clicks.');
-assert(editorSource.includes('function createFixedFieldsEditor(grid, initialFields, fixedFields)'),
-  'Asset identity fields should use the simplified fixed-fields renderer.');
+assert(!editorSource.includes('.click()'),
+  'Asset identity/custom fields must be created directly rather than by synthetic Add custom field clicks.');
+assert(editorSource.includes('function lockFixedField(field = {})'),
+  'The canonical editor should protect standard Asset identity fields without hiding user-defined fields.');
 
 class FakeClassList {
   constructor() { this.values = new Set(); }
@@ -119,30 +121,26 @@ try {
     { label: 'Memo', type: 'text', value: 'Cold storage' }
   ], {
     title: 'Network & Additional Fields',
-    note: 'Network and Contract address are standard SafeLedger asset identity fields. Add other optional fields below as needed.',
-    fixedFields: [
-      { label: 'Network', type: 'text' },
-      { label: 'Contract address', type: 'text' }
-    ]
+    note: 'Network and Contract address stay standard while custom fields remain editable.'
   });
+  editor.lockFixedField({ label: 'Network', type: 'text' });
+  editor.lockFixedField({ label: 'Contract address', type: 'text' });
 
   const fields = editor.getFields();
   assert.deepStrictEqual(fields.map((field) => field.label), ['Network', 'Memo', 'Contract address']);
   assert.strictEqual(fields.find((field) => field.label === 'Network').value, 'Ethereum',
     'Editing an existing Asset must preserve its Network value.');
   assert.strictEqual(fields.find((field) => field.label === 'Memo').value, 'Cold storage',
-    'Older additional Asset fields must remain stored even though the simplified Asset editor no longer exposes them.');
+    'Existing user-defined Asset custom fields must be visible, editable, and preserved.');
   assert.strictEqual(fields.find((field) => field.label === 'Contract address').value, '');
 
   const identityFields = findAll(grid, (node) => !!node.dataset.assetIdentityField);
-  assert.strictEqual(identityFields.length, 2, 'Asset editor must render exactly Network and Contract address.');
+  assert.strictEqual(identityFields.length, 2, 'Asset editor must protect exactly Network and Contract address as identity fields.');
   assert.deepStrictEqual(identityFields.map((node) => node.dataset.assetIdentityField), ['Network', 'Contract address']);
-  assert(identityFields.every((node) => node.className.includes('edit-info-grid-field')),
-    'Asset identity should use the same ordinary edit-field layout as the rest of the Asset form.');
-  assert.strictEqual(findAll(grid, (node) => node.className.includes('custom-field-add')).length, 0,
-    'The Asset editor must not expose Add custom field anymore.');
-  assert.strictEqual(findAll(grid, (node) => node.value === 'Cold storage').length, 0,
-    'Older additional Asset data must be preserved without cluttering the current editor.');
+  assert.strictEqual(findAll(grid, (node) => String(node.className).includes('custom-field-add')).length, 1,
+    'Asset edit must expose Add custom field for user-defined Asset metadata.');
+  assert.strictEqual(findAll(grid, (node) => node.value === 'Cold storage').length, 1,
+    'Existing custom Asset values must be rendered instead of silently hidden.');
 
   const fullGrid = new FakeElement('div');
   const maxFields = Array.from({ length: 50 }, (_, index) => ({
@@ -150,21 +148,18 @@ try {
     type: 'text',
     value: `Value ${index}`
   }));
-  const fullEditor = customFieldsUi.createEditor(fullGrid, maxFields, {
-    fixedFields: [
-      { label: 'Network', type: 'text' },
-      { label: 'Contract address', type: 'text' }
-    ]
-  });
+  const fullEditor = customFieldsUi.createEditor(fullGrid, maxFields);
+  fullEditor.lockFixedField({ label: 'Network', type: 'text' });
+  fullEditor.lockFixedField({ label: 'Contract address', type: 'text' });
   const fullResult = fullEditor.getFields();
   assert.strictEqual(fullResult.length, 50);
   assert.strictEqual(fullResult[49].label, 'Field 49',
     'A full legacy custom-field list must never lose its final stored user field.');
   assert(!fullResult.some((field) => field.label === 'Network' || field.label === 'Contract address'),
-    'When the historical field limit is already full, identity inputs must not overwrite preserved user data.');
+    'When the historical field limit is already full, identity helpers must not overwrite preserved user data.');
 } finally {
   if (previousDocument === undefined) delete global.document;
   else global.document = previousDocument;
 }
 
-console.log(`PASS SafeLedger ${pkg.version} keeps multichain Asset identity while simplifying Network/Contract editing and preserving older extra-field data.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps multichain Asset identity fields protected while exposing and preserving user-defined Asset custom fields.`);
