@@ -1,7 +1,5 @@
 'use strict';
 
-const motion = require('./motion-ui');
-
 const STATUS_TIMEOUT_MS = 5000;
 const STATUS_ICONS = Object.freeze({
   info: 'fa fa-info-circle',
@@ -72,15 +70,12 @@ function closeStatus() {
 }
 
 exports.showStatus = (params = {}) => {
-  const state = String(params.status || '').toUpperCase();
-  if (state === 'SUCCESS') motion.signalSaveSuccess();
-  else if (state === 'ERROR' || state === 'DELETED') motion.clearSave();
-
   if (!shouldDisplayStatus(params)) return false;
   const area = statusArea();
   if (!area) return false;
   resetArea(area);
 
+  const state = String(params.status || '').toUpperCase();
   const kind = statusKind(state);
   const message = String(params.statusMsg || '').trim();
   const options = LOGIN_REQUIRED.test(message)
