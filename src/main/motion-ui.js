@@ -1,7 +1,6 @@
 'use strict';
 
 const DURATIONS = Object.freeze({ fast: 140, normal: 200, dashboard: 320, nav: 190 });
-let pendingSave = null;
 
 function prefersReducedMotion() {
   try {
@@ -19,51 +18,6 @@ function animate(node, keyframes, options = {}) {
   } catch (_) {
     return Promise.resolve(false);
   }
-}
-
-function rememberSave(button) {
-  if (!button || typeof button.getBoundingClientRect !== 'function') {
-    pendingSave = null;
-    return;
-  }
-  const rect = button.getBoundingClientRect();
-  pendingSave = {
-    button,
-    rect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height }
-  };
-}
-
-function clearSave() {
-  pendingSave = null;
-}
-
-function signalSaveSuccess() {
-  const pending = pendingSave;
-  pendingSave = null;
-  if (!pending || typeof document === 'undefined') return false;
-
-  const connected = pending.button && pending.button.isConnected;
-  if (connected) {
-    const icon = pending.button.querySelector('.fa');
-    if (icon) icon.className = 'fa fa-check';
-    pending.button.classList.add('detail-save-success');
-  }
-
-  if (prefersReducedMotion()) return true;
-  const pop = document.createElement('span');
-  pop.className = 'save-success-pop';
-  pop.setAttribute('aria-hidden', 'true');
-  pop.innerHTML = '<i class="fa fa-check"></i>';
-  const rect = pending.rect;
-  pop.style.left = `${Math.round(rect.left + rect.width / 2)}px`;
-  pop.style.top = `${Math.round(rect.top + rect.height / 2)}px`;
-  document.body.appendChild(pop);
-  animate(pop, [
-    { opacity: 0, transform: 'translate(-50%, -50%) scale(.72)' },
-    { opacity: 1, transform: 'translate(-50%, -50%) scale(1.06)', offset: .45 },
-    { opacity: 0, transform: 'translate(-50%, -58%) scale(1)' }
-  ], { duration: 360 }).finally(() => pop.remove());
-  return true;
 }
 
 function reveal(node) {
@@ -108,11 +62,7 @@ module.exports = {
   DURATIONS,
   prefersReducedMotion,
   animate,
-  rememberSave,
-  clearSave,
-  signalSaveSuccess,
   reveal,
   dashboardEntrance,
-  animateReadiness,
-  _test: { getPendingSave: () => pendingSave }
+  animateReadiness
 };
