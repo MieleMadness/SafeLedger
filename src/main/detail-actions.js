@@ -1,7 +1,5 @@
 'use strict';
 
-const motion = require('./motion-ui');
-
 const DETAIL_MODE_CLASSES = ['wallet-coin-detail', 'wallet-coin-view', 'wallet-coin-edit'];
 
 function getDock() {
@@ -48,7 +46,6 @@ function makeIconButton(action) {
   button.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    if (String(action.className || '').split(/\s+/).includes('detail-action-save')) motion.rememberSave(button);
     if (typeof action.onClick === 'function') action.onClick(event, button);
   });
   return button;
