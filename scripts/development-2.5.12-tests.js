@@ -41,7 +41,8 @@ function testDashboardNavigationAndInsights() {
   assert(!dashboard.includes('MutationObserver') && !dashboard.includes('.click()'),
     'Vault Overview navigation must remain correct on first render without synthetic forwarding.');
 
-  assert(dashboard.includes("makeSection(\n    'Maintenance Snapshot'"));
+  assert(dashboard.includes("makeSection('Maintenance Snapshot', 'vault-maintenance-section'"),
+    'Maintenance Snapshot must remain a canonical named dashboard section without depending on source line wrapping.');
   assert(dashboard.includes("'Stale information'"));
   assert(dashboard.includes("'Recovery coverage'"));
   assert(dashboard.includes("'Last Backup'"), 'Maintenance Snapshot should use the clearer Last Backup label.');
