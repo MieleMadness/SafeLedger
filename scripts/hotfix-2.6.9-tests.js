@@ -39,8 +39,8 @@ assert(detailActions.includes("const DETAIL_MODE_CLASSES = ['wallet-coin-detail'
   'Shared detail-action ownership must define all view/edit mode classes in one place.');
 assert(detailActions.includes('detail.classList.remove(...DETAIL_MODE_CLASSES);'),
   'Shared detail-action cleanup must remove every stale detail/view/edit mode.');
-assert(detailActions.includes("function clear() {\n  clearDockOnly();\n  setDetailMode('');\n}"),
-  'Clearing detail actions must synchronously clear both the action dock and detail mode.');
+assert(/function\s+clear\s*\(\)\s*\{\s*clearDockOnly\(\);\s*setDetailMode\(''\);\s*\}/.test(detailActions),
+  'Clearing detail actions must synchronously clear both the action dock and detail mode on every platform.');
 
 assert(renderer.includes('function cancelAddProfile()'));
 assert(renderer.includes('clearUtilitySelections();'));
