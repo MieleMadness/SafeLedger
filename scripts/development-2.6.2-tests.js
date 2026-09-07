@@ -55,9 +55,18 @@ assert.strictEqual(fs.existsSync(path.join(root, 'src/main/asset-multichain-ui.j
 const recordSource = read('src/main/record.js');
 const customFieldsUiSource = read('src/main/custom-fields-ui.js');
 assert(recordSource.includes("Object.freeze({ label: 'Network', type: 'text' })") && recordSource.includes("Object.freeze({ label: 'Contract address', type: 'text' })"));
-assert(recordSource.includes('fixedFields: ASSET_IDENTITY_FIELDS'));
+assert(recordSource.includes('customFieldsUi.createEditor(grid, params.record && params.record.customFields'),
+  'Asset identity and user custom fields should be owned by the canonical editor.');
+assert(recordSource.includes('customFieldEditor.lockFixedField(identityField)'),
+  'Network and Contract address must remain protected identity fields inside the editable custom-field UI.');
+assert(!recordSource.includes('fixedFields: ASSET_IDENTITY_FIELDS'),
+  'The superseded fixed-only Asset path must not return because it hides user-defined custom fields.');
 assert(recordSource.includes('displayPreferences.genericAssetFallback(symbol, maxLength)'));
 assert(customFieldsUiSource.includes('function lockFixedField(field = {})'));
+assert(customFieldsUiSource.includes('Add custom field'),
+  'Asset users must retain the shared Add custom field capability.');
+assert(!customFieldsUiSource.includes('MutationObserver') && !customFieldsUiSource.includes('.click()'),
+  'Multichain identity/custom-field rendering must remain direct rather than observer or synthetic-event driven.');
 
 const presentationSource = read('src/main/vault-item-presentation.js');
 assert(presentationSource.includes("const serviceCatalog = require('./service-catalog');"));
@@ -69,4 +78,4 @@ assert(release.includes('Shit Coin Mode'));
 assert(release.includes('Chain Games'));
 assert(release.includes('known website'));
 
-console.log(`PASS SafeLedger ${pkg.version} preserves Shit Coin Mode, Chain Games, direct multichain Asset identity, and local known-site artwork without a DOM repair observer.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves Shit Coin Mode, Chain Games, protected multichain Asset identity with editable user custom fields, and local known-site artwork without a DOM repair observer.`);
