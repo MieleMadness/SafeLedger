@@ -53,9 +53,13 @@ const profileSource = read('src/main/profile.js');
 assert(profileSource.includes("'Blank Profile'"));
 assert(profileSource.includes("'Select wallet templates'"));
 const dashboardSource = read('src/main/dashboard-ui.js');
-const dashboardRows = read('src/main/dashboard-row-ui.js');
 assert(dashboardSource.includes("const badge = document.createElement('span');"), 'Vault Overview status pills should remain informational.');
 assert(dashboardSource.includes("source: 'dashboard'"), 'Vault Overview navigation should use direct vault-item targets.');
-assert(dashboardRows.includes("row.querySelector('.dashboard-list-main-action')"), 'Vault Overview attention rows should remain clickable.');
+assert(dashboardSource.includes("row.addEventListener('click', () => openWallet(item));"), 'Vault Overview attention rows should remain directly clickable.');
+assert(dashboardSource.includes("row.setAttribute('role', 'button');"), 'Vault Overview attention rows should remain keyboard accessible.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/dashboard-row-ui.js')), false,
+  'The retired dashboard row repair module must stay removed.');
+assert(!dashboardSource.includes('MutationObserver') && !dashboardSource.includes('.click()'),
+  'Vault Overview row navigation must remain direct rather than post-render repaired.');
 
-console.log('PASS SafeLedger development Web3Icons catalog, wallet templates, and Vault Overview row navigation integration.');
+console.log('PASS SafeLedger development Web3Icons catalog, wallet templates, and directly rendered Vault Overview row navigation integration.');
