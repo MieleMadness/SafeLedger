@@ -34,7 +34,7 @@ assert(foundation.includes('--sl-compact-nav-column: 98px;'));
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/login-workspace-ui.js')), false,
   'The synthetic-click login workspace coordinator must stay retired.');
 assert(!entry.includes('login-workspace-ui.js'));
-assert(renderer.includes('function firstDisplayProfileIndex(list = vaultList)')),
+assert(renderer.includes('function firstDisplayProfileIndex(list = vaultList)'),
   'The canonical renderer must choose the first displayed Profile directly from state.');
 assert(renderer.includes('const firstIndex = firstDisplayProfileIndex(vaultList);'));
 assert(renderer.includes("ipc.send('read', { type: 'vault-read', file: firstProfile.file });"),
