@@ -1,6 +1,13 @@
 'use strict';
 
-const rendererNavigation = require('./renderer');
+const detailActions = require('./detail-actions');
+const recoveryIntelligenceUi = require('./recovery-intelligence-dashboard-ui');
+
+let navigation = {};
+
+function configure(options = {}) {
+  navigation = Object.assign({}, options);
+}
 
 function clearArea() {
   const area = document.getElementById('detailArea');
@@ -43,9 +50,8 @@ function makeStatus(status) {
 }
 
 function openWallet(item = {}) {
-  const navigate = rendererNavigation && rendererNavigation._test && rendererNavigation._test.navigateGlobalResult;
-  if (typeof navigate !== 'function') return;
-  navigate({
+  if (typeof navigation.onOpenWallet !== 'function') return;
+  navigation.onOpenWallet({
     type: 'wallet',
     source: 'dashboard',
     profileIndex: Number(item.profileIndex),
@@ -116,13 +122,20 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
     const row = document.createElement('div');
     row.className = `dashboard-list-row${actionable ? ' dashboard-list-row-action' : ''}`;
 
-    const main = document.createElement(actionable ? 'button' : 'div');
+    const main = document.createElement('div');
     main.className = `dashboard-list-main${actionable ? ' dashboard-list-main-action' : ''}`;
     if (actionable) {
-      main.type = 'button';
-      main.title = `Open ${item.walletName}`;
-      main.setAttribute('aria-label', `Open ${item.walletName} in ${item.profileName}`);
-      main.addEventListener('click', () => openWallet(item));
+      const label = `Open ${item.walletName} in ${item.profileName}`;
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.title = `Open ${item.walletName}`;
+      row.setAttribute('aria-label', label);
+      row.addEventListener('click', () => openWallet(item));
+      row.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openWallet(item);
+      });
     }
 
     const title = document.createElement('div');
@@ -322,7 +335,7 @@ function renderDeviceHealth(area, device = {}) {
   area.appendChild(section);
 }
 
-function render(summary, device = {}) {
+function render(summary, device = {}, intelligence = null) {
   const area = clearArea();
   if (!area) return;
   const header = document.createElement('div');
@@ -357,6 +370,7 @@ function render(summary, device = {}) {
   renderMaintenanceSnapshot(area, summary, device);
   renderRecoveryHealth(area, summary);
   renderDeviceHealth(area, device);
+  if (intelligence) recoveryIntelligenceUi.renderIntelligence(area, intelligence);
 
   const attention = makeSection('Recovery Needs Attention');
   appendWalletList(attention, summary.needsAttention || [], 'Everything documented is currently ready.', false, true);
@@ -368,6 +382,7 @@ function render(summary, device = {}) {
 }
 
 async function showDashboard() {
+  detailActions.clear();
   const area = clearArea();
   if (!area || !window.safeLedgerApi || typeof window.safeLedgerApi.getDashboardSummary !== 'function') return;
   const loading = document.createElement('p');
@@ -375,18 +390,19 @@ async function showDashboard() {
   loading.textContent = 'Reviewing encrypted vault records locally…';
   area.appendChild(loading);
   try {
-    const [result, storage, backupResult, activityResult] = await Promise.all([
+    const [result, storage, backupResult, activityResult, intelligenceResult] = await Promise.all([
       window.safeLedgerApi.getDashboardSummary(),
       typeof window.safeLedgerApi.getStorageHealth === 'function' ? window.safeLedgerApi.getStorageHealth().catch(() => null) : Promise.resolve(null),
       typeof window.safeLedgerApi.getBackupHealth === 'function' ? window.safeLedgerApi.getBackupHealth().catch(() => null) : Promise.resolve(null),
-      typeof window.safeLedgerApi.getActivityHistory === 'function' ? window.safeLedgerApi.getActivityHistory(1).catch(() => null) : Promise.resolve(null)
+      typeof window.safeLedgerApi.getActivityHistory === 'function' ? window.safeLedgerApi.getActivityHistory(1).catch(() => null) : Promise.resolve(null),
+      typeof window.safeLedgerApi.getRecoveryIntelligence === 'function' ? window.safeLedgerApi.getRecoveryIntelligence().catch(() => null) : Promise.resolve(null)
     ]);
     if (!result || !result.ok) throw new Error(result && result.message ? result.message : 'Unable to build Vault Overview.');
     render(result.summary, {
       storage,
       backupHealth: backupResult && backupResult.health ? backupResult.health : null,
       activity: activityResult && Array.isArray(activityResult.entries) ? activityResult.entries : []
-    });
+    }, intelligenceResult && intelligenceResult.ok === true ? intelligenceResult.intelligence : null);
   } catch (err) {
     area.innerHTML = '';
     const message = document.createElement('p');
@@ -398,16 +414,16 @@ async function showDashboard() {
 
 window.addEventListener('DOMContentLoaded', () => {
   const button = document.getElementById('dashboardButton');
-  if (button) button.addEventListener('click', (event) => { event.preventDefault(); showDashboard(); });
-  if (window.safeLedgerApi && typeof window.safeLedgerApi.onResult === 'function') {
-    window.safeLedgerApi.onResult((payload) => {
-      if (payload && payload.type === 'vaultlist-init' && payload.sessionUnlocked === true) setTimeout(showDashboard, 0);
-    });
-  }
+  if (button) button.addEventListener('click', (event) => {
+    event.preventDefault();
+    showDashboard();
+  });
 });
 
+exports.configure = configure;
 exports.show = showDashboard;
 exports.render = render;
+exports.renderIntelligence = recoveryIntelligenceUi.renderIntelligence;
 exports._test = {
   formatBytes,
   backupAgeLabel,
