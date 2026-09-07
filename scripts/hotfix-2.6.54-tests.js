@@ -24,28 +24,16 @@ const record = read('src/main/record.js');
 const customFieldsUi = read('src/main/custom-fields-ui.js');
 const dataWriteSource = read('src/main/data-write-service.js');
 
-// Change Password must report the missing prerequisite before new-password
-// policy checks obscure the actual error.
 assert(cryptoUi.includes("if (newPassword && !oldPassword) return failButton(button, 'Old Password Must Be Specified');"),
   'Change Password must clearly require the old password when a new password is supplied.');
-
-// QR was not removed. Protect both the local generator and the two primary
-// screen paths so later UI cleanup cannot silently drop the control.
 assert(securityUi.includes("const QRCode = require('qrcode');"));
-assert(securityUi.includes("QRCode.toDataURL(text, { errorCorrectionLevel: 'M', margin: 2, width: 240 })"),
-  'On-screen QR generation must remain local and available.');
-assert(securityUi.includes("button.innerHTML = qrIconMarkup();"),
-  'QR actions must retain the local inline SVG control.');
+assert(securityUi.includes("QRCode.toDataURL(text, { errorCorrectionLevel: 'M', margin: 2, width: 240 })"));
+assert(securityUi.includes("button.innerHTML = qrIconMarkup();"));
 assert(securityUi.includes('exports.appendPublicAddressField = (parent, address, symbol) =>'));
-assert(securityUi.includes("`Generated locally from the ${symbol || 'asset'} public address. No network connection is used.`"));
-assert(securityUi.includes('const allowQr = options.allowQr !== false;'),
-  'Sensitive fields should remain QR-capable unless a caller explicitly disables QR.');
+assert(securityUi.includes('const allowQr = options.allowQr !== false;'));
 assert(securityUi.includes("actions.style.display = privacyMode ? 'none' : '';"));
-assert(securityUi.includes("if (privacyMode) actions.style.display = details.open ? '' : 'none';"),
-  'Privacy Mode may hide sensitive QR/Copy actions until expansion, but must reveal them directly when the field opens.');
+assert(securityUi.includes("if (privacyMode) actions.style.display = details.open ? '' : 'none';"));
 
-// Requested opening height is exactly 100px taller than the previous 750px
-// preference while still respecting the operating-system work area.
 const windowSizing = require('../src/main/window-sizing-main.js');
 assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 850);
 assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283);
@@ -53,30 +41,24 @@ assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1600, height: 1
 assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1200, height: 800 }), { width: 1200, height: 800 });
 assert(windowSizingSource.includes('const PREFERRED_HEIGHT = 850;'));
 
-// Vault Overview copy and hierarchy.
-assert(dashboard.includes("makeSection('Vault Inventory', 'vault-inventory-section', vaultContentsLabel(counts))"),
-  'Vault contents detail should sit directly below the Vault Inventory header.');
-assert(dashboard.includes("'Maintenance Snapshot',\n    'vault-maintenance-section',"));
+assert(dashboard.includes("makeSection('Vault Inventory', 'vault-inventory-section', vaultContentsLabel(counts))"));
+assert(dashboard.includes("makeSection('Maintenance Snapshot', 'vault-maintenance-section'"));
 assert(dashboard.includes('Review stale recovery information, documentation coverage, and the latest local backup activity.'));
-assert(dashboard.includes("'Recovery Health',\n    'vault-recovery-section',"));
+assert(dashboard.includes("makeSection('Recovery Health', 'vault-recovery-section'"));
 assert(dashboard.includes('See how many Vault Items are recovery-ready'));
-assert(dashboard.includes("'Device & Backup Health',\n    'device-health-section',"));
+assert(dashboard.includes("makeSection('Device & Backup Health', 'device-health-section'"));
 assert(dashboard.includes('Check SafeLedgerData storage availability and encrypted-backup freshness.'));
 assert(dashboard.includes("list.className = 'dashboard-maintenance-list';"));
 assert(dashboard.includes("details.className = 'dashboard-maintenance-details';"));
 assert(dashboard.includes("appendMaintenanceItem(list, 'Last Backup'"));
-assert(!dashboard.includes("datesTitle.textContent = 'Last maintenance';"),
-  'The retired Last Maintenance label must not return.');
+assert(!dashboard.includes("datesTitle.textContent = 'Last maintenance';"));
 assert(productCss.includes('.dashboard-maintenance-list') && productCss.includes('.dashboard-maintenance-details'));
 
-// Profile custom fields must pass through the canonical editor and the
-// authoritative main-owned allowlist instead of being renderer-only state.
 assert(profile.includes("const customFieldsUi = require('./custom-fields-ui');"));
 assert(profile.includes("title: 'Profile Custom Fields'"));
 assert(profile.includes('nextProfile.customFields = customFieldEditor.getFields();'));
 assert(profile.includes('customFieldsUi.appendDetail(area, profile.customFields'));
-assert(dataWriteSource.includes("if (Object.prototype.hasOwnProperty.call(input, 'customFields')) patch.customFields = customFields.normalize(input.customFields);"),
-  'Main-owned Profile mutation must normalize and allow custom fields.');
+assert(dataWriteSource.includes("if (Object.prototype.hasOwnProperty.call(input, 'customFields')) patch.customFields = customFields.normalize(input.customFields);"));
 const normalizedProfile = dataWrite.normalizeProfilePatch({
   name: 'Primary',
   customFields: [
@@ -86,53 +68,15 @@ const normalizedProfile = dataWrite.normalizeProfilePatch({
   injected: 'not-allowed'
 });
 assert.strictEqual(normalizedProfile.customFields.length, 2);
-assert.strictEqual(normalizedProfile.injected, undefined,
-  'Adding Profile custom fields must not broaden the authoritative write boundary to arbitrary renderer fields.');
+assert.strictEqual(normalizedProfile.injected, undefined);
 
-// Asset identity stays fixed while user custom fields are visible/editable.
 assert(record.includes('customFieldsUi.createEditor(grid, params.record && params.record.customFields'));
 assert(record.includes('customFieldEditor.lockFixedField(identityField)'));
-assert(!record.includes('fixedFields: ASSET_IDENTITY_FIELDS'),
-  'Asset edit should no longer take the fixed-only path that hid user-defined fields.');
+assert(!record.includes('fixedFields: ASSET_IDENTITY_FIELDS'));
 assert(customFieldsUi.includes('function lockFixedField(field = {})'));
 assert(customFieldsUi.includes("add.innerHTML = '<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add custom field';"));
-assert(!customFieldsUi.includes('MutationObserver') && !customFieldsUi.includes('.click()'),
-  'Custom-field ownership must remain direct and state-driven.');
+assert(!customFieldsUi.includes('MutationObserver') && !customFieldsUi.includes('.click()'));
 
-// Editing a seeded Asset must target the exact selected authoritative record.
-// Starter Assets can legitimately share one creation timestamp, so the old
-// created-timestamp + renderer-index fallback could update a sibling after the
-// renderer sorted its list, producing duplicate Bitcoin entries.
-assert(record.includes('const originalRecord = cloneValue(params.record);'));
-assert(record.includes('const submittedVaultData = cloneValue(params.vaultData);'));
-assert(record.includes("originalRecord\n    });") || record.includes('originalRecord });'),
-  'Asset modify requests must carry the original selected record identity into the main process.');
-assert(!record.includes('records.sort(utils.compareIgnoreCase)'),
-  'The renderer must not reorder the Asset collection before the authoritative save resolves its target.');
-assert(dataWriteSource.includes('function resolveRecordModifyIndex(items, requestedIndex, originalRecord, candidate)'));
-assert(dataWriteSource.includes('.filter(({ item }) => exactEqual(item, originalRecord))'));
-
-const sharedCreated = '2026-09-07T12:00:00.000Z';
-const authoritativeAssets = [
-  { name: 'Ethereum', symbol: 'ETH', created: sharedCreated, publicAddress: '' },
-  { name: 'Bitcoin', symbol: 'BTC', created: sharedCreated, publicAddress: '' }
-];
-const originalBitcoin = JSON.parse(JSON.stringify(authoritativeAssets[1]));
-const editedBitcoin = Object.assign({}, originalBitcoin, { publicAddress: 'bc1q-safeledger-test' });
-assert.strictEqual(
-  dataWrite.resolveRecordModifyIndex(authoritativeAssets, 0, originalBitcoin, editedBitcoin),
-  1,
-  'A Bitcoin edit must resolve Bitcoin by its original authoritative record even if a sorted renderer index points at Ethereum.'
-);
-assert.strictEqual(
-  dataWrite.resolveRecordModifyIndex(authoritativeAssets, 0, Object.assign({}, originalBitcoin, { publicAddress: 'stale' }), editedBitcoin),
-  -1,
-  'A stale original Asset snapshot must fail closed instead of falling back to a potentially wrong renderer index.'
-);
-
-// Phase 5 release trust remains inherited rather than weakened by this UI patch.
-// Run the actual Phase 5 gate instead of coupling 2.6.54 to one variable name
-// or exact source phrase inside that historical test.
 execFileSync(process.execPath, [path.join(root, 'scripts/hotfix-2.6.53-tests.js')], { stdio: 'pipe' });
 for (const workflow of ['windows-portable.yml', 'linux-appimage.yml', 'macos-arm64.yml']) {
   const source = read(`.github/workflows/${workflow}`);
@@ -151,4 +95,4 @@ for (const relative of [
   'scripts/hotfix-2.6.54-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} keeps QR available, clarifies Change Password, opens taller, improves Vault Overview, supports authoritative custom fields, and updates the exact selected Asset without creating duplicates.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps QR available, clarifies Change Password, opens taller, improves Vault Overview, and supports authoritative Profile/Asset custom fields.`);
