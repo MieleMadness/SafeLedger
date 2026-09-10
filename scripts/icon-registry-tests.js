@@ -7,7 +7,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const runtimeRoot = path.join(root, 'src', 'main');
 const localIconPath = path.join(runtimeRoot, 'css', 'local-icons.css');
-const ICON_TOKEN = /\b(?:fa|glyphicon)-[a-z0-9]+(?:-[a-z0-9]+)*\b/gi;
+// Match complete icon-class tokens only. The boundaries deliberately reject
+// substrings inside template prefixes (fa-chevron-${...}) and unrelated text
+// such as hexadecimal regex ranges ([0-9a-fA-F]).
+const ICON_TOKEN = /(?<![a-z0-9-])(?:fa|glyphicon)-[a-z0-9]+(?:-[a-z0-9]+)*(?![a-z0-9-])/gi;
 const ICON_SELECTOR = /\.(?:fa|glyphicon)-[a-z0-9]+(?:-[a-z0-9]+)*/gi;
 const MODIFIER_CLASSES = new Set(['fa-spin']);
 const GENERATED_RUNTIME_ICONS = Object.freeze(['fa-chevron-left', 'fa-chevron-right']);
@@ -32,6 +35,10 @@ function relative(file) {
   return path.relative(root, file).split(path.sep).join('/');
 }
 
+function extractIconTokens(source) {
+  return Array.from(String(source || '').matchAll(ICON_TOKEN), (match) => match[0].toLowerCase());
+}
+
 function collectRuntimeIcons(files = runtimeFiles()) {
   const usedBy = new Map();
   const remember = (token, source) => {
@@ -44,7 +51,7 @@ function collectRuntimeIcons(files = runtimeFiles()) {
 
   for (const file of files) {
     const source = fs.readFileSync(file, 'utf8');
-    for (const match of source.matchAll(ICON_TOKEN)) remember(match[0], relative(file));
+    for (const token of extractIconTokens(source)) remember(token, relative(file));
   }
   for (const token of GENERATED_RUNTIME_ICONS) remember(token, '<generated runtime class>');
   return usedBy;
@@ -73,4 +80,4 @@ assert.deepStrictEqual(missing, [], missing.length
 
 console.log(`PASS SafeLedger local icon registry covers ${usedBy.size} runtime icon classes; no live fa-/glyphicon- reference can silently fall back to a dot.`);
 
-module.exports = { runtimeFiles, collectRuntimeIcons, collectDefinedIcons, findMissingIcons, GENERATED_RUNTIME_ICONS, MODIFIER_CLASSES };
+module.exports = { runtimeFiles, extractIconTokens, collectRuntimeIcons, collectDefinedIcons, findMissingIcons, GENERATED_RUNTIME_ICONS, MODIFIER_CLASSES };
