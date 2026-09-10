@@ -8,8 +8,11 @@ const { execFileSync } = require('child_process');
 const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const pkg = JSON.parse(read('package.json'));
+const versionParts = String(pkg.version || '').split('.').map(Number);
 
-assert.strictEqual(pkg.version, '2.6.59');
+assert.strictEqual(versionParts[0], 2);
+assert.strictEqual(versionParts[1], 6);
+assert(versionParts[2] >= 59, 'The 2.6.59 appearance contract must remain active on later 2.6.x candidates.');
 assert(pkg.scripts['test:regression'].includes('node scripts/appearance-tests.js'));
 assert(pkg.scripts['test:regression'].includes('node scripts/hotfix-2.6.59-tests.js'));
 
@@ -59,4 +62,4 @@ for (const relative of [
   'src/main/app-appearance.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger 2.6.59 splits Light and Colorful cleanly, preserves legacy Light as Colorful, and adds the image-inspired airy Light palette.');
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.59 Light/Colorful appearance contract active.`);

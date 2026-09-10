@@ -61,8 +61,11 @@ for (const phrase of [
 }
 assert(dashboardSource.includes("makeStat('Vault Items', vaultItems)"),
   'Vault Overview inventory must create the Vault Items stat directly.');
-assert(dashboardSource.includes('Click a Vault Item to resolve them.'),
-  'Vault Overview recovery actions must use Vault Item terminology directly.');
+assert(
+  dashboardSource.includes('Choose Resolve to open the Vault Item that needs work.') &&
+  dashboardSource.includes("makeResolveButton('Resolve', () => openWallet(item)"),
+  'Vault Overview recovery actions must use Vault Item terminology and expose the direct Resolve action.'
+);
 assert(dashboardSource.includes("list.className = 'dashboard-attention-gaps';"),
   'Recovery Needs Attention must expose recovery gaps directly rather than relying on a separate scorecard section.');
 

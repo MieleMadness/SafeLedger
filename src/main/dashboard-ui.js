@@ -3,6 +3,7 @@
 const detailActions = require('./detail-actions');
 const recoveryIntelligenceUi = require('./recovery-intelligence-dashboard-ui');
 const recoverySimulator = require('./recovery-simulator');
+const securityEnhancements = require('./security-enhancements');
 const motion = require('./motion-ui');
 
 let navigation = {};
@@ -68,6 +69,21 @@ function openWallet(item = {}) {
   });
 }
 
+function makeResolveButton(label, onActivate, title = '') {
+  if (typeof onActivate !== 'function') return null;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn btn-default btn-sm dashboard-resolve-button';
+  button.textContent = label || 'Resolve';
+  button.title = title || button.textContent;
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onActivate(event, button);
+  });
+  return button;
+}
+
 async function openPortableStorageFolder() {
   if (!window.safeLedgerApi || typeof window.safeLedgerApi.openDataFolder !== 'function') {
     window.alert('SafeLedgerData folder access is unavailable in this build.');
@@ -131,7 +147,7 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
     helper.className = 'dashboard-section-help';
     helper.textContent = showDate
       ? 'Click a recently verified Vault Item below to open it.'
-      : 'Each item shows its readiness score and the most important recovery gaps. Click a Vault Item to resolve them.';
+      : 'Each item shows its readiness score and the most important recovery gaps. Choose Resolve to open the Vault Item that needs work.';
     section.appendChild(helper);
   }
 
@@ -169,7 +185,15 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
     main.appendChild(meta);
     if (!showDate) appendAttentionGaps(main, item);
     row.appendChild(main);
-    row.appendChild(makeStatus(item.status));
+
+    const end = document.createElement('div');
+    end.className = 'dashboard-list-end';
+    end.appendChild(makeStatus(item.status));
+    if (actionable && !showDate) {
+      const resolve = makeResolveButton('Resolve', () => openWallet(item), `Open ${item.walletName} to resolve recovery gaps`);
+      if (resolve) end.appendChild(resolve);
+    }
+    row.appendChild(end);
     list.appendChild(row);
   }
   section.appendChild(list);
@@ -196,7 +220,7 @@ function formatActivityTime(entry) {
   return Number.isNaN(date.getTime()) ? 'Unavailable' : date.toLocaleString();
 }
 
-function appendHealthRow(section, titleText, metaText, statusText, statusKind, titleOptions = {}) {
+function appendHealthRow(section, titleText, metaText, statusText, statusKind, titleOptions = {}, actionOptions = null) {
   const row = document.createElement('div');
   row.className = 'dashboard-list-row device-health-row';
   const main = document.createElement('div');
@@ -208,9 +232,17 @@ function appendHealthRow(section, titleText, metaText, statusText, statusKind, t
   main.appendChild(title);
   main.appendChild(meta);
   row.appendChild(main);
+
+  const end = document.createElement('div');
+  end.className = 'dashboard-list-end';
   const badge = makeStatus(statusKind || statusText);
   badge.textContent = statusText;
-  row.appendChild(badge);
+  end.appendChild(badge);
+  if (actionOptions && typeof actionOptions.onActivate === 'function') {
+    const resolve = makeResolveButton(actionOptions.label || 'Resolve', actionOptions.onActivate, actionOptions.title || 'Resolve this issue');
+    if (resolve) end.appendChild(resolve);
+  }
+  row.appendChild(end);
   section.appendChild(row);
 }
 
@@ -360,7 +392,14 @@ function appendSimulatorList(host, titleText, values) {
   host.appendChild(list);
 }
 
-function renderSimulatorResult(host, simulation) {
+async function runBackupResolution(actionId) {
+  if (actionId === 'create-backup') await securityEnhancements.exportEncryptedBackup();
+  else if (actionId === 'verify-backup') await securityEnhancements.verifyEncryptedBackup();
+  else return;
+  await showDashboard();
+}
+
+function renderSimulatorResult(host, simulation, options = {}) {
   host.innerHTML = '';
   const header = document.createElement('div');
   header.className = 'recovery-simulator-answer-header';
@@ -376,6 +415,29 @@ function renderSimulatorResult(host, simulation) {
   host.appendChild(headline);
   appendSimulatorList(host, 'Strengths', simulation.strengths);
   appendSimulatorList(host, 'Gaps to resolve', simulation.gaps);
+
+  const actions = Array.isArray(simulation.actions) ? simulation.actions : [];
+  if (!actions.length) return;
+  const controls = document.createElement('div');
+  controls.className = 'recovery-resolution-actions';
+  for (const action of actions) {
+    if (!action || !action.id) continue;
+    if (action.id === 'open-resolution-target') {
+      if (!options.target) continue;
+      const targetLabel = options.target.walletName ? `Resolve in ${options.target.walletName}` : (action.label || 'Resolve Vault Item');
+      const button = makeResolveButton(targetLabel, () => openWallet(options.target), 'Open the Vault Item with the next unresolved recovery gap');
+      if (button) controls.appendChild(button);
+      continue;
+    }
+    if (action.id === 'create-backup' || action.id === 'verify-backup') {
+      const button = makeResolveButton(action.label || 'Resolve', (_event, element) => {
+        element.disabled = true;
+        runBackupResolution(action.id).finally(() => { if (element.isConnected) element.disabled = false; });
+      });
+      if (button) controls.appendChild(button);
+    }
+  }
+  if (controls.childNodes.length) host.appendChild(controls);
 }
 
 function renderRecoverySimulator(area, summary, device = {}) {
@@ -419,7 +481,11 @@ function renderRecoverySimulator(area, summary, device = {}) {
     details.addEventListener('toggle', () => {
       if (!details.open || rendered) return;
       rendered = true;
-      renderSimulatorResult(answer, recoverySimulator.simulate(scenario.id, summary.simulationFacts || {}, device.backupHealth || null));
+      const simulation = recoverySimulator.simulate(scenario.id, summary.simulationFacts || {}, device.backupHealth || null);
+      const target = summary.resolutionTargets && summary.resolutionTargets[scenario.id]
+        ? summary.resolutionTargets[scenario.id]
+        : null;
+      renderSimulatorResult(answer, simulation, { target });
       motion.reveal(answer);
     });
     accordion.appendChild(details);
@@ -452,12 +518,19 @@ function renderDeviceHealth(area, device = {}) {
   if (backupHealth) {
     const backupDue = !backupHealth.backup || backupHealth.backup.state === 'never' || backupHealth.backup.state === 'due';
     const verifyDue = !backupHealth.verified || backupHealth.verified.state === 'never' || backupHealth.verified.state === 'due';
+    const nextAction = backupDue
+      ? { label: 'Create Backup', title: 'Create a current encrypted backup', onActivate: () => runBackupResolution('create-backup') }
+      : verifyDue
+        ? { label: 'Verify Backup', title: 'Verify the current encrypted backup', onActivate: () => runBackupResolution('verify-backup') }
+        : null;
     appendHealthRow(
       section,
       'Encrypted backup',
       `Last backup: ${backupAgeLabel(backupHealth.backup)} • Last verified: ${backupAgeLabel(backupHealth.verified)}`,
       backupDue || verifyDue ? 'Review' : 'Current',
-      backupDue || verifyDue ? 'Needs Review' : 'Ready'
+      backupDue || verifyDue ? 'Needs Review' : 'Ready',
+      {},
+      nextAction
     );
   } else {
     appendHealthRow(section, 'Encrypted backup', 'Backup health status unavailable.', 'Review', 'Needs Review');
@@ -564,6 +637,8 @@ exports._test = {
   makeReadinessRing,
   makeStatus,
   makeHealthTitle,
+  makeResolveButton,
+  runBackupResolution,
   openPortableStorageFolder,
   openWallet,
   appendWalletList,

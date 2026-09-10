@@ -156,7 +156,8 @@ function summarize(profileEntries = [], options = {}) {
     profileReadErrors,
     needsAttention: needsAttention.slice(0, 12),
     recentlyVerified: recentlyVerified.slice(0, 6),
-    simulationFacts: commandCenter.buildSimulationFacts(profileEntries)
+    simulationFacts: commandCenter.buildSimulationFacts(profileEntries),
+    resolutionTargets: commandCenter.buildResolutionTargets(profileEntries)
   };
 }
 

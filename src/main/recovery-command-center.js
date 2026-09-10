@@ -35,6 +35,43 @@ function locationsAppearSeparate(group = {}) {
   return Boolean(primary && backup && primary !== backup);
 }
 
+function navigationTarget(entry = {}, group = {}, profileIndex, walletIndex) {
+  return Object.freeze({
+    profileName: text(entry.profileName) || 'Profile',
+    profileFile: text(entry.profileFile),
+    profileIndex,
+    walletName: text(group.name) || 'Unnamed Vault Item',
+    walletIndex
+  });
+}
+
+function buildResolutionTargets(profileEntries = []) {
+  const targets = {
+    'device-lost': null,
+    'location-unavailable': null,
+    'family-access': null,
+    'exchange-lockout': null
+  };
+
+  for (const [profileIndex, entry] of profileEntries.entries()) {
+    const groups = entry && entry.vaultData && Array.isArray(entry.vaultData.groups) ? entry.vaultData.groups : [];
+    for (const [walletIndex, group] of groups.entries()) {
+      const target = navigationTarget(entry, group || {}, profileIndex, walletIndex);
+      const method = hasRecoveryMethod(group);
+      const location = hasRecoveryLocation(group);
+      const instructions = hasInstructions(group);
+      const kind = vaultItemKind(group);
+
+      if (!targets['device-lost'] && (!method || !location || !instructions)) targets['device-lost'] = target;
+      if (!targets['location-unavailable'] && !locationsAppearSeparate(group)) targets['location-unavailable'] = target;
+      if (!targets['family-access'] && (!text(group && group.beneficiary) || !instructions || !location)) targets['family-access'] = target;
+      if (!targets['exchange-lockout'] && kind === 'exchange' && !(method || instructions || text(group && group.recoveryLink))) targets['exchange-lockout'] = target;
+    }
+  }
+
+  return Object.freeze(targets);
+}
+
 function buildSimulationFacts(profileEntries = []) {
   const facts = {
     profileCount: profileEntries.length,
@@ -81,5 +118,6 @@ function buildSimulationFacts(profileEntries = []) {
 
 module.exports = {
   buildSimulationFacts,
-  _test: { text, lower, vaultItemKind, hasRecoveryMethod, hasRecoveryLocation, hasInstructions, locationsAppearSeparate }
+  buildResolutionTargets,
+  _test: { text, lower, vaultItemKind, hasRecoveryMethod, hasRecoveryLocation, hasInstructions, locationsAppearSeparate, navigationTarget }
 };

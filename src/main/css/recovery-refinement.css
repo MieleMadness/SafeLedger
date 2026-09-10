@@ -14,6 +14,21 @@
 .recovery-needs-attention-section .dashboard-status {
   margin-top: 2px;
 }
+.dashboard-list-end {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dashboard-resolve-button {
+  white-space: nowrap;
+}
+.recovery-resolution-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
 
 .recovery-simulator-accordion-list {
   display: grid;
@@ -150,6 +165,7 @@ html[data-theme="dark"] .recovery-simulator-topic-icon {
   }
   .recovery-simulator-topic-icon { width: 32px; height: 32px; }
   .recovery-simulator-accordion-answer { padding: 12px; }
+  .dashboard-list-end { align-items: flex-end; flex-direction: column; }
 }
 
 @media (prefers-reduced-motion: reduce) {
