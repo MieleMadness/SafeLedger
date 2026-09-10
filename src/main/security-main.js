@@ -473,12 +473,13 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
     const selection = await dialog.showOpenDialog(getMainWindow(), {
-      title: 'Choose SafeLedger 1.x Data Folder',
-      properties: ['openDirectory']
+      title: 'Select SafeLedger 1.x Data File',
+      properties: ['openFile'],
+      filters: [{ name: 'SafeLedger 1.x Data', extensions: ['json'] }]
     });
     if (!selection || selection.canceled || !selection.filePaths || !selection.filePaths.length) return { ok: false, canceled: true };
     try {
-      selectedLegacySource = legacyImport.resolveLegacySourceDir(selection.filePaths[0]);
+      selectedLegacySource = legacyImport.resolveLegacySourceSelection(selection.filePaths[0]);
       return { ok: true, sourceFolder: path.basename(selectedLegacySource), sourcePath: selectedLegacySource };
     } catch (err) {
       selectedLegacySource = null;
@@ -489,7 +490,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
   ipc.handle('legacy-import-run', async (event, password) => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
-    if (!selectedLegacySource) return { ok: false, message: 'Choose the SafeLedger 1.x data folder first.' };
+    if (!selectedLegacySource) return { ok: false, message: 'Choose a SafeLedger 1.x data file first.' };
     try {
       const result = await legacyImport.importIntoCurrent({
         sourceDir: selectedLegacySource,

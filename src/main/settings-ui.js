@@ -252,17 +252,17 @@ function renderDeviceSection(area, params) {
 
 function renderLegacyImportSection(area) {
   const section = makeSection('Import SafeLedger 1.x Data');
-  addNote(section, 'Import profiles from an original SafeLedger 1.x safeledgerdata folder. The importer reads the old files only, creates new 2.x encrypted vault files, verifies the imported structure, and never modifies the original 1.x data.');
+  addNote(section, 'Select vaultlist.json or any zvault-#.json file from your original SafeLedger 1.x safeledgerdata folder. SafeLedger uses that file to locate the complete legacy set, reads the old files only, creates new 2.x encrypted vault files, and never modifies the original 1.x data.');
   const sourceStatus = document.createElement('p');
   sourceStatus.className = 'settings-section-note';
-  sourceStatus.textContent = 'No SafeLedger 1.x folder selected.';
+  sourceStatus.textContent = 'No SafeLedger 1.x data file selected.';
   section.appendChild(sourceStatus);
   const actions = document.createElement('div');
   actions.className = 'settings-section-actions';
   const choose = document.createElement('button');
   choose.type = 'button';
   choose.className = 'btn btn-default';
-  choose.innerHTML = '<i class="fa fa-folder-open" aria-hidden="true"></i> Choose 1.x Folder';
+  choose.innerHTML = '<i class="fa fa-folder-open" aria-hidden="true"></i> Choose 1.x Data File';
   actions.appendChild(choose);
   section.appendChild(actions);
 
@@ -296,7 +296,7 @@ function renderLegacyImportSection(area) {
     choose.disabled = false;
     if (!result || result.canceled) return;
     if (!result.ok) return alert(result.message || 'Unable to select SafeLedger 1.x data.');
-    sourceStatus.textContent = `Selected: ${result.sourcePath || result.sourceFolder}`;
+    sourceStatus.textContent = `Selected legacy folder: ${result.sourcePath || result.sourceFolder}`;
     password.disabled = false;
     run.disabled = !password.value;
     password.focus();
@@ -440,6 +440,13 @@ function renderPasswordSection(area) {
   area.appendChild(section);
 }
 
+function resetDetailScroll(area) {
+  if (!area) return;
+  area.scrollTop = 0;
+  const scrollHost = typeof area.closest === 'function' ? area.closest('.content-middle') : null;
+  if (scrollHost) scrollHost.scrollTop = 0;
+}
+
 function showSettings(params) {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
@@ -459,6 +466,11 @@ function showSettings(params) {
   renderAssetDisplaySection(area, params);
   renderPrivacySection(area, params);
   renderPasswordSection(area);
+
+  // The detail column is the scroll owner. Explicitly reset it after the full
+  // Settings page is rendered so Settings always opens at its header instead
+  // of inheriting the scroll position from the previously viewed detail page.
+  resetDetailScroll(area);
 }
 
 exports.show = showSettings;
@@ -473,7 +485,9 @@ exports._test = {
   addBackupReminderControl,
   saveUserSetting,
   lockIconMarkup,
+  renderLegacyImportSection,
   renderSelfDestructSection,
   renderAssetDisplaySection,
-  renderPrivacySection
+  renderPrivacySection,
+  resetDetailScroll
 };
