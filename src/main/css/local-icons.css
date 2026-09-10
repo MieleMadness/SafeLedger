@@ -22,6 +22,33 @@
 .fa-star::before { content: "★"; }
 .fa-star-o::before { content: "☆"; }
 
+/* Emergency Recovery uses fa-life-ring in the Profile action dock and the
+ * package generator. Give it a real local lifebuoy instead of allowing the
+ * generic undefined-icon dot fallback to render. */
+.fa-life-ring {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+  border: .12em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background:
+    linear-gradient(currentColor, currentColor) top center / .13em .25em no-repeat,
+    linear-gradient(currentColor, currentColor) bottom center / .13em .25em no-repeat,
+    linear-gradient(currentColor, currentColor) left center / .25em .13em no-repeat,
+    linear-gradient(currentColor, currentColor) right center / .25em .13em no-repeat;
+}
+.fa-life-ring::before {
+  content: "";
+  position: absolute;
+  inset: .22em;
+  border: .08em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
 /* Activity History uses CSS-drawn power and open-lock artwork instead of
  * generic Unicode placeholders. These stay fully local and themeable. */
 .fa-power-off,
