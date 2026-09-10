@@ -197,7 +197,8 @@ function renderAppearanceSection(area, params) {
   const currentAppearance = normalizeAppearance(params.settings.appearance);
   const inputs = [
     addAppearanceOption(options, 'system', 'System', 'Follow the operating system and update automatically.', currentAppearance),
-    addAppearanceOption(options, 'light', 'Light', 'Bright workspace with SafeLedger blue navigation.', currentAppearance),
+    addAppearanceOption(options, 'light', 'Light', 'Airy white workspace with soft blue panels and navigation.', currentAppearance),
+    addAppearanceOption(options, 'colorful', 'Colorful', 'Classic SafeLedger look with bold blue navigation.', currentAppearance),
     addAppearanceOption(options, 'dark', 'Dark', 'Low-glare surfaces with deeper blue navigation.', currentAppearance)
   ];
   for (const input of inputs) {

@@ -9,7 +9,9 @@ const root = path.join(__dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const pkg = JSON.parse(read('package.json'));
 
-assert.strictEqual(pkg.version, '2.6.58');
+const parts = pkg.version.split('.').map(Number);
+assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 58,
+  'The 2.6.58 startup-performance gate must remain active on 2.6.58 and later 2.6.x candidates.');
 assert(pkg.scripts['test:regression'].includes('node scripts/startup-performance-tests.js'));
 assert(pkg.scripts['test:regression'].includes('node scripts/hotfix-2.6.58-tests.js'));
 
@@ -45,4 +47,4 @@ for (const relative of [
   'src/main/token-icons.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger 2.6.58 removes bulk Web3 SVG payloads and eager icon-catalog loading from the critical startup path while preserving the full offline catalog.');
+console.log('PASS SafeLedger 2.6.58+ keeps bulk Web3 SVG payloads and eager icon-catalog loading off the critical startup path while preserving the full offline catalog.');

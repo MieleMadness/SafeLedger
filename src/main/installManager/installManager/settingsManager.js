@@ -8,6 +8,7 @@ const backupHealth = require('../../backup-health');
 const { atomicWriteJson } = require('../../atomic-file');
 
 const { BRUTE_FORCE_MIN, BRUTE_FORCE_MAX, clampBruteForceValue, normalizeAppearance, normalizePrivacyMode, normalizeBoolean } = settingsSchema;
+const APPEARANCE_SCHEMA_VERSION = 2;
 
 const USER_EDITABLE_KEYS = Object.freeze([
   'appearance',
@@ -25,6 +26,7 @@ const defaults = () => ({
   created: new Date().toISOString(),
   modified: new Date().toISOString(),
   appearance: 'system',
+  appearanceSchemaVersion: APPEARANCE_SCHEMA_VERSION,
   privacyMode: true,
   shitCoinMode: false,
   failAttemptCount: 0,
@@ -49,7 +51,8 @@ function normalizeCounter(value, fallback = 0) {
 
 function normalizeSettings(settings, now = Date.now()) {
   const baseDefaults = defaults();
-  const next = Object.assign({}, baseDefaults, settings || {});
+  const source = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : {};
+  const next = Object.assign({}, baseDefaults, source);
 
   delete next.activationCode;
   delete next.atime;
@@ -57,7 +60,11 @@ function normalizeSettings(settings, now = Date.now()) {
   delete next.lower;
   delete next.masterKeyVerifier;
 
-  next.appearance = normalizeAppearance(next.appearance);
+  const sourceAppearanceVersion = Number.parseInt(source.appearanceSchemaVersion, 10);
+  const legacyAppearance = String(source.appearance || '').trim().toLowerCase();
+  const migrateLegacyLight = (!Number.isFinite(sourceAppearanceVersion) || sourceAppearanceVersion < APPEARANCE_SCHEMA_VERSION) && legacyAppearance === 'light';
+  next.appearance = migrateLegacyLight ? 'colorful' : normalizeAppearance(next.appearance);
+  next.appearanceSchemaVersion = APPEARANCE_SCHEMA_VERSION;
   next.privacyMode = normalizePrivacyMode(next.privacyMode);
   next.shitCoinMode = normalizeBoolean(next.shitCoinMode, false);
   next.numFailAttempts = clampBruteForceValue(next.numFailAttempts, baseDefaults.numFailAttempts);
@@ -139,6 +146,7 @@ exports.USER_EDITABLE_KEYS = USER_EDITABLE_KEYS;
 exports._test = {
   BRUTE_FORCE_MIN,
   BRUTE_FORCE_MAX,
+  APPEARANCE_SCHEMA_VERSION,
   clampBruteForceValue,
   normalizeCounter,
   normalizeSettings,
