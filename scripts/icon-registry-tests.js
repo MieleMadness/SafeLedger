@@ -15,6 +15,10 @@ const ICON_SELECTOR = /\.(?:fa|glyphicon)-[a-z0-9]+(?:-[a-z0-9]+)*/gi;
 const MODIFIER_CLASSES = new Set(['fa-spin']);
 const GENERATED_RUNTIME_ICONS = Object.freeze(['fa-chevron-left', 'fa-chevron-right']);
 
+function normalizeNewlines(value) {
+  return String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
 function runtimeFiles(dir = runtimeRoot) {
   const files = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -58,7 +62,7 @@ function collectRuntimeIcons(files = runtimeFiles()) {
 }
 
 function collectDefinedIcons(css = fs.readFileSync(localIconPath, 'utf8')) {
-  const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+  const withoutComments = String(css || '').replace(/\/\*[\s\S]*?\*\//g, '');
   return new Set(Array.from(withoutComments.matchAll(ICON_SELECTOR), (match) => match[0].slice(1).toLowerCase()));
 }
 
@@ -69,7 +73,7 @@ function findMissingIcons(usedBy = collectRuntimeIcons(), defined = collectDefin
 const usedBy = collectRuntimeIcons();
 const defined = collectDefinedIcons();
 const missing = findMissingIcons(usedBy, defined);
-const localIcons = fs.readFileSync(localIconPath, 'utf8');
+const localIcons = normalizeNewlines(fs.readFileSync(localIconPath, 'utf8'));
 
 assert(localIcons.includes('.fa::before,\n.glyphicon::before { content: "•"; }'),
   'The generic dot must remain a diagnostic fallback for truly unknown icon classes.');
@@ -80,4 +84,4 @@ assert.deepStrictEqual(missing, [], missing.length
 
 console.log(`PASS SafeLedger local icon registry covers ${usedBy.size} runtime icon classes; no live fa-/glyphicon- reference can silently fall back to a dot.`);
 
-module.exports = { runtimeFiles, extractIconTokens, collectRuntimeIcons, collectDefinedIcons, findMissingIcons, GENERATED_RUNTIME_ICONS, MODIFIER_CLASSES };
+module.exports = { normalizeNewlines, runtimeFiles, extractIconTokens, collectRuntimeIcons, collectDefinedIcons, findMissingIcons, GENERATED_RUNTIME_ICONS, MODIFIER_CLASSES };
