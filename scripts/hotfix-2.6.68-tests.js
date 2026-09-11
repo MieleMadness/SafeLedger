@@ -19,6 +19,7 @@ const index = read('src/main/index.html');
 const settings = read('src/main/settings-ui.js');
 const priorGate = read('scripts/hotfix-2.6.66-tests.js');
 const release = read('RELEASE-2.6.68.md');
+const releaseLower = release.toLowerCase();
 
 assert(layout.includes('--sl-panel-padding: 14px;'));
 assert(layout.includes('--sl-tile-padding: 12px;'));
@@ -71,6 +72,7 @@ assert(release.includes('Vault Inventory'));
 assert(release.includes('Recovery Health'));
 assert(release.includes('14px'));
 assert(release.includes('12px'));
-assert(release.includes('root cause'));
+assert(releaseLower.includes('root cause'),
+  'Release notes should document the spacing root cause regardless of heading capitalization.');
 
 console.log(`PASS SafeLedger ${pkg.version} uses one 14px major-panel rhythm and one 12px information-tile rhythm without stacked bottom gutters.`);
