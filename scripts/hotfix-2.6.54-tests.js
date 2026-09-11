@@ -18,7 +18,7 @@ const cryptoUi = read('src/main/crypto-ui-bridge.js');
 const securityUi = read('src/main/security-ui.js');
 const windowSizingSource = read('src/main/window-sizing-main.js');
 const dashboard = read('src/main/dashboard-ui.js');
-const productCss = read('src/main/css/product-features.css');
+const dashboardLayout = read('src/main/css/dashboard-layout.css');
 const profile = read('src/main/profile.js');
 const record = read('src/main/record.js');
 const customFieldsUi = read('src/main/custom-fields-ui.js');
@@ -44,16 +44,19 @@ assert(windowSizingSource.includes('const PREFERRED_HEIGHT = 800;'));
 
 assert(dashboard.includes("makeSection('Vault Inventory', 'vault-inventory-section', vaultContentsLabel(counts))"));
 assert(dashboard.includes("makeSection('Maintenance Snapshot', 'vault-maintenance-section'"));
-assert(dashboard.includes('Review stale recovery information, documentation coverage, and the latest local backup activity.'));
+assert(dashboard.includes('Review verification freshness, recovery coverage, and recent backup activity.'));
 assert(dashboard.includes("makeSection('Recovery Health', 'vault-recovery-section'"));
 assert(dashboard.includes('See how many Vault Items are recovery-ready'));
 assert(dashboard.includes("makeSection('Device & Backup Health', 'device-health-section'"));
 assert(dashboard.includes('Check SafeLedgerData storage availability and encrypted-backup freshness.'));
-assert(dashboard.includes("list.className = 'dashboard-maintenance-list';"));
-assert(dashboard.includes("details.className = 'dashboard-maintenance-details';"));
-assert(dashboard.includes("appendMaintenanceItem(list, 'Last Backup'"));
+assert(dashboard.includes("cards.className = 'dashboard-maintenance-cards';"));
+assert(dashboard.includes('appendMaintenanceCard(cards'));
+assert(dashboard.includes("title: 'Recovery verification'"));
+assert(dashboard.includes("title: 'Recovery coverage'"));
+assert(dashboard.includes("title: 'Backup activity'"));
 assert(!dashboard.includes("datesTitle.textContent = 'Last maintenance';"));
-assert(productCss.includes('.dashboard-maintenance-list') && productCss.includes('.dashboard-maintenance-details'));
+assert(dashboardLayout.includes('.dashboard-maintenance-card'));
+assert(dashboardLayout.includes('.dashboard-maintenance-end'));
 
 assert(profile.includes("const customFieldsUi = require('./custom-fields-ui');"));
 assert(profile.includes("title: 'Profile Custom Fields'"));
@@ -96,4 +99,4 @@ for (const relative of [
   'scripts/hotfix-2.6.54-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} keeps QR available, clarifies Change Password, uses the revised 800px workspace height, improves Vault Overview, and supports authoritative Profile/Asset custom fields.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps QR available, clarifies Change Password, uses the revised 800px workspace height, keeps actionable Vault Overview maintenance guidance, and supports authoritative Profile/Asset custom fields.`);
