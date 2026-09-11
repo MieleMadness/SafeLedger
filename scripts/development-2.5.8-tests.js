@@ -113,13 +113,13 @@ function testSettingsWorkflowOrder() {
   const source = read('src/main/settings-ui.js');
   const calls = [
     'renderAppearanceSection(area, params);',
+    'renderAssetDisplaySection(area, params);',
+    'renderPrivacySection(area, params);',
     'renderBackupSection(area);',
     'renderDeviceSection(area, params);',
     'renderLegacyImportSection(area);',
     'renderBruteForceSection(area, params);',
     'renderSelfDestructSection(area, params);',
-    'renderAssetDisplaySection(area, params);',
-    'renderPrivacySection(area, params);',
     'renderPasswordSection(area);'
   ];
   let previous = -1;

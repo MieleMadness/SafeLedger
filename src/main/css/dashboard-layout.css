@@ -61,12 +61,17 @@
   margin-bottom: 0;
 }
 
-/* Maintenance Snapshot now uses the same visual language as What Happens If,
- * but the rows are direct status/action cards rather than expandable Q&A. */
+/* Maintenance Snapshot uses the same one-shell / divided-row language as
+ * Recovery Needs Attention while retaining the requested local icons and
+ * direct maintenance actions. */
 .dashboard-maintenance-cards {
   display: grid;
-  gap: 9px;
+  gap: 0;
   margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--sl-border);
+  border-radius: 8px;
+  background: var(--sl-surface);
 }
 
 .dashboard-maintenance-card {
@@ -74,10 +79,15 @@
   grid-template-columns: 38px minmax(0, 1fr) auto;
   gap: 11px;
   align-items: center;
-  border: 1px solid var(--sl-border);
-  border-radius: 10px;
-  background: var(--sl-surface);
+  border: 0;
+  border-bottom: 1px solid var(--sl-border);
+  border-radius: 0;
+  background: transparent;
   box-shadow: var(--sl-shadow-soft);
+}
+
+.dashboard-maintenance-card:last-child {
+  border-bottom: 0;
 }
 
 .dashboard-maintenance-copy {
@@ -92,8 +102,13 @@
   min-width: 0;
 }
 
-html[data-theme="dark"] .dashboard-maintenance-card {
+html[data-theme="dark"] .dashboard-maintenance-cards {
   background: var(--sl-surface-raised);
+  border-color: var(--sl-border);
+}
+
+html[data-theme="dark"] .dashboard-maintenance-card {
+  background: transparent;
   border-color: var(--sl-border);
 }
 

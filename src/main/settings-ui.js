@@ -458,13 +458,13 @@ function showSettings(params) {
 
   // One canonical Settings render owns both section creation and ordering.
   renderAppearanceSection(area, params);
+  renderAssetDisplaySection(area, params);
+  renderPrivacySection(area, params);
   renderBackupSection(area);
   renderDeviceSection(area, params);
   renderLegacyImportSection(area);
   renderBruteForceSection(area, params);
   renderSelfDestructSection(area, params);
-  renderAssetDisplaySection(area, params);
-  renderPrivacySection(area, params);
   renderPasswordSection(area);
 
   // The detail column is the scroll owner. Explicitly reset it after the full
