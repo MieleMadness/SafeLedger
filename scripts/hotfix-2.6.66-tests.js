@@ -40,13 +40,16 @@ assert(dashboard.includes('Click a recently verified Vault Item below to open it
 assert(!dashboard.includes('Each item shows its readiness score and the most important recovery gaps. Choose Resolve to open the Vault Item that needs work.'),
   'Recovery Needs Attention must not render a second redundant helper paragraph.');
 
-assert(dashboardCss.includes('.vault-inventory-section,\n.vault-recovery-section {\n  padding-bottom: 14px;'));
+assert(dashboardCss.includes('--sl-panel-padding: 14px;'),
+  'The current container contract must preserve the 14px panel rhythm introduced by 2.6.66.');
+assert(dashboardCss.includes('.vault-inventory-section,\n.vault-recovery-section,'),
+  'Vault Inventory and Recovery Health must remain part of the shared panel-spacing contract.');
 assert(dashboardCss.includes('.vault-inventory-section .dashboard-stats,\n.vault-recovery-section .dashboard-stats {\n  margin-bottom: 0;'));
-assert(!dashboardCss.includes('!important'), 'Dashboard spacing should be owned by normal component cascade, not force-overridden.');
+assert(!dashboardCss.includes('!important'), 'Component spacing should be owned by normal cascade, not force-overridden.');
 const currentCssIndex = index.indexOf('./css/ui-current.css');
 const dashboardCssIndex = index.indexOf('./css/dashboard-layout.css');
 assert(currentCssIndex >= 0 && dashboardCssIndex > currentCssIndex,
-  'Dashboard component spacing must load after the historical consolidated UI cascade it replaces.');
+  'Current component spacing must load after the historical consolidated UI cascade it replaces.');
 
 assert(priorGate.includes('parts[2] >= 65'), 'The 2.6.65 Settings and legacy import gate must remain future-compatible.');
 assert(release.includes('800px'));
@@ -61,4 +64,4 @@ for (const relative of [
   'scripts/hotfix-2.6.66-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} uses the 800px preferred height, removes redundant Recovery Needs Attention copy, and matches dashboard block bottom spacing to the 14px side padding.`);
+console.log(`PASS SafeLedger ${pkg.version} uses the 800px preferred height, removes redundant Recovery Needs Attention copy, and preserves the shared 14px panel-spacing contract.`);

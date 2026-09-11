@@ -1,16 +1,59 @@
-/* SafeLedger Vault Overview component spacing.
+/* SafeLedger panel and tile spacing contract.
  *
- * This stylesheet intentionally owns dashboard block spacing after the
- * historical consolidated UI cascade. Keep component layout here instead of
- * adding one-off inline styles or broad generic overrides.
+ * The app has two intentional spacing levels:
+ *   - major content panels use 14px on every side;
+ *   - smaller information tiles use 12px on every side.
+ *
+ * This stylesheet loads after the historical consolidated UI cascade so the
+ * current component contract owns spacing directly without inline repair code,
+ * timers, observers, or broad force-overrides.
  */
 
-/* Vault Inventory and Recovery Health use 14px side padding. Their stat grid
- * should end on that same 14px rhythm, without an extra bottom margin creating
- * a visibly larger gap below the information tiles. */
+:root {
+  --sl-panel-padding: 14px;
+  --sl-tile-padding: 12px;
+}
+
+/* Major panels follow the same 14px container rhythm as Backup & Recovery. */
+.settings-section,
 .vault-inventory-section,
-.vault-recovery-section {
-  padding-bottom: 14px;
+.vault-recovery-section,
+.recovery-readiness-card,
+.recovery-drill-wizard-card {
+  padding: var(--sl-panel-padding);
+}
+
+/* The final child should not create a second bottom gutter inside a panel.
+ * The panel itself owns the bottom padding. */
+.settings-section > :last-child,
+.vault-inventory-section > :last-child,
+.vault-recovery-section > :last-child,
+.recovery-readiness-card > :last-child,
+.recovery-drill-wizard-card > :last-child {
+  margin-bottom: 0;
+}
+
+/* Appearance previously added 12px below its tile grid on top of the parent
+ * panel's 14px bottom padding. Keep only the panel padding, matching Backup &
+ * Recovery and the rest of Settings. */
+.appearance-options {
+  margin-bottom: 0;
+}
+
+/* Information tiles use one 12px internal padding contract. */
+.appearance-option,
+.dashboard-stat,
+.security-scorecard,
+.dashboard-maintenance-card {
+  padding: var(--sl-tile-padding);
+}
+
+/* Dashboard grids own their outer spacing. A dashboard-stat is a grid tile,
+ * not a standalone vertical block, so it must not contribute the generic
+ * 16px card margin beneath the row. This was the remaining source of the
+ * oversized gap in Vault Inventory and Recovery Health. */
+.dashboard-stats > .dashboard-stat {
+  margin-bottom: 0;
 }
 
 .vault-inventory-section .dashboard-stats,
