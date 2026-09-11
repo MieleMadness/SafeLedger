@@ -32,8 +32,10 @@ function testDashboardNavigationAndInsights() {
   assert(dashboard.includes("event.key !== 'Enter' && event.key !== ' '"));
   assert(dashboard.includes("const badge = document.createElement('span');"));
   assert(!dashboard.includes('dashboard-status-action'));
-  assert(dashboard.includes('Each item shows its readiness score and the most important recovery gaps.'),
+  assert(dashboard.includes('Vault Items that are not fully recovery-ready appear here with their readiness score and most important gaps.'),
     'Recovery Needs Attention guidance should explain the consolidated readiness score/gaps.');
+  assert(dashboard.includes('Choose Resolve to open the Vault Item that needs work.'),
+    'Recovery Needs Attention guidance should retain the direct Resolve instruction.');
   assert(dashboard.includes('Click a recently verified Vault Item below to open it.'));
   assert(dashboard.includes("appendWalletList(recent, summary.recentlyVerified || [], 'No Vault Item recovery plans have been verified yet.', true, true)"),
     'Recently Verified rows should use the same direct row navigation as Recovery Needs Attention.');
