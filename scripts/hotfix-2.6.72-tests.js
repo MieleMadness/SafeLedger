@@ -28,14 +28,23 @@ assert(historical.includes("title: 'Recovery coverage'"));
 assert(historical.includes("title: 'Backup activity'"));
 assert(historical.includes('maintenanceTargets'));
 assert(historical.includes("read('src/main/css/dashboard-layout.css')"));
+
+// Check for the obsolete positive requirements themselves, not for the raw
+// implementation strings. The current historical test intentionally contains
+// negative assertions proving the retired renderer stays absent, so a broad
+// substring search would incorrectly fail on those protective checks.
 assert(!historical.includes("assert(dashboard.includes(\"'Stale information'\"))"),
   'The historical gate must not require the retired Stale information bullet label.');
 assert(!historical.includes("assert(dashboard.includes(\"'Last Backup'\"))"),
   'The historical gate must not require the retired Last Backup bullet label.');
-assert(!historical.includes("list.className = 'dashboard-maintenance-list';"),
-  'The historical gate must not preserve the retired maintenance bullet-list renderer.');
-assert(!historical.includes("details.className = 'dashboard-maintenance-details';"),
-  'The historical gate must not preserve the retired nested maintenance bullets.');
+assert(!historical.includes("assert(dashboard.includes(\"list.className = 'dashboard-maintenance-list';\"))"),
+  'The historical gate must not positively require the retired maintenance bullet-list renderer.');
+assert(!historical.includes("assert(dashboard.includes(\"details.className = 'dashboard-maintenance-details';\"))"),
+  'The historical gate must not positively require the retired nested maintenance bullets.');
+assert(historical.includes("assert(!dashboard.includes(\"list.className = 'dashboard-maintenance-list';\"),"),
+  'The historical gate should explicitly prevent the retired maintenance list from returning.');
+assert(historical.includes("assert(!dashboard.includes(\"details.className = 'dashboard-maintenance-details';\"),"),
+  'The historical gate should explicitly prevent the retired nested details from returning.');
 
 assert(dashboard.includes("cards.className = 'dashboard-maintenance-cards';"));
 assert(layout.includes('.dashboard-maintenance-card {'));
