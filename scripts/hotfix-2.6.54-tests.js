@@ -35,11 +35,12 @@ assert(securityUi.includes("actions.style.display = privacyMode ? 'none' : '';")
 assert(securityUi.includes("if (privacyMode) actions.style.display = details.open ? '' : 'none';"));
 
 const windowSizing = require('../src/main/window-sizing-main.js');
-assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 850);
+assert.strictEqual(windowSizing.PREFERRED_HEIGHT, 800);
 assert.strictEqual(windowSizing.PREFERRED_WIDTH, 1283);
-assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1600, height: 1200 }), { width: 1283, height: 850 });
+assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1600, height: 1200 }), { width: 1283, height: 800 });
 assert.deepStrictEqual(windowSizing.preferredWindowSize({ width: 1200, height: 800 }), { width: 1200, height: 800 });
-assert(windowSizingSource.includes('const PREFERRED_HEIGHT = 850;'));
+assert(windowSizing.PREFERRED_HEIGHT > 750, 'The revised default should remain taller than the original 750px baseline.');
+assert(windowSizingSource.includes('const PREFERRED_HEIGHT = 800;'));
 
 assert(dashboard.includes("makeSection('Vault Inventory', 'vault-inventory-section', vaultContentsLabel(counts))"));
 assert(dashboard.includes("makeSection('Maintenance Snapshot', 'vault-maintenance-section'"));
@@ -95,4 +96,4 @@ for (const relative of [
   'scripts/hotfix-2.6.54-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} keeps QR available, clarifies Change Password, opens taller, improves Vault Overview, and supports authoritative Profile/Asset custom fields.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps QR available, clarifies Change Password, uses the revised 800px workspace height, improves Vault Overview, and supports authoritative Profile/Asset custom fields.`);

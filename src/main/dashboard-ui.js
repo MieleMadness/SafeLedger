@@ -142,12 +142,10 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
     return;
   }
 
-  if (actionable) {
+  if (actionable && showDate) {
     const helper = document.createElement('p');
     helper.className = 'dashboard-section-help';
-    helper.textContent = showDate
-      ? 'Click a recently verified Vault Item below to open it.'
-      : 'Each item shows its readiness score and the most important recovery gaps. Choose Resolve to open the Vault Item that needs work.';
+    helper.textContent = 'Click a recently verified Vault Item below to open it.';
     section.appendChild(helper);
   }
 
@@ -569,7 +567,7 @@ function render(summary, device = {}, intelligence = null) {
   renderDeviceHealth(area, device);
   if (intelligence) recoveryIntelligenceUi.renderIntelligence(area, intelligence);
 
-  const attention = makeSection('Recovery Needs Attention', 'recovery-needs-attention-section', 'Vault Items that are not fully recovery-ready appear here with their readiness score and most important gaps.');
+  const attention = makeSection('Recovery Needs Attention', 'recovery-needs-attention-section', 'Vault Items that are not fully recovery-ready appear here with their readiness score and most important gaps. Choose Resolve to open the Vault Item that needs work.');
   appendWalletList(attention, summary.needsAttention || [], 'Everything documented is currently ready.', false, true);
   area.appendChild(attention);
 

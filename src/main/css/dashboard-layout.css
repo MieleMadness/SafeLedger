@@ -1,0 +1,19 @@
+/* SafeLedger Vault Overview component spacing.
+ *
+ * This stylesheet intentionally owns dashboard block spacing after the
+ * historical consolidated UI cascade. Keep component layout here instead of
+ * adding one-off inline styles or broad generic overrides.
+ */
+
+/* Vault Inventory and Recovery Health use 14px side padding. Their stat grid
+ * should end on that same 14px rhythm, without an extra bottom margin creating
+ * a visibly larger gap below the information tiles. */
+.vault-inventory-section,
+.vault-recovery-section {
+  padding-bottom: 14px;
+}
+
+.vault-inventory-section .dashboard-stats,
+.vault-recovery-section .dashboard-stats {
+  margin-bottom: 0;
+}

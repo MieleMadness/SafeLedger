@@ -4,10 +4,11 @@
 // 2.6.19 equalizes the Asset column to 2fr, leaving 11 total units
 // (2/2/2/5). Keep the same approximate per-unit width so the Detail column
 // stays visually stable while the overall window becomes one grid unit narrower.
-// 2.6.54 adds 100px of vertical workspace so dashboard and edit screens need
-// less immediate scrolling without changing the established horizontal layout.
+// 2.6.54 added 100px of vertical workspace above the original 750px baseline.
+// 2.6.66 trims 50px back from that increase, keeping a roomier 800px default
+// while reducing how much of the desktop the app occupies on launch.
 const PREFERRED_WIDTH = 1283;
-const PREFERRED_HEIGHT = 850;
+const PREFERRED_HEIGHT = 800;
 
 function preferredWindowSize(workArea = {}) {
   const availableWidth = Number(workArea.width) > 0 ? Number(workArea.width) : PREFERRED_WIDTH;
