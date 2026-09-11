@@ -101,9 +101,6 @@ async function testStaleOsSignalsCannotKillFreshSession() {
     service.checkIdleState();
     assert.deepStrictEqual(locks, ['idle-state']);
 
-    // Simulate a successful same-process re-login while the OS still reports
-    // the previous locked state for one more poll. That stale level must not
-    // destroy the new session.
     unlocked = true;
     generation++;
     service.checkIdleState();
@@ -115,9 +112,6 @@ async function testStaleOsSignalsCannotKillFreshSession() {
     service.checkIdleState();
     assert.deepStrictEqual(locks, ['idle-state', 'idle-state']);
 
-    // A suspend lock records the old session generation. If a late resume
-    // signal arrives after a new authentication, it must not lock that new
-    // generation.
     idleState = 'active';
     service.checkIdleState();
     unlocked = true;
@@ -130,7 +124,6 @@ async function testStaleOsSignalsCannotKillFreshSession() {
     powerMonitor.emit('resume');
     assert.strictEqual(locks.length, countAfterSuspend, 'late resume must not destroy a post-suspend re-login');
 
-    // Resume remains fail-closed if there was no observed suspend event.
     unlocked = true;
     powerMonitor.emit('resume');
     assert.strictEqual(locks.at(-1), 'resume');
@@ -146,7 +139,6 @@ function testTrustedFolderAction() {
   const bridge = read('src/main/renderer-bridge.js');
   const bootstrap = read('src/main/bootstrap.js');
   const dashboard = read('src/main/dashboard-ui.js');
-  const icons = read('src/main/css/local-icons.css');
 
   assert(preload.includes("openDataFolder: () => invoke('device-open-data-folder')"));
   assert(preload.includes('function invoke(channel, ...args)'), 'trusted folder action should pass through the normalized preload invoke boundary');
@@ -154,9 +146,9 @@ function testTrustedFolderAction() {
   assert(bootstrap.includes("ipc.handle('device-open-data-folder'"));
   assert(bootstrap.includes('shell.openPath(getDataRoot())'));
   assert(!bootstrap.includes("shell.openPath(event"), 'renderer event data must never select the opened path');
-  assert(dashboard.includes('Open SafeLedgerData folder'));
-  assert(dashboard.includes('dashboard-title-action'));
-  assert(dashboard.includes('fa-external-link'));
+  assert(dashboard.includes("label: 'Open Storage'"), 'Portable storage should use the current full Open Storage button.');
+  assert(dashboard.includes('onActivate: openPortableStorageFolder'), 'Open Storage must call the trusted SafeLedgerData folder action directly.');
+  assert(!dashboard.includes('dashboard-title-action'), 'the retired compact title-icon storage action must not return');
   assert(dashboard.includes("const badge = document.createElement('span');"), 'recovery status pills should remain informational');
   assert(!dashboard.includes('dashboard-status-action'), 'status pills should not carry a competing wallet navigation action');
   assert(dashboard.includes("main.className = `dashboard-list-main${actionable ? ' dashboard-list-main-action' : ''}`;"),
@@ -171,7 +163,6 @@ function testTrustedFolderAction() {
   assert(!dashboard.includes('MutationObserver') && !dashboard.includes('.click()'),
     'dashboard interaction must remain direct rather than observer/synthetic-click driven');
   assert(dashboard.includes('window.safeLedgerApi.openDataFolder()'));
-  assert(icons.includes('.fa-external-link'));
 }
 
 function testSemanticContrast() {
@@ -189,7 +180,7 @@ function testSemanticContrast() {
   }
 
   assert(css.includes('#detailArea .btn-default'));
-  assert(css.includes('.dashboard-title-action:focus-visible'));
+  assert(!css.includes('.dashboard-title-action'), 'retired compact storage-icon styling should stay removed');
   assert(css.includes('font-size: 11px !important;'), 'status pills must share the Portable Storage pill text size');
   assert(css.includes('font-weight: 700 !important;'), 'status pill text must remain bold');
   assert(css.includes('#loginBtn .fa'), 'Login icon spacing must remain part of the UI polish');
