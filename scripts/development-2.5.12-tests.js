@@ -16,7 +16,7 @@ const vaultItemPresentationSource = read('src/main/vault-item-presentation.js');
 const groupSource = read('src/main/group.js');
 const entry = read('src/main/renderer-entry.js');
 const css = read('src/main/css/ui-current.css');
-const productCss = read('src/main/css/product-features.css');
+const dashboardLayout = read('src/main/css/dashboard-layout.css');
 const index = read('src/main/index.html');
 const web3Icons = require(path.join(root, 'src', 'main', 'web3-icons.js'));
 const dashboardSummary = require(path.join(root, 'src', 'main', 'dashboard-summary.js'));
@@ -48,18 +48,28 @@ function testDashboardNavigationAndInsights() {
 
   assert(dashboard.includes("makeSection('Maintenance Snapshot', 'vault-maintenance-section'"),
     'Maintenance Snapshot must remain a canonical named dashboard section without depending on source line wrapping.');
-  assert(dashboard.includes("'Stale information'"));
-  assert(dashboard.includes("'Recovery coverage'"));
-  assert(dashboard.includes("'Last Backup'"), 'Maintenance Snapshot should use the clearer Last Backup label.');
-  assert(dashboard.includes("list.className = 'dashboard-maintenance-list';"),
-    'Maintenance Snapshot should render as one vertical bullet list rather than horizontal cards.');
-  assert(dashboard.includes("details.className = 'dashboard-maintenance-details';"),
-    'Multi-value maintenance information should be listed downward as nested bullets.');
-  assert(productCss.includes('.dashboard-maintenance-list') && productCss.includes('.dashboard-maintenance-details'),
-    'Vertical Maintenance Snapshot bullets must have canonical product-feature styling.');
+  assert(dashboard.includes("cards.className = 'dashboard-maintenance-cards';"),
+    'Maintenance Snapshot should use the current static action-card presentation.');
+  assert(dashboard.includes("title: 'Recovery verification'"));
+  assert(dashboard.includes("title: 'Recovery coverage'"));
+  assert(dashboard.includes("title: 'Backup activity'"));
+  assert(dashboard.includes("icon: 'fa-clock-o'"));
+  assert(dashboard.includes("icon: 'fa-life-ring'"));
+  assert(dashboard.includes("icon: 'fa-archive'"));
+  assert(dashboard.includes("label: 'Resolve'"),
+    'Maintenance cards should keep direct Resolve actions for Vault Item work.');
+  assert(dashboard.includes("label: 'Create Backup'"));
+  assert(dashboard.includes("label: 'Verify Backup'"));
+  assert(!dashboard.includes("list.className = 'dashboard-maintenance-list';"),
+    'The retired vertical Maintenance Snapshot bullet list must not be restored.');
+  assert(!dashboard.includes("details.className = 'dashboard-maintenance-details';"),
+    'The retired nested maintenance bullet details must not be restored.');
+  assert(dashboardLayout.includes('.dashboard-maintenance-card {') && dashboardLayout.includes('.dashboard-maintenance-cards {'),
+    'Current Maintenance Snapshot action cards must keep their canonical component styling.');
   assert(dashboard.includes('window.safeLedgerApi.getActivityHistory(1)'));
   assert(summarySource.includes('STALE_VERIFICATION_DAYS = 180'));
   assert(summarySource.includes('recoveryCoverage'));
+  assert(summarySource.includes('maintenanceTargets'));
   assert(summarySource.includes('profileIndex,'));
 
   const now = Date.parse('2026-09-01T00:00:00.000Z');
@@ -81,6 +91,10 @@ function testDashboardNavigationAndInsights() {
   assert.strictEqual(result.recoveryCoverage.location, 2);
   assert.strictEqual(result.needsAttention[0].profileIndex, 0);
   assert(Array.isArray(result.needsAttention[0].actions));
+  assert(result.maintenanceTargets && result.maintenanceTargets.verification,
+    'Maintenance Snapshot should retain a direct target for the stale verification issue.');
+  assert(result.maintenanceTargets && result.maintenanceTargets.coverage,
+    'Maintenance Snapshot should retain a direct target for incomplete recovery coverage.');
 }
 
 function testCopyAndQrArtwork() {
@@ -140,4 +154,4 @@ testDashboardNavigationAndInsights();
 testCopyAndQrArtwork();
 testRecoveryDrillReminderAndContrast();
 testExchangeAndWebsiteVaultItems();
-console.log('PASS SafeLedger dashboard navigation, consolidated Recovery Needs Attention gaps, vertical maintenance insight, QR artwork, recovery validation clarity, and directly rendered exchange/service Vault Items.');
+console.log('PASS SafeLedger dashboard navigation, consolidated Recovery Needs Attention gaps, actionable Maintenance Snapshot cards, QR artwork, recovery validation clarity, and directly rendered exchange/service Vault Items.');
