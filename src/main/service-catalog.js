@@ -55,10 +55,11 @@ function escapeXml(value) {
 }
 
 function chainGamesSvg(label) {
-  // Local/offline rendition of the current Chain Games angular interlocking
-  // brand motif. The artwork is intentionally vector-only so it stays crisp
-  // at small list sizes and requires no favicon or network request.
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${label}"><defs><linearGradient id="chain-games-gradient" x1="16" y1="16" x2="80" y2="80" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#20c8ff"/><stop offset="1" stop-color="#a935ff"/></linearGradient></defs><rect width="96" height="96" rx="22" fill="#0b1030"/><path d="M16 48 36 28h18L34 48l20 20H36L16 48Z" fill="url(#chain-games-gradient)"/><path d="M80 48 60 28H42l20 20-20 20h18l20-20Z" fill="url(#chain-games-gradient)"/><path d="M37 48 48 37l11 11-11 11-11-11Z" fill="#f7f8ff" opacity=".96"/></svg>`;
+  // Exact circular Chain Games mark from the SVG supplied by the project owner.
+  // Keep the existing dark local backing so the white artwork remains visible
+  // in every SafeLedger appearance without introducing a network dependency.
+  const markPath = 'M164,4.5C73.4,4.5,0,77.9,0,168.5s73.4,164,164,164s164-73.4,164-164S254.6,4.5,164,4.5z M156,247.7 l-92.9-76.9l92.2-115.4v73.4l-16.9-13.2l-33.9,39.9l51.5,41.1V247.7z M172.5,281.6v-73.5l17.1,13.2l33.9-39.8l-51.7-41.1v-51 l93.1,76.8L172.5,281.6z';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="-4.5 0 337 337" role="img" aria-label="${label}"><rect x="-4.5" y="0" width="337" height="337" rx="72" fill="#0b1030"/><path d="${markPath}" fill="#FFFFFF"/></svg>`;
 }
 
 function textTileSvg(service, label) {
