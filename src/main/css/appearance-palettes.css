@@ -137,14 +137,16 @@ html[data-theme="light"] .recovery-binder-option {
 
 /* Login artwork is deliberately theme-aware but layout-neutral. Light and
  * Colorful share the frosted artwork; Dark uses the matching navy artwork.
- * System appearance resolves to one of these data-theme values before login. */
+ * System appearance resolves to one of these data-theme values before login.
+ * SVG is used intentionally so the checked-in asset is text-verifiable and
+ * cannot be silently corrupted by binary transport or repository tooling. */
 html[data-theme="light"],
 html[data-theme="colorful"] {
-  --sl-login-backdrop: url("../assets/login-background-light.jpg");
+  --sl-login-backdrop: url("../assets/login-background-light.svg");
 }
 
 html[data-theme="dark"] {
-  --sl-login-backdrop: url("../assets/login-background-dark.jpg");
+  --sl-login-backdrop: url("../assets/login-background-dark.svg");
 }
 
 .app-shell[data-login-mode="true"] {

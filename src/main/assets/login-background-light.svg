@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="SafeLedger light login background">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7faff"/>
+      <stop offset="1" stop-color="#e0edfa"/>
+    </linearGradient>
+    <radialGradient id="glowTop" cx="78%" cy="18%" r="48%">
+      <stop offset="0" stop-color="#5a9aeb" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#5a9aeb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowBottom" cx="77%" cy="84%" r="42%">
+      <stop offset="0" stop-color="#7fc8ff" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#7fc8ff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" fill="none" stroke="#5078af" stroke-opacity=".14" stroke-width="1"/>
+    </pattern>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation=".4"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect width="1280" height="720" fill="url(#glowTop)"/>
+  <rect width="1280" height="720" fill="url(#glowBottom)"/>
+  <rect x="600" width="680" height="720" fill="url(#grid)"/>
+
+  <g fill="#ffffff" fill-opacity=".46" stroke="#5a91d7" stroke-opacity=".28" stroke-width="2">
+    <circle cx="930" cy="160" r="110"/>
+    <circle cx="1110" cy="300" r="155"/>
+    <circle cx="870" cy="500" r="135"/>
+    <circle cx="1180" cy="590" r="95"/>
+  </g>
+  <g fill="none" stroke="#2f70c0" stroke-opacity=".26" stroke-width="2">
+    <circle cx="930" cy="160" r="98"/>
+    <circle cx="1110" cy="300" r="143"/>
+    <circle cx="870" cy="500" r="123"/>
+    <circle cx="1180" cy="590" r="83"/>
+  </g>
+
+  <g stroke="#5078af" stroke-opacity=".24" stroke-width="2" fill="none" filter="url(#soft)">
+    <path d="M735 125L850 90L965 215L1105 120L1220 210"/>
+    <path d="M735 125L760 340L900 320L965 215"/>
+    <path d="M900 320L1040 400L1190 360L1220 210"/>
+    <path d="M760 340L740 560L900 585L1040 400"/>
+    <path d="M900 585L1060 545L1210 600L1190 360"/>
+  </g>
+  <g fill="#ffffff" fill-opacity=".86" stroke="#5a91d7" stroke-opacity=".35">
+    <circle cx="735" cy="125" r="5"/><circle cx="850" cy="90" r="5"/><circle cx="965" cy="215" r="5"/>
+    <circle cx="1105" cy="120" r="5"/><circle cx="1220" cy="210" r="5"/><circle cx="760" cy="340" r="5"/>
+    <circle cx="900" cy="320" r="5"/><circle cx="1040" cy="400" r="5"/><circle cx="1190" cy="360" r="5"/>
+    <circle cx="740" cy="560" r="5"/><circle cx="900" cy="585" r="5"/><circle cx="1060" cy="545" r="5"/>
+    <circle cx="1210" cy="600" r="5"/>
+  </g>
+
+  <g transform="translate(1045 355)" fill="none" stroke="#3b71b2" stroke-opacity=".52">
+    <path d="M0-105L78-74L64 15L0 98L-64 15L-78-74Z" fill="#3b71b2" fill-opacity=".10" stroke-width="2"/>
+    <path d="M-28-15A28 28 0 0 1 28-15" stroke-width="7" stroke-linecap="round"/>
+    <rect x="-38" y="-5" width="76" height="60" rx="12" stroke-width="6"/>
+    <circle cx="0" cy="21" r="5" fill="#3b71b2" fill-opacity=".52" stroke="none"/>
+    <path d="M0 25V38" stroke-width="5" stroke-linecap="round"/>
+  </g>
+
+  <g stroke="#2f70c0" stroke-opacity=".08" stroke-width="3">
+    <path d="M680 720L1080 0"/><path d="M714 720L1114 0"/><path d="M748 720L1148 0"/>
+  </g>
+</svg>

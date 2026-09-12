@@ -19,14 +19,14 @@ assert(pkg.scripts['test:regression'].includes('node scripts/hotfix-2.6.79-tests
 const gate78 = read('scripts/hotfix-2.6.78-tests.js');
 assert(!gate78.includes('data.length > 20000'),
   'The arbitrary compressed-file byte-size threshold must stay removed.');
-assert(gate78.includes('function jpegDimensions(data)'),
-  'The login-artwork gate must validate JPEG image metadata instead of compressed byte size.');
-assert(gate78.includes('data[data.length - 2]') && gate78.includes('data[data.length - 1]'),
-  'The login-artwork gate must validate the JPEG EOI marker.');
-assert(gate78.includes('dimensions.width >= 640') && gate78.includes('dimensions.height >= 360'),
-  'The login-artwork gate must require a useful background-sized image.');
-assert(gate78.includes("Math.abs(ratio - (16 / 9)) < 0.02"),
-  'The login-artwork gate must preserve the intended widescreen composition.');
+assert(!gate78.includes('function jpegDimensions(data)'),
+  'The historical JPEG parser must stay retired after the malformed binary artwork was removed.');
+assert(gate78.includes('login-background-light.svg') && gate78.includes('login-background-dark.svg'),
+  'The login-artwork gate must validate the current self-contained SVG assets.');
+assert(gate78.includes('viewBox="0 0 1280 720"'),
+  'The login-artwork gate must preserve the intended 16:9 source composition.');
+assert(gate78.includes('must not contain scripts') && gate78.includes('must not reference remote content'),
+  'The local SVG artwork gate must preserve the offline/static security boundary.');
 
 const release = read('RELEASE-2.6.79.md').toLowerCase();
 for (const phrase of [
@@ -46,4 +46,4 @@ for (const relative of [
   'scripts/hotfix-2.6.79-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} validates login artwork by JPEG structure and composition instead of compressed file size.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.79 regression repair while validating the current self-contained login artwork.`);
