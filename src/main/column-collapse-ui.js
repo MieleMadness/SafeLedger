@@ -141,8 +141,11 @@ function init() {
 
 function collapseForLogin() {
   clearOpeningAnimation();
-  for (const state of init()) setCollapsed(state, true);
-  return columnStates;
+  const states = init();
+  const shell = states[0] && states[0].shell;
+  if (shell) shell.setAttribute('data-login-mode', 'true');
+  for (const state of states) setCollapsed(state, true);
+  return states;
 }
 
 function targetExpandedTemplate(shell) {
@@ -161,6 +164,9 @@ function revealAfterLogin() {
   const shell = states[0] && states[0].shell;
   if (!shell) return Promise.resolve();
 
+  /* Login artwork belongs only to the locked/login surface. Remove that state
+   * before restoring the normal workspace, including reduced-motion paths. */
+  shell.removeAttribute('data-login-mode');
   clearOpeningAnimation();
   const grids = Array.from(shell.querySelectorAll('.app-grid'));
   const canAnimate = grids.length > 0 && grids.every((grid) => typeof grid.animate === 'function');

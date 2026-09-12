@@ -134,3 +134,37 @@ html[data-theme="light"] .recovery-binder-summary,
 html[data-theme="light"] .recovery-binder-option {
   box-shadow: var(--sl-shadow-soft) !important;
 }
+
+/* Login artwork is deliberately theme-aware but layout-neutral. Light and
+ * Colorful share the frosted artwork; Dark uses the matching navy artwork.
+ * System appearance resolves to one of these data-theme values before login. */
+html[data-theme="light"],
+html[data-theme="colorful"] {
+  --sl-login-backdrop: url("../assets/login-background-light.jpg");
+}
+
+html[data-theme="dark"] {
+  --sl-login-backdrop: url("../assets/login-background-dark.jpg");
+}
+
+.app-shell[data-login-mode="true"] {
+  background-color: var(--sl-bg);
+  background-image: var(--sl-login-backdrop);
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/* The existing login form remains the interaction surface. Only the workspace
+ * cells become transparent while login mode is active so the artwork can fill
+ * the unused space to the right of and below the form. */
+.app-shell[data-login-mode="true"] .app-cell {
+  background-color: transparent !important;
+  background-image: none !important;
+  border-color: transparent !important;
+}
+
+html[data-theme="light"] .app-shell[data-login-mode="true"] .app-cell,
+html[data-theme="colorful"] .app-shell[data-login-mode="true"] .app-cell {
+  color: var(--sl-text) !important;
+}
