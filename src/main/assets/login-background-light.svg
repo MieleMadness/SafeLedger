@@ -1,67 +1,104 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="SafeLedger light login background">
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-label="SafeLedger light crypto login wallpaper">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#f7faff"/>
-      <stop offset="1" stop-color="#e0edfa"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8fbff"/>
+      <stop offset=".55" stop-color="#eef5fd"/>
+      <stop offset="1" stop-color="#dfeafa"/>
     </linearGradient>
-    <radialGradient id="glowTop" cx="78%" cy="18%" r="48%">
-      <stop offset="0" stop-color="#5a9aeb" stop-opacity=".24"/>
-      <stop offset="1" stop-color="#5a9aeb" stop-opacity="0"/>
+    <radialGradient id="blueGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#7cb9ff" stop-opacity=".35"/>
+      <stop offset=".48" stop-color="#b8d9ff" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#dcecff" stop-opacity="0"/>
     </radialGradient>
-    <radialGradient id="glowBottom" cx="77%" cy="84%" r="42%">
-      <stop offset="0" stop-color="#7fc8ff" stop-opacity=".18"/>
-      <stop offset="1" stop-color="#7fc8ff" stop-opacity="0"/>
-    </radialGradient>
-    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
-      <path d="M64 0H0V64" fill="none" stroke="#5078af" stroke-opacity=".14" stroke-width="1"/>
-    </pattern>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation=".4"/>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".94"/>
+      <stop offset="1" stop-color="#cbdcf1" stop-opacity=".62"/>
+    </linearGradient>
+    <linearGradient id="eth" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#a9bfdc"/>
+    </linearGradient>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="18" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#6f91ba" flood-opacity=".20"/>
+    </filter>
+    <filter id="tinyGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="8" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
 
   <rect width="1280" height="720" fill="url(#bg)"/>
-  <rect width="1280" height="720" fill="url(#glowTop)"/>
-  <rect width="1280" height="720" fill="url(#glowBottom)"/>
-  <rect x="600" width="680" height="720" fill="url(#grid)"/>
+  <ellipse cx="1050" cy="160" rx="300" ry="240" fill="url(#blueGlow)"/>
+  <ellipse cx="1010" cy="610" rx="330" ry="220" fill="url(#blueGlow)" opacity=".72"/>
+  <ellipse cx="650" cy="690" rx="250" ry="170" fill="url(#blueGlow)" opacity=".34"/>
 
-  <g fill="#ffffff" fill-opacity=".46" stroke="#5a91d7" stroke-opacity=".28" stroke-width="2">
-    <circle cx="930" cy="160" r="110"/>
-    <circle cx="1110" cy="300" r="155"/>
-    <circle cx="870" cy="500" r="135"/>
-    <circle cx="1180" cy="590" r="95"/>
-  </g>
-  <g fill="none" stroke="#2f70c0" stroke-opacity=".26" stroke-width="2">
-    <circle cx="930" cy="160" r="98"/>
-    <circle cx="1110" cy="300" r="143"/>
-    <circle cx="870" cy="500" r="123"/>
-    <circle cx="1180" cy="590" r="83"/>
+  <!-- subtle flowing lines from the supplied frosted reference -->
+  <g fill="none" stroke="#7fa7d2" stroke-opacity=".14" stroke-width="2">
+    <path d="M650 720C780 560 850 620 965 470S1160 340 1280 410"/>
+    <path d="M690 720C810 575 885 635 990 490S1175 365 1280 430"/>
+    <path d="M730 720C845 590 920 650 1020 510S1190 390 1280 452"/>
+    <path d="M820 0C930 110 1035 70 1160 175S1235 310 1280 340"/>
   </g>
 
-  <g stroke="#5078af" stroke-opacity=".24" stroke-width="2" fill="none" filter="url(#soft)">
-    <path d="M735 125L850 90L965 215L1105 120L1220 210"/>
-    <path d="M735 125L760 340L900 320L965 215"/>
-    <path d="M900 320L1040 400L1190 360L1220 210"/>
-    <path d="M760 340L740 560L900 585L1040 400"/>
-    <path d="M900 585L1060 545L1210 600L1190 360"/>
-  </g>
-  <g fill="#ffffff" fill-opacity=".86" stroke="#5a91d7" stroke-opacity=".35">
-    <circle cx="735" cy="125" r="5"/><circle cx="850" cy="90" r="5"/><circle cx="965" cy="215" r="5"/>
-    <circle cx="1105" cy="120" r="5"/><circle cx="1220" cy="210" r="5"/><circle cx="760" cy="340" r="5"/>
-    <circle cx="900" cy="320" r="5"/><circle cx="1040" cy="400" r="5"/><circle cx="1190" cy="360" r="5"/>
-    <circle cx="740" cy="560" r="5"/><circle cx="900" cy="585" r="5"/><circle cx="1060" cy="545" r="5"/>
-    <circle cx="1210" cy="600" r="5"/>
+  <!-- Bitcoin coin -->
+  <g transform="translate(1040 125)" filter="url(#shadow)">
+    <circle r="88" fill="url(#glass)" stroke="#ffffff" stroke-width="2"/>
+    <circle r="73" fill="none" stroke="#9ab9dd" stroke-opacity=".42" stroke-width="2"/>
+    <text x="0" y="24" text-anchor="middle" font-family="Arial, sans-serif" font-size="86" font-weight="700" fill="#ffffff" stroke="#a7bdd8" stroke-opacity=".22" stroke-width="1">₿</text>
   </g>
 
-  <g transform="translate(1045 355)" fill="none" stroke="#3b71b2" stroke-opacity=".52">
-    <path d="M0-105L78-74L64 15L0 98L-64 15L-78-74Z" fill="#3b71b2" fill-opacity=".10" stroke-width="2"/>
-    <path d="M-28-15A28 28 0 0 1 28-15" stroke-width="7" stroke-linecap="round"/>
-    <rect x="-38" y="-5" width="76" height="60" rx="12" stroke-width="6"/>
-    <circle cx="0" cy="21" r="5" fill="#3b71b2" fill-opacity=".52" stroke="none"/>
-    <path d="M0 25V38" stroke-width="5" stroke-linecap="round"/>
+  <!-- Ethereum crystal -->
+  <g transform="translate(820 220)" filter="url(#softGlow)">
+    <polygon points="0,-82 52,8 0,39 -52,8" fill="url(#eth)" stroke="#ffffff" stroke-opacity=".8"/>
+    <polygon points="0,49 52,18 0,91 -52,18" fill="#c8d8ec" stroke="#ffffff" stroke-opacity=".75"/>
+    <polygon points="0,-82 0,39 -52,8" fill="#d9e5f3" opacity=".82"/>
   </g>
 
-  <g stroke="#2f70c0" stroke-opacity=".08" stroke-width="3">
-    <path d="M680 720L1080 0"/><path d="M714 720L1114 0"/><path d="M748 720L1148 0"/>
+  <!-- Chainlink-like hexagon -->
+  <g transform="translate(1150 315)" filter="url(#tinyGlow)">
+    <polygon points="0,-64 56,-32 56,32 0,64 -56,32 -56,-32" fill="none" stroke="#c9d9ec" stroke-width="18"/>
+    <polygon points="0,-38 33,-19 33,19 0,38 -33,19 -33,-19" fill="#f6faff"/>
+  </g>
+
+  <!-- Solana mark -->
+  <g transform="translate(740 425) skewX(-12)" fill="#d4e0ef" filter="url(#tinyGlow)">
+    <rect x="-55" y="-44" width="112" height="22" rx="6"/>
+    <rect x="-45" y="-11" width="112" height="22" rx="6"/>
+    <rect x="-55" y="22" width="112" height="22" rx="6"/>
+  </g>
+
+  <!-- USDC-style coin -->
+  <g transform="translate(1105 535)" filter="url(#shadow)">
+    <circle r="74" fill="url(#glass)" stroke="#ffffff" stroke-width="2"/>
+    <path d="M-43-46C-70-18-70 18-43 46M43-46C70-18 70 18 43 46" fill="none" stroke="#b9cce2" stroke-width="10" stroke-linecap="round"/>
+    <text x="0" y="22" text-anchor="middle" font-family="Arial, sans-serif" font-size="70" font-weight="700" fill="#ffffff" stroke="#a9bdd5" stroke-opacity=".28">$</text>
+  </g>
+
+  <!-- wallet -->
+  <g transform="translate(720 610)" filter="url(#shadow)">
+    <rect x="-95" y="-57" width="190" height="114" rx="22" fill="url(#glass)" stroke="#ffffff" stroke-width="2"/>
+    <path d="M-78-43H58C76-43 88-32 88-15" fill="none" stroke="#b5cbe3" stroke-width="8" stroke-linecap="round"/>
+    <rect x="27" y="-11" width="82" height="46" rx="16" fill="#e4eef9" stroke="#ffffff" stroke-width="2"/>
+    <circle cx="54" cy="12" r="7" fill="#bfd3e9"/>
+  </g>
+
+  <!-- lock -->
+  <g transform="translate(935 650)" filter="url(#softGlow)">
+    <path d="M-38-15V-42C-38-80 38-80 38-42V-15" fill="none" stroke="#d1deee" stroke-width="18" stroke-linecap="round"/>
+    <rect x="-62" y="-18" width="124" height="92" rx="20" fill="url(#glass)" stroke="#ffffff" stroke-width="2"/>
+    <circle cy="20" r="10" fill="#b6cae2"/>
+    <path d="M0 28V46" stroke="#b6cae2" stroke-width="8" stroke-linecap="round"/>
+  </g>
+
+  <!-- small frosted cubes/spheres -->
+  <g fill="#ffffff" fill-opacity=".48" stroke="#c7d8eb" stroke-opacity=".62">
+    <circle cx="1220" cy="205" r="28"/>
+    <circle cx="870" cy="675" r="34"/>
+    <circle cx="1220" cy="670" r="42"/>
+    <rect x="900" y="95" width="42" height="42" rx="9" transform="rotate(18 921 116)"/>
   </g>
 </svg>

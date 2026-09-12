@@ -23,15 +23,14 @@ assert(palette.includes('html[data-theme="light"],\nhtml[data-theme="colorful"] 
   'Light and Colorful must share the same local login artwork.');
 assert(palette.includes('html[data-theme="dark"] {\n  --sl-login-backdrop: url("../assets/login-background-dark.svg");\n}'),
   'Dark must use the matching dark login artwork.');
-assert(!palette.includes('login-background-light.jpg') && !palette.includes('login-background-dark.jpg'),
-  'Malformed binary login artwork must not remain referenced by the active palette.');
-assert(palette.includes('.app-shell[data-login-mode="true"]') &&
+assert(palette.includes('.app-shell[data-login-mode="true"] .detail-column') &&
   palette.includes('background-size: cover;') &&
   palette.includes('background-repeat: no-repeat;'),
-  'Login artwork must fill the login shell without tiling.');
-assert(palette.includes('.app-shell[data-login-mode="true"] .app-cell') &&
-  palette.includes('background-color: transparent !important;'),
-  'Workspace cells must expose the login artwork only while login mode is active.');
+  'Login artwork must fill only the login display column without tiling.');
+assert(!palette.includes('.app-shell[data-login-mode="true"] .app-cell'),
+  'Login artwork must not flatten every workspace cell into one background surface.');
+assert(!palette.includes('border-color: transparent !important;'),
+  'Login artwork must not erase the existing workspace divider borders.');
 assert(!palette.includes('url("http://') && !palette.includes('url("https://'),
   'Login artwork must not introduce remote runtime resources.');
 
@@ -77,4 +76,4 @@ for (const relative of [
   'scripts/hotfix-2.6.78-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} uses self-contained theme-aware login artwork only during login.`);
+console.log(`PASS SafeLedger ${pkg.version} uses self-contained theme-aware login artwork only in the login display column.`);
