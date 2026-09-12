@@ -43,9 +43,11 @@ assert.strictEqual(chainToken.src, chainUrl,
 const historical = read('scripts/hotfix-2.6.4-tests.js');
 assert(historical.includes(suppliedMark),
   'The historical Chain Games regression must track the supplied artwork rather than the retired approximation.');
-assert(!historical.includes("chainSvg.includes('chain-games-gradient') &&"),
-  'The historical gate must not positively require the retired gradient logo.');
 
+// Validate the historical regression by executing it. Do not infer assertion
+// polarity by substring-searching its JavaScript source: the same text appears
+// inside both positive and negated expressions, which caused the 2.6.76 CI
+// false positive even though the historical test itself was passing.
 execFileSync(process.execPath, [path.join(root, 'scripts/hotfix-2.6.4-tests.js')], { stdio: 'pipe' });
 execFileSync(process.execPath, [path.join(root, 'scripts/hotfix-2.6.75-tests.js')], { stdio: 'pipe' });
 for (const relative of [
