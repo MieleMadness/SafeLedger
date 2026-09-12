@@ -149,11 +149,16 @@ html[data-theme="dark"] {
 
 /* Only the Detail / display column receives login wallpaper. The Profiles,
  * Vault Items, Assets, search row, action row, and their existing workspace
- * divider borders stay exactly as the normal layout defines them. */
+ * divider borders stay exactly as the normal layout defines them.
+ *
+ * app-theme.css intentionally gives .dark4bg its normal workspace background
+ * with an !important shorthand. These login-state longhands are also marked
+ * !important so the wallpaper can override that background only while locked,
+ * without changing layout, borders, or any other column styling. */
 .app-shell[data-login-mode="true"] .detail-column {
-  background-color: var(--sl-bg);
-  background-image: var(--sl-login-backdrop);
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: cover;
+  background-color: var(--sl-bg) !important;
+  background-image: var(--sl-login-backdrop) !important;
+  background-position: 72% center !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
 }

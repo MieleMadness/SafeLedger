@@ -17,6 +17,7 @@ assert(pkg.scripts['test:regression'].includes('node scripts/hotfix-2.6.81-tests
   'The 2.6.81 display-column wallpaper regression must remain in the main regression chain.');
 
 const palette = read('src/main/css/appearance-palettes.css');
+const theme = read('src/main/css/app-theme.css');
 const dividers = read('src/main/css/workspace-dividers.css');
 const index = read('src/main/index.html');
 const collapse = read('src/main/column-collapse-ui.js');
@@ -31,10 +32,15 @@ assert(!/\.app-shell\[data-login-mode="true"\]\s+\.app-cell/.test(palette),
   'Login mode must not make every workspace cell transparent.');
 assert(!palette.includes('border-color: transparent !important;'),
   'Login wallpaper must not erase existing column divider borders.');
-assert(palette.includes('background-image: var(--sl-login-backdrop);') &&
-  palette.includes('background-size: cover;') &&
-  palette.includes('background-repeat: no-repeat;'),
-  'The display-column wallpaper must remain a centered, non-tiling cover image.');
+
+assert(theme.includes('.dark4bg { background: var(--sl-bg) !important;'),
+  'The base theme intentionally owns the normal Detail-column background with an important shorthand.');
+assert(palette.includes('background-color: var(--sl-bg) !important;') &&
+  palette.includes('background-image: var(--sl-login-backdrop) !important;') &&
+  palette.includes('background-position: 72% center !important;') &&
+  palette.includes('background-size: cover !important;') &&
+  palette.includes('background-repeat: no-repeat !important;'),
+  'The login-state Detail-column wallpaper must explicitly win the important base background cascade.');
 
 assert(palette.includes('html[data-theme="light"],\nhtml[data-theme="colorful"] {\n  --sl-login-backdrop: url("../assets/login-background-light.svg");\n}'),
   'Light and Colorful must share the same local frosted wallpaper.');
@@ -92,4 +98,4 @@ for (const relative of [
   'scripts/hotfix-2.6.81-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} scopes the reference-style login wallpaper to the display column and preserves workspace dividers.`);
+console.log(`PASS SafeLedger ${pkg.version} scopes the reference-style login wallpaper to the display column, wins the base theme cascade, and preserves workspace dividers.`);
