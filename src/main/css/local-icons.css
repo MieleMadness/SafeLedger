@@ -17,11 +17,132 @@
 .fa-home::before { content: "⌂"; }
 .fa-history::before { content: "↶"; }
 .fa-refresh::before { content: "↻"; }
-.fa-unlock::before { content: "▢"; }
 .fa-folder-open-o::before,
 .fa-folder-open::before { content: "▣"; }
 .fa-star::before { content: "★"; }
 .fa-star-o::before { content: "☆"; }
+
+/* Emergency Recovery uses fa-life-ring in the Profile action dock and the
+ * package generator. Give it a real local lifebuoy instead of allowing the
+ * generic undefined-icon dot fallback to render. */
+.fa-life-ring {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+  border: .12em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  background:
+    linear-gradient(currentColor, currentColor) top center / .13em .25em no-repeat,
+    linear-gradient(currentColor, currentColor) bottom center / .13em .25em no-repeat,
+    linear-gradient(currentColor, currentColor) left center / .25em .13em no-repeat,
+    linear-gradient(currentColor, currentColor) right center / .25em .13em no-repeat;
+}
+.fa-life-ring::before {
+  content: "";
+  position: absolute;
+  inset: .22em;
+  border: .08em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+/* Activity History uses CSS-drawn power and open-lock artwork instead of
+ * generic Unicode placeholders. These stay fully local and themeable. */
+.fa-power-off,
+.fa-unlock,
+.fa-unlock-alt {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+}
+.fa-power-off::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: .01em;
+  width: .12em;
+  height: .48em;
+  transform: translateX(-50%);
+  border-radius: .08em;
+  background: currentColor;
+}
+.fa-power-off::after {
+  content: "";
+  position: absolute;
+  left: .13em;
+  top: .16em;
+  width: .74em;
+  height: .74em;
+  border: .12em solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.fa-unlock::before,
+.fa-unlock-alt::before {
+  content: "";
+  position: absolute;
+  left: .42em;
+  top: .02em;
+  width: .44em;
+  height: .50em;
+  border: .11em solid currentColor;
+  border-left-color: transparent;
+  border-bottom: 0;
+  border-radius: .40em .40em 0 0;
+  box-sizing: border-box;
+}
+.fa-unlock::after,
+.fa-unlock-alt::after {
+  content: "";
+  position: absolute;
+  left: .12em;
+  right: .12em;
+  bottom: .04em;
+  height: .48em;
+  border: .11em solid currentColor;
+  border-radius: .08em;
+  box-sizing: border-box;
+}
+
+/* Closed padlock used for device-security, recovery, and lock status cues.
+ * Drawn with CSS so it stays crisp, fully offline, and never falls back to a
+ * platform-dependent square glyph. */
+.fa-lock {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+}
+.fa-lock::before {
+  content: "";
+  position: absolute;
+  left: .22em;
+  top: .02em;
+  width: .56em;
+  height: .52em;
+  border: .11em solid currentColor;
+  border-bottom: 0;
+  border-radius: .36em .36em 0 0;
+  box-sizing: border-box;
+}
+.fa-lock::after {
+  content: "";
+  position: absolute;
+  left: .12em;
+  right: .12em;
+  bottom: .03em;
+  height: .50em;
+  border: .11em solid currentColor;
+  border-radius: .08em;
+  box-sizing: border-box;
+}
 
 /* Standard external/open affordance: a small square with an arrow leaving it.
  * Drawn locally so the dashboard never depends on an icon font or network. */
@@ -155,6 +276,312 @@
   background: currentColor;
 }
 
+/* Complete local icon registry coverage. These icons were referenced by live
+ * UI code but had no local definition, which meant the diagnostic dot fallback
+ * could appear even though the feature requested a meaningful icon. */
+.fa-clock-o {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  border: .11em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  vertical-align: -.08em;
+}
+.fa-clock-o::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: .17em;
+  width: .09em;
+  height: .31em;
+  transform: translateX(-50%);
+  border-radius: .08em;
+  background: currentColor;
+}
+.fa-clock-o::after {
+  content: "";
+  position: absolute;
+  left: .47em;
+  top: .45em;
+  width: .27em;
+  height: .09em;
+  transform: rotate(28deg);
+  transform-origin: left center;
+  border-radius: .08em;
+  background: currentColor;
+}
+
+.fa-archive {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: .76em;
+  margin-top: .15em;
+  border: .11em solid currentColor;
+  border-radius: .06em;
+  box-sizing: border-box;
+  vertical-align: -.03em;
+}
+.fa-archive::before {
+  content: "";
+  position: absolute;
+  left: -.11em;
+  right: -.11em;
+  top: -.26em;
+  height: .20em;
+  border: .10em solid currentColor;
+  border-radius: .05em;
+  box-sizing: border-box;
+}
+.fa-archive::after {
+  content: "";
+  position: absolute;
+  left: .25em;
+  right: .25em;
+  top: .18em;
+  border-top: .10em solid currentColor;
+}
+
+.fa-user-plus,
+.fa-user-times {
+  position: relative;
+  width: 1.16em;
+  min-width: 1.16em;
+  height: 1em;
+  vertical-align: -.08em;
+}
+.fa-user-plus::before,
+.fa-user-times::before {
+  content: "";
+  position: absolute;
+  left: .08em;
+  top: .05em;
+  width: .30em;
+  height: .30em;
+  border: .10em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  box-shadow: 0 .43em 0 .13em currentColor;
+}
+.fa-user-plus::after,
+.fa-user-times::after {
+  position: absolute;
+  right: -.02em;
+  top: .04em;
+  width: .58em;
+  text-align: center;
+  font-size: .72em;
+  line-height: 1;
+  font-weight: 800;
+}
+.fa-user-plus::after { content: "+"; }
+.fa-user-times::after { content: "×"; }
+
+.fa-exclamation-circle {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  border: .11em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  vertical-align: -.08em;
+}
+.fa-exclamation-circle::before {
+  content: "!";
+  position: absolute;
+  inset: .04em 0 0;
+  font-size: .72em;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fa-mobile {
+  position: relative;
+  width: .62em;
+  min-width: .62em;
+  height: 1em;
+  border: .11em solid currentColor;
+  border-radius: .12em;
+  box-sizing: border-box;
+  vertical-align: -.08em;
+}
+.fa-mobile::before {
+  content: "";
+  position: absolute;
+  left: .09em;
+  right: .09em;
+  top: .13em;
+  bottom: .17em;
+  border-top: .05em solid currentColor;
+  border-bottom: .05em solid currentColor;
+}
+.fa-mobile::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: .04em;
+  width: .08em;
+  height: .08em;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.fa-database {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: .90em;
+  vertical-align: -.05em;
+}
+.fa-database::before {
+  content: "";
+  position: absolute;
+  inset: .03em .08em .08em;
+  border: .11em solid currentColor;
+  border-radius: 50% / 18%;
+  box-sizing: border-box;
+}
+.fa-database::after {
+  content: "";
+  position: absolute;
+  left: .09em;
+  right: .09em;
+  top: .29em;
+  height: .26em;
+  border-top: .09em solid currentColor;
+  border-bottom: .09em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.fa-map-marker {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  vertical-align: -.08em;
+}
+.fa-map-marker::before {
+  content: "";
+  position: absolute;
+  left: .22em;
+  top: .08em;
+  width: .56em;
+  height: .56em;
+  border: .11em solid currentColor;
+  border-radius: 50% 50% 50% 0;
+  box-sizing: border-box;
+  transform: rotate(-45deg);
+}
+.fa-map-marker::after {
+  content: "";
+  position: absolute;
+  left: .44em;
+  top: .30em;
+  width: .12em;
+  height: .12em;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.fa-users {
+  position: relative;
+  width: 1.12em;
+  min-width: 1.12em;
+  height: 1em;
+  vertical-align: -.08em;
+}
+.fa-users::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 24%, transparent 0 .10em, currentColor .11em .20em, transparent .21em),
+    radial-gradient(circle at 72% 27%, transparent 0 .09em, currentColor .10em .19em, transparent .20em);
+}
+.fa-users::after {
+  content: "";
+  position: absolute;
+  left: .05em;
+  right: .05em;
+  bottom: .05em;
+  height: .43em;
+  border: .11em solid currentColor;
+  border-bottom: 0;
+  border-radius: .56em .56em 0 0;
+  box-sizing: border-box;
+}
+
+.fa-folder-o {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: .76em;
+  margin-top: .14em;
+  border: .11em solid currentColor;
+  border-radius: .06em;
+  box-sizing: border-box;
+  vertical-align: -.03em;
+}
+.fa-folder-o::before {
+  content: "";
+  position: absolute;
+  left: -.11em;
+  top: -.24em;
+  width: .47em;
+  height: .24em;
+  border: .11em solid currentColor;
+  border-bottom: 0;
+  border-radius: .06em .06em 0 0;
+  box-sizing: border-box;
+}
+.fa-folder-o::after {
+  content: "";
+  position: absolute;
+  left: .34em;
+  right: .08em;
+  top: -.11em;
+  border-top: .09em solid currentColor;
+}
+
+.fa-globe {
+  position: relative;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  border: .11em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+  vertical-align: -.08em;
+}
+.fa-globe::before {
+  content: "";
+  position: absolute;
+  left: .24em;
+  right: .24em;
+  top: -.11em;
+  bottom: -.11em;
+  border-left: .09em solid currentColor;
+  border-right: .09em solid currentColor;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.fa-globe::after {
+  content: "";
+  position: absolute;
+  left: .04em;
+  right: .04em;
+  top: 50%;
+  border-top: .09em solid currentColor;
+  transform: translateY(-50%);
+}
+
 .fa-check-circle::before { content: "✓"; }
 .fa-pencil::before { content: "✎"; }
 .fa-paint-brush::before { content: "✦"; }
@@ -183,7 +610,6 @@
 .fa-download::before { content: "⇩"; }
 .fa-upload::before { content: "⇧"; }
 .fa-exchange::before { content: "⇄"; }
-.fa-lock::before { content: "■"; }
 .fa-key::before { content: "◆"; }
 .fa-file-text-o::before { content: "▤"; }
 .fa-list::before { content: "☷"; }

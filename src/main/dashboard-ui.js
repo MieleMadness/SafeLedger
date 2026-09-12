@@ -1,6 +1,16 @@
 'use strict';
 
-const rendererNavigation = require('./renderer');
+const detailActions = require('./detail-actions');
+const recoveryIntelligenceUi = require('./recovery-intelligence-dashboard-ui');
+const recoverySimulator = require('./recovery-simulator');
+const securityEnhancements = require('./security-enhancements');
+const motion = require('./motion-ui');
+
+let navigation = {};
+
+function configure(options = {}) {
+  navigation = Object.assign({}, options);
+}
 
 function clearArea() {
   const area = document.getElementById('detailArea');
@@ -22,12 +32,18 @@ function makeStat(label, value) {
   return card;
 }
 
-function makeSection(titleText, className = '') {
+function makeSection(titleText, className = '', helpText = '') {
   const section = document.createElement('section');
   section.className = `dashboard-section${className ? ` ${className}` : ''}`;
   const title = document.createElement('h2');
   title.textContent = titleText;
   section.appendChild(title);
+  if (helpText) {
+    const help = document.createElement('p');
+    help.className = 'dashboard-section-help';
+    help.textContent = helpText;
+    section.appendChild(help);
+  }
   return section;
 }
 
@@ -42,16 +58,36 @@ function makeStatus(status) {
   return badge;
 }
 
+function makeLabeledStatus(label, statusKind) {
+  const badge = makeStatus(statusKind);
+  badge.textContent = label;
+  return badge;
+}
+
 function openWallet(item = {}) {
-  const navigate = rendererNavigation && rendererNavigation._test && rendererNavigation._test.navigateGlobalResult;
-  if (typeof navigate !== 'function') return;
-  navigate({
+  if (typeof navigation.onOpenWallet !== 'function') return;
+  navigation.onOpenWallet({
     type: 'wallet',
     source: 'dashboard',
     profileIndex: Number(item.profileIndex),
     profileFile: String(item.profileFile || ''),
     walletIndex: Number(item.walletIndex)
   });
+}
+
+function makeResolveButton(label, onActivate, title = '') {
+  if (typeof onActivate !== 'function') return null;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'btn btn-default btn-sm dashboard-resolve-button';
+  button.textContent = label || 'Resolve';
+  button.title = title || button.textContent;
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onActivate(event, button);
+  });
+  return button;
 }
 
 async function openPortableStorageFolder() {
@@ -69,27 +105,27 @@ async function openPortableStorageFolder() {
   }
 }
 
-function makeHealthTitle(titleText, options = {}) {
+function makeHealthTitle(titleText) {
   const title = document.createElement('div');
   title.className = 'dashboard-list-title';
-
   const text = document.createElement('span');
   text.textContent = titleText;
   title.appendChild(text);
-
-  if (typeof options.onActivate === 'function') {
-    title.classList.add('has-action');
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'dashboard-title-action';
-    button.title = options.title || 'Open';
-    button.setAttribute('aria-label', options.ariaLabel || options.title || 'Open');
-    button.innerHTML = '<i class="fa fa-external-link" aria-hidden="true"></i>';
-    button.addEventListener('click', options.onActivate);
-    title.appendChild(button);
-  }
-
   return title;
+}
+
+function appendAttentionGaps(main, item) {
+  const gaps = Array.isArray(item && item.actions) ? item.actions.slice(0, 3) : [];
+  if (!gaps.length) return;
+  const list = document.createElement('ul');
+  list.className = 'dashboard-attention-gaps';
+  for (const gap of gaps) {
+    if (!gap || !gap.action) continue;
+    const li = document.createElement('li');
+    li.textContent = gap.action;
+    list.appendChild(li);
+  }
+  if (list.childNodes.length) main.appendChild(list);
 }
 
 function appendWalletList(section, items, emptyText, showDate, actionable = false) {
@@ -101,12 +137,10 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
     return;
   }
 
-  if (actionable) {
+  if (actionable && showDate) {
     const helper = document.createElement('p');
     helper.className = 'dashboard-section-help';
-    helper.textContent = showDate
-      ? 'Click a recently verified vault item below to open it.'
-      : 'Click a vault item below to open it and resolve the recovery gaps.';
+    helper.textContent = 'Click a recently verified Vault Item below to open it.';
     section.appendChild(helper);
   }
 
@@ -115,14 +149,21 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
   for (const item of items) {
     const row = document.createElement('div');
     row.className = `dashboard-list-row${actionable ? ' dashboard-list-row-action' : ''}`;
-
-    const main = document.createElement(actionable ? 'button' : 'div');
+    const main = document.createElement('div');
     main.className = `dashboard-list-main${actionable ? ' dashboard-list-main-action' : ''}`;
+
     if (actionable) {
-      main.type = 'button';
-      main.title = `Open ${item.walletName}`;
-      main.setAttribute('aria-label', `Open ${item.walletName} in ${item.profileName}`);
-      main.addEventListener('click', () => openWallet(item));
+      const label = `Open ${item.walletName} in ${item.profileName}`;
+      row.tabIndex = 0;
+      row.setAttribute('role', 'button');
+      row.title = `Open ${item.walletName}`;
+      row.setAttribute('aria-label', label);
+      row.addEventListener('click', () => openWallet(item));
+      row.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openWallet(item);
+      });
     }
 
     const title = document.createElement('div');
@@ -132,11 +173,20 @@ function appendWalletList(section, items, emptyText, showDate, actionable = fals
     meta.className = 'dashboard-list-meta';
     meta.textContent = showDate && item.lastVerified
       ? `${item.profileName} • Verified ${new Date(item.lastVerified).toLocaleDateString()}`
-      : `${item.profileName} • ${item.score}% ready`;
+      : `${item.profileName} • ${item.score}% recovery ready`;
     main.appendChild(title);
     main.appendChild(meta);
+    if (!showDate) appendAttentionGaps(main, item);
     row.appendChild(main);
-    row.appendChild(makeStatus(item.status));
+
+    const end = document.createElement('div');
+    end.className = 'dashboard-list-end';
+    end.appendChild(makeStatus(item.status));
+    if (actionable && !showDate) {
+      const resolve = makeResolveButton('Resolve', () => openWallet(item), `Open ${item.walletName} to resolve recovery gaps`);
+      if (resolve) end.appendChild(resolve);
+    }
+    row.appendChild(end);
     list.appendChild(row);
   }
   section.appendChild(list);
@@ -163,21 +213,29 @@ function formatActivityTime(entry) {
   return Number.isNaN(date.getTime()) ? 'Unavailable' : date.toLocaleString();
 }
 
-function appendHealthRow(section, titleText, metaText, statusText, statusKind, titleOptions = {}) {
+function appendHealthRow(section, titleText, metaText, statusText, statusKind, actionOptions = null) {
   const row = document.createElement('div');
   row.className = 'dashboard-list-row device-health-row';
   const main = document.createElement('div');
   main.className = 'dashboard-list-main';
-  const title = makeHealthTitle(titleText, titleOptions);
+  const title = makeHealthTitle(titleText);
   const meta = document.createElement('div');
   meta.className = 'dashboard-list-meta';
   meta.textContent = metaText;
   main.appendChild(title);
   main.appendChild(meta);
   row.appendChild(main);
+
+  const end = document.createElement('div');
+  end.className = 'dashboard-list-end';
+  if (actionOptions && typeof actionOptions.onActivate === 'function') {
+    const resolve = makeResolveButton(actionOptions.label || 'Resolve', actionOptions.onActivate, actionOptions.title || 'Resolve this issue');
+    if (resolve) end.appendChild(resolve);
+  }
   const badge = makeStatus(statusKind || statusText);
   badge.textContent = statusText;
-  row.appendChild(badge);
+  end.appendChild(badge);
+  row.appendChild(end);
   section.appendChild(row);
 }
 
@@ -194,8 +252,7 @@ function vaultContentsLabel(counts = {}) {
   const exchanges = Number(counts.exchanges) || 0;
   const services = Number(counts.services) || 0;
   const total = wallets + exchanges + services;
-  if (!total) return 'Add a wallet, exchange account, or Web / Web3 service to begin building your vault inventory.';
-
+  if (!total) return 'Vault contents: Add a wallet, exchange account, or Web / Web3 service to begin building your vault inventory.';
   const parts = [];
   if (hardware) parts.push(quantity(hardware, 'hardware wallet'));
   if (software) parts.push(quantity(software, 'software wallet'));
@@ -206,9 +263,43 @@ function vaultContentsLabel(counts = {}) {
   return `Vault contents: ${parts.join(' • ')}`;
 }
 
+function makeReadinessRing(percent) {
+  const wrap = document.createElement('div');
+  wrap.className = 'dashboard-readiness-ring';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 100 100');
+  svg.setAttribute('aria-hidden', 'true');
+  const background = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  background.setAttribute('cx', '50');
+  background.setAttribute('cy', '50');
+  background.setAttribute('r', '38');
+  background.setAttribute('class', 'dashboard-readiness-track');
+  const progress = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  progress.setAttribute('cx', '50');
+  progress.setAttribute('cy', '50');
+  progress.setAttribute('r', '38');
+  progress.setAttribute('class', 'dashboard-readiness-progress');
+  const circumference = 2 * Math.PI * 38;
+  progress.style.strokeDasharray = String(circumference);
+  progress.dataset.circumference = String(circumference);
+  svg.appendChild(background);
+  svg.appendChild(progress);
+  const copy = document.createElement('div');
+  copy.className = 'dashboard-readiness-copy';
+  const value = document.createElement('strong');
+  value.textContent = `${Number(percent) || 0}%`;
+  const label = document.createElement('span');
+  label.textContent = 'Recovery readiness';
+  copy.appendChild(value);
+  copy.appendChild(label);
+  wrap.appendChild(svg);
+  wrap.appendChild(copy);
+  return { wrap, progress };
+}
+
 function renderInventory(area, summary) {
   const counts = summary.counts || {};
-  const section = makeSection('Vault Inventory', 'vault-inventory-section');
+  const section = makeSection('Vault Inventory', 'vault-inventory-section', vaultContentsLabel(counts));
   const stats = document.createElement('div');
   stats.className = 'dashboard-stats vault-inventory-stats';
   const vaultItems = Number(counts.wallets || 0) + Number(counts.exchanges || 0) + Number(counts.services || 0);
@@ -218,16 +309,11 @@ function renderInventory(area, summary) {
   stats.appendChild(makeStat('Services', counts.services || 0));
   stats.appendChild(makeStat('Assets', counts.assets || 0));
   section.appendChild(stats);
-
-  const meta = document.createElement('p');
-  meta.className = 'dashboard-inventory-meta';
-  meta.textContent = vaultContentsLabel(counts);
-  section.appendChild(meta);
   area.appendChild(section);
 }
 
 function renderRecoveryHealth(area, summary) {
-  const section = makeSection('Recovery Health', 'vault-recovery-section');
+  const section = makeSection('Recovery Health', 'vault-recovery-section', 'See how many Vault Items are recovery-ready, need a review, or still have incomplete recovery documentation.');
   const stats = document.createElement('div');
   stats.className = 'dashboard-stats recovery-health-stats';
   stats.appendChild(makeStat('Ready', summary.counts.ready));
@@ -237,56 +323,224 @@ function renderRecoveryHealth(area, summary) {
   area.appendChild(section);
 }
 
+function appendMaintenanceCard(host, options = {}) {
+  const card = document.createElement('div');
+  card.className = 'dashboard-maintenance-card';
+
+  const icon = document.createElement('span');
+  icon.className = 'recovery-simulator-topic-icon dashboard-maintenance-icon';
+  const iconClass = String(options.icon || '');
+  icon.innerHTML = `<i class="fa ${iconClass}" aria-hidden="true"></i>`;
+
+  const copy = document.createElement('span');
+  copy.className = 'recovery-simulator-topic-copy dashboard-maintenance-copy';
+  const title = document.createElement('strong');
+  title.textContent = options.title || '';
+  const description = document.createElement('small');
+  description.textContent = options.description || '';
+  copy.appendChild(title);
+  copy.appendChild(description);
+
+  const end = document.createElement('div');
+  end.className = 'dashboard-maintenance-end';
+  if (options.action && typeof options.action.onActivate === 'function') {
+    const button = makeResolveButton(options.action.label || 'Resolve', options.action.onActivate, options.action.title || 'Resolve this issue');
+    if (button) end.appendChild(button);
+  }
+  if (options.statusText && options.statusKind) end.appendChild(makeLabeledStatus(options.statusText, options.statusKind));
+
+  card.appendChild(icon);
+  card.appendChild(copy);
+  card.appendChild(end);
+  host.appendChild(card);
+}
+
 function renderMaintenanceSnapshot(area, summary, device = {}) {
-  const section = makeSection('Maintenance Snapshot', 'vault-maintenance-section');
-  const grid = document.createElement('div');
-  grid.className = 'dashboard-maintenance-grid';
+  const section = makeSection('Maintenance Snapshot', 'vault-maintenance-section', 'Review verification freshness, recovery coverage, and recent backup activity. Use Resolve when SafeLedger can take you directly to the next item that needs work.');
+  const cards = document.createElement('div');
+  cards.className = 'dashboard-maintenance-cards';
 
-  const stale = document.createElement('div');
-  stale.className = 'dashboard-maintenance-card';
-  const staleTitle = document.createElement('strong');
-  staleTitle.textContent = 'Stale information';
-  const staleText = document.createElement('span');
   const staleInfo = summary.stale || {};
-  staleText.textContent = staleInfo.count
-    ? `${staleInfo.count} vault item${staleInfo.count === 1 ? '' : 's'} ${staleInfo.neverVerified ? `(${staleInfo.neverVerified} never verified) ` : ''}need a verification review.`
-    : 'All vault items have been verified within the last 6 months.';
-  stale.appendChild(staleTitle);
-  stale.appendChild(staleText);
-  grid.appendChild(stale);
+  const staleCount = Number(staleInfo.count) || 0;
+  const staleTarget = summary.maintenanceTargets && summary.maintenanceTargets.verification;
+  const staleDescription = staleCount
+    ? `${quantity(staleCount, 'Vault Item')} need${staleCount === 1 ? 's' : ''} a verification review${staleInfo.neverVerified ? ` • ${staleInfo.neverVerified} never verified` : ''}.`
+    : 'All Vault Items have been verified within the last 6 months.';
+  appendMaintenanceCard(cards, {
+    icon: 'fa-clock-o',
+    title: 'Recovery verification',
+    description: staleDescription,
+    statusText: staleCount ? 'Review' : 'Current',
+    statusKind: staleCount ? 'Needs Review' : 'Ready',
+    action: staleCount && staleTarget ? {
+      label: 'Resolve',
+      title: `Open ${staleTarget.walletName || 'Vault Item'} to review verification`,
+      onActivate: () => openWallet(staleTarget)
+    } : null
+  });
 
-  const coverage = document.createElement('div');
-  coverage.className = 'dashboard-maintenance-card';
-  const coverageTitle = document.createElement('strong');
-  coverageTitle.textContent = 'Recovery coverage';
-  const coverageText = document.createElement('span');
-  const rc = summary.recoveryCoverage || { total: 0, method: 0, location: 0, drills: 0 };
-  coverageText.textContent = rc.total
-    ? `${rc.method}/${rc.total} methods • ${rc.location}/${rc.total} locations • ${rc.drills}/${rc.total} recovery drills`
-    : 'No vault items are available for recovery coverage yet.';
-  coverage.appendChild(coverageTitle);
-  coverage.appendChild(coverageText);
-  grid.appendChild(coverage);
+  const rc = summary.recoveryCoverage || { total: 0, method: 0, location: 0, instructions: 0, drills: 0 };
+  const total = Number(rc.total) || 0;
+  const coverageComplete = total > 0 && [rc.method, rc.location, rc.instructions, rc.drills].every((value) => Number(value) === total);
+  const coverageTarget = summary.maintenanceTargets && summary.maintenanceTargets.coverage;
+  const coverageDescription = total
+    ? `Methods ${Number(rc.method) || 0}/${total} • Locations ${Number(rc.location) || 0}/${total} • Instructions ${Number(rc.instructions) || 0}/${total} • Validations ${Number(rc.drills) || 0}/${total}`
+    : 'No Vault Items are available for recovery coverage yet.';
+  appendMaintenanceCard(cards, {
+    icon: 'fa-life-ring',
+    title: 'Recovery coverage',
+    description: coverageDescription,
+    statusText: total ? (coverageComplete ? 'Complete' : 'Review') : 'No Items',
+    statusKind: total ? (coverageComplete ? 'Ready' : 'Needs Review') : 'Ready',
+    action: total && !coverageComplete && coverageTarget ? {
+      label: 'Resolve',
+      title: `Open ${coverageTarget.walletName || 'Vault Item'} to improve recovery coverage`,
+      onActivate: () => openWallet(coverageTarget)
+    } : null
+  });
 
-  const dates = document.createElement('div');
-  dates.className = 'dashboard-maintenance-card';
-  const datesTitle = document.createElement('strong');
-  datesTitle.textContent = 'Last maintenance';
-  const datesText = document.createElement('span');
   const backupHealth = device.backupHealth || {};
+  const backupDue = !backupHealth.backup || backupHealth.backup.state === 'never' || backupHealth.backup.state === 'due';
+  const verifyDue = !backupHealth.verified || backupHealth.verified.state === 'never' || backupHealth.verified.state === 'due';
   const activity = Array.isArray(device.activity) ? device.activity[0] : null;
-  datesText.textContent = `Backup: ${backupAgeLabel(backupHealth.backup)} • Verified backup: ${backupAgeLabel(backupHealth.verified)} • Vault activity: ${formatActivityTime(activity)}`;
-  dates.appendChild(datesTitle);
-  dates.appendChild(datesText);
-  grid.appendChild(dates);
+  const backupAction = backupDue
+    ? { label: 'Create Backup', title: 'Create a current encrypted backup', onActivate: () => runBackupResolution('create-backup') }
+    : verifyDue
+      ? { label: 'Verify Backup', title: 'Verify the current encrypted backup', onActivate: () => runBackupResolution('verify-backup') }
+      : null;
+  appendMaintenanceCard(cards, {
+    icon: 'fa-archive',
+    title: 'Backup activity',
+    description: `Backup ${backupAgeLabel(backupHealth.backup)} • Verified ${backupAgeLabel(backupHealth.verified)} • Latest vault activity ${formatActivityTime(activity)}`,
+    statusText: backupDue || verifyDue ? 'Review' : 'Current',
+    statusKind: backupDue || verifyDue ? 'Needs Review' : 'Ready',
+    action: backupAction
+  });
 
-  section.appendChild(grid);
+  section.appendChild(cards);
+  area.appendChild(section);
+}
+
+function appendSimulatorList(host, titleText, values) {
+  if (!Array.isArray(values) || !values.length) return;
+  const title = document.createElement('strong');
+  title.className = 'recovery-simulator-answer-label';
+  title.textContent = titleText;
+  host.appendChild(title);
+  const list = document.createElement('ul');
+  for (const value of values) {
+    const li = document.createElement('li');
+    li.textContent = value;
+    list.appendChild(li);
+  }
+  host.appendChild(list);
+}
+
+async function runBackupResolution(actionId) {
+  if (actionId === 'create-backup') await securityEnhancements.exportEncryptedBackup();
+  else if (actionId === 'verify-backup') await securityEnhancements.verifyEncryptedBackup();
+  else return;
+  await showDashboard();
+}
+
+function renderSimulatorResult(host, simulation, options = {}) {
+  host.innerHTML = '';
+  const header = document.createElement('div');
+  header.className = 'recovery-simulator-answer-header';
+  const score = document.createElement('strong');
+  score.className = 'recovery-simulator-answer-score';
+  score.textContent = `${simulation.score}%`;
+  header.appendChild(score);
+  header.appendChild(makeStatus(simulation.status));
+  host.appendChild(header);
+  const headline = document.createElement('p');
+  headline.className = 'recovery-simulator-headline';
+  headline.textContent = simulation.headline;
+  host.appendChild(headline);
+  appendSimulatorList(host, 'Strengths', simulation.strengths);
+  appendSimulatorList(host, 'Gaps to resolve', simulation.gaps);
+
+  const actions = Array.isArray(simulation.actions) ? simulation.actions : [];
+  if (!actions.length) return;
+  const controls = document.createElement('div');
+  controls.className = 'recovery-resolution-actions';
+  for (const action of actions) {
+    if (!action || !action.id) continue;
+    if (action.id === 'open-resolution-target') {
+      if (!options.target) continue;
+      const targetLabel = options.target.walletName ? `Resolve in ${options.target.walletName}` : (action.label || 'Resolve Vault Item');
+      const button = makeResolveButton(targetLabel, () => openWallet(options.target), 'Open the Vault Item with the next unresolved recovery gap');
+      if (button) controls.appendChild(button);
+      continue;
+    }
+    if (action.id === 'create-backup' || action.id === 'verify-backup') {
+      const button = makeResolveButton(action.label || 'Resolve', (_event, element) => {
+        element.disabled = true;
+        runBackupResolution(action.id).finally(() => { if (element.isConnected) element.disabled = false; });
+      });
+      if (button) controls.appendChild(button);
+    }
+  }
+  if (controls.childNodes.length) host.appendChild(controls);
+}
+
+function renderRecoverySimulator(area, summary, device = {}) {
+  const section = makeSection(
+    'What Happens If…',
+    'recovery-simulator-section',
+    'Open a scenario below to see how your current recovery documentation would hold up. SafeLedger evaluates only local, aggregate recovery evidence—this is a planning check, not a guarantee.'
+  );
+  const accordion = document.createElement('div');
+  accordion.className = 'recovery-simulator-accordion-list';
+
+  for (const scenario of recoverySimulator.SCENARIOS) {
+    const details = document.createElement('details');
+    details.className = 'recovery-simulator-accordion';
+    const summaryRow = document.createElement('summary');
+    summaryRow.className = 'recovery-simulator-accordion-summary';
+
+    const icon = document.createElement('span');
+    icon.className = 'recovery-simulator-topic-icon';
+    icon.innerHTML = `<i class="fa ${scenario.icon}" aria-hidden="true"></i>`;
+    const copy = document.createElement('span');
+    copy.className = 'recovery-simulator-topic-copy';
+    const title = document.createElement('strong');
+    title.textContent = scenario.title;
+    const description = document.createElement('small');
+    description.textContent = scenario.description;
+    copy.appendChild(title);
+    copy.appendChild(description);
+    const chevron = document.createElement('i');
+    chevron.className = 'fa fa-chevron-down recovery-simulator-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    summaryRow.appendChild(icon);
+    summaryRow.appendChild(copy);
+    summaryRow.appendChild(chevron);
+    details.appendChild(summaryRow);
+
+    const answer = document.createElement('div');
+    answer.className = 'recovery-simulator-accordion-answer';
+    details.appendChild(answer);
+    let rendered = false;
+    details.addEventListener('toggle', () => {
+      if (!details.open || rendered) return;
+      rendered = true;
+      const simulation = recoverySimulator.simulate(scenario.id, summary.simulationFacts || {}, device.backupHealth || null);
+      const target = summary.resolutionTargets && summary.resolutionTargets[scenario.id]
+        ? summary.resolutionTargets[scenario.id]
+        : null;
+      renderSimulatorResult(answer, simulation, { target });
+      motion.reveal(answer);
+    });
+    accordion.appendChild(details);
+  }
+
+  section.appendChild(accordion);
   area.appendChild(section);
 }
 
 function renderDeviceHealth(area, device = {}) {
-  const section = makeSection('Device & Backup Health', 'device-health-section');
-
+  const section = makeSection('Device & Backup Health', 'device-health-section', 'Check SafeLedgerData storage availability and encrypted-backup freshness. These checks stay local to this device.');
   const storage = device.storage;
   if (storage) {
     const storageReady = storage.connected === true && storage.writable === true;
@@ -296,10 +550,10 @@ function renderDeviceHealth(area, device = {}) {
       ? `${storage.writable ? 'SafeLedgerData writable' : 'SafeLedgerData not writable'} • ${formatBytes(storage.freeBytes)}`
       : `SafeLedgerData ${storage.reason || 'unavailable'}`;
     appendHealthRow(section, 'Portable storage', meta, label, status, storage.connected ? {
-      onActivate: openPortableStorageFolder,
+      label: 'Open Storage',
       title: 'Open SafeLedgerData folder',
-      ariaLabel: 'Open SafeLedgerData folder in the system file manager'
-    } : {});
+      onActivate: openPortableStorageFolder
+    } : null);
   } else {
     appendHealthRow(section, 'Portable storage', 'Storage status unavailable.', 'Review', 'Needs Review');
   }
@@ -308,42 +562,40 @@ function renderDeviceHealth(area, device = {}) {
   if (backupHealth) {
     const backupDue = !backupHealth.backup || backupHealth.backup.state === 'never' || backupHealth.backup.state === 'due';
     const verifyDue = !backupHealth.verified || backupHealth.verified.state === 'never' || backupHealth.verified.state === 'due';
+    const nextAction = backupDue
+      ? { label: 'Create Backup', title: 'Create a current encrypted backup', onActivate: () => runBackupResolution('create-backup') }
+      : verifyDue
+        ? { label: 'Verify Backup', title: 'Verify the current encrypted backup', onActivate: () => runBackupResolution('verify-backup') }
+        : null;
     appendHealthRow(
       section,
       'Encrypted backup',
       `Last backup: ${backupAgeLabel(backupHealth.backup)} • Last verified: ${backupAgeLabel(backupHealth.verified)}`,
       backupDue || verifyDue ? 'Review' : 'Current',
-      backupDue || verifyDue ? 'Needs Review' : 'Ready'
+      backupDue || verifyDue ? 'Needs Review' : 'Ready',
+      nextAction
     );
   } else {
     appendHealthRow(section, 'Encrypted backup', 'Backup health status unavailable.', 'Review', 'Needs Review');
   }
-
   area.appendChild(section);
 }
 
-function render(summary, device = {}) {
+function render(summary, device = {}, intelligence = null) {
   const area = clearArea();
   if (!area) return;
   const header = document.createElement('div');
-  header.className = 'dashboard-header';
+  header.className = 'dashboard-header recovery-command-center-header';
   const headingWrap = document.createElement('div');
   const heading = document.createElement('h1');
   heading.textContent = 'Vault Overview';
   const intro = document.createElement('p');
-  intro.textContent = 'An at-a-glance view of your Profiles, Vault Items, assets, backups, and recovery health. Vault Items include wallets, exchange accounts, and Web / Web3 services. Everything is calculated locally from your encrypted vault.';
+  intro.textContent = 'Your local Recovery Command Center: inventory, recovery readiness, scenario planning, backups, and recovery intelligence—all calculated from encrypted SafeLedger data on this device.';
   headingWrap.appendChild(heading);
   headingWrap.appendChild(intro);
-  const readiness = document.createElement('div');
-  readiness.className = 'dashboard-readiness';
-  const readinessValue = document.createElement('strong');
-  readinessValue.textContent = `${summary.readinessPercent}%`;
-  const readinessLabel = document.createElement('span');
-  readinessLabel.textContent = ' recovery readiness';
-  readiness.appendChild(readinessValue);
-  readiness.appendChild(readinessLabel);
+  const ring = makeReadinessRing(summary.readinessPercent);
   header.appendChild(headingWrap);
-  header.appendChild(readiness);
+  header.appendChild(ring.wrap);
   area.appendChild(header);
 
   if (summary.profileReadErrors) {
@@ -354,20 +606,26 @@ function render(summary, device = {}) {
   }
 
   renderInventory(area, summary);
-  renderMaintenanceSnapshot(area, summary, device);
-  renderRecoveryHealth(area, summary);
   renderDeviceHealth(area, device);
+  renderRecoveryHealth(area, summary);
+  renderMaintenanceSnapshot(area, summary, device);
+  renderRecoverySimulator(area, summary, device);
+  if (intelligence) recoveryIntelligenceUi.renderIntelligence(area, intelligence);
 
-  const attention = makeSection('Recovery Needs Attention');
+  const attention = makeSection('Recovery Needs Attention', 'recovery-needs-attention-section', 'Vault Items that are not fully recovery-ready appear here with their readiness score and most important gaps. Choose Resolve to open the Vault Item that needs work.');
   appendWalletList(attention, summary.needsAttention || [], 'Everything documented is currently ready.', false, true);
   area.appendChild(attention);
 
   const recent = makeSection('Recently Verified');
-  appendWalletList(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true, true);
+  appendWalletList(recent, summary.recentlyVerified || [], 'No Vault Item recovery plans have been verified yet.', true, true);
   area.appendChild(recent);
+
+  motion.animateReadiness(ring.progress, summary.readinessPercent);
+  motion.dashboardEntrance(area);
 }
 
 async function showDashboard() {
+  detailActions.clear();
   const area = clearArea();
   if (!area || !window.safeLedgerApi || typeof window.safeLedgerApi.getDashboardSummary !== 'function') return;
   const loading = document.createElement('p');
@@ -375,18 +633,19 @@ async function showDashboard() {
   loading.textContent = 'Reviewing encrypted vault records locally…';
   area.appendChild(loading);
   try {
-    const [result, storage, backupResult, activityResult] = await Promise.all([
+    const [result, storage, backupResult, activityResult, intelligenceResult] = await Promise.all([
       window.safeLedgerApi.getDashboardSummary(),
       typeof window.safeLedgerApi.getStorageHealth === 'function' ? window.safeLedgerApi.getStorageHealth().catch(() => null) : Promise.resolve(null),
       typeof window.safeLedgerApi.getBackupHealth === 'function' ? window.safeLedgerApi.getBackupHealth().catch(() => null) : Promise.resolve(null),
-      typeof window.safeLedgerApi.getActivityHistory === 'function' ? window.safeLedgerApi.getActivityHistory(1).catch(() => null) : Promise.resolve(null)
+      typeof window.safeLedgerApi.getActivityHistory === 'function' ? window.safeLedgerApi.getActivityHistory(1).catch(() => null) : Promise.resolve(null),
+      typeof window.safeLedgerApi.getRecoveryIntelligence === 'function' ? window.safeLedgerApi.getRecoveryIntelligence().catch(() => null) : Promise.resolve(null)
     ]);
     if (!result || !result.ok) throw new Error(result && result.message ? result.message : 'Unable to build Vault Overview.');
     render(result.summary, {
       storage,
       backupHealth: backupResult && backupResult.health ? backupResult.health : null,
       activity: activityResult && Array.isArray(activityResult.entries) ? activityResult.entries : []
-    });
+    }, intelligenceResult && intelligenceResult.ok === true ? intelligenceResult.intelligence : null);
   } catch (err) {
     area.innerHTML = '';
     const message = document.createElement('p');
@@ -398,16 +657,16 @@ async function showDashboard() {
 
 window.addEventListener('DOMContentLoaded', () => {
   const button = document.getElementById('dashboardButton');
-  if (button) button.addEventListener('click', (event) => { event.preventDefault(); showDashboard(); });
-  if (window.safeLedgerApi && typeof window.safeLedgerApi.onResult === 'function') {
-    window.safeLedgerApi.onResult((payload) => {
-      if (payload && payload.type === 'vaultlist-init' && payload.sessionUnlocked === true) setTimeout(showDashboard, 0);
-    });
-  }
+  if (button) button.addEventListener('click', (event) => {
+    event.preventDefault();
+    showDashboard();
+  });
 });
 
+exports.configure = configure;
 exports.show = showDashboard;
 exports.render = render;
+exports.renderIntelligence = recoveryIntelligenceUi.renderIntelligence;
 exports._test = {
   formatBytes,
   backupAgeLabel,
@@ -416,11 +675,20 @@ exports._test = {
   renderMaintenanceSnapshot,
   renderRecoveryHealth,
   renderDeviceHealth,
+  renderRecoverySimulator,
+  renderSimulatorResult,
+  makeReadinessRing,
   makeStatus,
+  makeLabeledStatus,
   makeHealthTitle,
+  makeResolveButton,
+  runBackupResolution,
   openPortableStorageFolder,
   openWallet,
   appendWalletList,
+  appendAttentionGaps,
+  appendHealthRow,
+  appendMaintenanceCard,
   quantity,
   vaultContentsLabel
 };

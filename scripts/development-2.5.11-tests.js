@@ -5,11 +5,10 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
+const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
 const security = read('src/main/security-ui.js');
-const sensitiveUi = read('src/main/sensitive-control-icons-ui.js');
-const uiCss = read('src/main/css/ui-2.5.11.css');
+const uiCss = read('src/main/css/ui-current.css');
 const dashboardUi = read('src/main/dashboard-ui.js');
 const dashboardSummary = read('src/main/dashboard-summary.js');
 const index = read('src/main/index.html');
@@ -24,14 +23,15 @@ function testSensitiveControlLanguage() {
     'Editable sensitive fields should start with an eye icon.');
   assert(security.includes('control.innerHTML = eyeIcon.markup(hidden);'),
     'Editable sensitive fields should switch eye state when revealed.');
-  assert(security.includes("stateIcon.className = 'fa fa-plus';"),
-    'View-mode sensitive rows should start with a plus disclosure icon.');
-  assert(security.includes("stateIcon.className = details.open ? 'fa fa-minus' : 'fa fa-plus';"),
-    'View-mode sensitive rows should toggle plus/minus rather than eye artwork.');
-  assert(!sensitiveUi.includes("require('./eye-icon')"),
-    'The display-only disclosure patch must not replace plus/minus with eye icons.');
-  assert(!sensitiveUi.includes('attributes: true'),
-    'Sensitive display patching should not observe attribute changes and recreate the prior wallet-freeze loop.');
+  assert(security.includes("stateIcon.className = open ? 'fa fa-minus' : 'fa fa-plus';"),
+    'View-mode sensitive rows should directly toggle plus/minus rather than eye artwork.');
+  assert(security.includes('syncSensitiveSummary(details, summary, stateIcon);'));
+  assert(security.includes("details.addEventListener('toggle', () =>"),
+    'Disclosure state must be updated by the canonical sensitive-field owner.');
+  assert(!security.includes('MutationObserver'),
+    'Sensitive controls must not return to observer-driven repair.');
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/sensitive-control-icons-ui.js')), false,
+    'The retired display-only disclosure patch must stay removed.');
   assert(uiCss.includes('.edit-sensitive-actions'));
   assert(uiCss.includes('position: absolute;'));
   assert(uiCss.includes('.edit-sensitive-toggle .sl-eye-svg'),
@@ -48,17 +48,22 @@ function testCopyControlFoundation() {
 
 function testVaultOverview() {
   assert(dashboardUi.includes("heading.textContent = 'Vault Overview';"));
-  assert(dashboardUi.includes("makeSection('Vault Inventory'"));
-  assert(dashboardUi.includes("makeSection('Recovery Health'"));
-  assert(dashboardUi.includes("makeSection('Device & Backup Health'"));
-  assert(dashboardUi.includes("makeSection('Recovery Needs Attention')"));
+  for (const [title, className] of [
+    ['Vault Inventory', 'vault-inventory-section'],
+    ['Recovery Health', 'vault-recovery-section'],
+    ['Device & Backup Health', 'device-health-section'],
+    ['Recovery Needs Attention', 'recovery-needs-attention-section']
+  ]) {
+    assert(dashboardUi.includes(`'${title}'`), `Vault Overview should retain the ${title} section.`);
+    assert(dashboardUi.includes(`'${className}'`), `${title} should retain its canonical section class.`);
+  }
   assert(dashboardUi.includes("makeSection('Recently Verified')"));
   assert(dashboardSummary.includes('hardwareWallets: 0'));
   assert(dashboardSummary.includes('softwareWallets: 0'));
   assert(dashboardSummary.includes('otherWallets: 0'));
   assert(index.includes('title="Vault Overview"'));
   assert(index.includes('aria-label="Open Vault Overview"'));
-  assert(index.includes('./css/ui-2.5.11.css'));
+  assert(index.includes('./css/ui-current.css'));
 }
 
 function testFioCatalogSupport() {
@@ -83,4 +88,4 @@ testSensitiveControlLanguage();
 testCopyControlFoundation();
 testVaultOverview();
 testFioCatalogSupport();
-console.log('PASS SafeLedger 2.5.11 editable eye controls, plus/minus disclosures, local copy control, Vault Overview, and reviewed FIO support.');
+console.log('PASS SafeLedger 2.5.11 editable eye controls, directly owned plus/minus disclosures, local copy control, Vault Overview, and reviewed FIO support.');

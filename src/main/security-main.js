@@ -82,6 +82,10 @@ function sha256Base64(encoded) {
   return crypto.createHash('sha256').update(Buffer.from(String(encoded || ''), 'base64')).digest('hex');
 }
 
+function sha256Buffer(value) {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
 function buildBackupManifest(files) {
   const manifest = {};
   for (const [relative, encoded] of Object.entries(files || {})) manifest[relative] = sha256Base64(encoded);
@@ -130,37 +134,68 @@ async function writeBackupFile(filePath, payload) {
   await atomicWriteJson(filePath, payload, { pretty: false });
 }
 
-async function stageRestore(dataRoot, payload) {
+async function verifyStagedPayload(stagingDir, payload, io = fs.promises) {
+  for (const [relative, encoded] of Object.entries(payload.files || {})) {
+    const target = safeBackupPath(stagingDir, relative);
+    let written;
+    try {
+      written = await io.readFile(target);
+    } catch (_) {
+      throw new Error(`Restore staging verification could not read ${relative}. Current SafeLedger data was not changed.`);
+    }
+    if (sha256Buffer(written) !== sha256Base64(encoded)) {
+      throw new Error(`Restore staging verification failed for ${relative}. Current SafeLedger data was not changed.`);
+    }
+  }
+  return true;
+}
+
+async function commitStagedRestore(dataRoot, stagingDir, safetyDir, io = fs.promises) {
+  let movedCurrent = false;
+  try {
+    await io.rename(dataRoot, safetyDir);
+    movedCurrent = true;
+  } catch (err) {
+    if (!err || err.code !== 'ENOENT') throw err;
+  }
+
+  try {
+    await io.rename(stagingDir, dataRoot);
+  } catch (promoteError) {
+    if (movedCurrent) {
+      try {
+        await io.rename(safetyDir, dataRoot);
+      } catch (rollbackError) {
+        const error = new Error(`Restore was interrupted and SafeLedger could not automatically return the prior data folder. The pre-restore safety copy remains at ${safetyDir}. Do not continue until that safety copy is restored.`);
+        error.cause = promoteError;
+        error.rollbackError = rollbackError;
+        throw error;
+      }
+    }
+    throw promoteError;
+  }
+
+  return { safetyDir: movedCurrent ? safetyDir : null };
+}
+
+async function stageRestore(dataRoot, payload, io = fs.promises) {
+  const validated = validateBackupPayload(payload);
   const parent = path.dirname(dataRoot);
   const token = timestampToken();
   const stagingDir = path.join(parent, `SafeLedgerData-restore-staging-${token}`);
   const safetyDir = path.join(parent, `SafeLedgerData-pre-restore-${token}`);
-  await fs.promises.rm(stagingDir, { recursive: true, force: true });
-  await fs.promises.mkdir(stagingDir, { recursive: true });
+  await io.rm(stagingDir, { recursive: true, force: true });
+  await io.mkdir(stagingDir, { recursive: true });
   try {
-    for (const [relative, encoded] of Object.entries(payload.files)) {
+    for (const [relative, encoded] of Object.entries(validated.files)) {
       const target = safeBackupPath(stagingDir, relative);
-      await fs.promises.mkdir(path.dirname(target), { recursive: true });
-      await fs.promises.writeFile(target, Buffer.from(encoded, 'base64'), { mode: 0o600 });
+      await io.mkdir(path.dirname(target), { recursive: true });
+      await io.writeFile(target, Buffer.from(encoded, 'base64'), { mode: 0o600 });
     }
-    let movedCurrent = false;
-    try {
-      await fs.promises.rename(dataRoot, safetyDir);
-      movedCurrent = true;
-    } catch (err) {
-      if (err.code !== 'ENOENT') throw err;
-    }
-    try {
-      await fs.promises.rename(stagingDir, dataRoot);
-    } catch (err) {
-      if (movedCurrent) {
-        try { await fs.promises.rename(safetyDir, dataRoot); } catch (_) {}
-      }
-      throw err;
-    }
-    return { safetyDir: movedCurrent ? safetyDir : null };
+    await verifyStagedPayload(stagingDir, validated, io);
+    return await commitStagedRestore(dataRoot, stagingDir, safetyDir, io);
   } catch (err) {
-    await fs.promises.rm(stagingDir, { recursive: true, force: true }).catch(() => {});
+    await io.rm(stagingDir, { recursive: true, force: true }).catch(() => {});
     throw err;
   }
 }
@@ -194,7 +229,7 @@ function verifyBackupPayload(payload, dataKey) {
     if (!encryption.isAuthenticatedEncryptedPayload(encryptedList)) throw new Error('unsupported vault list');
     list = JSON.parse(encryption.decrypt(dataKey, encryptedList));
   } catch (_) {
-    throw new Error('Backup files passed integrity checks, but the encrypted vault list could not be authenticated with the current SafeLedger data key.');
+    throw new Error('Backup files passed integrity checks, but the encrypted vault list could not be authenticated with the supplied SafeLedger data key.');
   }
   if (!robustVault.validVaultListStructure(list)) throw new Error('Backup vault list has an invalid structure.');
 
@@ -223,6 +258,47 @@ function verifyBackupPayload(payload, dataKey) {
     walletCount,
     assetCount
   };
+}
+
+async function verifyBackupPayloadWithPassword(payload, password, currentDataKey = null) {
+  const validated = validateBackupPayload(payload);
+  if (validated.version < 3) {
+    const report = verifyBackupPayload(validated, currentDataKey);
+    return Object.assign({}, report, {
+      recoveryVerified: false,
+      verificationMode: 'legacy-current-session',
+      warning: 'This older SafeLedger backup predates the portable key envelope, so it can be checked against the current unlocked session but cannot prove an independent password recovery.'
+    });
+  }
+
+  const suppliedPassword = String(password || '');
+  if (!suppliedPassword) throw new Error('Enter the master password that belongs to this backup to verify independent recovery.');
+
+  let envelope;
+  try {
+    envelope = JSON.parse(decodeBackupText(validated, 'vaults/key-envelope.json'));
+  } catch (_) {
+    throw new Error('Backup key envelope is unreadable.');
+  }
+  if (!keyEnvelope.validateEnvelope(envelope)) throw new Error('Backup key envelope is damaged or unsupported.');
+
+  const unlocked = await keyEnvelope.unlockEnvelope(suppliedPassword, envelope);
+  if (!unlocked.ok) {
+    if (unlocked.type === 'password-failed') {
+      throw new Error('That password could not unlock this backup. The live SafeLedger failed-login counter was not changed.');
+    }
+    throw new Error(unlocked.message || 'The backup key envelope could not be unlocked.');
+  }
+
+  try {
+    const report = verifyBackupPayload(validated, unlocked.dataKey);
+    return Object.assign({}, report, {
+      recoveryVerified: true,
+      verificationMode: 'backup-password'
+    });
+  } finally {
+    unlocked.dataKey.fill(0);
+  }
 }
 
 async function buildDashboard(dataRoot, cryptoSession) {
@@ -346,7 +422,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     return { ok: true, fileCount: Object.keys(files).length };
   });
 
-  ipc.handle('security-verify-backup', async (event) => {
+  ipc.handle('security-verify-backup', async (event, password) => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
     const selection = await dialog.showOpenDialog(getMainWindow(), {
@@ -357,8 +433,8 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     if (!selection || selection.canceled || !selection.filePaths || !selection.filePaths.length) return { ok: false, canceled: true };
     try {
       const payload = JSON.parse(await fs.promises.readFile(selection.filePaths[0], 'utf8'));
-      const report = verifyBackupPayload(payload, getSessionKey(cryptoSession));
-      await audit(getDataRoot(), 'complete-data-backup-verified');
+      const report = await verifyBackupPayloadWithPassword(payload, password, getSessionKey(cryptoSession));
+      await audit(getDataRoot(), report.recoveryVerified ? 'complete-data-backup-recovery-verified' : 'complete-data-backup-legacy-verified');
       return { ok: true, report };
     } catch (err) {
       return { ok: false, message: err && err.message ? err.message : 'Backup verification failed.' };
@@ -383,7 +459,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
       noLink: true,
       title: 'Restore SafeLedger Backup',
       message: 'Restore the complete SafeLedgerData backup?',
-      detail: 'SafeLedger will first preserve the current SafeLedgerData folder as a pre-restore safety copy. The application will lock after the restore.'
+      detail: 'SafeLedger will stage and re-check every backup file before touching current data, then preserve the current SafeLedgerData folder as a pre-restore safety copy. The application will lock after the restore.'
     });
     if (confirmation.response !== 0) return { ok: false, canceled: true };
     cryptoSession.clearSession();
@@ -397,12 +473,13 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
     const selection = await dialog.showOpenDialog(getMainWindow(), {
-      title: 'Choose SafeLedger 1.x Data Folder',
-      properties: ['openDirectory']
+      title: 'Select SafeLedger 1.x Data File',
+      properties: ['openFile'],
+      filters: [{ name: 'SafeLedger 1.x Data', extensions: ['json'] }]
     });
     if (!selection || selection.canceled || !selection.filePaths || !selection.filePaths.length) return { ok: false, canceled: true };
     try {
-      selectedLegacySource = legacyImport.resolveLegacySourceDir(selection.filePaths[0]);
+      selectedLegacySource = legacyImport.resolveLegacySourceSelection(selection.filePaths[0]);
       return { ok: true, sourceFolder: path.basename(selectedLegacySource), sourcePath: selectedLegacySource };
     } catch (err) {
       selectedLegacySource = null;
@@ -413,7 +490,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
   ipc.handle('legacy-import-run', async (event, password) => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
-    if (!selectedLegacySource) return { ok: false, message: 'Choose the SafeLedger 1.x data folder first.' };
+    if (!selectedLegacySource) return { ok: false, message: 'Choose a SafeLedger 1.x data file first.' };
     try {
       const result = await legacyImport.importIntoCurrent({
         sourceDir: selectedLegacySource,
@@ -462,10 +539,14 @@ module.exports = {
     collectFiles,
     safeBackupPath,
     sha256Base64,
+    sha256Buffer,
     buildBackupManifest,
     validateBackupManifest,
     validateBackupPayload,
     verifyBackupPayload,
+    verifyBackupPayloadWithPassword,
+    verifyStagedPayload,
+    commitStagedRestore,
     stageRestore,
     sanitizeAuditEvent,
     writeBackupFile,

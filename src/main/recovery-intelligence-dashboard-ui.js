@@ -1,70 +1,5 @@
 'use strict';
 
-let loading = false;
-
-function makeStatus(status) {
-  const badge = document.createElement('span');
-  badge.className = `dashboard-status ${status === 'Ready' ? 'is-ready' : status === 'Needs Review' ? 'is-review' : 'is-incomplete'}`;
-  badge.textContent = status;
-  return badge;
-}
-
-function renderWalletRows(section, items, emptyText, showDate) {
-  Array.from(section.children).slice(1).forEach((node) => node.remove());
-  if (!items || !items.length) {
-    const empty = document.createElement('p');
-    empty.className = 'dashboard-empty';
-    empty.textContent = emptyText;
-    section.appendChild(empty);
-    return;
-  }
-  const list = document.createElement('div');
-  list.className = 'dashboard-list';
-  for (const item of items) {
-    const row = document.createElement('div');
-    row.className = 'dashboard-list-row';
-    const main = document.createElement('div');
-    main.className = 'dashboard-list-main';
-    const title = document.createElement('div');
-    title.className = 'dashboard-list-title';
-    title.textContent = item.walletName;
-    const meta = document.createElement('div');
-    meta.className = 'dashboard-list-meta';
-    meta.textContent = showDate && item.lastVerified
-      ? `${item.profileName} • Verified ${new Date(item.lastVerified).toLocaleDateString()}`
-      : `${item.profileName} • ${item.score}% recovery health`;
-    main.appendChild(title);
-    main.appendChild(meta);
-    row.appendChild(main);
-    row.appendChild(makeStatus(item.status));
-    list.appendChild(row);
-  }
-  section.appendChild(list);
-}
-
-function refreshDashboardSummary(area, summary) {
-  if (!summary) return;
-  const readiness = area.querySelector('.dashboard-readiness strong');
-  if (readiness) readiness.textContent = `${summary.readinessPercent}%`;
-  const stats = Array.from(area.querySelectorAll('.dashboard-stat'));
-  const values = [summary.counts.profiles, summary.counts.wallets, summary.counts.assets, summary.counts.ready];
-  stats.slice(0, 4).forEach((card, index) => {
-    const value = card.querySelector('.dashboard-stat-value');
-    if (value) value.textContent = String(values[index]);
-  });
-  const sections = Array.from(area.querySelectorAll('.dashboard-section'));
-  const attention = sections.find((section) => {
-    const h2 = section.querySelector('h2');
-    return h2 && h2.textContent === 'Needs Attention';
-  });
-  const recent = sections.find((section) => {
-    const h2 = section.querySelector('h2');
-    return h2 && h2.textContent === 'Recently Verified';
-  });
-  if (attention) renderWalletRows(attention, summary.needsAttention || [], 'Everything documented is currently ready.', false);
-  if (recent) renderWalletRows(recent, summary.recentlyVerified || [], 'No vault-item recovery plans have been verified yet.', true);
-}
-
 function appendIssue(list, title, meta) {
   const row = document.createElement('div');
   row.className = 'dashboard-list-row';
@@ -83,7 +18,8 @@ function appendIssue(list, title, meta) {
 }
 
 function renderIntelligence(area, intelligence) {
-  const existing = document.getElementById('recoveryIntelligenceSection');
+  if (!area) return null;
+  const existing = area.querySelector('#recoveryIntelligenceSection');
   if (existing) existing.remove();
 
   const section = document.createElement('section');
@@ -153,7 +89,9 @@ function renderIntelligence(area, intelligence) {
       ? 'Review the validation counts above.'
       : 'No supported validation errors or duplicate recovery-data groups were detected.';
     section.appendChild(clean);
-  } else section.appendChild(issues);
+  } else {
+    section.appendChild(issues);
+  }
 
   const deviceSection = Array.from(area.querySelectorAll('.dashboard-section')).find((candidate) => {
     const h2 = candidate.querySelector('h2');
@@ -161,32 +99,7 @@ function renderIntelligence(area, intelligence) {
   });
   if (deviceSection && deviceSection.nextSibling) area.insertBefore(section, deviceSection.nextSibling);
   else area.appendChild(section);
+  return section;
 }
 
-async function enhanceDashboard() {
-  const area = document.getElementById('detailArea');
-  if (!area || loading || document.getElementById('recoveryIntelligenceSection')) return;
-  const heading = area.querySelector('.dashboard-header h1');
-  if (!heading || heading.textContent !== 'Recovery Dashboard') return;
-  if (!window.safeLedgerApi || typeof window.safeLedgerApi.getRecoveryIntelligence !== 'function') return;
-  loading = true;
-  try {
-    const result = await window.safeLedgerApi.getRecoveryIntelligence();
-    if (!result || !result.ok) return;
-    if (!area.querySelector('.dashboard-header h1')) return;
-    refreshDashboardSummary(area, result.summary);
-    renderIntelligence(area, result.intelligence);
-  } catch (_) {
-  } finally {
-    loading = false;
-  }
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  const area = document.getElementById('detailArea');
-  if (!area) return;
-  const observer = new MutationObserver(() => { setTimeout(enhanceDashboard, 0); });
-  observer.observe(area, { childList: true, subtree: true });
-});
-
-exports._test = { refreshDashboardSummary, renderIntelligence };
+module.exports = { appendIssue, renderIntelligence, _test: { appendIssue, renderIntelligence } };

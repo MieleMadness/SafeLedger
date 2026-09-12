@@ -1,0 +1,1182 @@
+/* SafeLedger current UI cascade.
+ *
+ * Consolidated in 2.6.14 from the versioned UI patch stylesheets. Sections
+ * intentionally remain in their original load order so the computed cascade
+ * stays identical while the renderer loads one current UI stylesheet.
+ */
+
+/* === Former ui-2.5.8.css === */
+/* Match focused fields to the same 2px highlight used by Emergency Lock.
+ * The old form-control rule combined a 3px shadow with a second outline,
+ * making text fields look much heavier than every other control. */
+.form-control:focus,
+.form-control:focus-visible {
+  box-shadow: none !important;
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: 0 !important;
+}
+
+/* Password visibility is an icon inside the field, consistent with sensitive
+ * Asset fields. There is no separate Show/Hide Text button row anymore. */
+.password-visibility-shell {
+  position: relative;
+}
+
+.password-visibility-shell .form-control {
+  padding-right: 44px !important;
+}
+
+.password-visibility-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  z-index: 3;
+  transform: translateY(-50%);
+  margin: 0 !important;
+}
+
+.password-visibility-toggle .fa {
+  margin: 0 !important;
+  font-size: 15px;
+  color: var(--sl-icon-blue, var(--sl-primary-strong));
+}
+
+/* The login password field and its strength meter intentionally use half of
+ * the detail-column width. Login occupies the former Show Text control row. */
+.login-password-shell,
+.login-password-strength,
+#loginSecurityControls {
+  width: 50% !important;
+}
+
+#loginSecurityControls {
+  justify-content: flex-start;
+  margin: 6px 0 8px;
+}
+
+.login-submit-button {
+  float: none !important;
+  margin: 0 !important;
+}
+
+.login-password-strength {
+  margin-top: 8px !important;
+}
+
+/* Sensitive display rows use the same eye language as password fields. */
+.secure-field-summary-label > .fa-eye,
+.secure-field-summary-label > .fa-eye-slash {
+  width: 18px;
+  color: var(--sl-icon-blue, var(--sl-primary-strong));
+  text-align: center;
+}
+
+/* A simplified QR glyph: three clear locator squares plus one data mark.
+ * This reads as QR at small sizes without the visual noise of fa-qrcode. */
+.sl-qr-icon {
+  width: 17px;
+  height: 17px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 2px;
+  color: var(--sl-icon-purple, currentColor);
+}
+
+.sl-qr-icon-part {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  border: 2px solid currentColor;
+  border-radius: 1px;
+}
+
+.sl-qr-icon-part-4 {
+  width: 4px;
+  height: 4px;
+  align-self: center;
+  justify-self: center;
+  border: 0;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+/* Wallet selection responds to its actual Settings/Profile panel width. A
+ * normal SafeLedger detail column lands at two cards across; larger windows
+ * can grow to three or four, while narrow windows fall back to one. */
+.profile-wallet-picker {
+  container-type: inline-size;
+}
+
+.profile-wallet-template-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px !important;
+  max-height: 360px;
+  padding: 2px 5px 2px 2px;
+}
+
+.profile-wallet-template {
+  min-width: 0;
+  min-height: 58px;
+  align-items: center !important;
+  gap: 9px !important;
+  padding: 9px 10px !important;
+}
+
+.profile-wallet-template input {
+  margin: 0 !important;
+}
+
+.profile-wallet-template-icon,
+.profile-wallet-template .wallet-list-catalog-icon,
+.profile-wallet-template .wallet-list-icon {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  flex: 0 0 30px;
+  object-fit: contain;
+  border-radius: 7px;
+}
+
+.profile-wallet-template .wallet-list-catalog-icon,
+.profile-wallet-template .wallet-list-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-wallet-template-copy {
+  overflow: hidden;
+}
+
+.profile-wallet-template-copy > strong,
+.profile-wallet-template-copy > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@container (min-width: 360px) {
+  .profile-wallet-template-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 680px) {
+  .profile-wallet-template-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@container (min-width: 920px) {
+  .profile-wallet-template-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .login-password-shell,
+  .login-password-strength,
+  #loginSecurityControls {
+    width: 100% !important;
+  }
+}
+
+/* === Former ui-2.5.9.css === */
+/* Shared eye artwork follows the simple outline/pupil shape used in the
+ * supplied design reference. It is inline SVG, so it stays crisp and fully
+ * offline at every display scale. */
+.sl-eye-svg {
+  width: 22px;
+  height: 16px;
+  display: block;
+  overflow: visible;
+  color: currentColor;
+}
+
+.sl-eye-outline,
+.sl-eye-pupil,
+.sl-eye-slash {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-eye-pupil {
+  stroke-width: 2;
+}
+
+.sl-eye-slash {
+  stroke-width: 2.2;
+}
+
+.password-visibility-toggle {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--sl-text-strong) !important;
+}
+
+.password-visibility-toggle:hover,
+.password-visibility-toggle:focus {
+  border: 0 !important;
+  background: var(--sl-primary-soft) !important;
+  box-shadow: none !important;
+}
+
+.password-visibility-toggle:focus-visible {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: 0 !important;
+}
+
+.sl-sensitive-eye {
+  width: 24px;
+  min-width: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sl-text-strong);
+}
+
+.sl-sensitive-eye .sl-eye-svg {
+  width: 20px;
+  height: 15px;
+}
+
+/* === Former ui-2.5.11.css === */
+/* Editable sensitive fields use the same simple eye artwork as login. */
+.edit-sensitive-shell {
+  position: relative;
+}
+
+.edit-sensitive-shell .form-control {
+  padding-right: 44px !important;
+}
+
+.edit-sensitive-actions {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  z-index: 3;
+  transform: translateY(-50%);
+  margin: 0 !important;
+}
+
+.edit-sensitive-toggle {
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--sl-text-strong) !important;
+}
+
+.edit-sensitive-toggle:hover,
+.edit-sensitive-toggle:focus {
+  border: 0 !important;
+  background: var(--sl-primary-soft) !important;
+  box-shadow: none !important;
+}
+
+.edit-sensitive-toggle:focus-visible {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: 0 !important;
+}
+
+.edit-sensitive-toggle .sl-eye-svg {
+  width: 22px;
+  height: 16px;
+  margin: auto;
+}
+
+/* View-mode sensitive fields are disclosure rows, so plus/minus communicates
+ * expand/collapse more clearly than an eye. */
+.secure-field-summary-label > .fa-plus,
+.secure-field-summary-label > .fa-minus {
+  width: 18px;
+  min-width: 18px;
+  text-align: center;
+  color: var(--sl-text-strong);
+}
+
+/* Copy uses the provided circular-arrow/plus visual language instead of the
+ * small crowded font glyph. */
+.copy-inline-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+.sl-copy-svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+  overflow: visible;
+  color: currentColor;
+}
+
+.sl-copy-arrow,
+.sl-copy-plus {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-copy-arrow {
+  stroke-width: 2.1;
+}
+
+.sl-copy-plus {
+  stroke-width: 2.8;
+}
+
+/* Vault Overview keeps inventory and recovery information visually grouped. */
+.vault-inventory-section,
+.vault-recovery-section {
+  padding: 12px 14px;
+  border: 1px solid var(--sl-border, #d8dee8);
+  border-radius: 8px;
+  background: var(--sl-surface, #fff);
+}
+
+.vault-inventory-section .dashboard-stats,
+.vault-recovery-section .dashboard-stats {
+  margin-bottom: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-inventory-meta {
+  margin: 2px 0 0;
+  color: var(--sl-muted, #667085);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1000px) {
+  .vault-inventory-section .dashboard-stats,
+  .vault-recovery-section .dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .vault-inventory-section .dashboard-stats,
+  .vault-recovery-section .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === Former ui-2.5.12.css === */
+/* Copy uses two document sheets with folded corners for a clearer copy cue. */
+.copy-inline-button,
+.qr-inline-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  text-align: center !important;
+}
+
+.sl-copy-svg,
+.sl-qr-svg {
+  width: 19px;
+  height: 19px;
+  display: block;
+  margin: auto;
+  overflow: visible;
+  color: currentColor;
+}
+
+.sl-copy-sheet {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-qr-frame {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-qr-dot,
+.sl-qr-pixel {
+  fill: currentColor;
+}
+
+/* Public-address QR output should sit visually under the address, not drift. */
+.public-address-field .compact-qr-area {
+  width: 100% !important;
+  text-align: center !important;
+}
+.public-address-field .address-qr {
+  display: block !important;
+  margin: 0 auto !important;
+}
+.compact-qr-area .qr-caption {
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+  color: var(--sl-text-strong) !important;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Vault Overview */
+.dashboard-section-help {
+  margin: -2px 0 9px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.dashboard-maintenance-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.dashboard-maintenance-card {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--sl-border);
+  border-radius: 8px;
+  background: var(--sl-surface);
+}
+.dashboard-maintenance-card strong,
+.dashboard-maintenance-card span {
+  display: block;
+}
+.dashboard-maintenance-card strong {
+  margin-bottom: 5px;
+  color: var(--sl-text-strong);
+  font-size: 13px;
+}
+.dashboard-maintenance-card span {
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.vault-inventory-stats {
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)) !important;
+}
+.dashboard-list-main-action {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.dashboard-list-row-action .dashboard-status {
+  pointer-events: none;
+}
+
+/* Exchange / website presets */
+.vault-item-preset-field {
+  align-self: start;
+}
+.vault-item-preset-note {
+  margin: 5px 0 0;
+  color: var(--sl-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.vault-service-icon {
+  width: 25px;
+  min-width: 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  font-size: 17px;
+}
+
+/* Recovery drill: use theme text instead of legacy dark-blue copy. */
+.recovery-drill-step {
+  color: var(--sl-text) !important;
+  background: var(--sl-surface) !important;
+  border-color: var(--sl-border) !important;
+}
+.recovery-drill-step:hover {
+  background: var(--sl-surface-soft) !important;
+}
+.recovery-drill-step-title {
+  color: var(--sl-text-strong) !important;
+}
+.recovery-drill-step-text,
+.recovery-drill-intro,
+.recovery-drill-wallet {
+  color: var(--sl-muted) !important;
+}
+.recovery-drill-step-number {
+  color: var(--sl-primary) !important;
+}
+html[data-theme="dark"] .recovery-drill-step-number {
+  color: #9ec5ff !important;
+}
+html[data-theme="dark"] .recovery-drill-warning {
+  color: #ffe7a3 !important;
+  background: #3a2d0b !important;
+  border-color: #8d6a12 !important;
+}
+
+@media (max-width: 1050px) {
+  .dashboard-maintenance-grid { grid-template-columns: 1fr; }
+}
+
+/* === Former ui-2.5.13.css === */
+/* Generated QR codes are presented on a white card in every theme. Keep the
+ * explanatory caption dark enough to remain readable against that surface. */
+.compact-qr-area .qr-caption,
+.public-address-field .compact-qr-area .qr-caption {
+  color: #172033 !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+}
+
+/* Custom or unsupported wallet names should never look like a broken/missing
+ * image. The fallback is a fully local SVG wallet with a visible clasp. */
+.wallet-list-fallback-icon {
+  width: 22px !important;
+  height: 22px !important;
+  flex: 0 0 22px !important;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+}
+
+.sl-wallet-fallback-svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+  overflow: visible;
+}
+
+.sl-wallet-fallback-outline,
+.sl-wallet-fallback-clasp {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sl-wallet-fallback-dot {
+  fill: currentColor;
+}
+
+.item-selected .wallet-list-fallback-icon {
+  color: #ffffff;
+}
+
+@media (max-width: 1000px) {
+  .wallet-list-fallback-icon {
+    width: 19px !important;
+    height: 19px !important;
+    flex-basis: 19px !important;
+  }
+  .sl-wallet-fallback-svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* === Former ui-2.5.14.css === */
+/* Add Profile / Add Vault Item / Add Asset use the same inset 2px focus
+ * treatment as Emergency Lock. The outline sits inside the existing button
+ * footprint so hovering/focusing never changes layout or makes the border
+ * appear thicker than the emergency action. */
+#addVault,
+#addGroup,
+#addRecord {
+  box-sizing: border-box;
+  border-width: 1px !important;
+  border-radius: var(--sl-radius-sm) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+}
+
+#addVault:hover,
+#addVault:focus,
+#addVault:focus-visible,
+#addGroup:hover,
+#addGroup:focus,
+#addGroup:focus-visible,
+#addRecord:hover,
+#addRecord:focus,
+#addRecord:focus-visible {
+  background: var(--sl-primary-soft) !important;
+  color: var(--sl-primary-strong) !important;
+  border-color: var(--sl-primary) !important;
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: -2px !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* === Former ui-2.5.15.css === */
+/* Visual buttons share the Emergency Lock treatment: a stable 1px frame,
+ * subtle resting shadow, and a 2px inset focus/hover highlight with no glow
+ * outside the control or movement of the button footprint. */
+.btn,
+.detail-action-button,
+.dashboard-inline,
+.activity-inline,
+.global-search-inline,
+.panic-lock-inline,
+.field-inline-action,
+.dashboard-title-action,
+.activity-filter {
+  box-sizing: border-box;
+  border-width: 1px !important;
+  border-radius: var(--sl-radius-sm) !important;
+  box-shadow: var(--sl-shadow-soft) !important;
+  transform: none !important;
+  transition: background-color .12s ease, color .12s ease, border-color .12s ease;
+}
+
+.btn:not(:disabled):hover,
+.btn:not(:disabled):focus,
+.btn:not(:disabled):focus-visible,
+.detail-action-button:not(:disabled):hover,
+.detail-action-button:not(:disabled):focus,
+.detail-action-button:not(:disabled):focus-visible,
+.dashboard-inline:not(:disabled):hover,
+.dashboard-inline:not(:disabled):focus,
+.dashboard-inline:not(:disabled):focus-visible,
+.activity-inline:not(:disabled):hover,
+.activity-inline:not(:disabled):focus,
+.activity-inline:not(:disabled):focus-visible,
+.global-search-inline:not(:disabled):hover,
+.global-search-inline:not(:disabled):focus,
+.global-search-inline:not(:disabled):focus-visible,
+.panic-lock-inline:not(:disabled):hover,
+.panic-lock-inline:not(:disabled):focus,
+.panic-lock-inline:not(:disabled):focus-visible,
+.field-inline-action:not(:disabled):hover,
+.field-inline-action:not(:disabled):focus,
+.field-inline-action:not(:disabled):focus-visible,
+.dashboard-title-action:not(:disabled):hover,
+.dashboard-title-action:not(:disabled):focus,
+.dashboard-title-action:not(:disabled):focus-visible,
+.activity-filter:not(:disabled):hover,
+.activity-filter:not(:disabled):focus,
+.activity-filter:not(:disabled):focus-visible {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: -2px !important;
+  box-shadow: var(--sl-shadow-soft) !important;
+  transform: none !important;
+}
+
+/* Explicitly protect the login action from older Bootstrap-style focus glows. */
+#loginBtn,
+.login-submit-button {
+  box-shadow: var(--sl-shadow-soft) !important;
+  transform: none !important;
+}
+
+#loginBtn:not(:disabled):hover,
+#loginBtn:not(:disabled):focus,
+#loginBtn:not(:disabled):focus-visible,
+.login-submit-button:not(:disabled):hover,
+.login-submit-button:not(:disabled):focus,
+.login-submit-button:not(:disabled):focus-visible {
+  outline: 2px solid var(--sl-primary) !important;
+  outline-offset: -2px !important;
+  box-shadow: var(--sl-shadow-soft) !important;
+  transform: none !important;
+}
+
+/* === Former ui-2.5.16.css === */
+/* Password visibility buttons are direct children of secure input shells.
+ * Center the 34x28 button with the shell bounds rather than a transform so
+ * shared hover/focus rules cannot move it. The button also owns its internal
+ * flex centering instead of relying on the generic .field-inline-action rule.
+ * This mirrors the explicit SVG centering used by the proven 2.5.11 sensitive
+ * edit controls and keeps the eye centered inside its hover background. */
+.password-visibility-shell > .password-visibility-toggle {
+  position: absolute !important;
+  right: 7px !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  margin: auto 0 !important;
+  transform: none !important;
+  z-index: 3;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+.password-visibility-toggle .sl-eye-svg {
+  display: block !important;
+  flex: 0 0 auto;
+  margin: auto !important;
+}
+
+.login-password-shell > .password-visibility-toggle {
+  right: 7px !important;
+}
+
+/* === Former ui-2.6.7-scale.css === */
+/* Base readability: 14px -> 15px. */
+html,
+body {
+  font-size: 15px !important;
+}
+
+.form-control,
+#detailArea,
+#detailArea .detail-info-line,
+.sensitive-field summary,
+.detail-notes-value,
+.workspace-empty-text {
+  font-size: 15px !important;
+}
+
+/* Supporting 13px text -> 14px. */
+.dates,
+.wallet-detail-category,
+.sensitive-field-meta,
+.appearance-option strong,
+.column-empty-title {
+  font-size: 14px !important;
+}
+
+/* Small/helper 12px text -> 13px. */
+.wallet-list-category,
+.qr-caption,
+.password-strength-label,
+.settings-backup-note,
+.appearance-option span,
+.column-empty-text {
+  font-size: 13px !important;
+}
+
+.coin-detail-symbol {
+  font-size: 17px !important;
+}
+
+.workspace-empty-title {
+  font-size: 27px !important;
+}
+
+/* Keep the primary detail hierarchy at the proposed 30px size. */
+#detailArea h1,
+#detailArea .page-header,
+.wallet-detail-title,
+.coin-detail-title-wrap h1 {
+  font-size: 30px !important;
+}
+
+/* Profiles already use a simple white selection border. Vault Items and
+ * Assets now follow the same no-fill language: border only, no black tile. */
+.content-middle .nav > li > a.item-selected,
+.content-middle .nav > li > a.item-selected:hover,
+.content-middle .nav > li > a.item-selected:focus {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: #fff !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+/* Vault Item and Asset navigation artwork: 28px -> 32px. */
+.coin-list-brand-image,
+.coin-list-generic-icon,
+.wallet-list-brand-image,
+.wallet-list-catalog-icon,
+.wallet-list-icon,
+.wallet-list-fallback-icon {
+  width: 32px !important;
+  min-width: 32px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  flex: 0 0 32px !important;
+}
+
+.coin-list-generic-icon,
+.wallet-list-catalog-icon {
+  font-size: 11px !important;
+}
+
+.wallet-list-fallback-icon .sl-wallet-fallback-svg {
+  width: 25px !important;
+  height: 25px !important;
+}
+
+/* Asset detail artwork: 54px -> 60px. */
+.coin-brand-image,
+.coin-brand-icon {
+  width: 60px !important;
+  min-width: 60px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  flex: 0 0 60px !important;
+}
+
+.coin-brand-icon {
+  font-size: 30px !important;
+}
+
+.coin-brand-generic {
+  font-size: 20px !important;
+}
+
+/* Vault Item detail now mirrors the Asset detail header with the same 60px
+ * local/offline artwork, including service icons such as Chain Games. */
+.wallet-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 4px 0 10px;
+}
+
+.wallet-detail-title-wrap {
+  min-width: 0;
+}
+
+.wallet-detail-header .wallet-detail-title {
+  margin: 0 !important;
+}
+
+.wallet-detail-header .wallet-detail-category {
+  margin: 4px 0 0 !important;
+}
+
+.wallet-detail-header .wallet-detail-brand-image,
+.wallet-detail-header .wallet-list-brand-image,
+.wallet-detail-header .wallet-list-catalog-icon,
+.wallet-detail-header .wallet-list-icon,
+.wallet-detail-header .wallet-list-fallback-icon {
+  width: 60px !important;
+  min-width: 60px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  flex: 0 0 60px !important;
+  margin-right: 0 !important;
+  border-radius: 12px;
+}
+
+.wallet-detail-header img.wallet-detail-brand-image,
+.wallet-detail-header img.wallet-list-brand-image {
+  display: block;
+  object-fit: contain;
+}
+
+.wallet-detail-header .wallet-list-catalog-icon {
+  font-size: 18px !important;
+}
+
+.wallet-detail-header .wallet-list-fallback-icon .sl-wallet-fallback-svg {
+  width: 46px !important;
+  height: 46px !important;
+}
+
+/* Explicitly preserve the existing action and Emergency Lock control scale. */
+.detail-action-button,
+.global-search-inline,
+.dashboard-inline,
+.activity-inline,
+.settings-inline,
+.panic-lock-inline {
+  font-size: 14px !important;
+}
+
+@media (max-width: 1000px) {
+  /* Existing compact list text was 12px; scale it proportionally to 13px. */
+  .content-middle .nav > li > a {
+    font-size: 13px !important;
+  }
+
+  /* Compact navigation artwork: 24px -> 28px. */
+  .coin-list-brand-image,
+  .coin-list-generic-icon,
+  .wallet-list-brand-image,
+  .wallet-list-catalog-icon,
+  .wallet-list-icon,
+  .wallet-list-fallback-icon {
+    width: 28px !important;
+    min-width: 28px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    flex: 0 0 28px !important;
+  }
+
+  .wallet-list-fallback-icon .sl-wallet-fallback-svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  /* Compact detail artwork: 46px -> 52px. */
+  .coin-brand-image,
+  .coin-brand-icon,
+  .wallet-detail-header .wallet-detail-brand-image,
+  .wallet-detail-header .wallet-list-brand-image,
+  .wallet-detail-header .wallet-list-catalog-icon,
+  .wallet-detail-header .wallet-list-icon,
+  .wallet-detail-header .wallet-list-fallback-icon {
+    width: 52px !important;
+    min-width: 52px !important;
+    height: 52px !important;
+    min-height: 52px !important;
+    flex: 0 0 52px !important;
+  }
+
+  .coin-brand-icon {
+    font-size: 26px !important;
+  }
+
+  .wallet-detail-header .wallet-list-fallback-icon .sl-wallet-fallback-svg {
+    width: 40px !important;
+    height: 40px !important;
+  }
+}
+
+/* === Former ui-2.6.7-theme-refinement.css === */
+:root {
+  --sl-scroll-track: #e3e8ef;
+  --sl-scroll-thumb: #a8b4c3;
+  --sl-scroll-thumb-hover: #7d8ca0;
+  --sl-nav-scroll-track: rgba(255, 255, 255, .08);
+  --sl-nav-scroll-thumb: rgba(255, 255, 255, .42);
+  --sl-nav-scroll-thumb-hover: rgba(255, 255, 255, .62);
+}
+
+html[data-theme="dark"] {
+  --sl-scroll-track: #111c2e;
+  --sl-scroll-thumb: #465a73;
+  --sl-scroll-thumb-hover: #637993;
+  --sl-nav-scroll-track: rgba(255, 255, 255, .05);
+  --sl-nav-scroll-thumb: rgba(196, 214, 238, .34);
+  --sl-nav-scroll-thumb-hover: rgba(214, 229, 248, .52);
+}
+
+/* SafeLedger-owned application menu used on Windows/Linux so the menu bar can
+ * actually match the renderer theme. macOS keeps the native application menu. */
+.app-menu-bar {
+  flex: 0 0 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: stretch;
+  padding: 0 8px;
+  background: var(--sl-bg);
+  color: var(--sl-text);
+  border-bottom: 1px solid var(--sl-border);
+  position: relative;
+  z-index: 1000;
+  font-size: 13px;
+  user-select: none;
+}
+
+.app-menu-group {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.app-menu-trigger {
+  min-width: 0;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--sl-text);
+  font: inherit;
+  line-height: 1;
+  cursor: default;
+}
+
+.app-menu-trigger:hover,
+.app-menu-trigger:focus,
+.app-menu-group.is-open > .app-menu-trigger {
+  background: var(--sl-primary-soft);
+  color: var(--sl-primary-strong);
+  outline: none;
+}
+
+.app-menu-dropdown {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  min-width: 210px;
+  padding: 5px;
+  background: var(--sl-surface);
+  color: var(--sl-text);
+  border: 1px solid var(--sl-border-strong);
+  border-radius: var(--sl-radius-sm);
+  box-shadow: var(--sl-shadow);
+  z-index: 1100;
+}
+
+.app-menu-group.is-open > .app-menu-dropdown {
+  display: block;
+}
+
+.app-menu-item {
+  width: 100%;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--sl-text);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.app-menu-item:hover,
+.app-menu-item:focus {
+  background: var(--sl-primary-soft);
+  color: var(--sl-primary-strong);
+  outline: none;
+}
+
+.app-menu-shortcut {
+  color: var(--sl-muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.app-menu-separator {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--sl-border);
+}
+
+/* Bottom Add buttons now use the exact same themed surface/border/shadow and
+ * interaction language as detail actions. Existing dimensions stay untouched. */
+#addVault,
+#addGroup,
+#addRecord,
+.detail-action-button {
+  background: var(--sl-surface) !important;
+  border: 1px solid var(--sl-border-strong) !important;
+  box-shadow: var(--sl-shadow-soft) !important;
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease, transform .12s ease;
+}
+
+#addVault,
+#addGroup,
+#addRecord {
+  color: var(--sl-text) !important;
+}
+
+#addVault:hover,
+#addVault:focus,
+#addGroup:hover,
+#addGroup:focus,
+#addRecord:hover,
+#addRecord:focus,
+.detail-action-button:hover,
+.detail-action-button:focus {
+  background: var(--sl-primary-soft) !important;
+  border-color: var(--sl-primary) !important;
+  box-shadow: var(--sl-focus-ring) !important;
+}
+
+#addVault:hover,
+#addVault:focus,
+#addGroup:hover,
+#addGroup:focus,
+#addRecord:hover,
+#addRecord:focus {
+  color: var(--sl-primary-strong) !important;
+}
+
+#addVault:active,
+#addGroup:active,
+#addRecord:active,
+.detail-action-button:active {
+  transform: translateY(1px);
+  box-shadow: none !important;
+}
+
+/* Theme-aware scrollbars for the neutral/detail workspace. */
+html,
+body,
+.content-middle,
+#detailArea,
+.settings-section,
+.dashboard-list,
+.activity-list,
+.detail-notes-value,
+.sensitive-value,
+.public-address-value,
+.custom-fields-editor,
+.recovery-binder-summary {
+  scrollbar-color: var(--sl-scroll-thumb) var(--sl-scroll-track);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--sl-scroll-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--sl-scroll-thumb);
+  border: 2px solid var(--sl-scroll-track);
+  border-radius: 10px;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--sl-scroll-thumb-hover);
+  border-color: var(--sl-scroll-track);
+}
+
+/* The first three columns keep scrollbars related to their blue backgrounds. */
+.app-main-row > .dark1bg.content-middle,
+.app-main-row > .dark2bg.content-middle,
+.app-main-row > .dark3bg.content-middle {
+  scrollbar-color: var(--sl-nav-scroll-thumb) var(--sl-nav-scroll-track);
+}
+
+.app-main-row > .dark1bg.content-middle::-webkit-scrollbar-track,
+.app-main-row > .dark2bg.content-middle::-webkit-scrollbar-track,
+.app-main-row > .dark3bg.content-middle::-webkit-scrollbar-track {
+  background: var(--sl-nav-scroll-track);
+}
+
+.app-main-row > .dark1bg.content-middle::-webkit-scrollbar-thumb,
+.app-main-row > .dark2bg.content-middle::-webkit-scrollbar-thumb,
+.app-main-row > .dark3bg.content-middle::-webkit-scrollbar-thumb {
+  background: var(--sl-nav-scroll-thumb);
+  border-color: transparent;
+}
+
+.app-main-row > .dark1bg.content-middle::-webkit-scrollbar-thumb:hover,
+.app-main-row > .dark2bg.content-middle::-webkit-scrollbar-thumb:hover,
+.app-main-row > .dark3bg.content-middle::-webkit-scrollbar-thumb:hover {
+  background: var(--sl-nav-scroll-thumb-hover);
+}

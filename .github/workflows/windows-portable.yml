@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: read
+  id-token: write
+  attestations: write
 
 jobs:
   build-windows:
@@ -35,6 +37,18 @@ jobs:
         shell: pwsh
         run: npm run test:regression
 
+      - name: Run Phase 5 contract gate
+        shell: pwsh
+        run: node scripts/hotfix-2.6.53-tests.js
+
+      - name: Run encrypted lifecycle behavioral test
+        shell: pwsh
+        run: node scripts/behavioral-lifecycle-tests.js
+
+      - name: Test release trust metadata generator
+        shell: pwsh
+        run: node scripts/release-trust-tests.js
+
       - name: Run Electron crypto smoke test
         shell: pwsh
         run: npm run test:electron-crypto
@@ -47,19 +61,47 @@ jobs:
         shell: pwsh
         run: npm run dist:win
 
-      - name: Stage portable EXE and PDF README
+      - name: Stage clean download and verification files
+        id: stage
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force release/windows | Out-Null
+          New-Item -ItemType Directory -Force release/windows/app | Out-Null
+          New-Item -ItemType Directory -Force release/windows/verification | Out-Null
           $exe = Get-ChildItem -Path dist -Filter 'SafeLedger-*-Portable.exe' | Select-Object -First 1
           if (-not $exe) { throw 'Portable EXE was not created.' }
-          Copy-Item $exe.FullName -Destination release/windows/
-          npm run docs:pdf -- release/windows/README.pdf
-          if (-not (Test-Path 'release/windows/README.pdf')) { throw 'README.pdf was not generated.' }
+          $staged = Join-Path 'release/windows/app' $exe.Name
+          Copy-Item $exe.FullName -Destination $staged
+          npm run docs:pdf -- release/windows/app/README.pdf
+          if (-not (Test-Path 'release/windows/app/README.pdf')) { throw 'README.pdf was not generated.' }
+          node scripts/generate-release-trust.js $staged release/windows/verification windows x64 "${{ github.sha }}"
+          $sbom = Get-ChildItem -Path release/windows/verification -Filter '*-SBOM.cdx.json' | Select-Object -First 1
+          if (-not $sbom) { throw 'SBOM was not generated.' }
+          "artifact=$staged" >> $env:GITHUB_OUTPUT
+          "sbom=$($sbom.FullName)" >> $env:GITHUB_OUTPUT
 
-      - name: Upload flat portable download
+      - name: Attest Windows build provenance
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.stage.outputs.artifact }}
+
+      - name: Attest Windows SBOM
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: ${{ steps.stage.outputs.artifact }}
+          sbom-path: ${{ steps.stage.outputs.sbom }}
+
+      - name: Upload clean portable download
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: SafeLedger-Windows-Portable
-          path: release/windows/*
+          path: release/windows/app/*
+          if-no-files-found: error
+
+      - name: Upload Windows verification files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: SafeLedger-Windows-Verification
+          path: release/windows/verification/*
           if-no-files-found: error

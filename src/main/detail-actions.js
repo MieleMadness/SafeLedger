@@ -26,8 +26,8 @@ function setDetailMode(mode = '') {
 function modeForActions(actions) {
   const titles = (Array.isArray(actions) ? actions : [])
     .map((action) => String(action && action.title || '').trim().toLowerCase());
-  if (titles.some((title) => ['save coin', 'save wallet', 'save profile'].includes(title))) return 'edit';
-  if (titles.some((title) => ['edit coin', 'edit wallet', 'edit profile'].includes(title))) return 'view';
+  if (titles.some((title) => ['save coin', 'save wallet', 'save profile', 'save asset', 'save vault item'].includes(title))) return 'edit';
+  if (titles.some((title) => ['edit coin', 'edit wallet', 'edit profile', 'edit asset', 'edit vault item'].includes(title))) return 'view';
   return '';
 }
 

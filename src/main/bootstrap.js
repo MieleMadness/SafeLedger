@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain: ipc, powerMonitor, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain: ipc, powerMonitor, shell, screen } = require('electron');
 const path = require('path');
 const runtimeUtils = require('./runtime-utils');
 const cryptoSession = require('./crypto-session-main');
@@ -12,9 +12,24 @@ const dashboardSummary = require('./dashboard-summary');
 const addressValidator = require('./address-validator');
 const bip39 = require('./bip39-validator');
 const recoveryDuplicates = require('./recovery-duplicates');
+const windowSizing = require('./window-sizing-main');
 const { createSessionLockController } = require('./session-lock-main');
 const { createDeviceSecurityService } = require('./device-security-main');
 const { SensitiveFingerprintSession } = recoveryDuplicates;
+
+function installPreferredWindowSizing() {
+  let primaryWindowSized = false;
+  app.on('browser-window-created', (_event, win) => {
+    if (primaryWindowSized) return;
+    primaryWindowSized = true;
+    let workArea = {};
+    try {
+      const display = screen.getPrimaryDisplay();
+      workArea = display && display.workAreaSize ? display.workAreaSize : {};
+    } catch (_) {}
+    windowSizing.applyPreferredWindowSize(win, workArea);
+  });
+}
 
 // Resolve macOS portable-storage safety before loading the established main
 // runtime. If a quarantined app is translocated or its containing directory is
@@ -26,6 +41,10 @@ const startupStorageStatus = runtimeUtils.getPortableStartupStatus({
 });
 
 if (startupStorageStatus.allowed) {
+  // Install native window sizing inside the same trusted startup boundary,
+  // before main.js creates the primary BrowserWindow. No renderer resize side
+  // effect is needed and blocked portable starts still cannot create app data.
+  installPreferredWindowSizing();
   // Load the established SafeLedger application runtime only after the portable
   // storage boundary is known to be safe.
   require('./main');

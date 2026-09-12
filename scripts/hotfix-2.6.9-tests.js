@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const pkg = JSON.parse(read('package.json'));
 const versionParts = String(pkg.version || '').split('.').map((part) => Number.parseInt(part, 10));
 
@@ -16,82 +16,39 @@ assert(read('package.json').includes('node scripts/hotfix-2.6.9-tests.js'),
 
 const entry = read('src/main/renderer-entry.js');
 const renderer = read('src/main/renderer.js');
-const cleanup = read('src/main/dashboard-action-state-ui.js');
+const dashboard = read('src/main/dashboard-ui.js');
+const detailActions = read('src/main/detail-actions.js');
 
-const cleanupIndex = entry.indexOf("require('./dashboard-action-state-ui.js')");
-const dashboardIndex = entry.indexOf("require('./dashboard-ui.js')");
-assert(cleanupIndex >= 0, 'The renderer entry must load Vault Overview action-state cleanup.');
-assert(dashboardIndex >= 0 && cleanupIndex < dashboardIndex,
-  'Vault Overview action-state cleanup must register before dashboard rendering/navigation.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/dashboard-action-state-ui.js')), false,
+  'The retired Vault Overview action-state repair module must stay removed.');
+assert(!entry.includes("require('./dashboard-action-state-ui.js')"),
+  'Renderer entry must not restore the stale-action repair layer.');
 
-assert(cleanup.includes("const detailActions = require('./detail-actions')"));
-assert(cleanup.includes("document.getElementById('dashboardButton')"));
-assert(cleanup.includes("button.addEventListener('click', clearDashboardActions)"));
-assert(cleanup.includes('detailActions.clear();'),
-  'Vault Overview navigation must clear the prior detail action dock and detail mode.');
-assert(!cleanup.includes('MutationObserver') && !cleanup.includes('setTimeout('),
-  'Dashboard action cleanup must remain direct and synchronous.');
+assert(dashboard.includes("const detailActions = require('./detail-actions');"),
+  'Vault Overview must own action-dock cleanup directly.');
+assert(dashboard.includes('detailActions.clear();'),
+  'Opening Vault Overview must clear the prior detail action dock before rendering.');
+assert(dashboard.includes('async function showDashboard()'),
+  'Vault Overview must have one direct show path.');
+assert(/async function showDashboard\(\)\s*\{\s*detailActions\.clear\(\);\s*const area = clearArea\(\);/.test(dashboard),
+  'Dashboard action cleanup must remain direct and synchronous before any asynchronous dashboard work begins.');
+assert(!dashboard.includes('MutationObserver'),
+  'Dashboard action cleanup must not return to an observer-based repair layer.');
+
+assert(detailActions.includes("dock.innerHTML = '';"),
+  'Shared detail-action cleanup must remove stale Save/Cancel controls.');
+assert(detailActions.includes("const DETAIL_MODE_CLASSES = ['wallet-coin-detail', 'wallet-coin-view', 'wallet-coin-edit'];"),
+  'Shared detail-action ownership must define all view/edit mode classes in one place.');
+assert(detailActions.includes('detail.classList.remove(...DETAIL_MODE_CLASSES);'),
+  'Shared detail-action cleanup must remove every stale detail/view/edit mode.');
+assert(/function\s+clear\s*\(\)\s*\{\s*clearDockOnly\(\);\s*setDetailMode\(''\);\s*\}/.test(detailActions),
+  'Clearing detail actions must synchronously clear both the action dock and detail mode on every platform.');
 
 assert(renderer.includes('function cancelAddProfile()'));
-assert(renderer.includes("document.getElementById('dashboardButton')"));
-assert(renderer.includes('dashboardButton.click();'),
-  'Cancel Add Profile must continue through the same canonical Vault Overview navigation path as Home.');
+assert(renderer.includes('clearUtilitySelections();'));
+assert(renderer.includes('dashboardUi.show();'),
+  'Cancel Add Profile must navigate directly through the canonical Vault Overview owner.');
+assert(!renderer.includes('dashboardButton.click();'),
+  'Cancel Add Profile must not recreate the old synthetic-click navigation bandaid.');
 
-let domReadyHandler = null;
-let dashboardClickHandler = null;
-const dock = { innerHTML: '<button>Save</button><button>Cancel</button>' };
-const classes = new Set(['wallet-coin-detail', 'wallet-coin-edit']);
-const detailArea = {
-  classList: {
-    remove: (...names) => names.forEach((name) => classes.delete(name))
-  }
-};
-const dashboardButton = {
-  addEventListener: (type, handler) => {
-    if (type === 'click') dashboardClickHandler = handler;
-  }
-};
-
-const previousWindow = global.window;
-const previousDocument = global.document;
-
-global.window = {
-  addEventListener: (type, handler) => {
-    if (type === 'DOMContentLoaded') domReadyHandler = handler;
-  }
-};
-global.document = {
-  getElementById: (id) => {
-    if (id === 'dashboardButton') return dashboardButton;
-    if (id === 'detailActionArea') return dock;
-    if (id === 'detailArea') return detailArea;
-    return null;
-  }
-};
-
-try {
-  const modulePath = require.resolve('../src/main/dashboard-action-state-ui.js');
-  delete require.cache[modulePath];
-  require(modulePath);
-
-  assert.strictEqual(typeof domReadyHandler, 'function',
-    'Dashboard cleanup must register when the renderer DOM is ready.');
-  domReadyHandler();
-  assert.strictEqual(typeof dashboardClickHandler, 'function',
-    'Dashboard cleanup must attach directly to the Vault Overview/Home button.');
-
-  dashboardClickHandler();
-  assert.strictEqual(dock.innerHTML, '',
-    'Opening Vault Overview must remove stale Save/Cancel actions from the action dock.');
-  assert.strictEqual(classes.has('wallet-coin-detail'), false,
-    'Opening Vault Overview must leave detail-view mode.');
-  assert.strictEqual(classes.has('wallet-coin-edit'), false,
-    'Opening Vault Overview must leave edit mode.');
-} finally {
-  if (previousWindow === undefined) delete global.window;
-  else global.window = previousWindow;
-  if (previousDocument === undefined) delete global.document;
-  else global.document = previousDocument;
-}
-
-console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.9 Vault Overview stale-action fix active.`);
+console.log(`PASS SafeLedger ${pkg.version} keeps the 2.6.9 Vault Overview stale-action fix through direct synchronous dashboard/detail-action ownership while allowing presentation-only source formatting changes.`);

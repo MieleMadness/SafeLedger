@@ -1,0 +1,149 @@
+/* SafeLedger panel and tile spacing contract.
+ *
+ * The app has two intentional spacing levels:
+ *   - major content panels use 14px on every side;
+ *   - smaller information tiles use 12px on every side.
+ *
+ * This stylesheet loads after the historical consolidated UI cascade so the
+ * current component contract owns spacing directly without inline repair code,
+ * timers, observers, or broad force-overrides.
+ */
+
+:root {
+  --sl-panel-padding: 14px;
+  --sl-tile-padding: 12px;
+}
+
+/* Major panels follow the same 14px container rhythm as Backup & Recovery. */
+.settings-section,
+.vault-inventory-section,
+.vault-recovery-section,
+.recovery-readiness-card,
+.recovery-drill-wizard-card {
+  padding: var(--sl-panel-padding);
+}
+
+/* The final child should not create a second bottom gutter inside a panel.
+ * The panel itself owns the bottom padding. */
+.settings-section > :last-child,
+.vault-inventory-section > :last-child,
+.vault-recovery-section > :last-child,
+.recovery-readiness-card > :last-child,
+.recovery-drill-wizard-card > :last-child {
+  margin-bottom: 0;
+}
+
+/* Appearance previously added 12px below its tile grid on top of the parent
+ * panel's 14px bottom padding. Keep only the panel padding, matching Backup &
+ * Recovery and the rest of Settings. */
+.appearance-options {
+  margin-bottom: 0;
+}
+
+/* Information tiles use one 12px internal padding contract. */
+.appearance-option,
+.dashboard-stat,
+.security-scorecard {
+  padding: var(--sl-tile-padding);
+}
+
+/* Dashboard grids own their outer spacing. A dashboard-stat is a grid tile,
+ * not a standalone vertical block, so it must not contribute the generic
+ * 16px card margin beneath the row. This was the remaining source of the
+ * oversized gap in Vault Inventory and Recovery Health. */
+.dashboard-stats > .dashboard-stat {
+  margin-bottom: 0;
+}
+
+.vault-inventory-section .dashboard-stats,
+.vault-recovery-section .dashboard-stats {
+  margin-bottom: 0;
+}
+
+/* Maintenance Snapshot follows the same one-shell / divided-row language as
+ * Recovery Needs Attention. The maintenance icon treatment is intentionally
+ * hidden so the row content starts at the same left edge as other dashboard
+ * lists and the text/action hierarchy does the work. */
+.dashboard-maintenance-cards {
+  display: grid;
+  gap: 0;
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--sl-border);
+  border-radius: 8px;
+  background: var(--sl-surface);
+}
+
+.dashboard-maintenance-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--sl-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dashboard-maintenance-card:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-maintenance-icon {
+  display: none;
+}
+
+.dashboard-maintenance-copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.dashboard-maintenance-copy strong {
+  color: var(--sl-text-strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dashboard-maintenance-copy small {
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.dashboard-maintenance-end {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+html[data-theme="dark"] .dashboard-maintenance-cards {
+  background: var(--sl-surface-raised);
+  border-color: var(--sl-border);
+}
+
+html[data-theme="dark"] .dashboard-maintenance-card {
+  background: transparent;
+  border-color: var(--sl-border);
+}
+
+@media (max-width: 760px) {
+  .dashboard-maintenance-card {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .dashboard-maintenance-end {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}

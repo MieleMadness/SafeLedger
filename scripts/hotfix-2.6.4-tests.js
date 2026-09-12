@@ -19,8 +19,11 @@ assert(chainService && chainService.artwork === 'chain-games', 'Chain Games must
 const chainUrl = serviceCatalog.iconDataUrl(chainService);
 assert(chainUrl.startsWith('data:image/svg+xml;charset=utf-8,'), 'Chain Games icon must remain local/offline.');
 const chainSvg = decodeURIComponent(chainUrl.slice(chainUrl.indexOf(',') + 1));
-assert(chainSvg.includes('chain-games-gradient') && chainSvg.includes('<path'),
-  'Chain Games must render vector brand artwork rather than an initials-only tile.');
+assert(chainSvg.includes('M164,4.5C73.4,4.5,0,77.9,0,168.5') &&
+  chainSvg.includes('fill="#FFFFFF"') && chainSvg.includes('fill="#0b1030"'),
+  'Chain Games must render the supplied white circular brand mark on its local dark backing.');
+assert(!chainSvg.includes('chain-games-gradient') && !chainSvg.includes('<linearGradient'),
+  'The retired SafeLedger-drawn gradient Chain Games approximation must stay removed.');
 assert(!chainSvg.includes('<text'), 'Chain Games Vault Item icon must not fall back to CG initials.');
 
 const chainToken = tokenIcons.getIconMatch({ name: 'Chain Games — Polygon', symbol: 'CHAIN' });
@@ -50,4 +53,4 @@ assert(iconCss.includes('.wallet-list-fallback-icon'),
 assert(iconCss.includes('width: 24px !important;') && iconCss.includes('height: 24px !important;'),
   'The historical 2.6.4 stylesheet must retain its 24px compact icon baseline.');
 
-console.log(`PASS SafeLedger ${pkg.version} retains Chain Games artwork while Add Asset requires an explicit Vault Item selection.`);
+console.log(`PASS SafeLedger ${pkg.version} retains the supplied Chain Games artwork while Add Asset requires an explicit Vault Item selection.`);

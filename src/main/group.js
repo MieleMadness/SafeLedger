@@ -77,6 +77,36 @@ function appendDetailLine(area, label, value, formatter) {
   area.appendChild(p);
 }
 
+function appendVaultItemHeader(area, group, category = getWalletCategory(group)) {
+  const header = document.createElement('div');
+  header.className = 'wallet-detail-header';
+
+  const icon = vaultItemPresentation.createIconElement(group);
+  if (icon) {
+    icon.classList.add('wallet-detail-brand-image');
+    if (typeof icon.removeAttribute === 'function') icon.removeAttribute('id');
+    header.appendChild(icon);
+  }
+
+  const titleWrap = document.createElement('div');
+  titleWrap.className = 'wallet-detail-title-wrap';
+  const title = document.createElement('h1');
+  title.className = 'wallet-detail-title';
+  title.textContent = displayWalletName(group && group.name) || 'Vault Item';
+  titleWrap.appendChild(title);
+
+  if (category) {
+    const sub = document.createElement('div');
+    sub.className = 'wallet-detail-category';
+    sub.textContent = category;
+    titleWrap.appendChild(sub);
+  }
+
+  header.appendChild(titleWrap);
+  area.appendChild(header);
+  return header;
+}
+
 function persistWalletUpdate(params, updates, button, activityEvent) {
   if (params.saving.state) return alert('Please wait for processing to complete');
   Object.assign(params.group, updates || {});
@@ -144,7 +174,7 @@ function renderReadinessCard(area, params) {
   const drill = document.createElement('button');
   drill.type = 'button';
   drill.className = 'btn btn-default btn-sm';
-  drill.innerHTML = '<i class="fa fa-shield"></i> Run recovery drill';
+  drill.innerHTML = '<i class="fa fa-refresh"></i> Run recovery drill';
   drill.addEventListener('click', () => {
     if (params.saving.state) return alert('Please wait for processing to complete');
     recoveryDrillUi.render({
@@ -210,6 +240,8 @@ const renderGroups = (params) => {
 
     const li = document.createElement('LI');
     const href = document.createElement('A');
+    href.title = visibleName;
+    href.setAttribute('aria-label', visibleName);
     href.addEventListener('click', (e) => {
       e.preventDefault();
       if (params.saving.state) return alert('Please wait for processing to complete');
@@ -372,17 +404,8 @@ exports.showGroupDetail = (params) => renderGroupDetail(params);
 const renderGroupDetail = (params) => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
-  const header = document.createElement('h1');
-  header.className = 'wallet-detail-title';
-  header.textContent = displayWalletName(params.group.name) || 'Vault Item';
-  area.appendChild(header);
   const category = getWalletCategory(params.group);
-  if (category) {
-    const sub = document.createElement('div');
-    sub.className = 'wallet-detail-category';
-    sub.textContent = category;
-    area.appendChild(sub);
-  }
+  appendVaultItemHeader(area, params.group, category);
   area.appendChild(document.createElement('hr'));
 
   renderReadinessCard(area, params);
@@ -468,4 +491,4 @@ const confirmDelete = (params) => {
   ]);
 };
 
-exports._test = { walletSort, displayWalletName, formatLocalDate, getWalletCategory };
+exports._test = { walletSort, displayWalletName, formatLocalDate, getWalletCategory, appendVaultItemHeader };

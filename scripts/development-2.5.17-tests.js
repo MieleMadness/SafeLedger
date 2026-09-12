@@ -19,19 +19,36 @@ require(path.join(root, 'src/main/wallet-catalog-extensions.js'));
 const tokenIcons = require(path.join(root, 'src/main/token-icons.js'));
 const assetPresets = require(path.join(root, 'src/main/vault-item-asset-presets.js'));
 const vaultItemPresentation = require(path.join(root, 'src/main/vault-item-presentation.js'));
+const serviceCatalog = require(path.join(root, 'src/main/service-catalog.js'));
+const dataWrite = require(path.join(root, 'src/main/data-write-service.js'));
 
 const templates = profileSetup.availableTemplates();
-assert(templates.length > 0 && templates.every((template) => template.hasIcon === true),
-  'wallet preset dropdown must be built only from logo-backed templates');
+assert(templates.length > 0, 'starter preset picker must contain reviewed local-artwork templates');
+for (const template of templates) {
+  if (template.service === true) {
+    assert(serviceCatalog.find(template.name), `${template.name} service starter must resolve to SafeLedger-owned local artwork.`);
+    assert(assetPresets.hasAssetPreset(template.name, assetPresets.WEB3_CATEGORY),
+      `${template.name} service starter must have a reviewed Web3 asset preset.`);
+  } else {
+    assert.strictEqual(template.hasIcon, true, `${template.name} conventional wallet template must remain logo-backed.`);
+  }
+}
 for (const wallet of walletCatalog.catalog) {
   if (!profileSetup.iconMatch(wallet.name)) {
     assert(!templates.some((template) => template.name === wallet.name), `${wallet.name} must stay out of logo-backed wallet selectors.`);
   }
 }
 for (const category of ['Hardware Wallet', 'Software Wallet', 'Other Wallet']) {
-  assert(vaultItemPresentation.walletTemplatesForCategory(category).every((template) => template.hasIcon === true),
-    `${category} dropdown must contain only wallets with local artwork.`);
+  const categoryTemplates = vaultItemPresentation.walletTemplatesForCategory(category);
+  assert(categoryTemplates.every((template) => template.hasIcon === true && template.service !== true),
+    `${category} dropdown must contain only conventional wallets with local artwork.`);
+  assert(!categoryTemplates.some((template) => template.name === 'Chain Games'),
+    'The Chain Games Web3 service starter must not appear in Wallet-type preset dropdowns.');
 }
+
+const chainTemplate = templates.find((template) => template.name === 'Chain Games');
+assert(chainTemplate && chainTemplate.service === true,
+  'Chain Games must remain explicitly identified as the reviewed service starter in Profile setup.');
 
 const ledgerAssets = assetPresets.buildRecords('Ledger', 'Hardware Wallet', '2026-09-02T00:00:00.000Z');
 assert(ledgerAssets.some((asset) => asset.symbol === 'BTC'), 'Ledger should preload Bitcoin when created as a Vault Item.');
@@ -46,14 +63,18 @@ assert(krakenAssets.every((asset) => tokenIcons.getIconMatch(asset)), 'every see
 const fioAssets = assetPresets.buildRecords('FIO App', assetPresets.SERVICE_CATEGORY, '2026-09-02T00:00:00.000Z');
 assert.deepStrictEqual(fioAssets.map((asset) => asset.symbol), ['FIO'], 'FIO App should preload the icon-backed FIO asset only.');
 
-const seedSource = read('src/main/vault-item-asset-seeding-ui.js');
-const forwarderSource = read('src/main/vault-item-save-forwarder.js');
-assert(seedSource.includes('createSeededSend(originalSend, seedCreateRequest'),
-  'new Vault Item saves must pass through the asset seeding hook.');
-assert(forwarderSource.includes("channel === 'process-group'"),
-  'the asset seeding hook must remain limited to Vault Item save IPC.');
-assert(seedSource.includes("request.type !== 'group-create'"), 'asset seeding must be limited to newly created Vault Items.');
-assert(seedSource.includes('if (!records.length) return 0;'), 'unknown Vault Items must remain empty instead of receiving guessed assets.');
+const trustedLedger = dataWrite.buildTrustedStarterRecords({ name: 'Ledger', category: 'Hardware Wallet' }, '2026-09-02T00:00:00.000Z');
+assert(trustedLedger.some((asset) => asset.symbol === 'BTC') && trustedLedger.some((asset) => asset.symbol === 'ETH'),
+  'The authoritative main-process write path must seed reviewed Ledger starter Assets.');
+const trustedChain = dataWrite.buildTrustedStarterRecords({ name: 'Chain Games', category: assetPresets.WEB3_CATEGORY }, '2026-09-02T00:00:00.000Z');
+assert.strictEqual(trustedChain.length, 3, 'The authoritative main-process write path must seed all reviewed Chain Games Assets.');
+const writeSource = read('src/main/data-write-service.js');
+assert(writeSource.includes('records: buildTrustedStarterRecords(patch, created)'),
+  'New Vault Item starter Assets must be created inside the authoritative main-process write.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-asset-seeding-ui.js')), false,
+  'The old renderer-side asset seeding hook must stay retired.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-save-forwarder.js')), false,
+  'The old renderer IPC-send forwarding monkeypatch must stay retired.');
 
 const rendererEntry = read('src/main/renderer-entry.js');
 const rendererSource = read('src/main/renderer.js');
@@ -72,17 +93,20 @@ assert(rendererSource.includes('group.createGroup({ vaultData, saving, onCancel:
 assert(rendererSource.includes('record.createRecord({ vaultData, saving, onCancel: showSelectedVaultItemDetail })'),
   'The real Add Asset action must provide direct cancel navigation.');
 
-const iconFix = read('src/main/settings-icon-fix-ui.js');
-assert(iconFix.includes('sl-change-password-icon'), 'Change Password should use the local SVG icon replacement.');
-assert(iconFix.includes("button.querySelector('i.fa-lock')"), 'the broken legacy lock icon should be explicitly removed.');
-assert(iconFix.includes('<svg viewBox="0 0 24 24"'), 'Change Password replacement should be a local inline SVG.');
+const settingsUi = read('src/main/settings-ui.js');
+assert(settingsUi.includes('function lockIconMarkup()'), 'Change Password should keep a local lock icon helper.');
+assert(settingsUi.includes('changePassword.innerHTML = `${lockIconMarkup()}Change Password`;'),
+  'Change Password should render its local icon directly from the canonical Settings owner.');
+assert.strictEqual(fs.existsSync(path.join(root, 'src/main/settings-icon-fix-ui.js')), false,
+  'The old post-render Settings icon replacement module must stay retired.');
 
 assert(groupSource.includes("const vaultItemPresentation = require('./vault-item-presentation');"),
   'Vault Item forms must use the canonical direct preset/presentation helper.');
 assert(!rendererEntry.includes("require('./vault-item-wallet-presets-ui.js')"),
   'The retired post-render wallet preset observer must not return to the renderer.');
-for (const moduleName of ['vault-item-asset-seeding-ui.js', 'settings-icon-fix-ui.js']) {
-  assert(rendererEntry.includes(`require('./${moduleName}')`), `${moduleName} must load in the renderer.`);
-}
+assert(!rendererEntry.includes("require('./vault-item-asset-seeding-ui.js')") &&
+  !rendererEntry.includes("require('./vault-item-save-forwarder.js')") &&
+  !rendererEntry.includes("require('./settings-icon-fix-ui.js')"),
+  'Retired Phase 4 repair/forwarding modules must not return to the renderer bundle.');
 
-console.log('PASS SafeLedger 2.5.17+ logo-backed Vault Item selectors, reviewed asset seeding, direct Add-form cancellation, and local Change Password icon.');
+console.log(`PASS SafeLedger ${pkg.version} keeps conventional wallet selectors logo-backed, permits the reviewed Chain Games service starter, preserves main-owned starter Asset seeding, direct Add-form cancellation, and the directly rendered Change Password icon.`);

@@ -1,0 +1,173 @@
+/* SafeLedger Recovery UX refinement. Theme-aware additions shared by light/dark mode. */
+
+.dashboard-attention-gaps {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.dashboard-attention-gaps li { margin: 3px 0; }
+.recovery-needs-attention-section .dashboard-list-row {
+  align-items: flex-start;
+}
+.recovery-needs-attention-section .dashboard-status {
+  margin-top: 2px;
+}
+.dashboard-list-end {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dashboard-resolve-button {
+  white-space: nowrap;
+}
+.recovery-resolution-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.recovery-simulator-accordion-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+.recovery-simulator-accordion {
+  border: 1px solid var(--sl-border);
+  border-radius: 10px;
+  background: var(--sl-surface);
+  box-shadow: var(--sl-shadow-soft);
+  overflow: hidden;
+}
+.recovery-simulator-accordion[open] {
+  border-color: var(--sl-border-strong);
+}
+.recovery-simulator-accordion-summary {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 18px;
+  gap: 11px;
+  align-items: center;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--sl-text);
+  background: var(--sl-surface);
+  user-select: none;
+}
+.recovery-simulator-accordion-summary::-webkit-details-marker { display: none; }
+.recovery-simulator-accordion-summary:hover,
+.recovery-simulator-accordion-summary:focus-visible {
+  background: var(--sl-surface-soft);
+  outline: none;
+}
+.recovery-simulator-topic-icon {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--sl-border);
+  border-radius: 50%;
+  background: var(--sl-primary-soft);
+  color: var(--sl-primary-strong);
+  font-size: 16px;
+}
+.recovery-simulator-topic-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.recovery-simulator-topic-copy strong {
+  color: var(--sl-text-strong);
+  font-size: 13px;
+}
+.recovery-simulator-topic-copy small {
+  color: var(--sl-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.recovery-simulator-chevron {
+  color: var(--sl-muted);
+  transition: transform .16s ease;
+}
+.recovery-simulator-accordion[open] .recovery-simulator-chevron {
+  transform: rotate(180deg);
+}
+.recovery-simulator-accordion-answer {
+  padding: 13px 14px 14px 63px;
+  border-top: 1px solid var(--sl-border);
+  background: var(--sl-surface-soft);
+  color: var(--sl-text);
+}
+.recovery-simulator-answer-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 7px;
+}
+.recovery-simulator-answer-score {
+  color: var(--sl-text-strong);
+  font-size: 20px;
+}
+.recovery-simulator-headline {
+  margin: 0 0 10px;
+  color: var(--sl-text);
+  line-height: 1.5;
+}
+.recovery-simulator-answer-label {
+  display: block;
+  margin: 10px 0 4px;
+  color: var(--sl-text-strong);
+}
+.recovery-simulator-accordion-answer ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--sl-muted);
+}
+.recovery-simulator-accordion-answer li { margin: 3px 0; }
+
+.recovery-drill-checklist-list {
+  display: grid;
+  gap: 9px;
+}
+.recovery-drill-checklist-step {
+  margin: 0;
+}
+.recovery-drill-validation input::placeholder {
+  color: var(--sl-muted);
+  opacity: .82;
+}
+
+html[data-theme="dark"] .recovery-simulator-accordion {
+  background: var(--sl-surface-raised);
+}
+html[data-theme="dark"] .recovery-simulator-accordion-summary {
+  background: var(--sl-surface-raised);
+}
+html[data-theme="dark"] .recovery-simulator-accordion-summary:hover,
+html[data-theme="dark"] .recovery-simulator-accordion-summary:focus-visible,
+html[data-theme="dark"] .recovery-simulator-accordion-answer {
+  background: var(--sl-surface-soft);
+}
+html[data-theme="dark"] .recovery-simulator-topic-icon {
+  border-color: var(--sl-border-strong);
+  background: var(--sl-primary-soft);
+  color: var(--sl-primary-strong);
+}
+
+@media (max-width: 760px) {
+  .recovery-simulator-accordion-summary {
+    grid-template-columns: 34px minmax(0, 1fr) 16px;
+    padding: 11px;
+  }
+  .recovery-simulator-topic-icon { width: 32px; height: 32px; }
+  .recovery-simulator-accordion-answer { padding: 12px; }
+  .dashboard-list-end { align-items: flex-end; flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recovery-simulator-chevron { transition: none !important; }
+}

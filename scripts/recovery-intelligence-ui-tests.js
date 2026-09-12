@@ -30,13 +30,18 @@ function testPrivacyModeDefaultsAndPersistence() {
   assert.strictEqual(settingsManager._test.normalizeSettings({ privacyMode: 'true' }).privacyMode, true);
 
   const securityUi = read('src/main/security-ui.js');
-  const privacyUi = read('src/main/privacy-mode-ui.js');
+  const settingsUi = read('src/main/settings-ui.js');
   const renderer = read('src/main/renderer.js');
   assert(securityUi.includes('let privacyMode = true'));
   assert(securityUi.includes('actions.style.display = privacyMode'));
   assert(securityUi.includes('exports.setPrivacyMode'));
-  assert(privacyUi.includes("id = 'privacyModeEnabled'"));
-  assert(privacyUi.includes("ipc.send('save-settings'"));
+  assert(settingsUi.includes("const section = makeSection('Privacy Mode');"));
+  assert(settingsUi.includes("checkbox.id = 'privacyModeEnabled';"));
+  assert(settingsUi.includes('saveUserSetting(params, { privacyMode: checkbox.checked === true }, save)'));
+  assert(!settingsUi.includes('MutationObserver') && !settingsUi.includes('setTimeout('),
+    'Privacy Mode must be rendered directly by the canonical Settings owner.');
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/privacy-mode-ui.js')), false,
+    'The old post-render Privacy Mode injector must stay retired.');
   assert(renderer.includes('securityUi.setPrivacyMode'));
 }
 
@@ -46,7 +51,8 @@ function testGuidedRecoveryIsEphemeral() {
   assert(drillUi.includes("require('./bip39-validator')"));
   assert(drillUi.includes("input.type = 'password'"));
   assert(drillUi.includes("input.value = ''"), 'temporary BIP39 input must be cleared immediately');
-  assert(drillUi.includes('Test Recovery'));
+  assert(drillUi.includes("appendText(header, 'h1', '', 'Recovery Validation')"));
+  assert(!drillUi.includes("appendText(header, 'h1', '', 'Test Recovery')"));
   assert(!drillUi.includes('clipboard'));
   assert(!drillUi.includes('ipc.send'));
   assert(!drillUi.includes('fetch('));
@@ -86,4 +92,4 @@ testPrivacyModeDefaultsAndPersistence();
 testGuidedRecoveryIsEphemeral();
 testRecoveryIntelligenceBoundary();
 testBip39RendererBoundary();
-console.log('PASS SafeLedger 2.4 Privacy Mode, Guided Test Recovery, renderer-safe BIP39, and sanitized intelligence boundaries.');
+console.log('PASS SafeLedger 2.4 Privacy Mode, guided Recovery Validation, renderer-safe BIP39, sanitized intelligence boundaries, and canonical Phase 4 Settings ownership.');

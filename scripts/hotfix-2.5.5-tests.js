@@ -7,12 +7,27 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
+function localIconPath(value) {
+  const source = String(value || '');
+  return source.startsWith('./assets/token-icons/') && source.endsWith('.svg');
+}
+
+function localIconExists(value) {
+  if (!localIconPath(value)) return false;
+  const absolute = path.resolve(root, 'src', 'main', value);
+  const iconRoot = path.resolve(root, 'src', 'main', 'assets', 'token-icons');
+  return absolute.startsWith(iconRoot + path.sep) && fs.existsSync(absolute);
+}
+
 function testPreparedWalletManifest() {
   const manifest = JSON.parse(read('src/main/assets/token-icons/manifest.json'));
-  assert.strictEqual(manifest.version, 2, 'Icon manifest should include the wallet-aware format version.');
+  assert(manifest.version >= 3, 'Icon manifest should use the lazy local-SVG format.');
+  assert.strictEqual(manifest.assetMode, 'local-svg-files');
   assert(manifest.wallets && typeof manifest.wallets === 'object', 'Prepared icon manifest should contain wallets.');
+  assert(!read('src/main/assets/token-icons/manifest.json').includes('data:image/svg+xml;base64,'),
+    'The runtime icon manifest must not embed thousands of base64 SVG payloads.');
   for (const wallet of ['coinbase', 'exodus', 'ledger', 'metamask', 'phantom', 'trezor']) {
-    assert(String(manifest.wallets[wallet] || '').startsWith('data:image/'), `Expected bundled artwork for ${wallet}.`);
+    assert(localIconExists(manifest.wallets[wallet]), `Expected packaged local SVG artwork for ${wallet}.`);
   }
 }
 
@@ -55,9 +70,10 @@ function testScreenshotWalletsNeverUseGenericOutline() {
       const icon = walletIcons.createIconElement({ name });
       assert(icon, `${name} should produce a wallet icon.`);
       assert(!String(icon.className).includes('glyphicon-piggy-bank'), `${name} should not use the generic wallet outline.`);
-      if (walletIcons.getIconUrl({ name })) {
+      const iconUrl = walletIcons.getIconUrl({ name });
+      if (iconUrl) {
         assert.strictEqual(icon.tagName, 'img', `${name} should render bundled brand artwork.`);
-        assert(String(icon.src).startsWith('data:image/'), `${name} artwork must remain local/offline.`);
+        assert(localIconExists(iconUrl), `${name} artwork must remain packaged locally/offline as an on-demand SVG.`);
       } else {
         assert(String(icon.className).includes('wallet-list-catalog-icon'), `${name} should use a wallet-specific catalog badge when upstream artwork is unavailable.`);
       }
@@ -89,11 +105,12 @@ function testWalletListUsesResolver() {
   assert(prepare.includes("const categories = ['tokens', 'networks', 'wallets', 'exchanges'];"));
   assert(prepare.includes('applyMetadataAliases(manifest, metadata, category)'));
   assert(prepare.includes('minimums = { tokens: 1000, networks: 100, wallets: 30, exchanges: 20 }'));
-  assert(prepare.includes('manifest.aliases = { tokens: {}, networks: {}, wallets: {}, exchanges: {} }'));
+  assert(prepare.includes("assetMode: 'local-svg-files'"));
+  assert(prepare.includes('writeLocalIcon(category, canonical, source)'));
 }
 
 testPreparedWalletManifest();
 testWalletResolverAndAliases();
 testScreenshotWalletsNeverUseGenericOutline();
 testWalletListUsesResolver();
-console.log('PASS SafeLedger branded/offline wallet icons, catalog-specific fallbacks, custom SVG fallback, and full Web3 catalog preparation.');
+console.log('PASS SafeLedger branded/offline wallet icons stay local while bulk SVG payloads load on demand instead of during startup.');

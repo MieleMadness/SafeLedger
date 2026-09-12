@@ -3,6 +3,7 @@
 const { clipboard } = require('./renderer-bridge');
 const QRCode = require('qrcode');
 const eyeIcon = require('./eye-icon');
+const motion = require('./motion-ui');
 
 const CLIPBOARD_CLEAR_MS = 30000;
 let privacyMode = true;
@@ -131,6 +132,14 @@ exports.addEditSensitiveInputControl = (input, parent, label) => {
   return shell;
 };
 
+function syncSensitiveSummary(details, summary, stateIcon) {
+  const open = details.open === true;
+  stateIcon.className = open ? 'fa fa-minus' : 'fa fa-plus';
+  const action = open ? 'Collapse sensitive information' : 'Expand sensitive information';
+  summary.title = action;
+  summary.setAttribute('aria-label', action);
+}
+
 exports.appendSensitiveField = (parent, label, value, options = {}) => {
   const allowQr = options.allowQr !== false;
   const wrapper = document.createElement('div');
@@ -142,7 +151,6 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
   const summaryLabel = document.createElement('span');
   summaryLabel.className = 'secure-field-summary-label';
   const stateIcon = document.createElement('i');
-  stateIcon.className = 'fa fa-plus';
   const labelText = document.createElement('span');
   labelText.className = 'secure-field-summary-text';
   labelText.textContent = label;
@@ -159,7 +167,7 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
     () => value,
     qrArea,
     `Generated locally from the ${label}. Treat this QR code as sensitive recovery information.`,
-    () => { details.open = true; },
+    () => { details.open = true; syncSensitiveSummary(details, summary, stateIcon); },
     allowQr
   );
   actions.style.display = privacyMode ? 'none' : '';
@@ -186,10 +194,11 @@ exports.appendSensitiveField = (parent, label, value, options = {}) => {
   }
 
   if (allowQr) content.appendChild(qrArea);
-
+  syncSensitiveSummary(details, summary, stateIcon);
   details.addEventListener('toggle', () => {
-    stateIcon.className = details.open ? 'fa fa-minus' : 'fa fa-plus';
+    syncSensitiveSummary(details, summary, stateIcon);
     if (privacyMode) actions.style.display = details.open ? '' : 'none';
+    if (details.open) motion.reveal(content);
     if (!details.open && qrArea.style.display !== 'none') qrArea.style.display = 'none';
   });
   details.appendChild(content);
@@ -232,11 +241,7 @@ exports.appendPublicAddressField = (parent, address, symbol) => {
 exports.appendPublicAddressTools = (parent, address, symbol) => exports.appendPublicAddressField(parent, address, symbol);
 
 const escapeHtml = (value) => String(value || '')
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#039;');
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 
 function createPrintFrame() {
   const frame = document.createElement('iframe');
@@ -279,4 +284,4 @@ exports.printRecoverySheet = (title, fields, includesSensitive) => {
   }, 50);
 };
 
-exports._test = { makeIconButton, makeCopyButton, copyIconMarkup, qrIconMarkup, makeEditRevealButton, makeInlineActions, createPrintFrame };
+exports._test = { makeIconButton, makeCopyButton, copyIconMarkup, qrIconMarkup, makeEditRevealButton, makeInlineActions, createPrintFrame, syncSensitiveSummary };

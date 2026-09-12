@@ -1,0 +1,107 @@
+/* Canonical SafeLedger status/message presentation.
+ * This component intentionally lives outside the historical UI patch cascade.
+ * It uses explicit light/dark semantic colors with normal-text contrast well
+ * above 4.5:1 so status messages remain easy to read without dominating the
+ * utility bar. */
+
+:root {
+  --sl-status-info-bg: #edf4ff;
+  --sl-status-info-text: #174ea6;
+  --sl-status-info-border: #b8d4ff;
+  --sl-status-success-bg: #edf9f1;
+  --sl-status-success-text: #176b3a;
+  --sl-status-success-border: #b8e2c5;
+  --sl-status-danger-bg: #fff0f0;
+  --sl-status-danger-text: #a12828;
+  --sl-status-danger-border: #efb9b9;
+  --sl-status-processing-bg: #f7f9fc;
+  --sl-status-processing-text: #344054;
+  --sl-status-processing-border: #d7dee8;
+}
+
+html[data-theme="dark"] {
+  --sl-status-info-bg: #173453;
+  --sl-status-info-text: #d6e9ff;
+  --sl-status-info-border: #315f8f;
+  --sl-status-success-bg: #173a29;
+  --sl-status-success-text: #baf3cb;
+  --sl-status-success-border: #34704b;
+  --sl-status-danger-bg: #492124;
+  --sl-status-danger-text: #ffd1d1;
+  --sl-status-danger-border: #8a4148;
+  --sl-status-processing-bg: #18263a;
+  --sl-status-processing-text: #eef4fb;
+  --sl-status-processing-border: #50617a;
+}
+
+.top-utility-cell #statusArea {
+  min-height: 34px !important;
+  max-height: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: visible;
+}
+
+#statusArea .safeledger-status {
+  width: fit-content;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  margin: 0 !important;
+  padding: 6px 12px !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-width: 1px !important;
+  border-style: solid !important;
+  border-radius: var(--sl-radius-sm, 7px) !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#statusArea .safeledger-status > .fa {
+  flex: 0 0 auto;
+  width: 16px;
+  font-size: 15px;
+  line-height: 1;
+  text-align: center;
+}
+
+#statusArea .safeledger-status-text {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+#statusArea .safeledger-status-info {
+  background: var(--sl-status-info-bg) !important;
+  color: var(--sl-status-info-text) !important;
+  border-color: var(--sl-status-info-border) !important;
+}
+
+#statusArea .safeledger-status-success {
+  background: var(--sl-status-success-bg) !important;
+  color: var(--sl-status-success-text) !important;
+  border-color: var(--sl-status-success-border) !important;
+}
+
+#statusArea .safeledger-status-danger {
+  background: var(--sl-status-danger-bg) !important;
+  color: var(--sl-status-danger-text) !important;
+  border-color: var(--sl-status-danger-border) !important;
+}
+
+#statusArea .safeledger-status-processing {
+  background: var(--sl-status-processing-bg) !important;
+  color: var(--sl-status-processing-text) !important;
+  border-color: var(--sl-status-processing-border) !important;
+}
+
+@media (max-width: 1000px) {
+  #statusArea .safeledger-status { font-size: 14px !important; }
+}

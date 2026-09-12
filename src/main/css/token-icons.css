@@ -55,6 +55,26 @@
   border-color: rgba(255,255,255,.55);
 }
 
+/* Shit Coin Mode keeps the same artwork footprint as other assets, but the
+ * emoji itself is the artwork. Do not put it on the generic ticker tile. */
+.coin-list-generic-icon.shit-coin-icon,
+.item-selected .coin-list-generic-icon.shit-coin-icon {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  font-size: 24px !important;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.coin-brand-generic.shit-coin-icon {
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 42px !important;
+  font-weight: 400;
+  line-height: 1;
+}
+
 .coin-list-label {
   min-width: 0;
   overflow: hidden;
@@ -124,6 +144,14 @@
     width: 24px !important;
     height: 24px !important;
     flex-basis: 24px !important;
+  }
+
+  .coin-list-generic-icon.shit-coin-icon {
+    font-size: 21px !important;
+  }
+
+  .coin-brand-generic.shit-coin-icon {
+    font-size: 38px !important;
   }
 
   .wallet-list-fallback-icon .sl-wallet-fallback-svg {

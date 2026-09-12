@@ -2,6 +2,7 @@
 
 const walletCatalog = require('./wallet-catalog');
 const web3Icons = require('./web3-icons');
+const serviceCatalog = require('./service-catalog');
 
 const slug = (value) => String(value || '')
   .trim()
@@ -81,6 +82,12 @@ function createIconElement(wallet, brandClass = 'wallet-list-brand-image') {
   const match = getIconMatch(wallet);
   const name = String(wallet && wallet.name || 'Wallet');
   if (match) return web3Icons.createImage(match.src, name, brandClass);
+
+  // SafeLedger-owned service artwork is also fully local. This lets reviewed
+  // starter services such as Chain Games appear with their real SafeLedger
+  // artwork in the New Profile picker instead of a generic wallet glyph.
+  const serviceIcon = serviceCatalog.createIcon(name, brandClass);
+  if (serviceIcon) return serviceIcon;
 
   // SafeLedger catalog wallets that predate upstream brand artwork keep their
   // short identifying badge. This remains more useful than making every known
