@@ -23,10 +23,14 @@ assert(palette.includes('html[data-theme="light"],\nhtml[data-theme="colorful"] 
   'Light and Colorful must share the same local login artwork.');
 assert(palette.includes('html[data-theme="dark"] {\n  --sl-login-backdrop: url("../assets/login-background-dark.svg");\n}'),
   'Dark must use the matching dark login artwork.');
-assert(palette.includes('.app-shell[data-login-mode="true"] .detail-column') &&
-  palette.includes('background-size: cover;') &&
-  palette.includes('background-repeat: no-repeat;'),
-  'Login artwork must fill only the login display column without tiling.');
+
+const scopedRule = palette.match(/\.app-shell\[data-login-mode="true"\] \.detail-column\s*\{([\s\S]*?)\}/);
+assert(scopedRule, 'Login artwork must stay scoped to the login Detail/display column.');
+const rule = scopedRule[1];
+assert(/background-image:\s*var\(--sl-login-backdrop\)(?:\s*!important)?;/.test(rule) &&
+  /background-size:\s*cover(?:\s*!important)?;/.test(rule) &&
+  /background-repeat:\s*no-repeat(?:\s*!important)?;/.test(rule),
+  'Login artwork must fill only the login display column without tiling, regardless of whether later cascade fixes require !important.');
 assert(!palette.includes('.app-shell[data-login-mode="true"] .app-cell'),
   'Login artwork must not flatten every workspace cell into one background surface.');
 assert(!palette.includes('border-color: transparent !important;'),
