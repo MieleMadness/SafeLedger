@@ -39,10 +39,6 @@ assert(healthRow.indexOf('end.appendChild(resolve);') < healthRow.indexOf('end.a
   'Device health action buttons must appear to the left of their status pill.');
 
 assert(dashboard.includes("cards.className = 'dashboard-maintenance-cards';"));
-assert(dashboard.includes("icon: 'fa-clock-o'"));
-assert(dashboard.includes("icon: 'fa-life-ring'"));
-assert(dashboard.includes("icon: 'fa-archive'"));
-assert(!dashboard.includes('fa-wrench'), 'Maintenance cards must not introduce an undefined fallback icon.');
 assert(dashboard.includes("title: 'Recovery verification'"));
 assert(dashboard.includes("title: 'Recovery coverage'"));
 assert(dashboard.includes("title: 'Backup activity'"));
@@ -53,9 +49,14 @@ assert(!dashboard.includes('function appendMaintenanceItem('),
   'The retired Maintenance Snapshot list renderer should not remain as a second UI path.');
 
 assert(layout.includes('.dashboard-maintenance-card {'));
-assert(layout.includes('grid-template-columns: 38px minmax(0, 1fr) auto;'));
-assert(layout.includes('.dashboard-maintenance-end {'));
-assert(layout.includes('box-shadow: var(--sl-shadow-soft);'));
+assert(layout.includes('display: flex;'));
+assert(layout.includes('justify-content: space-between;'));
+assert(layout.includes('padding: 10px 12px;'));
+assert(layout.includes('.dashboard-maintenance-icon {\n  display: none;\n}'),
+  'Maintenance Snapshot must not show the retired icon-circle treatment.');
+assert(layout.includes('text-align: left;'));
+assert(layout.includes('box-shadow: none;'));
+assert(!layout.includes('grid-template-columns: 38px minmax(0, 1fr) auto;'));
 assert(!layout.includes('!important'));
 
 const now = Date.parse('2026-09-11T12:00:00.000Z');
@@ -116,4 +117,4 @@ for (const relative of [
   'scripts/hotfix-2.6.70-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} places Device & Backup Health under Vault Inventory, keeps health actions left of status pills, and makes Maintenance Snapshot directly actionable.`);
+console.log(`PASS SafeLedger ${pkg.version} places Device & Backup Health under Vault Inventory, keeps health actions left of status pills, and keeps Maintenance Snapshot directly actionable with the current simplified row layout.`);
