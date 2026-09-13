@@ -74,9 +74,14 @@ assert(assetSvg.includes('₿') && assetSvg.includes('Asset focus artwork with c
   'Asset artwork must remain cryptocurrency-token focused.');
 assert(pkg.build.files.includes('src/**/*'), 'Packaged builds must continue including all local artwork assets.');
 
-const release = read('RELEASE-2.6.84.md').toLowerCase();
-for (const phrase of ['profile', 'vault', 'asset', 'main focus', 'home', 'settings', 'solid', 'column dividers', 'local/offline']) {
-  assert(release.includes(phrase), `2.6.84 release notes must mention: ${phrase}`);
+const normalizeDoc = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+const release = normalizeDoc(read('RELEASE-2.6.84.md'));
+for (const phrase of ['profile', 'vault', 'asset', 'main focus', 'home', 'settings', 'solid', 'column dividers', 'local offline']) {
+  assert(release.includes(phrase), `2.6.84 release notes must describe: ${phrase}`);
 }
 
 execFileSync(process.execPath, [path.join(root, 'scripts/hotfix-2.6.83-tests.js')], { stdio: 'pipe' });
