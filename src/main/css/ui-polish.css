@@ -333,8 +333,6 @@ html[data-theme="dark"] .search-clear {
 .detail-action-button .fa-qrcode { color: var(--sl-icon-purple) !important; }
 .detail-action-button .fa-book { color: var(--sl-icon-indigo) !important; }
 .detail-action-button .fa-trash { color: var(--sl-icon-red) !important; }
-.detail-action-button .fa-star,
-.detail-action-button .fa-star-o { color: var(--sl-icon-gold) !important; }
 .detail-action-button .fa-cog,
 .detail-action-button .fa-history,
 .detail-action-button .fa-list { color: var(--sl-icon-neutral) !important; }
