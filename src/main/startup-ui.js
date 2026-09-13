@@ -68,8 +68,10 @@ function dismissStartupScreen() {
 }
 
 createStartupScreen();
-// Fail-open visually if startup initialization never returns. The renderer
-// coordinator dismisses this screen immediately when init-system resolves.
+if (window.safeLedgerApi && typeof window.safeLedgerApi.onInitSystem === 'function') {
+  window.safeLedgerApi.onInitSystem(dismissStartupScreen);
+}
+// Fail-open visually if startup initialization never returns.
 window.setTimeout(dismissStartupScreen, 8000);
 
 module.exports = {
