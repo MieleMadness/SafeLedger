@@ -20,14 +20,24 @@ const serviceSource = read('src/main/service-catalog.js');
 assert(!serviceSource.includes('Buffer.from('));
 assert(serviceSource.includes('encodeURIComponent(svg)'));
 
+// 2.6.3 originally verified the Chain Games icon by requiring its then-current
+// inline SVG data URL while Buffer was unavailable. Chain Games now uses
+// packaged local SVG files so Light/Colorful and Dark can have separate
+// variants. Preserve the actual sandbox/offline invariant instead of the old
+// representation detail: no Buffer dependency, no network URL, and the local
+// asset must exist in packaged source.
 const savedBuffer = global.Buffer;
 try {
   global.Buffer = undefined;
   const serviceIcon = serviceCatalog.iconDataUrl('Chain Games');
-  assert(serviceIcon.startsWith('data:image/svg+xml;charset=utf-8,'));
-  assert(decodeURIComponent(serviceIcon.split(',').slice(1).join(',')).includes('<svg'));
+  assert(serviceIcon.startsWith('./assets/chain-games-') && serviceIcon.endsWith('.svg'),
+    'Chain Games must resolve to its bundled local SVG asset family without Buffer.');
+  assert(!/^https?:\/\//i.test(serviceIcon), 'Chain Games artwork must not require the network.');
+  assert(fs.existsSync(path.join(root, 'src/main', serviceIcon.replace(/^\.\//, ''))),
+    'Chain Games local SVG must exist in packaged source.');
   const tokenIcon = tokenIcons.getIconMatch({ name: 'Chain Games — Ethereum', symbol: 'CHAIN' });
-  assert(tokenIcon && tokenIcon.src && tokenIcon.src.startsWith('data:image/svg+xml;charset=utf-8,'));
+  assert(tokenIcon && tokenIcon.src === serviceIcon,
+    'CHAIN Assets must share the same local Chain Games artwork source while Buffer is unavailable.');
 } finally {
   global.Buffer = savedBuffer;
 }
@@ -49,4 +59,4 @@ assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-save-forwa
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-asset-seeding-ui.js')), false,
   'The obsolete renderer seeding/refresh helper must stay removed.');
 
-console.log(`PASS SafeLedger ${pkg.version} preserves sandbox-safe Chain Games artwork and save safety with main-owned starter Asset creation.`);
+console.log(`PASS SafeLedger ${pkg.version} preserves sandbox-safe local Chain Games artwork and save safety with main-owned starter Asset creation.`);
