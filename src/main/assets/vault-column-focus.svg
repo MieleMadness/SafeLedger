@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="960" viewBox="0 0 540 960" role="img" aria-label="Vault focus artwork with hardware and secure storage imagery">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071426"/><stop offset=".55" stop-color="#0a1d3a"/><stop offset="1" stop-color="#061225"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8fc3ff" stop-opacity=".58"/><stop offset=".45" stop-color="#2f69c7" stop-opacity=".30"/><stop offset="1" stop-color="#102c62" stop-opacity=".18"/></linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="20"/></filter>
+  </defs>
+  <rect width="540" height="960" fill="url(#bg)"/>
+  <g opacity=".24" fill="none" stroke="#4b86d8" stroke-width="1">
+    <path d="M282 0c44 86 10 170 63 251s27 176 79 259 18 176 74 270"/>
+    <path d="M306 0c42 86 8 170 59 251s25 176 75 259 16 176 70 270"/>
+  </g>
+  <g opacity=".28" filter="url(#soft)"><circle cx="90" cy="170" r="68" fill="#204d95"/><circle cx="456" cy="270" r="58" fill="#2c66bc"/><circle cx="180" cy="770" r="82" fill="#193f7b"/></g>
+  <g transform="translate(391 112)" filter="url(#glow)"><path d="M0-72 65-44v65c0 52-27 91-65 115C-38 112-65 73-65 21v-65z" fill="url(#glass)" stroke="#6ea5f3" stroke-width="3"/><path d="M0-54v166c29-21 47-52 47-91v-52z" fill="#081a3b" fill-opacity=".36"/></g>
+  <g transform="translate(397 311) rotate(-18)" filter="url(#glow)"><rect x="-43" y="-68" width="86" height="136" rx="22" fill="url(#glass)" stroke="#639cf0" stroke-width="3"/><rect x="-28" y="-49" width="56" height="73" rx="8" fill="#071325"/><circle cx="0" cy="44" r="14" fill="#14315e" stroke="#578fe1" stroke-width="2"/></g>
+  <g transform="translate(344 487)" filter="url(#glow)"><path d="M-92-48h142c14 0 26 12 26 26v84c0 14-12 26-26 26H-92c-14 0-26-12-26-26v-84c0-14 12-26 26-26z" fill="url(#glass)" stroke="#6099ed" stroke-width="3"/><path d="M51-14h61v48H51c-14 0-25-11-25-24s11-24 25-24z" fill="#173b78" stroke="#72a6f0" stroke-width="2"/><circle cx="56" cy="10" r="8" fill="#8fc2ff"/></g>
+  <g transform="translate(391 676)" filter="url(#glow)"><rect x="-88" y="-86" width="176" height="172" rx="26" fill="url(#glass)" stroke="#639cf0" stroke-width="3"/><rect x="-63" y="-61" width="126" height="122" rx="14" fill="#08182f" fill-opacity=".45" stroke="#4c85da" stroke-width="2"/><circle r="39" fill="#0c2246" stroke="#72a6f0" stroke-width="4"/><circle r="20" fill="none" stroke="#7fb1f9" stroke-width="7" stroke-dasharray="18 9"/><path d="M0-39V-20M39 0H20M0 39V20M-39 0h19" stroke="#86b7fb" stroke-width="5" stroke-linecap="round"/></g>
+  <g transform="translate(404 854) rotate(15)" filter="url(#glow)"><rect x="-47" y="-77" width="94" height="154" rx="25" fill="url(#glass)" stroke="#6098eb" stroke-width="3"/><rect x="-31" y="-55" width="62" height="81" rx="10" fill="#071325"/><circle cx="-18" cy="48" r="9" fill="#173d79"/><circle cx="6" cy="48" r="9" fill="#173d79"/><circle cx="29" cy="48" r="6" fill="#173d79"/></g>
+  <g fill="#5e9af2" opacity=".34"><rect x="302" y="198" width="18" height="18" transform="rotate(25 311 207)"/><rect x="286" y="585" width="22" height="22" transform="rotate(28 297 596)"/><rect x="459" y="480" width="18" height="18" transform="rotate(18 468 489)"/></g>
+</svg>

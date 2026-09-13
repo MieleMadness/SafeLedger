@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="960" viewBox="0 0 540 960" role="img" aria-label="Profile focus artwork with vault and crypto imagery">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#071426"/><stop offset=".55" stop-color="#0a1d3a"/><stop offset="1" stop-color="#061225"/></linearGradient>
+    <radialGradient id="orb" cx="35%" cy="30%" r="70%"><stop stop-color="#5aa2ff" stop-opacity=".32"/><stop offset="1" stop-color="#0e2b62" stop-opacity=".02"/></radialGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8fc3ff" stop-opacity=".62"/><stop offset=".45" stop-color="#326fd5" stop-opacity=".28"/><stop offset="1" stop-color="#102c62" stop-opacity=".16"/></linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="18"/></filter>
+  </defs>
+  <rect width="540" height="960" fill="url(#bg)"/>
+  <g opacity=".24" fill="none" stroke="#4b86d8" stroke-width="1">
+    <path d="M250 0c40 90 12 172 65 248s34 170 86 253 22 166 72 250 28 144 67 209"/>
+    <path d="M274 0c38 88 10 172 61 248s32 170 82 253 20 166 68 250 27 144 64 209"/>
+    <path d="M298 0c36 86 8 172 57 248s30 170 78 253 18 166 64 250 26 144 61 209"/>
+  </g>
+  <g opacity=".30" filter="url(#soft)"><circle cx="80" cy="210" r="64" fill="#2459a8"/><circle cx="455" cy="92" r="52" fill="#326fcf"/><circle cx="120" cy="720" r="72" fill="#19468c"/></g>
+  <g transform="translate(352 74)" filter="url(#glow)"><path d="M55 0 110 24v57c0 45-23 79-55 99C23 160 0 126 0 81V24z" fill="url(#glass)" stroke="#75adff" stroke-width="3"/><path d="M55 15v143c25-18 40-45 40-77V35z" fill="#0a1a3b" fill-opacity=".34"/></g>
+  <g transform="translate(390 238)" filter="url(#glow)"><circle r="62" cx="0" cy="0" fill="#0c234c" stroke="#4c8df2" stroke-width="3"/><text x="0" y="22" text-anchor="middle" font-size="78" font-family="Arial, sans-serif" font-weight="700" fill="#84b8ff">₿</text></g>
+  <g transform="translate(390 355)" filter="url(#glow)"><path d="M0-63 39 0 0 23-39 0z" fill="#86b6ff" fill-opacity=".86"/><path d="M0 31 39 6 0 69-39 6z" fill="#4e83db" fill-opacity=".82"/></g>
+  <g transform="translate(338 472) rotate(-18)" filter="url(#glow)"><rect x="-43" y="-66" width="86" height="132" rx="20" fill="url(#glass)" stroke="#639cf0" stroke-width="3"/><rect x="-29" y="-48" width="58" height="70" rx="8" fill="#071325"/><circle cx="0" cy="44" r="13" fill="#14315e" stroke="#578fe1"/></g>
+  <g transform="translate(391 592)" filter="url(#glow)"><path d="M-54-42-24-57 0-44 24-57 54-42 42 17 18 48 0 56-18 48-42 17z" fill="url(#glass)" stroke="#4f88df" stroke-width="2"/><path d="m-21-8 21 16 21-16-7 27L0 30-14 19z" fill="#07162f" fill-opacity=".62"/></g>
+  <g transform="translate(346 705)" filter="url(#glow)" fill="#568ef1"><path d="m-53-28 92-14 14 16-92 14z"/><path d="m-53 0 92-14 14 16-92 14z"/><path d="m-53 28 92-14 14 16-92 14z"/></g>
+  <g transform="translate(420 738)" filter="url(#glow)"><circle r="53" fill="#0c2348" stroke="#5f99ec" stroke-width="3"/><circle r="37" fill="none" stroke="#7fb0f6" stroke-width="7" stroke-dasharray="67 13"/><text y="13" text-anchor="middle" font-size="38" font-family="Arial, sans-serif" font-weight="700" fill="#88baff">$</text></g>
+  <g transform="translate(324 842)" filter="url(#glow)"><path d="M-78-42h126c13 0 24 11 24 24v75c0 13-11 24-24 24H-78c-13 0-24-11-24-24v-75c0-13 11-24 24-24z" fill="url(#glass)" stroke="#6099ed" stroke-width="3"/><path d="M45-12h54v43H45c-12 0-22-10-22-22S33-12 45-12z" fill="#173b78" stroke="#72a6f0" stroke-width="2"/><circle cx="49" cy="9" r="7" fill="#8fc2ff"/></g>
+  <g transform="translate(456 852)" filter="url(#glow)"><rect x="-43" y="-8" width="86" height="70" rx="17" fill="url(#glass)" stroke="#6ea4ef" stroke-width="3"/><path d="M-27-8v-17c0-28 19-48 43-48s43 20 43 48v17" fill="none" stroke="#7aacf1" stroke-width="13"/><circle cx="0" cy="23" r="9" fill="#0a1a36"/><rect x="-4" y="25" width="8" height="18" rx="4" fill="#0a1a36"/></g>
+  <g fill="#5e9af2" opacity=".34"><rect x="284" y="142" width="18" height="18" transform="rotate(25 293 151)"/><rect x="298" y="626" width="21" height="21" transform="rotate(30 309 637)"/><rect x="455" y="510" width="16" height="16" transform="rotate(18 463 518)"/></g>
+</svg>

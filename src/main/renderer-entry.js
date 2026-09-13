@@ -3,6 +3,7 @@
 require('./app-appearance.js');
 require('./app-menu-ui.js');
 require('./startup-ui.js');
+require('./column-focus-artwork.js');
 require('./renderer.js');
 require('./column-collapse-ui.js');
 require('./dashboard-ui.js');
