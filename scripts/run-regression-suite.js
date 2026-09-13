@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { CANONICAL_SUITES, isHistoricalTestFile } = require('./regression-suite');
+const { CANONICAL_SUITES, isRetiredTestFile } = require('./regression-suite');
 
 const root = path.join(__dirname, '..');
 
@@ -12,7 +12,7 @@ function validateManifest() {
   for (const suite of CANONICAL_SUITES) {
     if (!suite || !suite.name || !suite.file) throw new Error('Regression manifest contains an invalid suite entry.');
     const base = path.basename(suite.file);
-    if (isHistoricalTestFile(base)) throw new Error(`Historical patch gate cannot be canonical: ${suite.file}`);
+    if (isRetiredTestFile(base)) throw new Error(`Retired patch/release gate cannot be canonical: ${suite.file}`);
     if (seen.has(suite.file)) throw new Error(`Duplicate canonical regression suite: ${suite.file}`);
     seen.add(suite.file);
     if (!fs.existsSync(path.join(root, suite.file))) throw new Error(`Canonical regression suite is missing: ${suite.file}`);
