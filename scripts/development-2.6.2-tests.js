@@ -16,11 +16,19 @@ assert.strictEqual(settingsManager._test.normalizeSettings({ shitCoinMode: 'true
 assert.strictEqual(settingsManager._test.normalizeSettings({ shitCoinMode: false }).shitCoinMode, false);
 
 const serviceCatalog = require('../src/main/service-catalog');
-for (const name of ['Chain Games','Facebook','Yahoo','Google','Microsoft','Apple','Amazon','PayPal','Instagram','LinkedIn','GitHub','Netflix','Spotify']) {
+for (const name of ['Facebook','Yahoo','Google','Microsoft','Apple','Amazon','PayPal','Instagram','LinkedIn','GitHub','Netflix','Spotify']) {
   const service = serviceCatalog.find(name);
   assert(service, `Known service missing: ${name}`);
   assert(serviceCatalog.iconDataUrl(service).startsWith('data:image/svg+xml'), `${name} icon must be fully local.`);
 }
+const chainService = serviceCatalog.find('Chain Games');
+assert(chainService, 'Known service missing: Chain Games');
+const chainArtwork = serviceCatalog.iconDataUrl(chainService);
+assert(chainArtwork.startsWith('./assets/chain-games-') && chainArtwork.endsWith('.svg'),
+  'Chain Games must resolve to a bundled local SVG asset rather than a remote URL.');
+assert(!/^https?:\/\//i.test(chainArtwork), 'Chain Games artwork must never require the network.');
+assert(fs.existsSync(path.join(root, 'src/main', chainArtwork.replace(/^\.\//, ''))),
+  'The Chain Games local artwork path must resolve to a packaged source asset.');
 assert.strictEqual(serviceCatalog.find('facebook.com').name, 'Facebook');
 assert.strictEqual(serviceCatalog.find('www.yahoo.com').name, 'Yahoo');
 
