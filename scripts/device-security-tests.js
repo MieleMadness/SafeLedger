@@ -8,7 +8,7 @@ const { EventEmitter } = require('events');
 const sessionLock = require('../src/main/session-lock-main');
 const deviceSecurity = require('../src/main/device-security-main');
 const backupHealth = require('../src/main/backup-health');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 
 async function testCentralLockController() {
   const sequence = [];
