@@ -1,7 +1,5 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
-
 function createStartupScreen() {
   if (document.getElementById('startupScreen')) return;
 
@@ -70,7 +68,11 @@ function dismissStartupScreen() {
 }
 
 createStartupScreen();
-ipc.on('result-init-system', dismissStartupScreen);
+// Fail-open visually if startup initialization never returns. The renderer
+// coordinator dismisses this screen immediately when init-system resolves.
 window.setTimeout(dismissStartupScreen, 8000);
 
-exports.dismiss = dismissStartupScreen;
+module.exports = {
+  create: createStartupScreen,
+  dismiss: dismissStartupScreen
+};
