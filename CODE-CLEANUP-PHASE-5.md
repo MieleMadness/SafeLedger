@@ -12,21 +12,17 @@ A candidate is removed only after its runtime ownership, dynamic references, pac
 
 > **Delete proven dead code. Preserve live code even when static analysis cannot see how it is reached. Fix the analysis instead of deleting around it.**
 
-This rule matters because Electron applications can load resources through more than CommonJS `require()` and HTML `<link>` tags.
+This rule matters because Electron applications can load resources through more than CommonJS `require()` and HTML `<link>` tags, and because old tests can look important even after their behavior has been absorbed into current durable suites.
 
-## 2.6.96: first Phase 5 slice
+## 2.6.96: repository hygiene foundation
 
 ### Retire the orphaned legacy logger
 
 `src/main/logger.js` was an old optional file logger. It defaulted to disabled, wrote to a legacy installation-code directory, and was not part of the current runtime graph.
 
-Current SafeLedger security/activity auditing is owned by the sanitized audit path in the trusted main process. Keeping the old logger created a second-looking logging mechanism with no current owner or contract.
-
-2.6.96 removes `src/main/logger.js` rather than leaving it disabled or wrapping it with compatibility code.
+Current SafeLedger security/activity auditing is owned by the sanitized audit path in the trusted main process. 2.6.96 removes the old logger rather than leaving it disabled or wrapping it with compatibility code.
 
 ### Fix a dead-code audit blind spot
-
-Phase 1 introduced an advisory dead-code audit. Phase 4 taught it to follow the new `app.css` import graph.
 
 During Phase 5 review, `src/main/css/recovery-binder.css` initially appeared to be an unlinked stylesheet because it is not imported by `app.css`.
 
@@ -34,11 +30,7 @@ That result was misleading. `recovery-binder-ui.js` intentionally creates a `<li
 
 `link.href = 'css/recovery-binder.css'`
 
-The stylesheet is therefore live even though it is loaded dynamically.
-
-2.6.96 updates the audit so reachable renderer JavaScript can contribute local runtime stylesheet references. Those styles then participate in the same recursive `@import` traversal as styles loaded from `index.html`.
-
-This prevents a future cleanup from deleting a working feature stylesheet simply because it is lazy-loaded.
+2.6.96 updates the audit so reachable renderer JavaScript can contribute local runtime stylesheet references. This prevents a future cleanup from deleting a working lazy-loaded feature stylesheet simply because static analysis initially missed it.
 
 ## 2.6.97: canonical settings ownership
 
@@ -52,79 +44,74 @@ That double-nested path was historical installation-manager structure. The modul
 
 `src/main/settings-manager.js`
 
-The trusted main process now imports the canonical module directly with:
+The trusted main process and bootstrap now import the canonical module directly. The old nested implementation is deleted. No forwarding file, compatibility shim, duplicate implementation, or dormant copy is retained.
 
-`require('./settings-manager')`
+The Repository Hygiene suite scans active runtime JavaScript and canonical regression suites for the retired nested path so it cannot quietly return.
 
-The old nested implementation is deleted. No forwarding file, compatibility shim, duplicate implementation, or dormant copy is retained.
+## 2.6.98: retire the patch-numbered test archive
 
-### Why this is a structural fix rather than a rename
+Phase 1 intentionally stopped executing patch-numbered `development-*`, `hotfix-*`, and release-numbered test gates after their behavior was absorbed into durable subsystem suites. At that time the files remained in the repository as historical evidence while the canonical test architecture matured.
 
-The change is protected at the architecture level:
+By 2.6.97, SafeLedger had a stable **47-suite canonical regression contract**. Windows, Linux, and macOS workflows all execute that canonical runner plus the durable release-trust, encrypted lifecycle, Electron crypto, and real GUI smoke gates. None of the patch/release-numbered files are part of current CI.
 
-- the security cleanup suite now reads the canonical module and requires the old file to remain absent;
-- Repository Hygiene scans all active `src/main` JavaScript and every canonical regression suite for the retired nested settings path;
-- the dead-code audit must report `src/main/settings-manager.js` as reachable from the trusted main-process graph;
-- the main runtime must require the canonical settings manager directly;
-- the settings manager remains syntax-checked with the rest of the trusted runtime.
+2.6.98 therefore removes **108 retired patch/release-numbered test files** from the active repository.
 
-This means future work cannot quietly reintroduce the old directory through a shim or stale test path.
+This is not a reduction in current test coverage. It removes obsolete copies of old release-specific policy after their behavior has been transferred into durable tests named for the subsystem or behavior they protect.
 
-### Settings behavior intentionally unchanged
+### Why Git history is the correct archive
 
-The move does not alter:
+The deleted tests remain available through repository history, including the commits that introduced and later superseded them. Keeping those same files in the live `scripts/` directory created several problems:
 
-- `settings.json` location or format;
-- appearance migration from historical Light to Colorful;
-- privacy-mode normalization;
-- brute-force limits or counters;
-- lockout state behavior;
-- Self-Destruct state;
-- backup reminder and verification timestamps;
-- the list of user-editable settings;
-- atomic file writes.
+- contributors could mistake an old patch gate for current policy;
+- repository searches returned obsolete implementation assumptions alongside current contracts;
+- structural refactors had to account for tests that intentionally no longer executed;
+- stale source-string assertions could be accidentally revived;
+- the difference between current behavior coverage and historical release evidence was unnecessarily ambiguous.
 
-Only module ownership and repository path change.
+Git already provides the historical record. The live tree should contain the tests that define current behavior.
+
+### Durable retirement contract
+
+`scripts/test-architecture-tests.js` now requires that:
+
+- all 47 canonical suites remain present and unique;
+- no canonical suite uses a patch/release-numbered filename;
+- no `development-x.y.z-tests.js`, `hotfix-x.y.z-tests.js`, or `release-x.y-tests.js` file exists in `scripts/`;
+- package test commands do not invoke a retired numbered gate;
+- Windows, Linux, and macOS workflows continue to run `npm run test:regression`;
+- those workflows continue to use the canonical release-trust contract;
+- no platform workflow directly invokes a retired numbered test.
+
+The filename policy remains in `scripts/regression-suite.js` only as a guard against reintroducing the retired architecture. The historical tests themselves are gone from the active tree.
 
 ## Durable regression contract
 
-The canonical `scripts/repository-hygiene-tests.js` suite protects Phase 5 cleanup rules.
+SafeLedger continues to run 47 durable canonical regression suites. Phase 5 specifically protects:
 
-It verifies that:
+- removal of the orphaned legacy logger;
+- dynamic Recovery Binder stylesheet ownership;
+- canonical top-level settings-manager ownership;
+- absence of the retired double-nested settings path;
+- absence of patch/release-numbered test archives from the active repository;
+- continued use of canonical regression and release-trust gates on all supported build workflows.
 
-- the orphaned legacy logger stays removed;
-- Recovery Binder CSS remains present while the UI dynamically owns it;
-- the dead-code audit recognizes that dynamic stylesheet reference;
-- the canonical top-level settings manager exists and is runtime-reachable;
-- the retired double-nested settings manager file stays removed;
-- active runtime and canonical tests contain no references to the retired nested settings path;
-- the audit itself remains syntax-valid and advisory.
+## Items intentionally not combined into 2.6.98
 
-SafeLedger continues to run 47 durable canonical regression suites rather than reviving patch-numbered tests as active policy.
-
-## Items intentionally not combined into 2.6.97
-
-Phase 5 contains additional cleanup targets, but they remain isolated into later patches so failures stay easy to attribute.
-
-### Historical patch-test archive
-
-Phase 1 deliberately stopped executing patch-numbered `development-*`, `hotfix-*`, and release-era gates after their behavior was absorbed into durable subsystem tests. Those files are now repository-history candidates, but removing a large archive is a separate repository change from runtime module ownership.
-
-A later Phase 5 patch can retire that archive once the removal itself is protected by the Test Architecture contract.
+Phase 5 still contains cleanup targets with different risk surfaces. They remain isolated so failures stay easy to attribute.
 
 ### Duplicate application icon source
 
 `sl.png` and `build/icon-source.png` currently contain the same image bytes, but they serve different paths today: one is referenced by the runtime BrowserWindow and one by packaging configuration.
 
-They are not deleted merely because their contents are identical. Consolidation requires updating the runtime/build ownership together and then verifying all three packaged platforms.
+They are not deleted merely because their contents are identical. Consolidation requires updating runtime/build ownership together and then verifying Windows, Linux, and macOS packaged behavior.
 
 ### Selector-level CSS cleanup
 
-Phase 4 established one cascade owner. Duplicate selectors and unnecessary `!important` declarations remain a valid cleanup target, but broad visual cleanup is kept separate from Phase 5 repository hygiene so visual regressions are not mixed with file/path changes.
+Phase 4 established one cascade owner. Duplicate selectors and unnecessary `!important` declarations remain a valid cleanup target, but broad visual cleanup stays separate from repository file/path cleanup so visual regressions are not mixed with structural changes.
 
 ## Behavior and security intentionally preserved
 
-2.6.96 and 2.6.97 do not intentionally change:
+2.6.96 through 2.6.98 do not intentionally change:
 
 - AES-256-GCM vault encryption;
 - Argon2id password/key-envelope behavior;
@@ -153,4 +140,6 @@ When a file appears dead or a path appears obsolete:
 6. update all active owners together;
 7. add a durable regression when the change represents an architectural decision.
 
-Do not create empty shims, dormant copies, or renamed compatibility layers simply to make a cleanup appear safer. If a live path must move, update all owners together and test the new structure directly.
+For tests, current behavior belongs in durable subsystem suites. Release-specific history belongs in Git history, not as dormant executable-looking files in the active source tree.
+
+Do not create empty shims, dormant copies, renamed compatibility layers, or dead test archives simply to make a cleanup appear safer.
