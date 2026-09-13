@@ -66,17 +66,43 @@ function reachableJavaScript() {
   return { roots, reachable };
 }
 
+function cssImports(file) {
+  if (!fs.existsSync(file)) return [];
+  const source = fs.readFileSync(file, 'utf8');
+  const dependencies = [];
+  const pattern = /@import\s+(?:url\(\s*)?['"]([^'"]+\.css)['"]\s*\)?[^;]*;/gi;
+  let match;
+  while ((match = pattern.exec(source))) {
+    const request = String(match[1] || '').trim();
+    if (!request || /^(?:[a-z]+:|\/\/|\/)/i.test(request)) continue;
+    const resolved = path.resolve(path.dirname(file), request);
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) dependencies.push(resolved);
+  }
+  return dependencies;
+}
+
 function linkedCss() {
   const index = fs.readFileSync(indexFile, 'utf8');
   const files = new Set();
+  const queue = [];
   const pattern = /<link\b[^>]*\bhref=["']([^"']+\.css)["'][^>]*>/gi;
   let match;
   while ((match = pattern.exec(index))) {
     const href = match[1];
     if (!href.startsWith('.')) continue;
     const resolved = path.resolve(runtimeRoot, href);
-    if (fs.existsSync(resolved)) files.add(resolved);
+    if (fs.existsSync(resolved)) queue.push(resolved);
   }
+
+  while (queue.length) {
+    const file = path.resolve(queue.shift());
+    if (files.has(file)) continue;
+    files.add(file);
+    for (const dependency of cssImports(file)) {
+      if (!files.has(path.resolve(dependency))) queue.push(dependency);
+    }
+  }
+
   return files;
 }
 
@@ -140,7 +166,7 @@ if (process.argv.includes('--json')) {
   console.log(report.note);
   console.log(`Runtime roots: ${report.roots.join(', ')}`);
   console.log(`JavaScript: ${report.counts.reachableJavascript}/${report.counts.javascript} statically reachable`);
-  console.log(`CSS: ${report.counts.linkedCss}/${report.counts.css} linked from index.html`);
+  console.log(`CSS: ${report.counts.linkedCss}/${report.counts.css} linked through index.html and local @import chains`);
   console.log(`Assets: ${report.counts.referencedAssets}/${report.counts.assets} statically referenced by reachable runtime sources`);
   for (const [label, values] of [
     ['Unreachable JavaScript candidates', report.unreachableJavascript],
@@ -153,4 +179,4 @@ if (process.argv.includes('--json')) {
   }
 }
 
-module.exports = { walk, rel, resolveLocalRequire, localRequires, reachableJavaScript, linkedCss, referencedAssets, audit };
+module.exports = { walk, rel, resolveLocalRequire, localRequires, reachableJavaScript, cssImports, linkedCss, referencedAssets, audit };
