@@ -313,7 +313,6 @@
 /* Copy uses the provided circular-arrow/plus visual language instead of the
  * small crowded font glyph. */
 .copy-inline-button {
-  display: inline-flex !important;
   align-items: center;
   justify-content: center;
 }
@@ -435,7 +434,6 @@
   max-width: 320px;
   margin-left: auto;
   margin-right: auto;
-  color: var(--sl-text-strong) !important;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.45;
@@ -552,9 +550,6 @@ html[data-theme="dark"] .recovery-drill-warning {
 /* Custom or unsupported wallet names should never look like a broken/missing
  * image. The fallback is a fully local SVG wallet with a visible clasp. */
 .wallet-list-fallback-icon {
-  width: 22px !important;
-  height: 22px !important;
-  flex: 0 0 22px !important;
   margin-right: 8px;
   display: inline-flex;
   align-items: center;
@@ -589,8 +584,6 @@ html[data-theme="dark"] .recovery-drill-warning {
 
 @media (max-width: 1000px) {
   .wallet-list-fallback-icon {
-    width: 19px !important;
-    height: 19px !important;
     flex-basis: 19px !important;
   }
   .sl-wallet-fallback-svg {
@@ -610,7 +603,6 @@ html[data-theme="dark"] .recovery-drill-warning {
   box-sizing: border-box;
   border-width: 1px !important;
   border-radius: var(--sl-radius-sm) !important;
-  box-shadow: none !important;
   transform: none !important;
   transition: background-color .12s ease, color .12s ease, border-color .12s ease;
 }
