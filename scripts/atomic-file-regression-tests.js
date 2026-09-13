@@ -36,7 +36,7 @@ async function run() {
       ['src/main/robust-vault.js', "require('./atomic-file')"],
       ['src/main/crypto-session-main.js', "require('./atomic-file')"],
       ['src/main/security-main.js', "require('./atomic-file')"],
-      ['src/main/installManager/installManager/settingsManager.js', "require('../../atomic-file')"]
+      ['src/main/settings-manager.js', "require('./atomic-file')"]
     ];
     for (const [relative, token] of sourceChecks) {
       const source = fs.readFileSync(path.join(__dirname, '..', relative), 'utf8');
