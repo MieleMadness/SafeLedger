@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const settingsSchema = require('../src/main/settings-schema');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 const appAppearance = require('../src/main/app-appearance');
 
 (async () => {
