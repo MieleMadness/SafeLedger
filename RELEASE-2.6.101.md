@@ -10,9 +10,11 @@ SafeLedger 2.6.101 continues Code Cleanup Phase 5 by reducing CSS specificity de
 - It marks an earlier `!important` declaration as removable only when the same selector, same at-rule context, and same property are declared later with `!important`.
 - For grouped selectors, every selector in the block must have a later owner before the declaration is considered removable.
 - Initial review found 67 physically removable shadowed declarations across the cascade.
-- 2.6.101 removes the 37 shadowed declarations owned by the broad `app-theme.css` layer.
+- 2.6.101 removes the 38 shadowed declarations owned by the broad `app-theme.css` layer.
+- Physical `!important` usage drops from 601 declarations to 563; `app-theme.css` drops from 122 to 84.
 - Later component owners remain unchanged in `ui-polish.css`, `ui-current.css`, `ui-dock-refinement.css`, and `qr-theme.css`.
 - The Style Consolidation regression now fails if `app-theme.css` regains an `!important` declaration that is always shadowed by a later component owner.
+- The UI Polish regression validates action-button sizing and wallet-category appearance at their surviving component owner rather than requiring stale copies in the base theme.
 
 ## Why this is not a bulk `!important` removal
 
@@ -36,7 +38,7 @@ Examples of ownership moved fully out of `app-theme.css` include:
 
 ## Intentionally left alone
 
-Thirty additional provably shadowed declarations remain outside `app-theme.css`. They span base layout, token artwork, current UI, and UI polish layers. They are not mixed into this patch so each ownership area can be reviewed independently.
+Twenty-nine additional provably shadowed declarations remain outside `app-theme.css`. They span base layout, token artwork, current UI, and UI polish layers. They are not mixed into this patch so each ownership area can be reviewed independently.
 
 The broader set of `!important` declarations that are not provably shadowed also remains untouched. Those declarations may still be required for specificity, theme, accessibility, responsive, or framework behavior.
 
