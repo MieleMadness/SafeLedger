@@ -20,7 +20,7 @@ const manifest = read('src/main/css/app.css');
 const globalSearch = read('src/main/global-search.js');
 const recoveryBinder = read('src/main/recovery-binder.js');
 const activityHistory = read('src/main/activity-history.js');
-const settingsManager = read('src/main/installManager/installManager/settingsManager.js');
+const settingsManager = read('src/main/settings-manager.js');
 const dataWriteService = read('src/main/data-write-service.js');
 
 assert(/^2\.\d+\.\d+$/.test(pkg.version), 'Roadmap candidate must use semantic SafeLedger 2.x versioning.');
@@ -88,7 +88,7 @@ for (const relative of [
   'src/main/renderer-entry.js',
   'src/main/renderer.js',
   'src/main/data-write-service.js',
-  'src/main/installManager/installManager/settingsManager.js',
+  'src/main/settings-manager.js',
   'src/main/dashboard-summary.js',
   'src/main/dashboard-ui.js',
   'src/main/activity-history.js',
