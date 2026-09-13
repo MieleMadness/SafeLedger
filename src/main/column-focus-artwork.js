@@ -29,7 +29,7 @@ function bindColumnClicks() {
       const target = event.target;
       const link = target && typeof target.closest === 'function' ? target.closest('a') : null;
       if (link && area.contains(link)) setFocus(kind);
-    });
+    }, true);
   }
 
   for (const id of ['dashboardButton', 'activityButton', 'settingsButton']) {

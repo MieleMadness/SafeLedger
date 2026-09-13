@@ -31,6 +31,8 @@ for (const pair of [
 ]) {
   assert(focus.includes(pair[0]), `${pair[1]} list clicks must own their matching focused-column state.`);
 }
+assert(/area\.addEventListener\('click',[\s\S]*?\}, true\);/.test(focus),
+  'Column focus click handling must run in capture phase before list-item handlers replace their DOM nodes.');
 for (const utility of ['dashboardButton', 'activityButton', 'settingsButton']) {
   assert(focus.includes(utility), `${utility} must clear decorative column focus for neutral utility views.`);
 }
