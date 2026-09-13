@@ -60,6 +60,14 @@ assert(Array.isArray(audit.unreachableJavascript));
 assert(Array.isArray(audit.unlinkedCss));
 assert(Array.isArray(audit.unreferencedAssets));
 assert(audit.note.includes('not safe to delete'), 'Dead-code audit must remain advisory rather than deleting by static analysis alone.');
+for (const canonicalCss of [
+  'src/main/css/app.css',
+  'src/main/css/site.css',
+  'src/main/css/ui-current.css',
+  'src/main/css/appearance-palettes.css'
+]) {
+  assert(!audit.unlinkedCss.includes(canonicalCss), `${canonicalCss} must remain reachable through the app.css import graph.`);
+}
 
 for (const relative of [
   'scripts/regression-suite.js',
