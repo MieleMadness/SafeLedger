@@ -12,6 +12,10 @@ const exists = (relative) => fs.existsSync(path.join(root, relative));
 const index = read('src/main/index.html');
 const manifest = read('src/main/css/app.css');
 const css = read('src/main/css/site.css');
+const tokenIcons = read('src/main/css/token-icons.css');
+const globalSearchCss = read('src/main/css/global-search.css');
+const uiPolish = read('src/main/css/ui-polish.css');
+const dockCss = read('src/main/css/ui-dock-refinement.css');
 const currentUi = read('src/main/css/ui-current.css');
 
 const legacyPatchFiles = [
@@ -112,6 +116,19 @@ for (const selector of [
   assert(currentUi.includes(selector), `Current UI stylesheet should preserve consolidated behavior for ${selector}`);
 }
 
+assert(!css.includes('::-webkit-scrollbar { width: 10px; height: 10px; }'),
+  'Base site.css must not reintroduce the duplicate scrollbar-size rule.');
+assert(currentUi.includes('::-webkit-scrollbar {\n  width: 10px;\n  height: 10px;\n}'),
+  'Theme-aware ui-current.css must remain the canonical scrollbar-size owner.');
+assert(!tokenIcons.includes('.coin-list-label {'),
+  'Token artwork CSS must not own generic coin-list label truncation.');
+assert(globalSearchCss.includes('.profile-list-name, .coin-list-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }'),
+  'Global/list layout CSS must remain the canonical coin-list label truncation owner.');
+assert(!uiPolish.includes('.detail-action-button .fa-star,\n.detail-action-button .fa-star-o { color: var(--sl-icon-gold) !important; }'),
+  'General UI polish must not duplicate favorite-action color ownership.');
+assert(dockCss.includes('.detail-action-button .fa-star,\n.detail-action-button .fa-star-o {\n  color: var(--sl-icon-gold) !important;\n}'),
+  'Dock refinement must remain the canonical favorite-action color owner.');
+
 assert(exists('scripts/ui-visual-baseline.json'),
   'Consolidated UI must keep a fixture-independent visual baseline after historical CSS files are removed.');
 assert(exists('scripts/visual-contract-regression-tests.js'),
@@ -120,6 +137,8 @@ assert(exists('scripts/visual-contract-regression-tests.js'),
 const cssOwnership = auditCssOwnership();
 assert.deepStrictEqual(cssOwnership.missing, [],
   `CSS ownership audit found missing cascade files: ${cssOwnership.missing.join(', ')}`);
+assert.strictEqual(cssOwnership.identicalDuplicateSelectorContexts, 0,
+  'Canonical CSS cascade must not contain byte-equivalent duplicate selector/context blocks; keep one explicit owner instead.');
 printCssOwnershipReport(cssOwnership);
 
-console.log('PASS canonical stylesheet consolidation uses one ordered app.css cascade and no retired versioned CSS fixtures.');
+console.log('PASS canonical stylesheet consolidation uses one ordered app.css cascade, single-owner exact selectors, and no retired versioned CSS fixtures.');
