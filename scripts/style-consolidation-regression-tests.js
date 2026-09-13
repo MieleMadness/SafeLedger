@@ -143,6 +143,9 @@ assert.strictEqual(cssOwnership.identicalDuplicateSelectorContexts, 0,
 printCssOwnershipReport(cssOwnership);
 
 const importantOwnership = auditImportantOwnership();
+const shadowedThemeDeclarations = importantOwnership.removable.filter((item) => item.file === 'app-theme.css');
+assert.deepStrictEqual(shadowedThemeDeclarations, [],
+  'app-theme.css must not regain !important declarations that are always shadowed by later component owners.');
 printImportantOwnershipReport(importantOwnership);
 
 console.log('PASS canonical stylesheet consolidation uses one ordered app.css cascade, single-owner exact selectors, and no retired versioned CSS fixtures.');
