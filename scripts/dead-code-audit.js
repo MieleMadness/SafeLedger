@@ -81,7 +81,34 @@ function cssImports(file) {
   return dependencies;
 }
 
-function linkedCss() {
+function runtimeCssReferences(sourceFiles) {
+  const files = new Set();
+  const patterns = [
+    /\.href\s*=\s*['"]([^'"]+\.css)['"]/gi,
+    /setAttribute\(\s*['"]href['"]\s*,\s*['"]([^'"]+\.css)['"]\s*\)/gi
+  ];
+
+  for (const file of sourceFiles || []) {
+    if (!fs.existsSync(file)) continue;
+    const source = fs.readFileSync(file, 'utf8');
+    for (const pattern of patterns) {
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(source))) {
+        const request = String(match[1] || '').trim();
+        if (!request || /^(?:[a-z]+:|\/\/|\/)/i.test(request)) continue;
+        // Renderer stylesheet hrefs resolve from index.html, not from the JS
+        // module's filesystem directory. All renderer source currently lives
+        // beside index.html under src/main, so use the document root here.
+        const resolved = path.resolve(runtimeRoot, request.replace(/^\.\//, ''));
+        if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) files.add(resolved);
+      }
+    }
+  }
+  return files;
+}
+
+function linkedCss(runtimeSources = []) {
   const index = fs.readFileSync(indexFile, 'utf8');
   const files = new Set();
   const queue = [];
@@ -93,6 +120,8 @@ function linkedCss() {
     const resolved = path.resolve(runtimeRoot, href);
     if (fs.existsSync(resolved)) queue.push(resolved);
   }
+
+  for (const dynamicFile of runtimeCssReferences(runtimeSources)) queue.push(dynamicFile);
 
   while (queue.length) {
     const file = path.resolve(queue.shift());
@@ -137,7 +166,7 @@ function audit() {
   const allCss = all.filter((file) => file.endsWith('.css'));
   const allAssets = all.filter((file) => rel(file).startsWith('src/main/assets/'));
   const jsGraph = reachableJavaScript();
-  const css = linkedCss();
+  const css = linkedCss(jsGraph.reachable);
   const assetSources = [indexFile, ...Array.from(jsGraph.reachable), ...Array.from(css)];
   const assets = referencedAssets(assetSources);
 
@@ -166,7 +195,7 @@ if (process.argv.includes('--json')) {
   console.log(report.note);
   console.log(`Runtime roots: ${report.roots.join(', ')}`);
   console.log(`JavaScript: ${report.counts.reachableJavascript}/${report.counts.javascript} statically reachable`);
-  console.log(`CSS: ${report.counts.linkedCss}/${report.counts.css} linked through index.html and local @import chains`);
+  console.log(`CSS: ${report.counts.linkedCss}/${report.counts.css} reachable through index.html, runtime stylesheet references, and local @import chains`);
   console.log(`Assets: ${report.counts.referencedAssets}/${report.counts.assets} statically referenced by reachable runtime sources`);
   for (const [label, values] of [
     ['Unreachable JavaScript candidates', report.unreachableJavascript],
@@ -179,4 +208,15 @@ if (process.argv.includes('--json')) {
   }
 }
 
-module.exports = { walk, rel, resolveLocalRequire, localRequires, reachableJavaScript, cssImports, linkedCss, referencedAssets, audit };
+module.exports = {
+  walk,
+  rel,
+  resolveLocalRequire,
+  localRequires,
+  reachableJavaScript,
+  cssImports,
+  runtimeCssReferences,
+  linkedCss,
+  referencedAssets,
+  audit
+};
