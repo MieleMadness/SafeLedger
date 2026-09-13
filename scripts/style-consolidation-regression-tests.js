@@ -3,6 +3,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { audit: auditCssOwnership, printReport: printCssOwnershipReport } = require('./css-ownership-audit');
 
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
@@ -115,5 +116,10 @@ assert(exists('scripts/ui-visual-baseline.json'),
   'Consolidated UI must keep a fixture-independent visual baseline after historical CSS files are removed.');
 assert(exists('scripts/visual-contract-regression-tests.js'),
   'Consolidated UI must keep its reusable visual-contract gate.');
+
+const cssOwnership = auditCssOwnership();
+assert.deepStrictEqual(cssOwnership.missing, [],
+  `CSS ownership audit found missing cascade files: ${cssOwnership.missing.join(', ')}`);
+printCssOwnershipReport(cssOwnership);
 
 console.log('PASS canonical stylesheet consolidation uses one ordered app.css cascade and no retired versioned CSS fixtures.');
