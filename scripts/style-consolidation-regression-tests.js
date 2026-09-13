@@ -9,6 +9,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const exists = (relative) => fs.existsSync(path.join(root, relative));
 
 const index = read('src/main/index.html');
+const manifest = read('src/main/css/app.css');
 const css = read('src/main/css/site.css');
 const currentUi = read('src/main/css/ui-current.css');
 
@@ -36,13 +37,46 @@ const retiredHistoricalUiFiles = [
   'src/main/css/ui-2.6.7-theme-refinement.css'
 ];
 
-assert(index.includes('./css/site.css'));
-assert(index.includes('./css/token-icons.css'));
-assert(index.includes('./css/ui-current.css'));
-assert(!index.includes('./css/2.0.'));
+const expectedCascade = [
+  'site.css',
+  'token-icons.css',
+  'product-features.css',
+  'recovery-refinement.css',
+  'activity-history.css',
+  'global-search.css',
+  'foundation.css',
+  'local-icons.css',
+  'app-theme.css',
+  'ui-polish.css',
+  'ui-dock-refinement.css',
+  'profile-setup.css',
+  'ui-current.css',
+  'dashboard-layout.css',
+  'status-messages.css',
+  'qr-theme.css',
+  'workspace-dividers.css',
+  'appearance-palettes.css'
+];
+
+const stylesheetLinks = Array.from(index.matchAll(/<link\b[^>]*\bhref=["']([^"']+\.css)["'][^>]*>/gi), (match) => match[1]);
+assert.deepStrictEqual(stylesheetLinks, ['./css/app.css'],
+  'index.html must have one stylesheet owner: css/app.css.');
+assert(index.includes('<link id="styleSheet" href="./css/app.css" rel="stylesheet">'),
+  'The renderer stylesheet link must point to the canonical app.css manifest.');
+
+const manifestImports = Array.from(manifest.matchAll(/@import\s+(?:url\(\s*)?["']([^"']+\.css)["']\s*\)?[^;]*;/gi), (match) => match[1]);
+assert.deepStrictEqual(manifestImports, expectedCascade,
+  'app.css must preserve the reviewed cascade order exactly.');
+for (const file of expectedCascade) {
+  assert(exists(`src/main/css/${file}`), `app.css import is missing from disk: ${file}`);
+}
+assert(!manifest.includes('app-state.css'),
+  'The stylesheet manifest must not reference a non-existent app-state.css patch layer.');
+
 for (const relative of retiredHistoricalUiFiles) {
   const href = `./css/${path.basename(relative)}`;
   assert(!index.includes(href), `${href} must stay retired from the runtime cascade.`);
+  assert(!manifest.includes(path.basename(relative)), `${relative} must not return through app.css.`);
   assert.strictEqual(exists(relative), false, `${relative} should stay deleted after consolidation into ui-current.css.`);
 }
 
@@ -82,4 +116,4 @@ assert(exists('scripts/ui-visual-baseline.json'),
 assert(exists('scripts/visual-contract-regression-tests.js'),
   'Consolidated UI must keep its reusable visual-contract gate.');
 
-console.log('PASS canonical stylesheet consolidation keeps one current UI cascade and no retired versioned CSS fixtures.');
+console.log('PASS canonical stylesheet consolidation uses one ordered app.css cascade and no retired versioned CSS fixtures.');
