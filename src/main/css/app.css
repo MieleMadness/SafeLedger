@@ -3,8 +3,9 @@
  *
  * index.html loads this one file. The order below is the application cascade
  * contract: legacy/base layout first, feature/component refinements next,
- * shared theme tokens/colors after components, and explicit application state
- * last. Keep ordering changes intentional and covered by css-architecture-tests.
+ * shared theme tokens/colors after components, and explicit palette overrides
+ * last. Keep ordering changes intentional and covered by the durable style
+ * consolidation regression suite.
  */
 
 /* Base shell, icon registries, and feature foundations. */
@@ -30,6 +31,3 @@
 
 /* Theme palettes intentionally come after component definitions. */
 @import url("appearance-palettes.css");
-
-/* Transient application state is the final cascade owner. */
-@import url("app-state.css");
