@@ -129,7 +129,7 @@ async function run() {
       initialDekHex = sessionKey.toString('hex');
       assert.strictEqual(fs.existsSync(path.join(vaultDir, 'key-envelope.json')), true);
       await robustVault.makeDir(vaultDir);
-      await robustVault.initVaultList(vaultDir, key);
+      await robustVault.initVaultList(vaultDir, sessionKey);
       await robustVault.saveVault(
         path.join(vaultDir, 'zvault-0.json'),
         JSON.stringify({ file: 'zvault-0.json', groups: [{ name: 'Ledger', records: [] }] }),
