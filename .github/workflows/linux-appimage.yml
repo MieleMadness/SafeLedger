@@ -35,8 +35,8 @@ jobs:
       - name: Run regression tests
         run: npm run test:regression
 
-      - name: Run Phase 5 contract gate
-        run: node scripts/hotfix-2.6.53-tests.js
+      - name: Run release trust contract gate
+        run: node scripts/release-trust-contract-tests.js
 
       - name: Run encrypted lifecycle behavioral test
         run: node scripts/behavioral-lifecycle-tests.js

@@ -37,9 +37,9 @@ jobs:
         shell: pwsh
         run: npm run test:regression
 
-      - name: Run Phase 5 contract gate
+      - name: Run release trust contract gate
         shell: pwsh
-        run: node scripts/hotfix-2.6.53-tests.js
+        run: node scripts/release-trust-contract-tests.js
 
       - name: Run encrypted lifecycle behavioral test
         shell: pwsh
