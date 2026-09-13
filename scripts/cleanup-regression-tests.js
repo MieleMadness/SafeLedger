@@ -8,6 +8,8 @@ const { execFileSync } = require('child_process');
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const exists = (relative) => fs.existsSync(path.join(root, relative));
+const retiredSettingsManagerFile = ['src/main', 'installManager', 'installManager', 'settingsManager.js'].join('/');
+const retiredSettingsManagerImport = ['installManager', 'installManager', 'settingsManager'].join('/');
 const main = read('src/main/main.js');
 const cryptoSession = read('src/main/crypto-session-main.js');
 const cryptoUi = read('src/main/crypto-ui-bridge.js');
@@ -26,7 +28,7 @@ const security = read('src/main/security-enhancements.js');
 for (const removed of [
   'src/main/vault.js',
   'src/main/installManager/installManager/installCodeManager.js',
-  'src/main/installManager/installManager/settingsManager.js',
+  retiredSettingsManagerFile,
   'src/main/master-key-verifier.js',
   'src/main/login-failure-policy.js',
   'src/main/settings-enhancements.js',
@@ -38,7 +40,7 @@ for (const removed of [
 
 assert(main.includes("const settingsManager = require('./settings-manager');"),
   'main.js must own settings through the canonical top-level settings-manager module.');
-assert(!main.includes('installManager/installManager/settingsManager'));
+assert(!main.includes(retiredSettingsManagerImport));
 assert(!main.includes('activeVaultData'));
 assert(!main.includes('activeCryptoKey'));
 assert(!main.includes('params.cryptoKey'));
