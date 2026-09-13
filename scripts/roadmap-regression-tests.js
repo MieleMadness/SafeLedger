@@ -16,6 +16,7 @@ const preload = read('src/main/preload.js');
 const renderer = read('src/main/renderer.js');
 const entry = read('src/main/renderer-entry.js');
 const index = read('src/main/index.html');
+const manifest = read('src/main/css/app.css');
 const globalSearch = read('src/main/global-search.js');
 const recoveryBinder = read('src/main/recovery-binder.js');
 const activityHistory = read('src/main/activity-history.js');
@@ -62,7 +63,8 @@ for (const forbidden of ['wallet.password', 'wallet.seedPhrase', 'wallet.recover
 
 assert(entry.includes("require('./app-appearance.js')"), 'Appearance controller must remain part of renderer startup.');
 assert(settingsManager.includes("appearance: 'system'"), 'System-following appearance must remain the default.');
-assert(index.includes('./css/app-theme.css'), 'Current application theme stylesheet must remain loaded.');
+assert(index.includes('./css/app.css'), 'Application shell must remain connected to the canonical stylesheet manifest.');
+assert(manifest.includes('@import url("app-theme.css");'), 'Current application theme stylesheet must remain loaded through the canonical manifest.');
 
 assert(index.includes('id="panicLockButton"'), 'Emergency Lock must remain present.');
 assert(main.includes('cryptoSession.clearSession()'), 'Main process must retain explicit encryption-session clearing.');
