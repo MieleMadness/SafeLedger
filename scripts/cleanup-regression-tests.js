@@ -16,7 +16,7 @@ const services = read('src/main/renderer-services.js');
 const profile = read('src/main/profile.js');
 const group = read('src/main/group.js');
 const record = read('src/main/record.js');
-const settingsManager = read('src/main/installManager/installManager/settingsManager.js');
+const settingsManager = read('src/main/settings-manager.js');
 const encryption = read('src/main/encryption.js');
 const keyEnvelope = read('src/main/key-envelope.js');
 const runtimeUtils = read('src/main/runtime-utils.js');
@@ -26,6 +26,7 @@ const security = read('src/main/security-enhancements.js');
 for (const removed of [
   'src/main/vault.js',
   'src/main/installManager/installManager/installCodeManager.js',
+  'src/main/installManager/installManager/settingsManager.js',
   'src/main/master-key-verifier.js',
   'src/main/login-failure-policy.js',
   'src/main/settings-enhancements.js',
@@ -35,6 +36,9 @@ for (const removed of [
   'src/main/settings-shortcut-ui.js'
 ]) assert.strictEqual(exists(removed), false, `${removed} should remain removed`);
 
+assert(main.includes("const settingsManager = require('./settings-manager');"),
+  'main.js must own settings through the canonical top-level settings-manager module.');
+assert(!main.includes('installManager/installManager/settingsManager'));
 assert(!main.includes('activeVaultData'));
 assert(!main.includes('activeCryptoKey'));
 assert(!main.includes('params.cryptoKey'));
@@ -64,8 +68,9 @@ assert(!security.includes("require('path')"));
 
 for (const relative of [
   'src/main/main.js','src/main/preload.js','src/main/security-main.js','src/main/crypto-session-main.js',
-  'src/main/crypto-ui-bridge.js','src/main/renderer-services.js','src/main/renderer-state.js','src/main/security-enhancements.js'
+  'src/main/crypto-ui-bridge.js','src/main/renderer-services.js','src/main/renderer-state.js','src/main/security-enhancements.js',
+  'src/main/settings-manager.js'
 ]) {
   execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 }
-console.log('PASS sandbox cleanup preserves main-only DEK, semantic renderer services, encryption, portability, and offline invariants.');
+console.log('PASS sandbox cleanup preserves main-only DEK, semantic renderer services, canonical settings ownership, encryption, portability, and offline invariants.');
