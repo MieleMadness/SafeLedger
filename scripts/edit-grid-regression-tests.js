@@ -14,6 +14,7 @@ for (const file of ['src/main/edit-form-ui.js', 'src/main/security-ui.js', 'src/
 }
 
 const index = read('src/main/index.html');
+const manifest = read('src/main/css/app.css');
 const formUi = read('src/main/edit-form-ui.js');
 const securityUi = read('src/main/security-ui.js');
 const record = read('src/main/record.js');
@@ -21,8 +22,10 @@ const group = read('src/main/group.js');
 const presentation = read('src/main/vault-item-presentation.js');
 const siteCss = read('src/main/css/site.css');
 
-assert(index.includes('./css/site.css'));
+assert(index.includes('./css/app.css'));
+assert(manifest.includes('@import url("site.css");'), 'Edit-grid styles must remain reachable through the canonical app.css cascade.');
 assert(!index.includes('./css/2.0.'));
+assert(!manifest.includes('2.0.'), 'Retired versioned CSS must not return through the canonical manifest.');
 assert(!index.includes("require('./edit-form-grid-enhancements.js')"));
 assert(!index.includes("require('./form-spacing-enhancements.js')"));
 assert(!index.includes("require('./edit-security-enhancements.js')"));
