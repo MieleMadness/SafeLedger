@@ -10,7 +10,6 @@ body {
 
 * { box-sizing: border-box; }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: rgba(255,255,255,.12); border-radius: 10px; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.28); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.42); border: 2px solid transparent; background-clip: padding-box; }
