@@ -11,6 +11,8 @@ const exists = (relative) => fs.existsSync(path.join(root, relative));
 
 const pkg = JSON.parse(read('package.json'));
 const main = read('src/main/main.js');
+const bootstrap = read('src/main/bootstrap.js');
+const sessionLock = read('src/main/session-lock-main.js');
 const preload = read('src/main/preload.js');
 const index = read('src/main/index.html');
 const entry = read('src/main/renderer-entry.js');
@@ -32,9 +34,20 @@ assert(main.includes("const securityMain = require('./security-main')"));
 assert(main.includes('securityMain.registerIpcHandlers'));
 assert(main.includes("process.env.SAFELEDGER_GUI_SMOKE === '1'"));
 assert(main.includes('installGuiSmokeProbe'));
-const panicLockBlock = main.slice(main.indexOf("ipc.on('panic-lock'"), main.indexOf("ipc.on('record-password-failure'"));
-assert(panicLockBlock.includes('cryptoSession.clearSession()'), 'Emergency Lock must clear the active encryption session');
-assert(panicLockBlock.includes('mainWindow.webContents.reload()'), 'Emergency Lock must reset the renderer to the login screen');
+
+assert(!main.includes("ipc.on('panic-lock'"), 'Emergency Lock must not have a second owner in main.js.');
+assert(!bootstrap.includes("removeAllListeners('panic-lock')"), 'Bootstrap must not repair duplicate Emergency Lock listeners at runtime.');
+const panicLockStart = bootstrap.indexOf("ipc.on('panic-lock'");
+const panicLockEnd = bootstrap.indexOf("ipc.handle('device-storage-health'", panicLockStart);
+assert(panicLockStart >= 0 && panicLockEnd > panicLockStart, 'Bootstrap must own the Emergency Lock IPC route.');
+const panicLockBlock = bootstrap.slice(panicLockStart, panicLockEnd);
+assert(panicLockBlock.includes('lockController.lockSession'), 'Emergency Lock must use the centralized session-lock controller.');
+assert(!panicLockBlock.includes('cryptoSession.clearSession()'), 'Emergency Lock IPC must not duplicate DEK cleanup outside the session-lock controller.');
+assert(sessionLock.includes('cryptoSession.clearSession();'), 'Central session lock must clear the active encryption session.');
+assert(sessionLock.indexOf('cryptoSession.clearSession();') < sessionLock.indexOf("win.webContents.send('security-session-locked'"),
+  'Central session lock must clear the DEK before touching renderer UI.');
+assert(sessionLock.includes('win.webContents.reload()'), 'Central session lock must reset the renderer to the login screen.');
+
 assert(preload.includes("const { contextBridge, ipcRenderer } = require('electron')"));
 assert(preload.includes("contextBridge.exposeInMainWorld('safeLedgerApi'"));
 assert(!preload.includes("require('./"));
@@ -68,7 +81,8 @@ assert(securityMain.includes("require('./atomic-file')"));
 assert(pkg.scripts['test:gui-smoke'].includes('run-gui-smoke.js'));
 
 for (const relative of [
-  'src/main/main.js', 'src/main/preload.js', 'src/main/security-main.js',
+  'src/main/bootstrap.js', 'src/main/main.js', 'src/main/session-lock-main.js',
+  'src/main/preload.js', 'src/main/security-main.js',
   'src/main/security-enhancements.js', 'src/main/profile-transaction.js',
   'src/main/renderer-bridge.js', 'src/main/renderer-entry.js', 'src/main/atomic-file.js',
   'src/main/vault-schema.js', 'src/main/legacy-import.js',
@@ -76,4 +90,4 @@ for (const relative of [
   'scripts/build-renderer.js', 'scripts/run-gui-smoke.js', 'scripts/version-bump-check.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger sandbox, Emergency Lock login reset, independent backup verification bridge, real GUI smoke hooks, and main-process security operations.');
+console.log('PASS SafeLedger sandbox, single-owner Emergency Lock, independent backup verification bridge, real GUI smoke hooks, and main-process security operations.');

@@ -217,6 +217,7 @@ function testStaticBootstrapBoundary() {
   const root = path.join(__dirname, '..');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const bootstrap = fs.readFileSync(path.join(root, 'src/main/bootstrap.js'), 'utf8');
+  const main = fs.readFileSync(path.join(root, 'src/main/main.js'), 'utf8');
   const preload = fs.readFileSync(path.join(root, 'src/main/preload.js'), 'utf8');
   const rendererBridge = fs.readFileSync(path.join(root, 'src/main/renderer-bridge.js'), 'utf8');
   const rendererSecurity = fs.readFileSync(path.join(root, 'src/main/security-enhancements.js'), 'utf8');
@@ -224,8 +225,13 @@ function testStaticBootstrapBoundary() {
   const service = fs.readFileSync(path.join(root, 'src/main/device-security-main.js'), 'utf8');
 
   assert.strictEqual(pkg.main, 'src/main/bootstrap.js');
-  assert(bootstrap.includes("ipc.removeAllListeners('panic-lock')"));
+  assert(bootstrap.includes('function startAllowedRuntime()'));
+  assert(bootstrap.includes("const mainRuntime = require('./main');"));
+  assert(bootstrap.includes('mainRuntime.registerCoreIpcHandlers();'));
+  assert(bootstrap.includes("ipc.on('panic-lock'"));
   assert(bootstrap.includes('lockController.lockSession'));
+  assert(!bootstrap.includes("removeAllListeners('panic-lock')"), 'Central lock ownership must not depend on replacing another listener.');
+  assert(!main.includes("ipc.on('panic-lock'"), 'main.js must not keep the retired Emergency Lock listener.');
   assert(bootstrap.includes('new SensitiveFingerprintSession()'));
   assert(bootstrap.includes('onLock: () => sensitiveFingerprints.clear()'));
   assert(bootstrap.includes("ipc.handle('device-storage-health'"));
@@ -259,7 +265,7 @@ function testStaticBootstrapBoundary() {
   await testDeviceSecurityEvents();
   await testBackupAgeSettings();
   testStaticBootstrapBoundary();
-  console.log('PASS SafeLedger 2.3+ centralized locks, OS events, storage protection/health, restore identity rotation, session-only cleanup, startup marker repair, and backup-age metadata.');
+  console.log('PASS SafeLedger centralized locks, OS events, storage protection/health, restore identity rotation, session-only cleanup, startup marker repair, and backup-age metadata.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
