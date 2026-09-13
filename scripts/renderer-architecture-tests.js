@@ -51,9 +51,11 @@ assert(!cryptoUi.includes('latestSettings') && !cryptoUi.includes('latestVaultLi
 assert(cryptoUi.includes("const rendererState = require('./renderer-state');"));
 assert(cryptoUi.includes('services.cryptoLogin(') && cryptoUi.includes('services.cryptoChangePassword('));
 
-assert(passwordUi.includes('function show(options = {})'));
-assert(passwordUi.includes('options.onSubmit'),
-  'Change Password must receive a direct submit callback from its owner.');
+assert(passwordUi.includes('function show()'));
+assert(passwordUi.includes("const cryptoUi = require('./crypto-ui-bridge');") && passwordUi.includes('cryptoUi.handlePasswordChange(editBtn)'),
+  'Change Password form must call the crypto controller directly from its own submit handler.');
+assert(passwordUi.includes("form.addEventListener('submit'"),
+  'Change Password must attach its handler while rendering the form.');
 assert(!passwordUi.includes('stopImmediatePropagation'));
 
 assert(preload.includes('let resultRequestQueue = Promise.resolve();'),
