@@ -4,29 +4,28 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { CANONICAL_SUITES, isHistoricalTestFile } = require('./regression-suite');
+const { CANONICAL_SUITES, isRetiredTestFile } = require('./regression-suite');
 
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const pkg = JSON.parse(read('package.json'));
 const regressionCommand = String(pkg.scripts && pkg.scripts['test:regression'] || '');
+const retiredGatePattern = /(?:hotfix|development)-\d+\.\d+\.\d+-tests\.js|release-\d+\.\d+-tests\.js/;
 
 assert(regressionCommand.includes('node scripts/run-regression-suite.js'), 'Main regression command must use the canonical suite runner.');
-assert(!/(?:hotfix|development)-\d+\.\d+\.\d+-tests\.js/.test(regressionCommand),
-  'Patch-numbered historical tests must not execute directly from test:regression.');
-assert(!/release-\d+\.\d+-tests\.js/.test(regressionCommand),
-  'Release-numbered historical tests must not execute directly from test:regression.');
+assert(!retiredGatePattern.test(regressionCommand),
+  'Retired patch/release-numbered tests must not execute directly from test:regression.');
 
 for (const [name, command] of Object.entries(pkg.scripts || {})) {
   if (!name.startsWith('test:')) continue;
-  assert(!/(?:hotfix|development)-\d+\.\d+\.\d+-tests\.js/.test(String(command)),
-    `${name} must not call a patch-numbered historical gate.`);
+  assert(!retiredGatePattern.test(String(command)), `${name} must not call a retired patch/release-numbered gate.`);
 }
 
+assert.strictEqual(CANONICAL_SUITES.length, 47, 'SafeLedger must retain the complete 47-suite durable regression contract.');
 const seen = new Set();
 for (const suite of CANONICAL_SUITES) {
   assert(suite && suite.name && suite.file, 'Canonical suite entries require a name and file.');
-  assert(!isHistoricalTestFile(path.basename(suite.file)), `Historical test listed as canonical: ${suite.file}`);
+  assert(!isRetiredTestFile(path.basename(suite.file)), `Retired patch/release test listed as canonical: ${suite.file}`);
   assert(!seen.has(suite.file), `Duplicate canonical test entry: ${suite.file}`);
   seen.add(suite.file);
   assert(fs.existsSync(path.join(root, suite.file)), `Canonical test file is missing: ${suite.file}`);
@@ -40,14 +39,15 @@ assert(seen.has('scripts/ui-consolidation-tests.js'));
 assert(seen.has('scripts/repository-hygiene-tests.js'));
 
 const scriptFiles = fs.readdirSync(path.join(root, 'scripts')).filter((name) => name.endsWith('.js'));
-const historical = scriptFiles.filter(isHistoricalTestFile);
-assert(historical.length > 20, 'Historical regression archive unexpectedly disappeared; Phase 1 archives rather than mass-deletes evidence.');
-for (const file of historical) assert(!seen.has(`scripts/${file}`), `Archived historical test leaked into canonical suite: ${file}`);
+const retiredFiles = scriptFiles.filter(isRetiredTestFile).sort();
+assert.deepStrictEqual(retiredFiles, [],
+  `Patch/release-numbered tests are retired repository baggage and must not return: ${retiredFiles.join(', ')}`);
 
 for (const workflow of ['windows-portable.yml', 'linux-appimage.yml', 'macos-arm64.yml']) {
   const source = read(`.github/workflows/${workflow}`);
+  assert(source.includes('npm run test:regression'), `${workflow} must run the canonical regression suite.`);
   assert(source.includes('node scripts/release-trust-contract-tests.js'), `${workflow} must use the canonical release trust contract.`);
-  assert(!source.includes('node scripts/hotfix-2.6.53-tests.js'), `${workflow} still uses the retired patch-numbered Phase 5 gate.`);
+  assert(!retiredGatePattern.test(source), `${workflow} must not call a retired patch/release-numbered test gate.`);
 }
 
 const auditRaw = execFileSync(process.execPath, [path.join(root, 'scripts/dead-code-audit.js'), '--json'], {
@@ -81,4 +81,4 @@ for (const relative of [
   'scripts/test-architecture-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger test architecture runs ${CANONICAL_SUITES.length} durable behavior suites while preserving ${historical.length} patch/release gates as non-executing historical evidence.`);
+console.log(`PASS SafeLedger test architecture runs ${CANONICAL_SUITES.length} durable behavior suites with no patch/release-numbered test archive in the active repository.`);
