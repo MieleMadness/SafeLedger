@@ -37,6 +37,7 @@ assert(seen.has('scripts/distribution-trust-tests.js'));
 assert(seen.has('scripts/data-ownership-tests.js'));
 assert(seen.has('scripts/recovery-confidence-tests.js'));
 assert(seen.has('scripts/ui-consolidation-tests.js'));
+assert(seen.has('scripts/repository-hygiene-tests.js'));
 
 const scriptFiles = fs.readdirSync(path.join(root, 'scripts')).filter((name) => name.endsWith('.js'));
 const historical = scriptFiles.filter(isHistoricalTestFile);
@@ -64,9 +65,10 @@ for (const canonicalCss of [
   'src/main/css/app.css',
   'src/main/css/site.css',
   'src/main/css/ui-current.css',
-  'src/main/css/appearance-palettes.css'
+  'src/main/css/appearance-palettes.css',
+  'src/main/css/recovery-binder.css'
 ]) {
-  assert(!audit.unlinkedCss.includes(canonicalCss), `${canonicalCss} must remain reachable through the app.css import graph.`);
+  assert(!audit.unlinkedCss.includes(canonicalCss), `${canonicalCss} must remain reachable through the current stylesheet ownership graph.`);
 }
 
 for (const relative of [
@@ -74,6 +76,7 @@ for (const relative of [
   'scripts/run-regression-suite.js',
   'scripts/current-product-contract-tests.js',
   'scripts/release-trust-contract-tests.js',
+  'scripts/repository-hygiene-tests.js',
   'scripts/dead-code-audit.js',
   'scripts/test-architecture-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
