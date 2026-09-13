@@ -84,6 +84,45 @@ Git already provides the historical record. The live tree should contain the tes
 
 The filename policy remains in `scripts/regression-suite.js` only as a guard against reintroducing the retired architecture. The historical tests themselves are gone from the active tree.
 
+## 2.6.99: one canonical application icon
+
+Phase 5 also identified two application-icon paths:
+
+- `sl.png`, used by the live Electron `BrowserWindow`;
+- `build/icon-source.png`, used by Windows and Linux packaging.
+
+The files were not merely visually similar. Git stored both paths as the same blob (`0eef161eeea26cbed070c117731f1151b3bb3ea1`, 3,453 bytes), proving their contents were identical.
+
+2.6.99 makes `sl.png` the one canonical PNG application icon.
+
+Windows and Linux packaging now point to `sl.png`, the package file list includes that one icon path, and `build/icon-source.png` is deleted.
+
+### Why the runtime path was kept
+
+The cleanup could have moved the BrowserWindow to the build directory instead. That would have introduced a new packaged runtime path assumption only to remove duplicate bytes.
+
+Keeping the existing runtime path is the lower-risk structural fix:
+
+- the BrowserWindow continues loading the same path it already used;
+- the icon bytes are unchanged;
+- Windows and Linux packaging are redirected to those same bytes;
+- no compatibility alias, copied PNG, symlink, or forwarding layer is required;
+- one file now owns both runtime and packaging behavior.
+
+### Durable icon ownership contract
+
+`scripts/repository-hygiene-tests.js` now requires that:
+
+- `sl.png` exists;
+- `build/icon-source.png` stays absent;
+- the BrowserWindow uses `sl.png`;
+- packaged files include `sl.png` and not the retired duplicate path;
+- Windows packaging uses `sl.png`;
+- Linux packaging uses `sl.png`;
+- no active package build configuration references the retired duplicate path.
+
+The three-platform build matrix remains the final packaged-behavior verification for this structural change.
+
 ## Durable regression contract
 
 SafeLedger continues to run 47 durable canonical regression suites. Phase 5 specifically protects:
@@ -93,17 +132,12 @@ SafeLedger continues to run 47 durable canonical regression suites. Phase 5 spec
 - canonical top-level settings-manager ownership;
 - absence of the retired double-nested settings path;
 - absence of patch/release-numbered test archives from the active repository;
-- continued use of canonical regression and release-trust gates on all supported build workflows.
+- continued use of canonical regression and release-trust gates on all supported build workflows;
+- one canonical application icon shared by the runtime window and Windows/Linux packaging.
 
-## Items intentionally not combined into 2.6.98
+## Items intentionally not combined into 2.6.99
 
-Phase 5 still contains cleanup targets with different risk surfaces. They remain isolated so failures stay easy to attribute.
-
-### Duplicate application icon source
-
-`sl.png` and `build/icon-source.png` currently contain the same image bytes, but they serve different paths today: one is referenced by the runtime BrowserWindow and one by packaging configuration.
-
-They are not deleted merely because their contents are identical. Consolidation requires updating runtime/build ownership together and then verifying Windows, Linux, and macOS packaged behavior.
+Phase 5 still has a visual cleanup target with a different risk surface, so it remains isolated.
 
 ### Selector-level CSS cleanup
 
@@ -111,7 +145,7 @@ Phase 4 established one cascade owner. Duplicate selectors and unnecessary `!imp
 
 ## Behavior and security intentionally preserved
 
-2.6.96 through 2.6.98 do not intentionally change:
+2.6.96 through 2.6.99 do not intentionally change:
 
 - AES-256-GCM vault encryption;
 - Argon2id password/key-envelope behavior;
@@ -142,4 +176,4 @@ When a file appears dead or a path appears obsolete:
 
 For tests, current behavior belongs in durable subsystem suites. Release-specific history belongs in Git history, not as dormant executable-looking files in the active source tree.
 
-Do not create empty shims, dormant copies, renamed compatibility layers, or dead test archives simply to make a cleanup appear safer.
+Do not create empty shims, dormant copies, renamed compatibility layers, duplicate binary assets, or dead test archives simply to make a cleanup appear safer.
