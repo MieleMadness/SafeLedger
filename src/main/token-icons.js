@@ -11,7 +11,7 @@ function isChainGames(record) {
 
 function getIconMatch(record) {
   if (isChainGames(record)) {
-    return { category: 'tokens', key: 'CHAIN-GAMES', src: serviceCatalog.iconDataUrl('Chain Games') };
+    return { category: 'tokens', key: 'CHAIN-GAMES', src: serviceCatalog.chainGamesAssetUrl() };
   }
   const item = record || {};
   const name = String(item.name || '').trim();
@@ -31,6 +31,7 @@ exports.getIconUrl = (record) => {
 };
 
 exports.createIconElement = (record, className = 'token-brand-image') => {
+  if (isChainGames(record)) return serviceCatalog.createIcon('Chain Games', className);
   const match = getIconMatch(record);
   if (!match) return null;
   const label = record && (record.name || record.symbol) ? (record.name || record.symbol) : 'Web3 asset';

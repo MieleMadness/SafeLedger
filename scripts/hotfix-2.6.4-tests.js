@@ -16,20 +16,31 @@ assert(parts[0] === 2 && parts[1] === 6 && parts[2] >= 4,
 
 const chainService = serviceCatalog.find('Chain Games');
 assert(chainService && chainService.artwork === 'chain-games', 'Chain Games must use dedicated local brand artwork.');
-const chainUrl = serviceCatalog.iconDataUrl(chainService);
-assert(chainUrl.startsWith('data:image/svg+xml;charset=utf-8,'), 'Chain Games icon must remain local/offline.');
-const chainSvg = decodeURIComponent(chainUrl.slice(chainUrl.indexOf(',') + 1));
-assert(chainSvg.includes('M164,4.5C73.4,4.5,0,77.9,0,168.5') &&
-  chainSvg.includes('fill="#FFFFFF"') && chainSvg.includes('fill="#0b1030"'),
-  'Chain Games must render the supplied white circular brand mark on its local dark backing.');
-assert(!chainSvg.includes('chain-games-gradient') && !chainSvg.includes('<linearGradient'),
-  'The retired SafeLedger-drawn gradient Chain Games approximation must stay removed.');
-assert(!chainSvg.includes('<text'), 'Chain Games Vault Item icon must not fall back to CG initials.');
+const lightChain = serviceCatalog.chainGamesAssetUrl('light');
+const colorfulChain = serviceCatalog.chainGamesAssetUrl('colorful');
+const darkChain = serviceCatalog.chainGamesAssetUrl('dark');
+assert.strictEqual(lightChain, './assets/chain-games-light-colorful.svg');
+assert.strictEqual(colorfulChain, lightChain, 'Light and Colorful must share the requested black-square Chain Games tile.');
+assert.strictEqual(darkChain, './assets/chain-games-dark.svg');
+for (const source of [lightChain, darkChain]) {
+  assert(fs.existsSync(path.join(root, 'src/main', source.replace('./', ''))), `Missing local Chain Games artwork: ${source}`);
+}
+const lightSvg = read('src/main/assets/chain-games-light-colorful.svg');
+const darkSvg = read('src/main/assets/chain-games-dark.svg');
+const leftOnlyMark = 'M156,247.7l-92.9-76.9l92.2-115.4';
+assert(lightSvg.includes(leftOnlyMark) && darkSvg.includes(leftOnlyMark), 'Chain Games must use the supplied left icon geometry.');
+assert(!lightSvg.includes('M164,4.5C73.4,4.5,0,77.9,0,168.5') && !darkSvg.includes('M164,4.5C73.4,4.5,0,77.9,0,168.5'),
+  'The retired circular outer mark must not return.');
+assert(lightSvg.includes('fill="#000000"') && lightSvg.includes('fill="#FFFFFF"'),
+  'Light/Colorful must use a black square with the white Chain Games mark.');
+assert(darkSvg.includes('<rect width="337" height="337" rx="72" fill="#FFFFFF"/>') && darkSvg.includes('fill="#000000"'),
+  'Dark must use a white square with the black Chain Games mark.');
+assert(!lightSvg.includes('<text') && !darkSvg.includes('<text'), 'Chain Games artwork must not include the wordmark or initials.');
 
 const chainToken = tokenIcons.getIconMatch({ name: 'Chain Games — Polygon', symbol: 'CHAIN' });
 assert(chainToken && chainToken.key === 'CHAIN-GAMES');
-assert.strictEqual(chainToken.src, chainUrl,
-  'CHAIN Asset artwork and the Chain Games Vault Item must share the same local brand source.');
+assert.strictEqual(chainToken.src, lightChain,
+  'CHAIN Asset artwork and the Chain Games Vault Item must share the same local theme-aware brand source.');
 
 assert.strictEqual(fs.existsSync(path.join(root, 'src/main/vault-item-selection-ui.js')), false,
   'The capture-phase Vault Item selection UI helper must stay removed.');
@@ -53,4 +64,4 @@ assert(iconCss.includes('.wallet-list-fallback-icon'),
 assert(iconCss.includes('width: 24px !important;') && iconCss.includes('height: 24px !important;'),
   'The historical 2.6.4 stylesheet must retain its 24px compact icon baseline.');
 
-console.log(`PASS SafeLedger ${pkg.version} retains the supplied Chain Games artwork while Add Asset requires an explicit Vault Item selection.`);
+console.log(`PASS SafeLedger ${pkg.version} retains theme-aware square Chain Games artwork while Add Asset requires an explicit Vault Item selection.`);

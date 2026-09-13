@@ -36,6 +36,24 @@
   border-radius: 7px;
 }
 
+/* Chain Games uses the left-only mark supplied by the project owner. Light
+ * and Colorful use a black square with the white mark; Dark uses the inverse.
+ * The tile keeps the same 7px corner radius as the other list artwork and the
+ * same square treatment in the larger Asset detail header. */
+.chain-games-brand-image {
+  display: block;
+  background-image: url("../assets/chain-games-light-colorful.svg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  border-radius: 7px !important;
+  overflow: hidden;
+}
+
+html[data-theme="dark"] .chain-games-brand-image {
+  background-image: url("../assets/chain-games-dark.svg");
+}
+
 .coin-list-generic-icon {
   display: inline-flex;
   align-items: center;

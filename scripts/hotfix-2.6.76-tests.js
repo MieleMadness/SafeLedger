@@ -19,30 +19,34 @@ assert(pkg.scripts['test:regression'].includes('node scripts/hotfix-2.6.76-tests
 
 const chainService = serviceCatalog.find('Chain Games');
 assert(chainService && chainService.artwork === 'chain-games');
-const chainUrl = serviceCatalog.iconDataUrl(chainService);
-assert(chainUrl && chainUrl.startsWith('data:image/svg+xml;charset=utf-8,'),
-  'Chain Games artwork must stay bundled locally as an SVG data URL.');
-const chainSvg = decodeURIComponent(chainUrl.slice(chainUrl.indexOf(',') + 1));
-const suppliedMark = 'M164,4.5C73.4,4.5,0,77.9,0,168.5';
-assert(chainSvg.includes(suppliedMark),
-  'Chain Games must use the circular mark from the project-owner supplied SVG.');
-assert(chainSvg.includes('fill="#FFFFFF"'),
-  'The supplied Chain Games mark must retain its white artwork.');
-assert(chainSvg.includes('fill="#0b1030"'),
-  'The white Chain Games mark must keep a local dark backing for cross-theme visibility.');
-assert(!chainSvg.includes('chain-games-gradient') && !chainSvg.includes('<linearGradient'),
-  'The retired SafeLedger-drawn gradient approximation must not return.');
-assert(!chainSvg.includes('<text'),
-  'Chain Games must not fall back to an initials tile.');
+const lightSource = serviceCatalog.chainGamesAssetUrl('light');
+const colorfulSource = serviceCatalog.chainGamesAssetUrl('colorful');
+const darkSource = serviceCatalog.chainGamesAssetUrl('dark');
+assert.strictEqual(lightSource, './assets/chain-games-light-colorful.svg');
+assert.strictEqual(colorfulSource, lightSource);
+assert.strictEqual(darkSource, './assets/chain-games-dark.svg');
+
+const lightSvg = read('src/main/assets/chain-games-light-colorful.svg');
+const darkSvg = read('src/main/assets/chain-games-dark.svg');
+const suppliedLeftMark = 'M156,247.7l-92.9-76.9l92.2-115.4';
+assert(lightSvg.includes(suppliedLeftMark) && darkSvg.includes(suppliedLeftMark),
+  'Chain Games must use only the left icon from the project-owner supplied logo.');
+assert(lightSvg.includes('<rect width="337" height="337" rx="72" fill="#000000"/>') && lightSvg.includes('fill="#FFFFFF"'),
+  'Light and Colorful must use the requested black square with white logo.');
+assert(darkSvg.includes('<rect width="337" height="337" rx="72" fill="#FFFFFF"/>') && darkSvg.includes('fill="#000000"'),
+  'Dark must use the requested white square with black logo.');
+assert(!lightSvg.includes('<text') && !darkSvg.includes('<text'), 'Chain Games must not include the wordmark or initials.');
+assert(!lightSvg.includes('M164,4.5C73.4,4.5,0,77.9,0,168.5') && !darkSvg.includes('M164,4.5C73.4,4.5,0,77.9,0,168.5'),
+  'The retired circular outer mark must not return.');
 
 const chainToken = tokenIcons.getIconMatch({ name: 'Chain Games — Polygon', symbol: 'CHAIN' });
 assert(chainToken && chainToken.key === 'CHAIN-GAMES');
-assert.strictEqual(chainToken.src, chainUrl,
-  'Chain Games Vault Items and CHAIN Assets must continue sharing the same canonical logo source.');
+assert.strictEqual(chainToken.src, lightSource,
+  'Chain Games Vault Items and CHAIN Assets must continue sharing the same canonical artwork family.');
 
 const historical = read('scripts/hotfix-2.6.4-tests.js');
-assert(historical.includes(suppliedMark),
-  'The historical Chain Games regression must track the supplied artwork rather than the retired approximation.');
+assert(historical.includes(suppliedLeftMark),
+  'The historical Chain Games regression must track the supplied left-only artwork.');
 
 // Validate the historical regression by executing it. Do not infer assertion
 // polarity by substring-searching its JavaScript source: the same text appears
@@ -57,4 +61,4 @@ for (const relative of [
   'scripts/hotfix-2.6.76-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger ${pkg.version} uses the supplied Chain Games circular mark for both Vault Item and CHAIN Asset artwork.`);
+console.log(`PASS SafeLedger ${pkg.version} uses square theme-aware Chain Games artwork for both Vault Item and CHAIN Asset rendering.`);

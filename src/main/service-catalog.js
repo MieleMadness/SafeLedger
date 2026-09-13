@@ -1,7 +1,13 @@
 'use strict';
 
+const CHAIN_GAMES_ARTWORK = Object.freeze({
+  light: './assets/chain-games-light-colorful.svg',
+  colorful: './assets/chain-games-light-colorful.svg',
+  dark: './assets/chain-games-dark.svg'
+});
+
 const SERVICES = Object.freeze([
-  ['Chain Games','CG','#0b1030',['chain games','chaingames','chaingames.io'],'chain-games'],
+  ['Chain Games','CG','#000000',['chain games','chaingames','chaingames.io'],'chain-games'],
   ['Facebook','f','#1877f2',['facebook','facebook.com','fb']],
   ['Yahoo','Y!','#6001d2',['yahoo','yahoo.com']],
   ['Google','G','#4285f4',['google','google.com']],
@@ -54,12 +60,14 @@ function escapeXml(value) {
   return String(value || '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
 }
 
-function chainGamesSvg(label) {
-  // Exact circular Chain Games mark from the SVG supplied by the project owner.
-  // Keep the existing dark local backing so the white artwork remains visible
-  // in every SafeLedger appearance without introducing a network dependency.
-  const markPath = 'M164,4.5C73.4,4.5,0,77.9,0,168.5s73.4,164,164,164s164-73.4,164-164S254.6,4.5,164,4.5z M156,247.7 l-92.9-76.9l92.2-115.4v73.4l-16.9-13.2l-33.9,39.9l51.5,41.1V247.7z M172.5,281.6v-73.5l17.1,13.2l33.9-39.8l-51.7-41.1v-51 l93.1,76.8L172.5,281.6z';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="-4.5 0 337 337" role="img" aria-label="${label}"><rect x="-4.5" y="0" width="337" height="337" rx="72" fill="#0b1030"/><path d="${markPath}" fill="#FFFFFF"/></svg>`;
+function currentTheme() {
+  if (typeof document === 'undefined' || !document.documentElement) return 'light';
+  const theme = String(document.documentElement.dataset.theme || '').toLowerCase();
+  return theme === 'dark' ? 'dark' : theme === 'colorful' ? 'colorful' : 'light';
+}
+
+function chainGamesAssetUrl(theme = currentTheme()) {
+  return theme === 'dark' ? CHAIN_GAMES_ARTWORK.dark : CHAIN_GAMES_ARTWORK.light;
 }
 
 function textTileSvg(service, label) {
@@ -71,20 +79,26 @@ function textTileSvg(service, label) {
 function iconDataUrl(value) {
   const service = typeof value === 'object' && value ? value : find(value);
   if (!service) return null;
+  if (service.artwork === 'chain-games') return chainGamesAssetUrl();
   const label = escapeXml(service.name);
-  const svg = service.artwork === 'chain-games'
-    ? chainGamesSvg(label)
-    : textTileSvg(service, label);
+  const svg = textTileSvg(service, label);
 
   // Renderer code runs inside Electron's sandbox with Node globals disabled.
-  // URI-encode the SVG instead of relying on Buffer/btoa so the same local
-  // icon generator works in both the trusted Node test process and renderer.
+  // URI-encode generic SVG tiles instead of relying on Buffer/btoa.
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 function createIcon(value, className = 'known-service-brand-image') {
   const service = find(value);
   if (!service || typeof document === 'undefined') return null;
+  if (service.artwork === 'chain-games') {
+    const icon = document.createElement('span');
+    icon.className = `${className} chain-games-brand-image`.trim();
+    icon.setAttribute('role', 'img');
+    icon.setAttribute('aria-label', `${service.name} icon`);
+    icon.dataset.chainGamesIcon = 'true';
+    return icon;
+  }
   const img = document.createElement('img');
   img.className = className;
   img.src = iconDataUrl(service);
@@ -98,4 +112,5 @@ exports.normalize = normalize;
 exports.find = find;
 exports.iconDataUrl = iconDataUrl;
 exports.createIcon = createIcon;
-exports._test = { chainGamesSvg, textTileSvg };
+exports.chainGamesAssetUrl = chainGamesAssetUrl;
+exports._test = { CHAIN_GAMES_ARTWORK, currentTheme, textTileSvg };
