@@ -39,10 +39,12 @@ const activeSources = new Set([
   ...walkJs(path.join(root, 'src', 'main')).map((file) => path.relative(root, file).split(path.sep).join('/')),
   ...CANONICAL_SUITES.map((suite) => suite.file)
 ]);
+const legacySettingsOffenders = [];
 for (const relative of activeSources) {
-  const source = read(relative);
-  assert(!source.includes(legacySettingsPath), `${relative} still references the retired nested settings manager path.`);
+  if (read(relative).includes(legacySettingsPath)) legacySettingsOffenders.push(relative);
 }
+assert.deepStrictEqual(legacySettingsOffenders, [],
+  `Active runtime/canonical tests still reference the retired nested settings manager path: ${legacySettingsOffenders.join(', ')}`);
 
 const main = read('src/main/main.js');
 assert(main.includes("const settingsManager = require('./settings-manager');"),
