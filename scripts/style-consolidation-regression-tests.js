@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const { audit: auditCssOwnership, printReport: printCssOwnershipReport } = require('./css-ownership-audit');
+const { audit: auditImportantOwnership, printReport: printImportantOwnershipReport } = require('./important-ownership-audit');
 
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -140,5 +141,8 @@ assert.deepStrictEqual(cssOwnership.missing, [],
 assert.strictEqual(cssOwnership.identicalDuplicateSelectorContexts, 0,
   'Canonical CSS cascade must not contain byte-equivalent duplicate selector/context blocks; keep one explicit owner instead.');
 printCssOwnershipReport(cssOwnership);
+
+const importantOwnership = auditImportantOwnership();
+printImportantOwnershipReport(importantOwnership);
 
 console.log('PASS canonical stylesheet consolidation uses one ordered app.css cascade, single-owner exact selectors, and no retired versioned CSS fixtures.');
