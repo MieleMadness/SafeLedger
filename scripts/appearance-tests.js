@@ -52,13 +52,15 @@ const appAppearance = require('../src/main/app-appearance');
 
   const root = path.join(__dirname, '..');
   const index = fs.readFileSync(path.join(root, 'src/main/index.html'), 'utf8');
+  const manifest = fs.readFileSync(path.join(root, 'src/main/css/app.css'), 'utf8');
   const theme = fs.readFileSync(path.join(root, 'src/main/css/app-theme.css'), 'utf8');
   const palettes = fs.readFileSync(path.join(root, 'src/main/css/appearance-palettes.css'), 'utf8');
   const settingsUi = fs.readFileSync(path.join(root, 'src/main/settings-ui.js'), 'utf8');
   const profile = fs.readFileSync(path.join(root, 'src/main/profile.js'), 'utf8');
-  assert(index.includes('./css/app-theme.css'));
-  assert(index.includes('./css/appearance-palettes.css'));
-  assert(index.indexOf('./css/appearance-palettes.css') > index.indexOf('./css/qr-theme.css'), 'Appearance palette must remain the final intentional color layer.');
+  assert(index.includes('./css/app.css'));
+  assert(manifest.includes('@import url("app-theme.css");'));
+  assert(manifest.includes('@import url("appearance-palettes.css");'));
+  assert(manifest.indexOf('@import url("appearance-palettes.css");') > manifest.indexOf('@import url("qr-theme.css");'), 'Appearance palette must remain the final intentional color layer.');
   assert(index.includes('data-appearance="system" data-theme="light"'));
   assert(theme.includes('html[data-theme="dark"]'));
   assert(theme.includes('--sl-surface'));
