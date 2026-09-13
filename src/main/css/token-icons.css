@@ -16,20 +16,6 @@
   max-width: 100%;
 }
 
-/* Vault Item and Asset navigation artwork intentionally shares one size.
- * Larger 28px tiles make small brand marks and short fallback labels easier
- * to recognize without changing the surrounding row hierarchy. */
-.coin-list-brand-image,
-.coin-list-generic-icon,
-.wallet-list-brand-image,
-.wallet-list-catalog-icon,
-.wallet-list-icon,
-.wallet-list-fallback-icon {
-  width: 28px !important;
-  height: 28px !important;
-  flex: 0 0 28px !important;
-}
-
 .coin-list-brand-image {
   display: block;
   object-fit: contain;
@@ -152,8 +138,6 @@ html[data-theme="dark"] .chain-games-brand-image {
   .wallet-list-catalog-icon,
   .wallet-list-icon,
   .wallet-list-fallback-icon {
-    width: 24px !important;
-    height: 24px !important;
     flex-basis: 24px !important;
   }
 
