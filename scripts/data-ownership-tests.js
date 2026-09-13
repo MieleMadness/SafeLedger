@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 const robustVault = require('../src/main/robust-vault');
 const dataWrite = require('../src/main/data-write-service');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 
 async function saveEncrypted(file, value, key) {
   await robustVault.saveVault(file, JSON.stringify(value), key);
