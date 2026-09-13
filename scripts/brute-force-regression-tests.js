@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 const settingsSchema = require('../src/main/settings-schema');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
