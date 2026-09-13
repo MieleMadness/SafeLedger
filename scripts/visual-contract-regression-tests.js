@@ -11,6 +11,7 @@ const baseline = JSON.parse(read('scripts/ui-visual-baseline.json'));
 const uiCurrent = read('src/main/css/ui-current.css');
 const statusCss = read('src/main/css/status-messages.css');
 const index = read('src/main/index.html');
+const manifest = read('src/main/css/app.css');
 
 function canonicalGitBlobSha(content) {
   // GitHub stores this text with LF line endings, while a Windows Actions
@@ -56,9 +57,10 @@ function contrast(first, second) {
 
 assert.strictEqual(canonicalGitBlobSha(uiCurrent), baseline.uiCurrentGitBlobSha,
   'Canonical ui-current.css changed from the approved visual baseline. Review the visual change and update the baseline intentionally.');
-assert(index.includes('<link href="./css/ui-current.css" rel="stylesheet">'));
-assert(index.includes('<link href="./css/status-messages.css" rel="stylesheet">'));
-assert(index.indexOf('./css/status-messages.css') > index.indexOf('./css/ui-current.css'),
+assert(index.includes('<link id="styleSheet" href="./css/app.css" rel="stylesheet">'));
+assert(manifest.includes('@import url("ui-current.css");'));
+assert(manifest.includes('@import url("status-messages.css");'));
+assert(manifest.indexOf('@import url("status-messages.css");') > manifest.indexOf('@import url("ui-current.css");'),
   'Canonical status message styling must load after the consolidated historical cascade.');
 
 assert(statusCss.includes('font-size: 15px !important;'),
