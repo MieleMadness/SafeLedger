@@ -2,11 +2,11 @@
 
 // Canonical SafeLedger regression manifest.
 //
-// Patch-numbered tests are intentionally not executed here. They remain in the
-// repository as historical evidence of the bug/fix that introduced a contract,
-// but active CI protects the current behavior through stable subsystem suites.
-// New regressions belong in an existing subsystem suite or a new durable suite
-// named for the behavior it protects, never for the release that discovered it.
+// Active CI protects current behavior through stable subsystem suites. Historical
+// patch/release-numbered gates were retired from the repository in 2.6.98 after
+// their durable behavior contracts had been absorbed here. Git history remains
+// the record of those one-off gates; new regressions belong in an existing
+// subsystem suite or a new durable suite named for the behavior it protects.
 
 const CANONICAL_SUITES = Object.freeze([
   ['Core data and compatibility', 'scripts/regression-tests.js'],
@@ -58,18 +58,18 @@ const CANONICAL_SUITES = Object.freeze([
   ['Test architecture', 'scripts/test-architecture-tests.js']
 ].map(([name, file]) => Object.freeze({ name, file })));
 
-const HISTORICAL_TEST_PATTERNS = Object.freeze([
+const RETIRED_TEST_FILE_PATTERNS = Object.freeze([
   /^development-\d+\.\d+\.\d+-tests\.js$/,
   /^hotfix-\d+\.\d+\.\d+-tests\.js$/,
   /^release-\d+\.\d+-tests\.js$/
 ]);
 
-function isHistoricalTestFile(fileName) {
-  return HISTORICAL_TEST_PATTERNS.some((pattern) => pattern.test(String(fileName || '')));
+function isRetiredTestFile(fileName) {
+  return RETIRED_TEST_FILE_PATTERNS.some((pattern) => pattern.test(String(fileName || '')));
 }
 
 module.exports = {
   CANONICAL_SUITES,
-  HISTORICAL_TEST_PATTERNS,
-  isHistoricalTestFile
+  RETIRED_TEST_FILE_PATTERNS,
+  isRetiredTestFile
 };
