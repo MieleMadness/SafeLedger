@@ -11,10 +11,13 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').re
 const pkg = JSON.parse(read('package.json'));
 const regressionCommand = String(pkg.scripts && pkg.scripts['test:regression'] || '');
 const retiredGatePattern = /(?:hotfix|development)-\d+\.\d+\.\d+-tests\.js|release-\d+\.\d+-tests\.js/;
+const runner = read('scripts/run-regression-suite.js');
 
 assert(regressionCommand.includes('node scripts/run-regression-suite.js'), 'Main regression command must use the canonical suite runner.');
 assert(!retiredGatePattern.test(regressionCommand),
   'Retired patch/release-numbered tests must not execute directly from test:regression.');
+assert(runner.includes('isRetiredTestFile'), 'Canonical runner must enforce the current retired-test filename policy.');
+assert(!runner.includes('isHistoricalTestFile'), 'Canonical runner must not depend on the retired Phase 1 historical-test helper name.');
 
 for (const [name, command] of Object.entries(pkg.scripts || {})) {
   if (!name.startsWith('test:')) continue;
