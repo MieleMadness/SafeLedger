@@ -3,7 +3,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 const { sha256Bytes, bytesToHex } = require('../src/main/sha256');
 
 const root = path.join(__dirname, '..');
