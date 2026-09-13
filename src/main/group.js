@@ -2,7 +2,7 @@
   Author: Edward Seufert - Cborgtech, LLC
 */
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
+const services = require('./renderer-services');
 const statusMgr = require('./status');
 const record = require('./record');
 const utils = require('./utils');
@@ -115,7 +115,11 @@ function persistWalletUpdate(params, updates, button, activityEvent) {
   params.saving.state = true;
   if (button) button.disabled = true;
   statusMgr.loadStatus();
-  ipc.send('process-group', { type: 'group-modify', vaultData: params.vaultData, activityEvent });
+  services.deliver(
+    services.saveVaultItem({ type: 'group-modify', vaultData: params.vaultData, activityEvent }),
+    params.onResult,
+    'Unable to update Vault Item.'
+  );
 }
 
 function renderReadinessCard(area, params) {
@@ -247,9 +251,10 @@ const renderGroups = (params) => {
       if (params.saving.state) return alert('Please wait for processing to complete');
       params.vaultData.groupSelected = i;
       params.vaultData.recordSelected = null;
-      renderGroupDetail({ vaultData: params.vaultData, group: current, saving: params.saving });
-      renderGroups({ vaultData: params.vaultData, saving: params.saving });
-      record.listRecords({ vaultData: params.vaultData, saving: params.saving });
+      const next = { vaultData: params.vaultData, group: current, saving: params.saving, onResult: params.onResult };
+      renderGroupDetail(next);
+      renderGroups({ vaultData: params.vaultData, saving: params.saving, onResult: params.onResult });
+      record.listRecords({ vaultData: params.vaultData, saving: params.saving, onResult: params.onResult });
     });
     if (params.vaultData.groupSelected == i) href.className = 'item-selected';
 
@@ -369,10 +374,14 @@ const createEditGroup = (params) => {
     params.vaultData.groupSelected = params.vaultData.groups.indexOf(g);
     params.saving.state = true;
     statusMgr.loadStatus();
-    ipc.send('process-group', {
-      type: params.group ? 'group-modify' : 'group-create',
-      vaultData: params.vaultData
-    });
+    services.deliver(
+      services.saveVaultItem({
+        type: params.group ? 'group-modify' : 'group-create',
+        vaultData: params.vaultData
+      }),
+      params.onResult,
+      'Unable to save Vault Item.'
+    );
   };
 
   form.addEventListener('submit', (e) => {
@@ -483,7 +492,11 @@ const confirmDelete = (params) => {
         params.vaultData.recordSelected = null;
         params.saving.state = true;
         statusMgr.loadStatus();
-        ipc.send('process-group', { type: 'group-delete', vaultData: params.vaultData });
+        services.deliver(
+          services.saveVaultItem({ type: 'group-delete', vaultData: params.vaultData }),
+          params.onResult,
+          'Unable to delete Vault Item.'
+        );
         area.innerHTML = '';
         detailActions.clear();
       }

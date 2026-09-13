@@ -1,18 +1,27 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
+const services = require('./renderer-services');
+const rendererState = require('./renderer-state');
 const status = require('./status');
 const passwordPolicy = require('./password-policy');
 
 const MAX_MASTER_PASSWORD_LENGTH = passwordPolicy.MAX_MASTER_PASSWORD_LENGTH;
-let latestSettings = null;
-let latestVaultList = null;
+let onCommandResult = null;
+let onPasswordChanged = null;
+
+function configure(options = {}) {
+  onCommandResult = typeof options.onCommandResult === 'function' ? options.onCommandResult : null;
+  onPasswordChanged = typeof options.onPasswordChanged === 'function' ? options.onPasswordChanged : null;
+}
 
 function failButton(button, message) {
   if (button) button.disabled = false;
   status.showStatus({ status: 'ERROR', statusMsg: message });
 }
-function loadUnlockedVaultList() { ipc.send('read-vaultlist-init'); }
+
+function loadUnlockedVaultList() {
+  return services.deliver(services.loadVaultList(), onCommandResult, 'Unable to load SafeLedger Profiles.');
+}
 
 async function handleLogin(button) {
   const input = document.getElementById('masterCryptoInput');
@@ -21,27 +30,22 @@ async function handleLogin(button) {
   const password = input.value;
   const validation = passwordPolicy.validatePassword(password);
   if (validation) return failButton(button, validation);
-  if (!latestSettings) return failButton(button, 'SafeLedger security settings are still loading');
+  if (!rendererState.getSettings()) return failButton(button, 'SafeLedger security settings are still loading');
   button.disabled = true;
   status.loadStatus();
   try {
-    const hasEnvelope = await ipc.invoke('crypto-v3-has-envelope');
+    const hasEnvelope = await services.cryptoHasEnvelope();
     if (!hasEnvelope) {
-      const initialized = await ipc.invoke('crypto-v3-initialize', password);
+      const initialized = await services.cryptoInitialize(password);
       input.value = '';
       if (!initialized || !initialized.ok) return failButton(button, (initialized && initialized.message) || 'Unable to initialize SafeLedger encryption');
-      loadUnlockedVaultList();
-      return;
+      return loadUnlockedVaultList();
     }
-    const unlocked = await ipc.invoke('crypto-v3-login', password);
+    const unlocked = await services.cryptoLogin(password);
     input.value = '';
-    if (unlocked && unlocked.ok) {
-      loadUnlockedVaultList();
-      return;
-    }
+    if (unlocked && unlocked.ok) return loadUnlockedVaultList();
     if (unlocked && unlocked.type === 'password-failed') {
-      ipc.send('record-password-failure');
-      return;
+      return services.deliver(services.recordPasswordFailure(), onCommandResult, 'Unable to update login security state.');
     }
     return failButton(button, (unlocked && unlocked.message) || 'Unable to unlock SafeLedger key envelope');
   } catch (err) {
@@ -65,17 +69,15 @@ async function handlePasswordChange(button) {
   button.disabled = true;
   status.loadStatus();
   try {
-    const changed = await ipc.invoke('crypto-v3-change-password', oldPassword, newPassword);
+    const changed = await services.cryptoChangePassword(oldPassword, newPassword);
     oldInput.value = '';
     newInput.value = '';
     confirmInput.value = '';
     if (!changed || !changed.ok) return failButton(button, (changed && changed.message) || 'Password change failed');
-    ipc.emit('result-rotate-crypto', {}, {
-      status: 'SUCCESS',
-      statusMsg: changed.statusMsg,
-      vaultList: latestVaultList,
-      sessionUnlocked: true
-    });
+    button.disabled = false;
+    rendererState.setUnlocked(true);
+    status.showStatus({ status: 'SUCCESS', statusMsg: changed.statusMsg || 'Password changed successfully.' });
+    if (onPasswordChanged) onPasswordChanged(changed);
   } catch (err) {
     oldInput.value = '';
     newInput.value = '';
@@ -84,40 +86,9 @@ async function handlePasswordChange(button) {
   }
 }
 
-document.addEventListener('click', (event) => {
-  const target = event.target && event.target.closest ? event.target.closest('button') : null;
-  if (!target) return;
-  if (target.id === 'loginBtn') {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    handleLogin(target);
-    return;
-  }
-  if (target.id === 'encryptionEditBtn') {
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    handlePasswordChange(target);
-  }
-}, true);
-
-ipc.on('result-init-system', (_event, params) => { if (params && params.settings) latestSettings = params.settings; });
-ipc.on('result', (_event, params) => {
-  if (params && params.settings) latestSettings = params.settings;
-  if (params && params.vaultList) latestVaultList = params.vaultList;
-  if (params && params.status === 'ERROR' && !(params.settings && params.settings.lockLogin)) {
-    const button = document.getElementById('loginBtn');
-    const input = document.getElementById('masterCryptoInput');
-    if (button && input) {
-      button.disabled = false;
-      input.disabled = false;
-      input.focus();
-    }
-  }
-});
-ipc.on('result-save-settings', (_event, params) => { if (params && params.settings) latestSettings = params.settings; });
-ipc.on('result-lockout-destroy', (_event, params) => {
-  latestVaultList = null;
-  if (params && params.settings) latestSettings = params.settings;
-});
-
-exports._test = { validatePassword: passwordPolicy.validatePassword };
+module.exports = {
+  configure,
+  handleLogin,
+  handlePasswordChange,
+  _test: { validatePassword: passwordPolicy.validatePassword }
+};

@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
+const services = require('./renderer-services');
 const status = require('./status');
 const detailActions = require('./detail-actions');
 const editFormUi = require('./edit-form-ui');
@@ -83,9 +83,9 @@ function listProfiles(params) {
       params.saving.state = true;
       status.loadStatus();
       params.vaultList.vaultSelected = index;
-      showProfileDetail({ vaultList: params.vaultList, profile: item, saving: params.saving });
+      showProfileDetail({ vaultList: params.vaultList, profile: item, saving: params.saving, onResult: params.onResult });
       listProfiles(params);
-      ipc.send('read', { type: 'vault-read', file: item.file });
+      services.deliver(services.readProfile(item.file), params.onResult, 'Unable to load Profile.');
     });
     const row = document.createElement('span');
     row.className = 'profile-list-row';
@@ -194,7 +194,7 @@ function createEditProfile(params) {
     params.saving.state = true; status.loadStatus();
     const payload = { action: profile ? 'modify' : 'create', vault: nextProfile, vaultList: params.vaultList };
     if (!profile) payload.profileSetup = selectedSetup;
-    ipc.send('process-vault-list', payload);
+    services.deliver(services.saveProfile(payload), params.onResult, 'Unable to save Profile.');
   };
   form.addEventListener('submit', (event) => { event.preventDefault(); saveProfile(null); });
   const actions = [];
@@ -208,7 +208,7 @@ function togglePinned(params, button) {
   params.profile.pinned = params.profile.pinned !== true; params.profile.modified = Date(); params.saving.state = true;
   if (button) button.disabled = true;
   status.loadStatus();
-  ipc.send('process-vault-list', { action: 'modify', vault: params.profile, vaultList: params.vaultList });
+  services.deliver(services.saveProfile({ action: 'modify', vault: params.profile, vaultList: params.vaultList }), params.onResult, 'Unable to update Profile.');
 }
 
 function appendProfileNotes(area, profile) {
@@ -251,7 +251,7 @@ function confirmDelete(params) {
     { icon: 'fa-trash', title: 'Confirm delete profile', className: 'detail-action-delete', onClick: () => {
       const index = params.vaultList.vaultSelected; if (index == null || index < 0) return;
       params.vaultList.vaults.splice(index, 1); params.vaultList.vaultSelected = null; params.saving.state = true; status.loadStatus();
-      ipc.send('vault-list-delete', { action: 'delete', vaultList: params.vaultList, fileName: profile.file });
+      services.deliver(services.deleteProfile({ action: 'delete', vaultList: params.vaultList, fileName: profile.file }), params.onResult, 'Unable to delete Profile.');
       area.innerHTML = ''; detailActions.clear();
     } }
   ]);

@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
+const services = require('./renderer-services');
 
 const AUTO_LOCK_MINUTES = 5;
 let idleTimer = null;
@@ -50,13 +50,23 @@ function handleSecuritySessionLocked(payload = {}) {
   if (payload.requiresRestart === true) renderRestartRequiredLock(payload.reason);
 }
 
+function setSessionUnlocked(value) {
+  unlockedSession = value === true;
+  if (unlockedSession) {
+    panicRunning = false;
+    resetIdleTimer();
+  } else {
+    clearTimeout(idleTimer);
+  }
+}
+
 function panicLock(reason = 'panic-lock') {
   if (panicRunning) return;
   panicRunning = true;
   unlockedSession = false;
   clearTimeout(idleTimer);
   try { clearVisibleSensitiveFields(); } catch (_) {}
-  try { ipc.send('panic-lock', { reason }); } catch (_) {}
+  try { services.panicLock(reason); } catch (_) {}
 }
 
 function resetIdleTimer() {
@@ -68,23 +78,6 @@ function resetIdleTimer() {
 
 ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach((eventName) => {
   window.addEventListener(eventName, resetIdleTimer, { passive: true });
-});
-
-ipc.on('result', (_evt, params) => {
-  if (params && params.status === 'SUCCESS' && params.type === 'vaultlist-init') {
-    unlockedSession = true;
-    panicRunning = false;
-    resetIdleTimer();
-  }
-  if (params && params.type === 'session-locked') {
-    unlockedSession = false;
-    clearTimeout(idleTimer);
-  }
-});
-ipc.on('security-session-locked', (_evt, payload) => handleSecuritySessionLocked(payload));
-ipc.on('result-lockout-destroy', () => {
-  unlockedSession = false;
-  clearTimeout(idleTimer);
 });
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -176,10 +169,10 @@ function requestBackupPassword() {
 
 async function exportEncryptedBackup() {
   try {
-    const result = await ipc.invoke('security-backup-all');
+    const result = await services.backupAllData();
     if (!result || result.canceled) return;
     if (!result.ok) return alert(result.message || 'Backup failed.');
-    try { await ipc.invoke('device-record-backup-success'); } catch (_) {}
+    try { await services.recordBackupSuccess(); } catch (_) {}
     alert(`Complete SafeLedger backup created with ${result.fileCount} file(s).`);
   } catch (err) { alert(`Backup failed: ${err.message || err}`); }
 }
@@ -188,12 +181,12 @@ async function verifyEncryptedBackup() {
   let password = await requestBackupPassword();
   if (password == null) return;
   try {
-    const result = await ipc.invoke('security-verify-backup', password);
+    const result = await services.verifyBackup(password);
     password = '';
     if (!result || result.canceled) return;
     if (!result.ok) return alert(result.message || 'Backup verification failed.');
     const report = result.report || {};
-    try { await ipc.invoke('device-record-backup-verified', report.created || null); } catch (_) {}
+    try { await services.recordBackupVerified(report.created || null); } catch (_) {}
     const recovery = report.recoveryVerified
       ? '\nRecovery: Independent password unlock confirmed'
       : `\nRecovery: Legacy compatibility check only${report.warning ? `\n${report.warning}` : ''}`;
@@ -206,10 +199,10 @@ async function verifyEncryptedBackup() {
 
 async function restoreEncryptedBackup() {
   try {
-    const result = await ipc.invoke('security-restore-all');
+    const result = await services.restoreAllData();
     if (!result || result.canceled) return;
     if (!result.ok) return alert(result.message || 'Restore failed.');
-    try { await ipc.invoke('device-reset-storage-identity'); } catch (_) {}
+    try { await services.resetStorageIdentity(); } catch (_) {}
     alert(`Complete SafeLedger backup restored.${result.safetyDir ? ` Safety copy: ${result.safetyDir}` : ''}\n\nSafeLedger will now lock and reload.`);
     panicLock('post-restore-lock');
   } catch (err) { alert(`Restore failed: ${err.message || err}`); }
@@ -217,7 +210,7 @@ async function restoreEncryptedBackup() {
 
 async function selectLegacyImportSource() {
   try {
-    return await ipc.invoke('legacy-import-select-source');
+    return await services.selectLegacyImportSource();
   } catch (err) {
     return { ok: false, message: err.message || String(err) };
   }
@@ -225,7 +218,7 @@ async function selectLegacyImportSource() {
 
 async function importLegacyData(password) {
   try {
-    const result = await ipc.invoke('legacy-import-run', String(password || ''));
+    const result = await services.importLegacyData(String(password || ''));
     if (!result || !result.ok) return result || { ok: false, message: 'SafeLedger 1.x import failed.' };
     const report = result.report || {};
     alert(`SafeLedger 1.x import completed.\n\nProfiles: ${report.profileCount || 0}\nWallets: ${report.walletCount || 0}\nAssets: ${report.assetCount || 0}\n\nThe original 1.x files were not changed. SafeLedger will lock and reload the imported data.`);
@@ -236,10 +229,12 @@ async function importLegacyData(password) {
   }
 }
 
+exports.setSessionUnlocked = setSessionUnlocked;
+exports.handleSecuritySessionLocked = handleSecuritySessionLocked;
 exports.panicLock = panicLock;
 exports.exportEncryptedBackup = exportEncryptedBackup;
 exports.verifyEncryptedBackup = verifyEncryptedBackup;
 exports.restoreEncryptedBackup = restoreEncryptedBackup;
 exports.selectLegacyImportSource = selectLegacyImportSource;
 exports.importLegacyData = importLegacyData;
-exports._test = { AUTO_LOCK_MINUTES, clearVisibleSensitiveFields, handleSecuritySessionLocked, renderRestartRequiredLock, requestBackupPassword, resetIdleTimer };
+exports._test = { AUTO_LOCK_MINUTES, clearVisibleSensitiveFields, handleSecuritySessionLocked, renderRestartRequiredLock, requestBackupPassword, resetIdleTimer, setSessionUnlocked };

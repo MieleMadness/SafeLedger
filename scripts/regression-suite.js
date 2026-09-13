@@ -20,6 +20,7 @@ const CANONICAL_SUITES = Object.freeze([
   ['Visual contracts', 'scripts/visual-contract-regression-tests.js'],
   ['Runtime hardening', 'scripts/runtime-hardening-regression-tests.js'],
   ['Main process ownership', 'scripts/main-process-ownership-tests.js'],
+  ['Renderer architecture', 'scripts/renderer-architecture-tests.js'],
   ['Security cleanup invariants', 'scripts/cleanup-regression-tests.js'],
   ['Renderer sandbox', 'scripts/sandbox-regression-tests.js'],
   ['Atomic persistence', 'scripts/atomic-file-regression-tests.js'],

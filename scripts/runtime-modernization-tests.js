@@ -14,7 +14,8 @@ const index = read('src/main/index.html');
 const main = read('src/main/main.js');
 const preload = read('src/main/preload.js');
 const build = read('scripts/build-renderer.js');
-const bridge = read('src/main/renderer-bridge.js');
+const services = read('src/main/renderer-services.js');
+const rendererState = read('src/main/renderer-state.js');
 
 const versionParts = String(pkg.version || '').split('.').map(Number);
 assert.strictEqual(versionParts[0], 2, 'runtime-modernization gates apply to SafeLedger 2.x');
@@ -22,7 +23,10 @@ assert(versionParts[1] >= 2, 'runtime-modernization gates require SafeLedger 2.2
 assert.strictEqual(pkg.dependencies.bootstrap, undefined);
 assert.strictEqual(pkg.dependencies['font-awesome'], undefined);
 assert.strictEqual(exists('src/main/renderer-electron-shim.js'), false);
-assert(exists('src/main/renderer-bridge.js'));
+assert.strictEqual(exists('src/main/renderer-bridge.js'), false,
+  'Renderer pseudo-IPC compatibility must stay retired.');
+assert(exists('src/main/renderer-services.js'));
+assert(exists('src/main/renderer-state.js'));
 assert(exists('src/main/css/foundation.css'));
 assert(exists('src/main/css/local-icons.css'));
 assert(!index.includes('bootstrap.min.css'));
@@ -44,12 +48,14 @@ assert(main.includes('nodeIntegration: false'));
 assert(main.includes('contextIsolation: true'));
 assert(main.includes('sandbox: true'));
 assert(preload.includes("contextBridge.exposeInMainWorld('safeLedgerApi'"));
-assert(bridge.includes('window.safeLedgerApi'));
-assert(!bridge.includes("require('electron')"));
+assert(services.includes('window.safeLedgerApi'));
+assert(!services.includes("require('electron')"));
+assert(rendererState.includes('sessionUnlocked'));
+assert(rendererState.includes('function clearWorkspace()'));
 
 const rendererFiles = [
-  'renderer.js', 'profile.js', 'group.js', 'record.js',
-  'crypto-ui-bridge.js', 'security-ui.js', 'security-enhancements.js'
+  'renderer.js', 'renderer-services.js', 'renderer-state.js', 'profile.js', 'group.js', 'record.js',
+  'crypto-ui-bridge.js', 'security-ui.js', 'security-enhancements.js', 'settings-ui.js'
 ];
 for (const name of rendererFiles) {
   const source = read(`src/main/${name}`);
@@ -63,10 +69,10 @@ for (const name of fs.readdirSync(path.join(root, 'src', 'main')).filter((value)
 }
 
 for (const relative of [
-  'src/main/renderer-bridge.js', 'src/main/renderer.js', 'src/main/profile.js',
+  'src/main/renderer-services.js', 'src/main/renderer-state.js', 'src/main/renderer.js', 'src/main/profile.js',
   'src/main/group.js', 'src/main/record.js', 'src/main/security-ui.js',
-  'src/main/security-enhancements.js', 'src/main/crypto-ui-bridge.js',
+  'src/main/security-enhancements.js', 'src/main/crypto-ui-bridge.js', 'src/main/settings-ui.js',
   'scripts/build-renderer.js', 'scripts/runtime-modernization-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger 2.2+ renderer boundary, native shell, terminology, and local-time modernization gates.');
+console.log('PASS SafeLedger 2.2+ sandbox boundary, semantic renderer services/state, native shell, terminology, and local-time modernization gates.');

@@ -1,9 +1,11 @@
 'use strict';
 
 // SafeLedger trusted UI coordinator. Persistent state belongs to the main
-// process; this module owns the active renderer selection/navigation state.
+// process; renderer-state.js is the sole owner of transient workspace/session
+// state shared by renderer modules.
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
+const services = require('./renderer-services');
+const rendererState = require('./renderer-state');
 const profile = require('./profile');
 const group = require('./group');
 const record = require('./record');
@@ -17,23 +19,24 @@ const columnCollapseUi = require('./column-collapse-ui');
 const passwordControls = require('./password-controls');
 const loginLayout = require('./login-layout-ui');
 const displayPreferences = require('./display-preferences');
+const cryptoUi = require('./crypto-ui-bridge');
+const securityEnhancements = require('./security-enhancements');
+const lockoutUi = require('./lockout-ui-enhancements');
+const topActionLockUi = require('./top-action-lock-ui');
 
-let vaultData;
-let vaultList;
-let sessionUnlocked = false;
-const saving = { state: false };
-let settings;
+const state = rendererState.state;
 let pendingGlobalTarget = null;
 let revealWorkspaceAfterRead = false;
 
 function applySettings(nextSettings) {
-  settings = nextSettings;
-  securityUi.setPrivacyMode(!settings || settings.privacyMode !== false);
-  displayPreferences.setSettings(settings || {});
+  rendererState.setSettings(nextSettings);
+  securityUi.setPrivacyMode(!state.settings || state.settings.privacyMode !== false);
+  displayPreferences.setSettings(state.settings || {});
+  lockoutUi.handleSecurityResult({ settings: state.settings });
 }
 
 function requireUnlocked(action) {
-  if (!sessionUnlocked) {
+  if (!state.sessionUnlocked) {
     status.showStatus({ status: 'ERROR', statusMsg: 'Please login.' });
     return false;
   }
@@ -42,26 +45,30 @@ function requireUnlocked(action) {
 }
 
 function profileParams(extra = {}) {
-  return Object.assign({ vaultList, saving }, extra);
+  return Object.assign({ vaultList: state.vaultList, saving: state.saving, onResult: handleResult }, extra);
+}
+
+function workspaceParams(extra = {}) {
+  return Object.assign({ vaultData: state.vaultData, saving: state.saving, onResult: handleResult }, extra);
 }
 
 function selectedProfile() {
-  if (!vaultList || !Array.isArray(vaultList.vaults)) return null;
-  if (vaultList.vaultSelected == null || vaultList.vaultSelected === '') return null;
-  const index = Number(vaultList.vaultSelected);
-  if (!Number.isInteger(index) || index < 0 || index >= vaultList.vaults.length) return null;
-  return vaultList.vaults[index] || null;
+  if (!state.vaultList || !Array.isArray(state.vaultList.vaults)) return null;
+  if (state.vaultList.vaultSelected == null || state.vaultList.vaultSelected === '') return null;
+  const index = Number(state.vaultList.vaultSelected);
+  if (!Number.isInteger(index) || index < 0 || index >= state.vaultList.vaults.length) return null;
+  return state.vaultList.vaults[index] || null;
 }
 
 function selectedVaultItem() {
-  if (!vaultData || !Array.isArray(vaultData.groups)) return null;
-  if (vaultData.groupSelected == null || vaultData.groupSelected === '') return null;
-  const index = Number(vaultData.groupSelected);
-  if (!Number.isInteger(index) || index < 0 || index >= vaultData.groups.length) return null;
-  return vaultData.groups[index] || null;
+  if (!state.vaultData || !Array.isArray(state.vaultData.groups)) return null;
+  if (state.vaultData.groupSelected == null || state.vaultData.groupSelected === '') return null;
+  const index = Number(state.vaultData.groupSelected);
+  if (!Number.isInteger(index) || index < 0 || index >= state.vaultData.groups.length) return null;
+  return state.vaultData.groups[index] || null;
 }
 
-function firstDisplayProfileIndex(list = vaultList) {
+function firstDisplayProfileIndex(list = state.vaultList) {
   if (!list || !Array.isArray(list.vaults) || !list.vaults.length) return null;
   const ordered = list.vaults.map((item, index) => ({ item, index })).sort((a, b) => {
     const aPinned = a.item && a.item.pinned === true;
@@ -75,10 +82,10 @@ function firstDisplayProfileIndex(list = vaultList) {
 function showSelectedProfileDetail() {
   const selected = selectedProfile();
   if (!selected) return showAfterLogin();
-  if (vaultData) {
-    vaultData.groupSelected = null;
-    vaultData.recordSelected = null;
-    group.listGroups({ vaultData, saving });
+  if (state.vaultData) {
+    state.vaultData.groupSelected = null;
+    state.vaultData.recordSelected = null;
+    group.listGroups(workspaceParams());
   }
   const recordArea = document.getElementById('recordArea');
   if (recordArea) recordArea.innerHTML = '';
@@ -88,20 +95,20 @@ function showSelectedProfileDetail() {
 function showSelectedVaultItemDetail() {
   const selected = selectedVaultItem();
   if (!selected) return showSelectedProfileDetail();
-  vaultData.recordSelected = null;
-  group.listGroups({ vaultData, saving });
-  record.listRecords({ vaultData, saving });
-  group.showGroupDetail({ vaultData, group: selected, saving });
+  state.vaultData.recordSelected = null;
+  group.listGroups(workspaceParams());
+  record.listRecords(workspaceParams());
+  group.showGroupDetail(workspaceParams({ group: selected }));
 }
 
 function clearUtilitySelections() {
-  if (vaultList) {
-    vaultList.vaultSelected = null;
+  if (state.vaultList) {
+    state.vaultList.vaultSelected = null;
     profile.listProfiles(profileParams());
   }
-  if (vaultData) {
-    vaultData.groupSelected = null;
-    vaultData.recordSelected = null;
+  if (state.vaultData) {
+    state.vaultData.groupSelected = null;
+    state.vaultData.recordSelected = null;
   }
   const groupArea = document.getElementById('groupArea');
   const recordArea = document.getElementById('recordArea');
@@ -115,10 +122,10 @@ function cancelAddProfile() {
 }
 
 function navigateGlobalResult(target = {}) {
-  if (!sessionUnlocked || !vaultList || !Array.isArray(vaultList.vaults)) return;
+  if (!state.sessionUnlocked || !state.vaultList || !Array.isArray(state.vaultList.vaults)) return;
   let profileIndex = Number(target.profileIndex);
-  if (!Number.isInteger(profileIndex) || profileIndex < 0 || profileIndex >= vaultList.vaults.length) {
-    profileIndex = vaultList.vaults.findIndex((item) => String(item && item.file || '') === String(target.profileFile || ''));
+  if (!Number.isInteger(profileIndex) || profileIndex < 0 || profileIndex >= state.vaultList.vaults.length) {
+    profileIndex = state.vaultList.vaults.findIndex((item) => String(item && item.file || '') === String(target.profileFile || ''));
   }
   if (profileIndex < 0) {
     const unavailable = target.source === 'dashboard'
@@ -127,26 +134,26 @@ function navigateGlobalResult(target = {}) {
     return status.showStatus({ status: 'ERROR', statusMsg: unavailable });
   }
 
-  const selectedProfileItem = vaultList.vaults[profileIndex];
+  const selectedProfileItem = state.vaultList.vaults[profileIndex];
   pendingGlobalTarget = target;
-  vaultList.vaultSelected = profileIndex;
+  state.vaultList.vaultSelected = profileIndex;
   profile.listProfiles(profileParams());
   profile.showProfileDetail(profileParams({ profile: selectedProfileItem }));
-  saving.state = true;
+  state.saving.state = true;
   status.loadStatus();
-  ipc.send('read', { type: 'vault-read', file: selectedProfileItem.file });
+  services.deliver(services.readProfile(selectedProfileItem.file), handleResult, 'Unable to load Profile.');
 }
 
 function refreshSearch(key) {
   if (key === 'profile') {
-    if (vaultList) profile.listProfiles(profileParams());
+    if (state.vaultList) profile.listProfiles(profileParams());
     return;
   }
   if (key === 'vault') {
-    group.listGroups({ vaultData, saving });
+    group.listGroups(workspaceParams());
     return;
   }
-  if (key === 'asset') record.listRecords({ vaultData, saving });
+  if (key === 'asset') record.listRecords(workspaceParams());
 }
 
 function setupSearchClear(inputId, buttonId, key) {
@@ -164,66 +171,16 @@ function setupSearchClear(inputId, buttonId, key) {
   sync();
 }
 
-globalSearchUi.configure({ isUnlocked: () => sessionUnlocked, onSelect: navigateGlobalResult });
-dashboardUi.configure({ onOpenWallet: navigateGlobalResult });
-columnCollapseUi.configure({ onSearchClear: refreshSearch });
-
-window.addEventListener('DOMContentLoaded', () => {
-  const addVault = document.getElementById('addVault');
-  const addGroup = document.getElementById('addGroup');
-  const addRecord = document.getElementById('addRecord');
-  const profileSearch = document.getElementById('profileSearch');
-  const groupSearch = document.getElementById('groupSearch');
-  const recordSearch = document.getElementById('recordSearch');
-  const dashboardButton = document.getElementById('dashboardButton');
-
-  initSystem();
-
-  addVault.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    requireUnlocked(() => {
-      if (vaultList) profile.createProfile(profileParams({ onCancel: cancelAddProfile }));
-      else status.showStatus({ status: 'ERROR', statusMsg: 'Vault list is empty' });
-    });
-  });
-
-  addGroup.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    requireUnlocked(() => {
-      if (selectedProfile()) group.createGroup({ vaultData, saving, onCancel: showSelectedProfileDetail });
-      else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Profile.' });
-    });
-  });
-
-  addRecord.addEventListener('click', (event) => {
-    event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    requireUnlocked(() => {
-      if (!selectedVaultItem()) {
-        status.showStatus({ status: 'INFO', statusMsg: 'Select a Vault Item first, then choose Add Asset.' });
-        return;
-      }
-      record.createRecord({ vaultData, saving, onCancel: showSelectedVaultItemDetail });
-    });
-  });
-
-  profileSearch.addEventListener('keyup', (event) => { event.preventDefault(); refreshSearch('profile'); });
-  groupSearch.addEventListener('keyup', (event) => { event.preventDefault(); refreshSearch('vault'); });
-  recordSearch.addEventListener('keyup', (event) => { event.preventDefault(); refreshSearch('asset'); });
-  setupSearchClear('profileSearch', 'profileSearchClear', 'profile');
-  setupSearchClear('groupSearch', 'groupSearchClear', 'vault');
-  setupSearchClear('recordSearch', 'recordSearchClear', 'asset');
-  if (dashboardButton) dashboardButton.addEventListener('click', clearUtilitySelections);
-});
-
-ipc.on('result', (_event, params) => {
-  saving.state = false;
+function handleResult(params = {}) {
+  state.saving.state = false;
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
-  if (params.sessionUnlocked === true) sessionUnlocked = true;
+  if (params.sessionUnlocked === true) {
+    rendererState.setUnlocked(true);
+    securityEnhancements.setSessionUnlocked(true);
+  }
   if (params.type === 'session-locked') {
-    sessionUnlocked = false;
+    rendererState.setUnlocked(false);
+    securityEnhancements.setSessionUnlocked(false);
     revealWorkspaceAfterRead = false;
     pendingGlobalTarget = null;
     globalSearchUi.close();
@@ -232,20 +189,21 @@ ipc.on('result', (_event, params) => {
 
   if (params.settings) {
     applySettings(params.settings);
-    if (settings.lockLogin) {
-      const unlockAt = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+    if (state.settings.lockLogin) {
+      const unlockAt = state.settings.lockLoginTime + (state.settings.minutesToWaitBetweenLockout * 60000);
       if (unlockAt > Date.now()) {
-        sessionUnlocked = false;
+        rendererState.setUnlocked(false);
+        securityEnhancements.setSessionUnlocked(false);
         showLockScreen();
         return;
       }
     }
   }
 
-  if (params.type === 'vault-delete' && vaultList) {
-    if (params.vaultList) vaultList = params.vaultList;
-    else vaultList.vaultSelected = null;
-    vaultData = undefined;
+  if (params.type === 'vault-delete' && state.vaultList) {
+    if (params.vaultList) rendererState.setVaultList(params.vaultList);
+    else state.vaultList.vaultSelected = null;
+    rendererState.setVaultData(null);
     document.getElementById('groupArea').innerHTML = '';
     document.getElementById('recordArea').innerHTML = '';
     profile.listProfiles(profileParams());
@@ -254,19 +212,20 @@ ipc.on('result', (_event, params) => {
 
   const recordArea = document.getElementById('recordArea');
   if (params.vaultList) {
-    vaultList = params.vaultList;
+    rendererState.setVaultList(params.vaultList);
     if (params.type === 'vaultlist-init') {
-      sessionUnlocked = true;
-      const firstIndex = firstDisplayProfileIndex(vaultList);
-      vaultList.vaultSelected = firstIndex;
+      rendererState.setUnlocked(true);
+      securityEnhancements.setSessionUnlocked(true);
+      const firstIndex = firstDisplayProfileIndex(state.vaultList);
+      state.vaultList.vaultSelected = firstIndex;
       profile.listProfiles(profileParams());
       if (firstIndex != null) {
-        const firstProfile = vaultList.vaults[firstIndex];
+        const firstProfile = state.vaultList.vaults[firstIndex];
         profile.showProfileDetail(profileParams({ profile: firstProfile }));
         revealWorkspaceAfterRead = true;
-        saving.state = true;
+        state.saving.state = true;
         status.loadStatus();
-        ipc.send('read', { type: 'vault-read', file: firstProfile.file });
+        services.deliver(services.readProfile(firstProfile.file), handleResult, 'Unable to load Profile.');
       } else {
         revealWorkspaceAfterRead = false;
         showAfterLogin();
@@ -278,8 +237,8 @@ ipc.on('result', (_event, params) => {
         document.getElementById('groupArea').innerHTML = '';
         recordArea.innerHTML = '';
       }
-      if (vaultList.vaultSelected != null) {
-        const selected = vaultList.vaults[vaultList.vaultSelected];
+      if (state.vaultList.vaultSelected != null) {
+        const selected = state.vaultList.vaults[state.vaultList.vaultSelected];
         if (selected) profile.showProfileDetail(profileParams({ profile: selected }));
       } else if (params.type !== 'vault-delete') {
         showAfterLogin();
@@ -288,51 +247,51 @@ ipc.on('result', (_event, params) => {
   }
 
   if (params.vaultData) {
-    vaultData = params.vaultData;
+    rendererState.setVaultData(params.vaultData);
     if (['vault-create', 'vault-read', 'group-delete'].includes(params.type)) {
-      vaultData.groupSelected = null;
-      vaultData.recordSelected = null;
+      state.vaultData.groupSelected = null;
+      state.vaultData.recordSelected = null;
       recordArea.innerHTML = '';
     }
-    group.listGroups({ vaultData, saving });
+    group.listGroups(workspaceParams());
 
     if (params.type === 'vault-read' && pendingGlobalTarget) {
       const target = pendingGlobalTarget;
       pendingGlobalTarget = null;
       if (target.type === 'wallet' || target.type === 'asset') {
         const groupIndex = Number(target.walletIndex);
-        if (Number.isInteger(groupIndex) && vaultData.groups && vaultData.groups[groupIndex]) {
-          vaultData.groupSelected = groupIndex;
-          const selectedGroup = vaultData.groups[groupIndex];
-          group.listGroups({ vaultData, saving });
-          record.listRecords({ vaultData, saving });
+        if (Number.isInteger(groupIndex) && state.vaultData.groups && state.vaultData.groups[groupIndex]) {
+          state.vaultData.groupSelected = groupIndex;
+          const selectedGroup = state.vaultData.groups[groupIndex];
+          group.listGroups(workspaceParams());
+          record.listRecords(workspaceParams());
           if (target.type === 'asset') {
             const recordIndex = Number(target.recordIndex);
             if (Number.isInteger(recordIndex) && selectedGroup.records && selectedGroup.records[recordIndex]) {
-              vaultData.recordSelected = recordIndex;
-              record.listRecords({ vaultData, saving });
-              record.showRecordDetail({ vaultData, record: selectedGroup.records[recordIndex], saving });
-            } else group.showGroupDetail({ vaultData, group: selectedGroup, saving });
-          } else group.showGroupDetail({ vaultData, group: selectedGroup, saving });
+              state.vaultData.recordSelected = recordIndex;
+              record.listRecords(workspaceParams());
+              record.showRecordDetail(workspaceParams({ record: selectedGroup.records[recordIndex] }));
+            } else group.showGroupDetail(workspaceParams({ group: selectedGroup }));
+          } else group.showGroupDetail(workspaceParams({ group: selectedGroup }));
         }
       }
     }
 
     if (params.type === 'group-create' || params.type === 'group-modify') {
-      if (vaultData.groupSelected != null) {
-        const selected = vaultData.groups[vaultData.groupSelected];
-        record.listRecords({ vaultData, saving });
-        if (selected) group.showGroupDetail({ vaultData, group: selected, saving });
+      if (state.vaultData.groupSelected != null) {
+        const selected = state.vaultData.groups[state.vaultData.groupSelected];
+        record.listRecords(workspaceParams());
+        if (selected) group.showGroupDetail(workspaceParams({ group: selected }));
       }
     }
 
-    if (params.type === 'record' && vaultData.groupSelected != null) {
-      const selectedGroup = vaultData.groups[vaultData.groupSelected];
+    if (params.type === 'record' && state.vaultData.groupSelected != null) {
+      const selectedGroup = state.vaultData.groups[state.vaultData.groupSelected];
       if (selectedGroup && Array.isArray(selectedGroup.records)) {
-        record.listRecords({ vaultData, saving });
-        if (vaultData.recordSelected != null) {
-          const selectedRecord = selectedGroup.records[vaultData.recordSelected];
-          if (selectedRecord) record.showRecordDetail({ vaultData, record: selectedRecord, saving });
+        record.listRecords(workspaceParams());
+        if (state.vaultData.recordSelected != null) {
+          const selectedRecord = selectedGroup.records[state.vaultData.recordSelected];
+          if (selectedRecord) record.showRecordDetail(workspaceParams({ record: selectedRecord }));
         }
       }
     }
@@ -342,17 +301,17 @@ ipc.on('result', (_event, params) => {
     revealWorkspaceAfterRead = false;
     columnCollapseUi.revealAfterLogin();
   }
-});
+}
 
-const initSystem = () => ipc.send('init-system');
-
-ipc.on('result-init-system', (_event, params) => {
-  saving.state = false;
+function handleInitSystem(params = {}) {
+  state.saving.state = false;
+  rendererState.setUnlocked(false);
+  securityEnhancements.setSessionUnlocked(false);
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
   if (params.settings) {
     applySettings(params.settings);
-    if (settings.lockLogin) {
-      const unlockAt = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
+    if (state.settings.lockLogin) {
+      const unlockAt = state.settings.lockLoginTime + (state.settings.minutesToWaitBetweenLockout * 60000);
       if (unlockAt > Date.now()) {
         showLockScreen();
         return;
@@ -360,21 +319,18 @@ ipc.on('result-init-system', (_event, params) => {
     }
   }
   showLogin();
-});
+}
 
-ipc.on('result-rotate-crypto', (_event, params) => {
-  saving.state = false;
-  if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
-  if (params.status === 'SUCCESS') {
-    sessionUnlocked = params.sessionUnlocked === true;
-    if (params.vaultList) vaultList = params.vaultList;
-    if (vaultList) profile.listProfiles(profileParams());
-    showAfterLogin();
-  } else {
-    const editBtn = document.getElementById('encryptionEditBtn');
-    if (editBtn) editBtn.disabled = false;
-  }
-});
+function initializeSystem() {
+  services.deliver(services.initializeSystem(), handleInitSystem, 'Not able to load settings file');
+}
+
+function handlePasswordChanged() {
+  rendererState.setUnlocked(true);
+  securityEnhancements.setSessionUnlocked(true);
+  if (state.vaultList) profile.listProfiles(profileParams());
+  showAfterLogin();
+}
 
 const showAfterLogin = () => {
   detailActions.clear();
@@ -390,7 +346,8 @@ const showAfterLogin = () => {
 };
 
 const showLogin = () => {
-  sessionUnlocked = false;
+  rendererState.setUnlocked(false);
+  securityEnhancements.setSessionUnlocked(false);
   revealWorkspaceAfterRead = false;
   pendingGlobalTarget = null;
   globalSearchUi.close();
@@ -404,7 +361,6 @@ const showLogin = () => {
   area.appendChild(document.createElement('hr'));
 
   const form = document.createElement('form');
-  form.addEventListener('submit', (event) => event.preventDefault());
   area.appendChild(form);
   const formGroup = document.createElement('div');
   formGroup.className = 'form-group';
@@ -438,28 +394,31 @@ const showLogin = () => {
   loginBtn.className = 'btn btn-default bottom-space pull-right';
   loginBtn.innerHTML = '<i class="fa fa-unlock"></i> Login';
   form.appendChild(loginBtn);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    cryptoUi.handleLogin(loginBtn);
+  });
 
   passwordControls.configure(input, { autocomplete: 'off', strength: true });
   loginLayout.syncLoginControlWidths();
 };
 
-window.addEventListener('resize', () => loginLayout.syncLoginControlWidths());
-
-ipc.on('show-settings', () => {
-  if (!sessionUnlocked || !settings) return;
+function openSettings() {
+  if (!state.sessionUnlocked || !state.settings) return;
   clearUtilitySelections();
-  settingsUi.show({ settings, saving });
-});
+  settingsUi.show({ settings: state.settings, saving: state.saving, onResult: handleSaveSettings });
+}
 
-ipc.on('result-save-settings', (_event, params) => {
-  saving.state = false;
+function handleSaveSettings(params = {}) {
+  state.saving.state = false;
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
   if (params.settings) applySettings(params.settings);
-  if (settings && sessionUnlocked) settingsUi.show({ settings, saving });
-});
+  if (state.settings && state.sessionUnlocked) settingsUi.show({ settings: state.settings, saving: state.saving, onResult: handleSaveSettings });
+}
 
 const showLockScreen = () => {
-  sessionUnlocked = false;
+  rendererState.setUnlocked(false);
+  securityEnhancements.setSessionUnlocked(false);
   revealWorkspaceAfterRead = false;
   pendingGlobalTarget = null;
   globalSearchUi.close();
@@ -468,11 +427,11 @@ const showLockScreen = () => {
   const area = document.getElementById('detailArea');
   area.innerHTML = '';
   const header = document.createElement('h1');
-  header.textContent = `Account is locked for ${settings.minutesToWaitBetweenLockout} minutes.`;
+  header.textContent = `Account is locked for ${state.settings.minutesToWaitBetweenLockout} minutes.`;
   area.appendChild(header);
   area.appendChild(document.createElement('hr'));
   const retry = document.createElement('p');
-  const unlockAt = new Date(settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000));
+  const unlockAt = new Date(state.settings.lockLoginTime + (state.settings.minutesToWaitBetweenLockout * 60000));
   retry.textContent = `Try again after ${unlockAt}`;
   area.appendChild(retry);
   const button = document.createElement('button');
@@ -482,24 +441,25 @@ const showLockScreen = () => {
   button.innerHTML = '<span class="fa fa-unlock" aria-hidden="true"></span> Retry Login';
   button.addEventListener('click', (event) => {
     event.preventDefault();
-    if (saving.state) return alert('Please wait for processing to complete');
-    const unlockTime = settings.lockLoginTime + (settings.minutesToWaitBetweenLockout * 60000);
-    if (settings.lockLogin && unlockTime > Date.now()) alert('Lock timeout is still active');
+    if (state.saving.state) return alert('Please wait for processing to complete');
+    const unlockTime = state.settings.lockLoginTime + (state.settings.minutesToWaitBetweenLockout * 60000);
+    if (state.settings.lockLogin && unlockTime > Date.now()) alert('Lock timeout is still active');
     else showLogin();
   });
   area.appendChild(button);
 };
 
-ipc.on('result-lockout-destroy', (_event, params) => {
-  saving.state = false;
-  sessionUnlocked = false;
+function handleLockoutDestroy(params = {}) {
+  state.saving.state = false;
+  rendererState.clearWorkspace();
+  securityEnhancements.setSessionUnlocked(false);
   revealWorkspaceAfterRead = false;
   pendingGlobalTarget = null;
   globalSearchUi.close();
   if (params.status) status.showStatus({ status: params.status, statusMsg: params.statusMsg });
   if (params.settings) applySettings(params.settings);
   showLockoutDestroy();
-});
+}
 
 const showLockoutDestroy = () => {
   detailActions.clear();
@@ -521,10 +481,80 @@ const showLockoutDestroy = () => {
   button.innerHTML = '<span class="fa fa-unlock" aria-hidden="true"></span> Go to Login';
   button.addEventListener('click', (event) => {
     event.preventDefault();
-    if (!saving.state) showLogin();
+    if (!state.saving.state) showLogin();
   });
   area.appendChild(button);
 };
+
+globalSearchUi.configure({ isUnlocked: () => state.sessionUnlocked, onSelect: navigateGlobalResult });
+dashboardUi.configure({ onOpenWallet: navigateGlobalResult });
+columnCollapseUi.configure({ onSearchClear: refreshSearch });
+cryptoUi.configure({ onCommandResult: handleResult, onPasswordChanged: handlePasswordChanged });
+topActionLockUi.configure({ onOpenLogin: initializeSystem });
+
+window.addEventListener('DOMContentLoaded', () => {
+  const addVault = document.getElementById('addVault');
+  const addGroup = document.getElementById('addGroup');
+  const addRecord = document.getElementById('addRecord');
+  const profileSearch = document.getElementById('profileSearch');
+  const groupSearch = document.getElementById('groupSearch');
+  const recordSearch = document.getElementById('recordSearch');
+  const dashboardButton = document.getElementById('dashboardButton');
+  const settingsButton = document.getElementById('settingsButton');
+
+  initializeSystem();
+
+  addVault.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (state.saving.state) return alert('Please wait for processing to complete');
+    requireUnlocked(() => {
+      if (state.vaultList) profile.createProfile(profileParams({ onCancel: cancelAddProfile }));
+      else status.showStatus({ status: 'ERROR', statusMsg: 'Vault list is empty' });
+    });
+  });
+
+  addGroup.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (state.saving.state) return alert('Please wait for processing to complete');
+    requireUnlocked(() => {
+      if (selectedProfile()) group.createGroup(workspaceParams({ onCancel: showSelectedProfileDetail }));
+      else status.showStatus({ status: 'ERROR', statusMsg: 'Please select a Profile.' });
+    });
+  });
+
+  addRecord.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (state.saving.state) return alert('Please wait for processing to complete');
+    requireUnlocked(() => {
+      if (!selectedVaultItem()) {
+        status.showStatus({ status: 'INFO', statusMsg: 'Select a Vault Item first, then choose Add Asset.' });
+        return;
+      }
+      record.createRecord(workspaceParams({ onCancel: showSelectedVaultItemDetail }));
+    });
+  });
+
+  profileSearch.addEventListener('keyup', (event) => { event.preventDefault(); refreshSearch('profile'); });
+  groupSearch.addEventListener('keyup', (event) => { event.preventDefault(); refreshSearch('vault'); });
+  recordSearch.addEventListener('keyup', (event) => { event.preventDefault(); refreshSearch('asset'); });
+  setupSearchClear('profileSearch', 'profileSearchClear', 'profile');
+  setupSearchClear('groupSearch', 'groupSearchClear', 'vault');
+  setupSearchClear('recordSearch', 'recordSearchClear', 'asset');
+  if (dashboardButton) dashboardButton.addEventListener('click', clearUtilitySelections);
+  if (settingsButton) settingsButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    openSettings();
+  });
+});
+
+window.addEventListener('resize', () => loginLayout.syncLoginControlWidths());
+
+services.onLockoutDestroy((params) => handleLockoutDestroy(params || {}));
+services.onSecuritySessionLocked((payload) => {
+  rendererState.setUnlocked(false);
+  securityEnhancements.handleSecuritySessionLocked(payload || {});
+});
+services.onShowSettings(() => openSettings());
 
 exports._test = {
   navigateGlobalResult,
@@ -535,5 +565,8 @@ exports._test = {
   refreshSearch,
   setupSearchClear,
   showSelectedProfileDetail,
-  showSelectedVaultItemDetail
+  showSelectedVaultItemDetail,
+  handleResult,
+  handleInitSystem,
+  openSettings
 };

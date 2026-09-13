@@ -1,6 +1,6 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
+const services = require('./renderer-services');
 const status = require('./status');
 const detailActions = require('./detail-actions');
 const passwordSettingsUi = require('./password-settings-ui');
@@ -31,7 +31,7 @@ function saveUserSetting(params, patch, button) {
   if (button) button.disabled = true;
   params.saving.state = true;
   status.loadStatus();
-  ipc.send('save-settings', { newSettings: patch });
+  services.deliver(services.saveSettings(patch), params.onResult, 'Unable to save settings.');
 }
 
 function configureNumberInput(input) {
@@ -134,8 +134,8 @@ async function populateDeviceSecurityStatus(section, params) {
 
   try {
     const [storage, backupResult] = await Promise.all([
-      ipc.invoke('device-storage-health'),
-      ipc.invoke('device-backup-health')
+      services.getStorageHealth(),
+      services.getBackupHealth()
     ]);
     storageValue.textContent = storage && storage.connected ? 'Connected' : `Unavailable${storage && storage.reason ? ` (${storage.reason})` : ''}`;
     writableValue.textContent = storage && storage.writable ? 'Writable' : 'Not writable';
@@ -370,9 +370,15 @@ function renderSelfDestructSection(area, params) {
     const desired = checkbox.checked === true;
     checkbox.disabled = true;
     try {
-      if (!window.safeLedgerApi || typeof window.safeLedgerApi.setSelfDestructProtection !== 'function') throw new Error('Self-Destruct settings are unavailable in this build.');
-      const result = await window.safeLedgerApi.setSelfDestructProtection(desired);
+      const result = await services.setSelfDestructProtection(desired);
       checkbox.checked = result && result.enabled === true;
+      try {
+        const refreshed = await services.getBackupHealth();
+        if (refreshed && refreshed.settings && typeof params.onResult === 'function') {
+          params.onResult({ status: 'SUCCESS', settings: refreshed.settings });
+          return;
+        }
+      } catch (_) {}
     } catch (err) {
       checkbox.checked = previous;
       window.alert(err && err.message ? err.message : 'Unable to update Self-Destruct Protection.');

@@ -1,6 +1,6 @@
 'use strict';
 
-const { clipboard } = require('./renderer-bridge');
+const services = require('./renderer-services');
 const QRCode = require('qrcode');
 const eyeIcon = require('./eye-icon');
 const motion = require('./motion-ui');
@@ -13,18 +13,22 @@ exports.isPrivacyMode = () => privacyMode;
 
 function autoClearClipboard(expected) {
   setTimeout(() => {
-    try {
-      if (clipboard.readText() === expected) clipboard.clear();
-    } catch (_) {}
+    services.clipboardClearIfMatches(expected).catch(() => {});
   }, CLIPBOARD_CLEAR_MS);
 }
 
 exports.copySensitive = (value) => {
   const text = String(value || '');
   if (!text) return;
-  clipboard.writeText(text);
+  services.clipboardWrite(text).catch(() => {});
   autoClearClipboard(text);
 };
+
+function copyPublic(value) {
+  const text = String(value || '');
+  if (!text) return;
+  services.clipboardWrite(text).catch(() => {});
+}
 
 function copyIconMarkup() {
   return '<svg class="sl-copy-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="sl-copy-sheet sl-copy-sheet-back" d="M9 4h7.5L20 7.5V16"/><path class="sl-copy-sheet sl-copy-sheet-back" d="M16.5 4v3.5H20"/><path class="sl-copy-sheet sl-copy-sheet-front" d="M4 8h7.5l3.5 3.5V20H4z"/><path class="sl-copy-sheet sl-copy-sheet-front" d="M11.5 8v3.5H15"/></svg>';
@@ -227,7 +231,7 @@ exports.appendPublicAddressField = (parent, address, symbol) => {
 
   if (address) {
     shell.appendChild(makeInlineActions(
-      () => clipboard.writeText(String(address)),
+      () => copyPublic(address),
       () => address,
       qrArea,
       `Generated locally from the ${symbol || 'asset'} public address. No network connection is used.`
@@ -284,4 +288,4 @@ exports.printRecoverySheet = (title, fields, includesSensitive) => {
   }, 50);
 };
 
-exports._test = { makeIconButton, makeCopyButton, copyIconMarkup, qrIconMarkup, makeEditRevealButton, makeInlineActions, createPrintFrame, syncSensitiveSummary };
+exports._test = { makeIconButton, makeCopyButton, copyIconMarkup, qrIconMarkup, makeEditRevealButton, makeInlineActions, createPrintFrame, syncSensitiveSummary, copyPublic };

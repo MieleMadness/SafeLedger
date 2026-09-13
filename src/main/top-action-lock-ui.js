@@ -1,28 +1,33 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
+const rendererState = require('./renderer-state');
 const status = require('./status');
 
 const LOCKED_MESSAGE = 'Please login.';
-let unlocked = false;
+let onOpenLogin = null;
+
+function configure(options = {}) {
+  onOpenLogin = typeof options.onOpenLogin === 'function' ? options.onOpenLogin : null;
+}
 
 function showLockedMessage() {
   status.showStatus({ status: 'ERROR', statusMsg: LOCKED_MESSAGE });
 }
 
 function openLogin() {
-  if (window.safeLedgerApi && typeof window.safeLedgerApi.initSystem === 'function') {
-    window.safeLedgerApi.initSystem();
+  if (onOpenLogin) return onOpenLogin();
+  if (typeof window !== 'undefined' && window.location && typeof window.location.reload === 'function') {
+    window.location.reload();
     return;
   }
-  ipc.send('init-system');
+  showLockedMessage();
 }
 
 function guardButton(id, lockedAction) {
   const button = document.getElementById(id);
   if (!button) return;
   button.addEventListener('click', (event) => {
-    if (unlocked) return;
+    if (rendererState.isUnlocked()) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     lockedAction();
@@ -36,22 +41,14 @@ function start() {
   guardButton('globalSearchButton', showLockedMessage);
 }
 
-ipc.on('result-init-system', () => { unlocked = false; });
-ipc.on('result', (_event, params = {}) => {
-  if (params.type === 'vaultlist-init' && params.sessionUnlocked === true) unlocked = true;
-  else if (params.sessionUnlocked === true) unlocked = true;
-  if (params.type === 'session-locked') unlocked = false;
-});
-ipc.on('result-lockout-destroy', () => { unlocked = false; });
-ipc.on('security-session-locked', () => { unlocked = false; });
-
 if (typeof window !== 'undefined') window.addEventListener('DOMContentLoaded', start);
 
+exports.configure = configure;
 exports.LOCKED_MESSAGE = LOCKED_MESSAGE;
 exports._test = {
   showLockedMessage,
   openLogin,
   guardButton,
   start,
-  isUnlocked: () => unlocked
+  isUnlocked: () => rendererState.isUnlocked()
 };

@@ -16,6 +16,7 @@ const sessionLock = read('src/main/session-lock-main.js');
 const preload = read('src/main/preload.js');
 const index = read('src/main/index.html');
 const entry = read('src/main/renderer-entry.js');
+const services = read('src/main/renderer-services.js');
 const security = read('src/main/security-enhancements.js');
 const securityMain = read('src/main/security-main.js');
 const build = read('scripts/build-renderer.js');
@@ -25,6 +26,8 @@ assert.strictEqual(pkg.devDependencies.esbuild, '0.28.2');
 assert.strictEqual(pkg.dependencies.jquery, undefined);
 assert.strictEqual(pkg.dependencies['@electron/remote'], undefined);
 assert.strictEqual(exists('src/main/preload-compat.js'), false);
+assert.strictEqual(exists('src/main/renderer-bridge.js'), false,
+  'The retired renderer pseudo-IPC adapter must not return.');
 assert(main.includes('nodeIntegration: false'));
 assert(main.includes('contextIsolation: true'));
 assert(main.includes('sandbox: true'));
@@ -50,6 +53,8 @@ assert(sessionLock.includes('win.webContents.reload()'), 'Central session lock m
 
 assert(preload.includes("const { contextBridge, ipcRenderer } = require('electron')"));
 assert(preload.includes("contextBridge.exposeInMainWorld('safeLedgerApi'"));
+assert(preload.includes('function requestResult('),
+  'Shared legacy result transport must be serialized behind the preload boundary.');
 assert(!preload.includes("require('./"));
 assert(index.includes('./renderer.bundle.js'));
 assert(!index.includes('bootstrap.min.css'));
@@ -61,15 +66,19 @@ assert(build.includes("platform: 'browser'"));
 assert(!build.includes('safeledger-electron-shim'));
 assert(!build.includes('renderer-electron-shim'));
 assert(build.includes('forbidden runtime dependency'));
+assert(services.includes('const backupAllData = () => required(\'backupAllData\')();'));
+assert(services.includes('const verifyBackup = (password) => required(\'verifyBackup\')(password);'));
+assert(services.includes('const restoreAllData = () => required(\'restoreAllData\')();'));
 assert(!security.includes("require('fs')"));
 assert(!security.includes("require('path')"));
 assert(!security.includes('MutationObserver'));
-assert(security.includes("ipc.invoke('security-backup-all')"));
-assert(security.includes("ipc.invoke('security-verify-backup', password)"),
-  'Verify Backup must pass the transient backup password to the trusted main-process verifier');
+assert(security.includes("const services = require('./renderer-services');"));
+assert(security.includes('services.backupAllData()'));
+assert(security.includes('services.verifyBackup(password)'),
+  'Verify Backup must pass the transient backup password through the semantic service boundary.');
 assert(security.includes('requestBackupPassword()'),
   'Verify Backup must challenge for the backup password instead of relying on the live session key');
-assert(security.includes("ipc.invoke('security-restore-all')"));
+assert(security.includes('services.restoreAllData()'));
 assert(securityMain.includes("ipc.handle('security-backup-all'"));
 assert(securityMain.includes("ipc.handle('security-verify-backup'"));
 assert(securityMain.includes("ipc.handle('security-restore-all'"));
@@ -84,10 +93,10 @@ for (const relative of [
   'src/main/bootstrap.js', 'src/main/main.js', 'src/main/session-lock-main.js',
   'src/main/preload.js', 'src/main/security-main.js',
   'src/main/security-enhancements.js', 'src/main/profile-transaction.js',
-  'src/main/renderer-bridge.js', 'src/main/renderer-entry.js', 'src/main/atomic-file.js',
+  'src/main/renderer-services.js', 'src/main/renderer-state.js', 'src/main/renderer-entry.js', 'src/main/atomic-file.js',
   'src/main/vault-schema.js', 'src/main/legacy-import.js',
   'scripts/continuity-hardening-tests.js', 'scripts/recovery-confidence-tests.js',
   'scripts/build-renderer.js', 'scripts/run-gui-smoke.js', 'scripts/version-bump-check.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger sandbox, single-owner Emergency Lock, independent backup verification bridge, real GUI smoke hooks, and main-process security operations.');
+console.log('PASS SafeLedger sandbox, semantic renderer service boundary, single-owner Emergency Lock, independent backup verification, GUI smoke hooks, and main-process security operations.');

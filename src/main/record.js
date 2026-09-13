@@ -2,7 +2,7 @@
   Author: Edward Seufert - Cborgtech, LLC
 */
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
+const services = require('./renderer-services');
 const statusMgr = require('./status');
 const securityUi = require('./security-ui');
 const walletCatalog = require('./wallet-catalog');
@@ -156,7 +156,7 @@ const renderRecords = (params) => {
       e.preventDefault();
       if (params.saving.state) return alert('Please wait for processing to complete');
       params.vaultData.recordSelected = i;
-      renderRecordDetail({ vaultData: params.vaultData, record: coin, saving: params.saving });
+      renderRecordDetail({ vaultData: params.vaultData, record: coin, saving: params.saving, onResult: params.onResult });
       renderRecords(params);
     });
     if (params.vaultData.recordSelected == i) href.className = 'item-selected';
@@ -269,12 +269,16 @@ const createEditRecord = (params) => {
 
     params.saving.state = true;
     statusMgr.loadStatus();
-    ipc.send('process-record', {
-      action: originalRecord ? 'modify' : 'create',
-      vaultData: submittedVaultData,
-      originalRecord,
-      duplicateConfirmed
-    });
+    services.deliver(
+      services.saveAsset({
+        action: originalRecord ? 'modify' : 'create',
+        vaultData: submittedVaultData,
+        originalRecord,
+        duplicateConfirmed
+      }),
+      params.onResult,
+      'Unable to save Asset.'
+    );
   };
 
   form.addEventListener('submit', (e) => { e.preventDefault(); saveRecord(null); });
@@ -301,7 +305,11 @@ function persistRecordUpdate(params, updates, button) {
   params.saving.state = true;
   if (button) button.disabled = true;
   statusMgr.loadStatus();
-  ipc.send('process-record', { action: 'modify', vaultData: submittedVaultData, originalRecord, duplicateConfirmed: false });
+  services.deliver(
+    services.saveAsset({ action: 'modify', vaultData: submittedVaultData, originalRecord, duplicateConfirmed: false }),
+    params.onResult,
+    'Unable to update Asset.'
+  );
 }
 
 exports.showRecordDetail = (params) => renderRecordDetail(params);
@@ -370,7 +378,11 @@ const confirmDelete = (params) => {
       params.vaultData.recordSelected = null;
       params.saving.state = true;
       statusMgr.loadStatus();
-      ipc.send('process-record', { action: 'delete', vaultData: params.vaultData });
+      services.deliver(
+        services.saveAsset({ action: 'delete', vaultData: params.vaultData }),
+        params.onResult,
+        'Unable to delete Asset.'
+      );
       area.innerHTML = '';
       detailActions.clear();
     } }

@@ -1,7 +1,7 @@
 {
   "name": "safe-ledger",
   "productName": "SafeLedger",
-  "version": "2.6.93",
+  "version": "2.6.94",
   "description": "Free, offline and portable encrypted information vault",
   "main": "src/main/bootstrap.js",
   "scripts": {
@@ -12,6 +12,7 @@
     "test:architecture": "node scripts/test-architecture-tests.js",
     "test:current-product-contract": "node scripts/current-product-contract-tests.js",
     "test:main-process-ownership": "node scripts/main-process-ownership-tests.js",
+    "test:renderer-architecture": "node scripts/renderer-architecture-tests.js",
     "audit:dead-code": "node scripts/dead-code-audit.js",
     "test:runtime-modernization": "node scripts/runtime-modernization-tests.js",
     "test:device-security": "node scripts/device-security-tests.js && node scripts/device-dashboard-health-tests.js",
