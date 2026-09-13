@@ -1,0 +1,35 @@
+/*
+ * SafeLedger renderer stylesheet manifest.
+ *
+ * index.html loads this one file. The order below is the application cascade
+ * contract: legacy/base layout first, feature/component refinements next,
+ * shared theme tokens/colors after components, and explicit application state
+ * last. Keep ordering changes intentional and covered by css-architecture-tests.
+ */
+
+/* Base shell, icon registries, and feature foundations. */
+@import url("site.css");
+@import url("token-icons.css");
+@import url("product-features.css");
+@import url("recovery-refinement.css");
+@import url("activity-history.css");
+@import url("global-search.css");
+@import url("foundation.css");
+@import url("local-icons.css");
+
+/* Shared theme/component system and current feature refinements. */
+@import url("app-theme.css");
+@import url("ui-polish.css");
+@import url("ui-dock-refinement.css");
+@import url("profile-setup.css");
+@import url("ui-current.css");
+@import url("dashboard-layout.css");
+@import url("status-messages.css");
+@import url("qr-theme.css");
+@import url("workspace-dividers.css");
+
+/* Theme palettes intentionally come after component definitions. */
+@import url("appearance-palettes.css");
+
+/* Transient application state is the final cascade owner. */
+@import url("app-state.css");
