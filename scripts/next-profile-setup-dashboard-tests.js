@@ -60,6 +60,7 @@ function testProfileCreationUiAndMainProcessContract() {
   const transaction = read('src/main/profile-transaction.js');
   const css = read('src/main/css/profile-setup.css');
   const index = read('src/main/index.html');
+  const manifest = read('src/main/css/app.css');
 
   assert(profile.includes("'Standard setup'"), 'Add Profile should offer Standard setup.');
   assert(profile.includes("'Blank Profile'"), 'Add Profile should offer Blank Profile.');
@@ -74,7 +75,8 @@ function testProfileCreationUiAndMainProcessContract() {
   assert(main.includes("if (mode === 'blank') return [];"), 'Blank mode should create an empty vault-item list.');
 
   assert(css.includes('.profile-wallet-template-grid'), 'Starter template picker should have dedicated layout styling.');
-  assert(index.includes('./css/profile-setup.css'), 'Profile setup styles should load in the application.');
+  assert(index.includes('./css/app.css'), 'Application shell must load the canonical stylesheet manifest.');
+  assert(manifest.includes('@import url("profile-setup.css");'), 'Profile setup styles should remain loaded through the canonical manifest.');
 }
 
 function testRecoveryDashboardRowsOpenVaultItems() {
