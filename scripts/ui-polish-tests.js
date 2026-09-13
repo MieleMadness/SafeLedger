@@ -8,6 +8,7 @@ const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const index = read('src/main/index.html');
+const manifest = read('src/main/css/app.css');
 const theme = read('src/main/css/app-theme.css');
 const group = read('src/main/group.js');
 const record = read('src/main/record.js');
@@ -34,8 +35,9 @@ function contrast(a, b) {
 }
 
 assert(/^2\.\d+\.\d+$/.test(pkg.version));
-assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/local-icons.css'), 'theme stylesheet must load after the legacy icon/foundation layers');
-assert(index.indexOf('./css/ui-current.css') > index.indexOf('./css/app-theme.css'), 'current UI refinements must load after the base theme');
+assert(index.includes('./css/app.css'), 'application shell must load the canonical stylesheet manifest');
+assert(manifest.indexOf('@import url("app-theme.css");') > manifest.indexOf('@import url("local-icons.css");'), 'theme stylesheet must load after the legacy icon/foundation layers');
+assert(manifest.indexOf('@import url("ui-current.css");') > manifest.indexOf('@import url("app-theme.css");'), 'current UI refinements must load after the base theme');
 assert(foundation.includes('--sl-profile-column: minmax(0, 2fr);'));
 assert(foundation.includes('--sl-vault-column: minmax(0, 2fr);'));
 assert(foundation.includes('--sl-asset-column: minmax(0, 2fr);'));
