@@ -64,14 +64,16 @@ function testGuidedRecoveryIsEphemeral() {
 function testRecoveryIntelligenceBoundary() {
   const bootstrap = read('src/main/bootstrap.js');
   const preload = read('src/main/preload.js');
-  const bridge = read('src/main/renderer-bridge.js');
+  const services = read('src/main/renderer-services.js');
   const dashboard = read('src/main/recovery-intelligence-dashboard-ui.js');
 
   assert(bootstrap.includes("ipc.handle('recovery-intelligence-summary'"));
   assert(bootstrap.includes('sensitiveFingerprints.findDuplicates'));
   assert(bootstrap.includes('onLock: () => sensitiveFingerprints.clear()'));
   assert(preload.includes('getRecoveryIntelligence'));
-  assert(bridge.includes("'recovery-intelligence-summary': 'getRecoveryIntelligence'"));
+  assert(services.includes("const getRecoveryIntelligence = () => required('getRecoveryIntelligence')();"));
+  assert(!services.includes('recovery-intelligence-summary'),
+    'Renderer services should expose application operations, not transport channel names.');
   assert(dashboard.includes('never addresses, seed phrases, private keys, fingerprints, or backup paths'));
   assert(!dashboard.includes('item.publicAddress'));
   assert(!dashboard.includes('item.privateAddress'));
@@ -92,4 +94,4 @@ testPrivacyModeDefaultsAndPersistence();
 testGuidedRecoveryIsEphemeral();
 testRecoveryIntelligenceBoundary();
 testBip39RendererBoundary();
-console.log('PASS SafeLedger 2.4 Privacy Mode, guided Recovery Validation, renderer-safe BIP39, sanitized intelligence boundaries, and canonical Phase 4 Settings ownership.');
+console.log('PASS SafeLedger 2.4 Privacy Mode, guided Recovery Validation, renderer-safe BIP39, sanitized intelligence boundaries, and semantic renderer services.');
