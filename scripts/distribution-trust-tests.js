@@ -109,6 +109,7 @@ function testBuildWorkflowTrustBoundary() {
   for (const file of active) {
     const workflow = read(path.join('.github', 'workflows', file));
     assert(workflow.includes('workflow_dispatch:'), `${file} must support manual runs`);
+    assert(workflow.includes('push:\n    branches:\n      - master'), `${file} must build master pushes consistently across all three platforms`);
     assert(workflow.includes('pull_request:\n    branches:\n      - master'), `${file} must validate pull requests targeting master`);
     assert(!workflow.includes('pull_request_target'), `${file} must not use pull_request_target`);
     assert(workflow.includes('permissions:\n  contents: read'), `${file} must keep repository contents read-only`);
@@ -123,6 +124,8 @@ function testBuildWorkflowTrustBoundary() {
     assert(workflow.includes("github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository"),
       `${file} must skip write attestations for untrusted fork pull requests.`);
     assert(workflow.includes('npm run test:regression'), `${file} must run regression tests`);
+    assert(workflow.includes('node scripts/release-trust-contract-tests.js'), `${file} must run the canonical release-trust contract`);
+    assert(!/(?:hotfix|development)-\d+\.\d+\.\d+-tests\.js/.test(workflow), `${file} must not execute patch-numbered historical gates`);
     assert(workflow.includes('npm run test:electron-crypto'), `${file} must run crypto smoke tests`);
     assert(workflow.includes('npm run test:gui-smoke'), `${file} must run GUI smoke tests`);
     assert(workflow.includes('"${{ github.sha }}"') || workflow.includes("'${{ github.sha }}'"),
@@ -135,14 +138,12 @@ function testBuildWorkflowTrustBoundary() {
   const linux = read('.github/workflows/linux-appimage.yml');
   const mac = read('.github/workflows/macos-arm64.yml');
 
-  assert(windows.includes('push:\n    branches:\n      - master'));
   assert(windows.includes('npm run dist:win'));
   assert(windows.includes('name: SafeLedger-Windows-Portable'));
   assert(windows.includes('path: release/windows/app/*'));
   assert(windows.includes('name: SafeLedger-Windows-Verification'));
   assert(windows.includes('path: release/windows/verification/*'));
 
-  assert(linux.includes('push:\n    branches:\n      - master'));
   assert(linux.includes('npm run dist:linux'));
   assert(linux.includes('name: SafeLedger-Linux-AppImage'));
   assert(linux.includes('path: release/linux/app/*'));
@@ -150,10 +151,9 @@ function testBuildWorkflowTrustBoundary() {
   assert(linux.includes('path: release/linux/verification/*'));
 
   assert(mac.includes('runs-on: macos-15'), 'macOS validation must run natively on a GitHub-hosted Apple Silicon runner.');
-  assert(mac.includes('safeledger-2.6.1-development'), '2.6.1 development pushes must exercise the macOS workflow.');
   assert(mac.includes('uname -m'), 'macOS workflow must verify runner architecture.');
   assert(mac.includes('process.arch'), 'macOS workflow must verify Node is running as arm64.');
-  assert(mac.includes('CSC_IDENTITY_AUTO_DISCOVERY: "false"'), '2.6.1 CI must not require Apple signing credentials.');
+  assert(mac.includes('CSC_IDENTITY_AUTO_DISCOVERY: "false"'), 'macOS CI must not require Apple signing credentials.');
   assert(mac.includes('npm run dist:mac:arm64'), 'macOS workflow must build the native arm64 ZIP.');
   assert(mac.includes('lipo -archs'), 'macOS workflow must verify the packaged executable architecture.');
   assert(mac.includes('name: SafeLedger-macOS-arm64'));
@@ -193,4 +193,4 @@ testBuildWorkflowTrustBoundary();
 testSbomGeneration();
 testNoProductSecurityScopeChange();
 
-console.log('PASS SafeLedger distribution trust, clean user downloads, separate verification artifacts, GitHub attestations, SBOM, checksum, legal, and three-platform validation workflow tests.');
+console.log('PASS SafeLedger distribution trust, clean user downloads, separate verification artifacts, GitHub attestations, SBOM, checksum, legal, and consistent three-platform validation workflow tests.');
