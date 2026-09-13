@@ -123,6 +123,48 @@ Keeping the existing runtime path is the lower-risk structural fix:
 
 The three-platform build matrix remains the final packaged-behavior verification for this structural change.
 
+## 2.6.100: measurable CSS ownership
+
+Phase 4 gave SafeLedger one explicit stylesheet manifest, but a single load order does not automatically mean each declaration has one clear owner. 2.6.100 adds `scripts/css-ownership-audit.js` so selector ownership can be measured before rules are removed.
+
+The initial 18-file cascade audit reported:
+
+- 1,545 rule instances;
+- 1,078 unique selector/context pairs;
+- 263 repeated selector/context pairs;
+- **4 byte-equivalent duplicate selector/context pairs**;
+- 259 differing cascade overrides requiring individual review;
+- 602 `!important` declarations.
+
+The audit deliberately distinguishes exact duplication from an override. A repeated selector is not automatically wrong: later theme, responsive, accessibility, or feature rules may intentionally refine an earlier owner.
+
+### Retire only proven exact duplicates
+
+2.6.100 removes only the earlier copies of the four declarations whose selector, context, and normalized declaration bodies were identical to later rules:
+
+- `::-webkit-scrollbar` sizing remains owned by theme-aware `ui-current.css`;
+- `.coin-list-label` truncation remains owned by the global/list layout in `global-search.css`;
+- `.detail-action-button .fa-star` color remains owned by `ui-dock-refinement.css`;
+- `.detail-action-button .fa-star-o` color remains owned by `ui-dock-refinement.css`.
+
+The canonical import order and the later winning declarations stay unchanged. No replacement layer, duplicate patch rule, or compatibility selector is added.
+
+### Durable CSS ownership contract
+
+The Style Consolidation regression suite now:
+
+- executes the CSS ownership audit on every supported CI platform;
+- requires every `app.css` import to exist;
+- verifies the surviving canonical owner for each retired exact duplicate;
+- requires the former duplicate copies to stay absent;
+- fails if the cascade contains any byte-equivalent duplicate selector/context block.
+
+The audit is also available directly with:
+
+`npm run audit:css-ownership`
+
+The 259 non-identical override relationships remain intact in 2.6.100. They are evidence for later review, not permission for bulk deletion.
+
 ## Durable regression contract
 
 SafeLedger continues to run 47 durable canonical regression suites. Phase 5 specifically protects:
@@ -133,19 +175,24 @@ SafeLedger continues to run 47 durable canonical regression suites. Phase 5 spec
 - absence of the retired double-nested settings path;
 - absence of patch/release-numbered test archives from the active repository;
 - continued use of canonical regression and release-trust gates on all supported build workflows;
-- one canonical application icon shared by the runtime window and Windows/Linux packaging.
+- one canonical application icon shared by the runtime window and Windows/Linux packaging;
+- one explicit CSS cascade with zero byte-equivalent duplicate selector/context blocks.
 
-## Items intentionally not combined into 2.6.99
+## Items intentionally not combined into 2.6.100
 
-Phase 5 still has a visual cleanup target with a different risk surface, so it remains isolated.
+### Selective `!important` cleanup
 
-### Selector-level CSS cleanup
+The ownership audit measured 602 `!important` declarations before this selector cleanup. They are not being stripped in bulk.
 
-Phase 4 established one cascade owner. Duplicate selectors and unnecessary `!important` declarations remain a valid cleanup target, but broad visual cleanup stays separate from repository file/path cleanup so visual regressions are not mixed with structural changes.
+Some declarations may be historical specificity debt, but others intentionally protect accessibility, theme, responsive, framework-override, or interaction behavior. SafeLedger 2.6.101 should review them selectively where ownership is already clear and remove only declarations proven unnecessary.
+
+### Final Phase 5 audit
+
+After the `!important` pass, Phase 5 should finish with a repository-wide audit of dead code, CSS ownership, package/dependency consistency, scripts, current documentation, runtime reachability, and the full three-platform release pipeline.
 
 ## Behavior and security intentionally preserved
 
-2.6.96 through 2.6.99 do not intentionally change:
+2.6.96 through 2.6.100 do not intentionally change:
 
 - AES-256-GCM vault encryption;
 - Argon2id password/key-envelope behavior;
@@ -164,16 +211,19 @@ Phase 4 established one cascade owner. Duplicate selectors and unnecessary `!imp
 
 Repository cleanup should reduce ambiguity, not hide it.
 
-When a file appears dead or a path appears obsolete:
+When a file, selector, or path appears obsolete or duplicated:
 
 1. confirm whether it is reachable through normal imports;
 2. check dynamic renderer/resource references;
 3. check package/build configuration;
-4. check durable behavior coverage;
-5. remove or move it only when ownership is fully understood;
-6. update all active owners together;
-7. add a durable regression when the change represents an architectural decision.
+4. check durable behavior and visual coverage;
+5. distinguish exact duplication from intentional cascade refinement;
+6. remove or move it only when ownership is fully understood;
+7. update all active owners together;
+8. add a durable regression when the change represents an architectural decision.
 
 For tests, current behavior belongs in durable subsystem suites. Release-specific history belongs in Git history, not as dormant executable-looking files in the active source tree.
 
-Do not create empty shims, dormant copies, renamed compatibility layers, duplicate binary assets, or dead test archives simply to make a cleanup appear safer.
+For CSS, repeated selectors are evidence to inspect—not a deletion list. Exact duplicates should have one owner; differing overrides must be understood before consolidation.
+
+Do not create empty shims, dormant copies, renamed compatibility layers, duplicate binary assets, duplicate CSS patches, or dead test archives simply to make a cleanup appear safer.
