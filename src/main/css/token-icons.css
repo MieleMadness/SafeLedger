@@ -93,13 +93,6 @@ html[data-theme="dark"] .chain-games-brand-image {
   line-height: 1;
 }
 
-.coin-list-label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* Wallets/Vault Items use the same local/offline artwork pipeline as assets.
  * Background variants are preferred at build time so logos remain visible
  * against both the navy list and the blue selected state. */
