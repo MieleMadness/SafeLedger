@@ -9,6 +9,7 @@ const { CANONICAL_SUITES } = require('./regression-suite');
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 const exists = (relative) => fs.existsSync(path.join(root, relative));
+const pkg = JSON.parse(read('package.json'));
 
 assert.strictEqual(exists('src/main/logger.js'), false,
   'The orphaned legacy file logger must stay removed; current SafeLedger auditing is owned by the sanitized security audit path.');
@@ -50,6 +51,24 @@ const main = read('src/main/main.js');
 assert(main.includes("const settingsManager = require('./settings-manager');"),
   'Trusted main-process settings ownership must use the canonical settings-manager module directly.');
 
+const canonicalAppIcon = 'sl.png';
+const retiredAppIcon = 'build/icon-source.png';
+assert(exists(canonicalAppIcon), 'The canonical SafeLedger application icon must remain at sl.png.');
+assert.strictEqual(exists(retiredAppIcon), false,
+  'The duplicate build/icon-source.png application icon must stay removed.');
+assert(main.includes("icon: path.join(app.getAppPath(), 'sl.png'),"),
+  'BrowserWindow must use the canonical sl.png application icon.');
+assert(Array.isArray(pkg.build && pkg.build.files) && pkg.build.files.includes(canonicalAppIcon),
+  'Packaged SafeLedger builds must include the canonical sl.png application icon.');
+assert(!pkg.build.files.includes(retiredAppIcon),
+  'Packaged SafeLedger files must not include the retired duplicate application icon.');
+assert.strictEqual(pkg.build.win && pkg.build.win.icon, canonicalAppIcon,
+  'Windows packaging must use the same canonical application icon as the runtime window.');
+assert.strictEqual(pkg.build.linux && pkg.build.linux.icon, canonicalAppIcon,
+  'Linux packaging must use the same canonical application icon as the runtime window.');
+assert(!JSON.stringify(pkg.build).includes(retiredAppIcon),
+  'No active package configuration may reference the retired duplicate application icon path.');
+
 const auditRaw = execFileSync(process.execPath, [path.join(root, 'scripts/dead-code-audit.js'), '--json'], {
   cwd: root,
   encoding: 'utf8',
@@ -69,4 +88,4 @@ for (const relative of [
   'scripts/repository-hygiene-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS repository hygiene removes verified orphaned paths, preserves dynamic Recovery Binder CSS, and keeps settings ownership on the canonical top-level module.');
+console.log('PASS repository hygiene removes verified orphaned paths, preserves dynamic Recovery Binder CSS, keeps canonical settings ownership, and uses one application icon across runtime and packaging.');
