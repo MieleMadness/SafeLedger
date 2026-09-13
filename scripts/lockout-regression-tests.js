@@ -7,7 +7,7 @@ const { execFileSync } = require('child_process');
 
 const root = path.join(__dirname, '..');
 const lockoutState = require('../src/main/lockout-state');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 
 const now = 1_800_000_000_000;
