@@ -28,19 +28,24 @@ async function handleLogin(button) {
   if (!input) return failButton(button, 'Password field is unavailable');
   input.maxLength = MAX_MASTER_PASSWORD_LENGTH;
   const password = input.value;
-  const validation = passwordPolicy.validatePassword(password);
-  if (validation) return failButton(button, validation);
   if (!rendererState.getSettings()) return failButton(button, 'SafeLedger security settings are still loading');
-  button.disabled = true;
-  status.loadStatus();
+
   try {
     const hasEnvelope = await services.cryptoHasEnvelope();
+    const validation = hasEnvelope
+      ? passwordPolicy.validateExistingPassword(password)
+      : passwordPolicy.validatePassword(password);
+    if (validation) return failButton(button, validation);
+
+    button.disabled = true;
+    status.loadStatus();
     if (!hasEnvelope) {
       const initialized = await services.cryptoInitialize(password);
       input.value = '';
       if (!initialized || !initialized.ok) return failButton(button, (initialized && initialized.message) || 'Unable to initialize SafeLedger encryption');
       return loadUnlockedVaultList();
     }
+
     const unlocked = await services.cryptoLogin(password);
     input.value = '';
     if (unlocked && unlocked.ok) return loadUnlockedVaultList();
@@ -90,5 +95,8 @@ module.exports = {
   configure,
   handleLogin,
   handlePasswordChange,
-  _test: { validatePassword: passwordPolicy.validatePassword }
+  _test: {
+    validateExistingPassword: passwordPolicy.validateExistingPassword,
+    validatePassword: passwordPolicy.validatePassword
+  }
 };
