@@ -72,7 +72,7 @@ Git already provides the historical record. The live tree should contain the tes
 
 ### Durable retirement contract
 
-`scripts/test-architecture-tests.js` now requires that:
+`scripts/test-architecture-tests.js` requires that:
 
 - all 47 canonical suites remain present and unique;
 - no canonical suite uses a patch/release-numbered filename;
@@ -111,7 +111,7 @@ Keeping the existing runtime path is the lower-risk structural fix:
 
 ### Durable icon ownership contract
 
-`scripts/repository-hygiene-tests.js` now requires that:
+`scripts/repository-hygiene-tests.js` requires that:
 
 - `sl.png` exists;
 - `build/icon-source.png` stays absent;
@@ -163,36 +163,106 @@ The audit is also available directly with:
 
 `npm run audit:css-ownership`
 
-The 259 non-identical override relationships remain intact in 2.6.100. They are evidence for later review, not permission for bulk deletion.
+## 2.6.101: selective `!important` ownership
 
-## Durable regression contract
+2.6.101 adds a second CSS audit focused on declarations that use `!important`.
 
-SafeLedger continues to run 47 durable canonical regression suites. Phase 5 specifically protects:
+The purpose is not to treat `!important` as automatically wrong. SafeLedger legitimately uses priority for framework overrides, interaction states, accessibility, theme behavior, and fixed component footprints. The audit instead asks a narrower question: **can an earlier important declaration ever win, or is it always replaced by a later important owner for the same selector, context, and property?**
 
-- removal of the orphaned legacy logger;
-- dynamic Recovery Binder stylesheet ownership;
-- canonical top-level settings-manager ownership;
-- absence of the retired double-nested settings path;
-- absence of patch/release-numbered test archives from the active repository;
-- continued use of canonical regression and release-trust gates on all supported build workflows;
-- one canonical application icon shared by the runtime window and Windows/Linux packaging;
-- one explicit CSS cascade with zero byte-equivalent duplicate selector/context blocks.
+Only mechanically provable shadowed declarations are candidates for cleanup. The first selective slice removed the clearly owned theme-layer cases while preserving all declarations that remained context-dependent or independently meaningful.
 
-## Items intentionally not combined into 2.6.100
+## 2.6.102: complete mechanically provable `!important` cleanup
 
-### Selective `!important` cleanup
+2.6.102 finishes that mechanically safe ownership pass across the canonical 18-file cascade.
 
-The ownership audit measured 602 `!important` declarations before this selector cleanup. They are not being stripped in bulk.
+It removes the remaining **29 provably shadowed `!important` declarations** from:
 
-Some declarations may be historical specificity debt, but others intentionally protect accessibility, theme, responsive, framework-override, or interaction behavior. SafeLedger 2.6.101 should review them selectively where ownership is already clear and remove only declarations proven unnecessary.
+- `product-features.css` — 1;
+- `site.css` — 9;
+- `token-icons.css` — 5;
+- `ui-current.css` — 8;
+- `ui-polish.css` — 6.
 
-### Final Phase 5 audit
+The cleanup deliberately preserves declarations that still have independent meaning. For example, responsive token artwork retained `flex-basis` ownership where the audit did not prove that declaration was shadowed.
 
-After the `!important` pass, Phase 5 should finish with a repository-wide audit of dead code, CSS ownership, package/dependency consistency, scripts, current documentation, runtime reachability, and the full three-platform release pipeline.
+After 2.6.102 the reviewed cascade has:
+
+- **18 canonical stylesheets** in one explicit `app.css` order;
+- **0 byte-equivalent duplicate selector/context blocks**;
+- **534 physical `!important` declarations**;
+- **0 provably shadowed `!important` declarations**.
+
+The Style Consolidation suite now fails if either exact duplicate CSS ownership or mechanically shadowed important ownership returns.
+
+## 2.6.103: final Phase 5 repository audit
+
+2.6.103 closes Phase 5 by turning the cleanup assumptions into repository-wide fail-fast contracts and auditing the supported release pipeline.
+
+### Runtime reachability must finish clean
+
+`repository-hygiene-tests.js` now runs the dead-code audit and requires zero unresolved candidates in all three categories:
+
+- unreachable runtime JavaScript;
+- unlinked stylesheets;
+- unreferenced runtime assets.
+
+This does **not** convert static analysis into permission to delete files. If a future feature is dynamically owned, the audit must be taught how that ownership works. A live resource should never be deleted merely to make the candidate count reach zero.
+
+The final audit confirms the current tree has no unresolved JavaScript, CSS, or runtime-asset candidates.
+
+### Executable tests require an owner
+
+`test-architecture-tests.js` now builds ownership from:
+
+- the 47 canonical regression suites;
+- explicit package test commands;
+- the supported Windows, Linux, and macOS workflows;
+- local helper modules statically required by those owned scripts.
+
+Any executable-looking `*-tests.js` or `*-regression.js` file without one of those owners fails CI. This prevents a new dormant test archive from accumulating under a different naming convention after the 2.6.98 cleanup.
+
+### Release workflow and security-documentation audit
+
+The three supported workflows were reviewed together. They consistently use Node 24, locked dependency installation, the 47-suite regression runner, release-trust contract, encrypted lifecycle test, release metadata test, Electron crypto smoke, real GUI smoke, platform packaging, provenance/SBOM attestations, and separate clean/verification artifact uploads.
+
+Platform-specific behavior remains intentional:
+
+- Linux configures the Electron sandbox helper and Xvfb for real GUI smoke;
+- macOS uses native Apple Silicon runners and verifies the packaged executable architecture;
+- Windows builds the x64 portable EXE and publishes its platform verification material.
+
+`RELEASE-VERIFICATION.md` is updated from its older 2.5-era Windows/Linux wording so the documented artifact and attestation model includes the current macOS Apple Silicon pipeline and avoids hard-coded old release filenames.
+
+### Package/dependency consistency review
+
+The locked dependency graph used by `npm ci` remains aligned with the pinned direct dependencies in `package.json`; no dependency upgrade or lock regeneration is part of this cleanup release.
+
+The lockfile's historical root-project version metadata is not packaged into SafeLedger and does not participate in dependency resolution or the release version embedded by `package.json`. Phase 5 intentionally does not synthesize a lockfile rewrite solely to change that non-runtime metadata. The dependency policy continues to protect the dependency specifications that affect reproducible installs. A future intentional dependency/lock refresh should regenerate the lockfile through npm rather than hand-editing generated dependency data.
+
+### Historical documentation is not dead code
+
+The repository retains historical `RELEASE-*.md` files intentionally. They document prior candidates and releases and belong in source history/documentation even though they are not executable runtime inputs.
+
+Likewise, `LICENSE.md` remains a short navigation pointer to the canonical Apache-2.0 `LICENSE` text and historical attribution in `NOTICE`; it is not a duplicate license implementation.
+
+## Phase 5 completion state
+
+Phase 5 is complete when the final 2.6.103 head passes the supported Windows, Linux, and macOS workflows with these contracts intact:
+
+- 47 durable canonical regression suites;
+- zero unresolved runtime dead-code candidates;
+- zero unowned executable test scripts;
+- one canonical settings implementation;
+- one canonical application icon;
+- no retired numbered test archive;
+- one explicit 18-file CSS cascade;
+- zero byte-equivalent duplicate selector/context blocks;
+- zero mechanically shadowed `!important` declarations;
+- current release-verification guidance aligned with the three supported platform workflows.
 
 ## Behavior and security intentionally preserved
 
-2.6.96 through 2.6.100 do not intentionally change:
+2.6.96 through 2.6.103 do not intentionally change:
 
 - AES-256-GCM vault encryption;
 - Argon2id password/key-envelope behavior;
@@ -211,7 +281,7 @@ After the `!important` pass, Phase 5 should finish with a repository-wide audit 
 
 Repository cleanup should reduce ambiguity, not hide it.
 
-When a file, selector, or path appears obsolete or duplicated:
+When a file, selector, test, or path appears obsolete or duplicated:
 
 1. confirm whether it is reachable through normal imports;
 2. check dynamic renderer/resource references;
@@ -222,7 +292,7 @@ When a file, selector, or path appears obsolete or duplicated:
 7. update all active owners together;
 8. add a durable regression when the change represents an architectural decision.
 
-For tests, current behavior belongs in durable subsystem suites. Release-specific history belongs in Git history, not as dormant executable-looking files in the active source tree.
+For tests, current behavior belongs in durable subsystem suites. Release-specific history belongs in Git history and release documentation, not as dormant executable-looking files in the active source tree.
 
 For CSS, repeated selectors are evidence to inspect—not a deletion list. Exact duplicates should have one owner; differing overrides must be understood before consolidation.
 
