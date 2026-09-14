@@ -82,10 +82,20 @@ assert(!audit.unreachableJavascript.includes('src/main/settings-manager.js'),
 assert(!audit.unlinkedCss.includes('src/main/css/recovery-binder.css'),
   'Dead-code audit must recognize CSS loaded dynamically by reachable renderer code.');
 
+// Phase 5 ends with no unresolved static reachability candidates. If a future
+// feature is loaded dynamically, teach dead-code-audit.js how that ownership
+// works instead of allowing the candidate list to grow or deleting live code.
+assert.deepStrictEqual(audit.unreachableJavascript, [],
+  `Unresolved runtime JavaScript candidates require ownership review: ${audit.unreachableJavascript.join(', ')}`);
+assert.deepStrictEqual(audit.unlinkedCss, [],
+  `Unresolved stylesheet candidates require ownership review: ${audit.unlinkedCss.join(', ')}`);
+assert.deepStrictEqual(audit.unreferencedAssets, [],
+  `Unresolved runtime asset candidates require ownership review: ${audit.unreferencedAssets.join(', ')}`);
+
 for (const relative of [
   'src/main/settings-manager.js',
   'scripts/dead-code-audit.js',
   'scripts/repository-hygiene-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS repository hygiene removes verified orphaned paths, preserves dynamic Recovery Binder CSS, keeps canonical settings ownership, and uses one application icon across runtime and packaging.');
+console.log(`PASS repository hygiene has no unresolved runtime dead-code candidates across ${audit.counts.javascript} JavaScript files, ${audit.counts.css} stylesheets, and ${audit.counts.assets} runtime assets; dynamic Recovery Binder CSS, canonical settings ownership, and the single application icon remain protected.`);
