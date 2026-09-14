@@ -12,6 +12,8 @@ const pkg = JSON.parse(read('package.json'));
 const regressionCommand = String(pkg.scripts && pkg.scripts['test:regression'] || '');
 const retiredGatePattern = /(?:hotfix|development)-\d+\.\d+\.\d+-tests\.js|release-\d+\.\d+-tests\.js/;
 const runner = read('scripts/run-regression-suite.js');
+const workflowNames = ['windows-portable.yml', 'linux-appimage.yml', 'macos-arm64.yml'];
+const workflowSources = workflowNames.map((name) => ({ name, source: read(`.github/workflows/${name}`) }));
 
 assert(regressionCommand.includes('node scripts/run-regression-suite.js'), 'Main regression command must use the canonical suite runner.');
 assert(!retiredGatePattern.test(regressionCommand),
@@ -46,12 +48,64 @@ const retiredFiles = scriptFiles.filter(isRetiredTestFile).sort();
 assert.deepStrictEqual(retiredFiles, [],
   `Patch/release-numbered tests are retired repository baggage and must not return: ${retiredFiles.join(', ')}`);
 
-for (const workflow of ['windows-portable.yml', 'linux-appimage.yml', 'macos-arm64.yml']) {
-  const source = read(`.github/workflows/${workflow}`);
+for (const { name: workflow, source } of workflowSources) {
   assert(source.includes('npm run test:regression'), `${workflow} must run the canonical regression suite.`);
   assert(source.includes('node scripts/release-trust-contract-tests.js'), `${workflow} must use the canonical release trust contract.`);
   assert(!retiredGatePattern.test(source), `${workflow} must not call a retired patch/release-numbered test gate.`);
 }
+
+function scriptRefs(source) {
+  return Array.from(String(source || '').matchAll(/\b(?:node|electron)\s+(scripts\/[A-Za-z0-9._/-]+\.js)\b/g), (match) => match[1]);
+}
+
+function localScriptRequires(relative) {
+  const source = read(relative);
+  const refs = [];
+  for (const match of source.matchAll(/require\(\s*['"]([^'"]+)['"]\s*\)/g)) {
+    const request = match[1];
+    if (!request.startsWith('.')) continue;
+    const fromDir = path.dirname(path.join(root, relative));
+    const base = path.resolve(fromDir, request);
+    for (const candidate of [base, `${base}.js`, path.join(base, 'index.js')]) {
+      if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) continue;
+      const resolved = path.relative(root, candidate).split(path.sep).join('/');
+      if (resolved.startsWith('scripts/')) refs.push(resolved);
+      break;
+    }
+  }
+  return refs;
+}
+
+// Test-like scripts must have an executable owner. Canonical suites are roots;
+// package commands and supported platform workflows may own additional release,
+// lifecycle, or smoke gates. Static helper requires inherit ownership from those
+// roots. This keeps dormant executable-looking tests from accumulating again.
+const ownedScripts = new Set(CANONICAL_SUITES.map((suite) => suite.file));
+for (const command of Object.values(pkg.scripts || {})) {
+  for (const relative of scriptRefs(command)) ownedScripts.add(relative);
+}
+for (const { source } of workflowSources) {
+  for (const relative of scriptRefs(source)) ownedScripts.add(relative);
+}
+
+const ownershipQueue = Array.from(ownedScripts);
+while (ownershipQueue.length) {
+  const relative = ownershipQueue.shift();
+  if (!relative.startsWith('scripts/') || !fs.existsSync(path.join(root, relative))) continue;
+  for (const dependency of localScriptRequires(relative)) {
+    if (ownedScripts.has(dependency)) continue;
+    ownedScripts.add(dependency);
+    ownershipQueue.push(dependency);
+  }
+}
+
+const executableTestFiles = scriptFiles
+  .filter((name) => /(?:-tests|-regression)\.js$/.test(name))
+  .map((name) => `scripts/${name}`)
+  .sort();
+const unownedTestFiles = executableTestFiles.filter((relative) => !ownedScripts.has(relative));
+assert.deepStrictEqual(unownedTestFiles, [],
+  `Executable test scripts have no canonical/package/workflow/helper owner: ${unownedTestFiles.join(', ')}`);
 
 const auditRaw = execFileSync(process.execPath, [path.join(root, 'scripts/dead-code-audit.js'), '--json'], {
   cwd: root,
@@ -84,4 +138,4 @@ for (const relative of [
   'scripts/test-architecture-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log(`PASS SafeLedger test architecture runs ${CANONICAL_SUITES.length} durable behavior suites with no patch/release-numbered test archive in the active repository.`);
+console.log(`PASS SafeLedger test architecture runs ${CANONICAL_SUITES.length} durable behavior suites, owns ${executableTestFiles.length} executable test scripts, and keeps no patch/release-numbered test archive in the active repository.`);
