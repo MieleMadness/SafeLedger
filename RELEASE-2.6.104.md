@@ -2,7 +2,7 @@
 
 ## Navigation, re-login, and login artwork repair
 
-SafeLedger 2.6.104 follows the completed 2.6.103 cleanup candidate and fixes hands-on regressions found during testing: the Detail/display column retaining its previous scroll position when a different Profile, Vault Item, or Asset is selected, re-login reliability after SafeLedger is locked, and the Login wallpaper rendering incorrectly when the approved artwork was packaged as an embedded raster.
+SafeLedger 2.6.104 follows the completed 2.6.103 cleanup candidate and fixes hands-on regressions found during testing: the Detail/display column retaining its previous scroll position when a different Profile, Vault Item, or Asset is selected, re-login reliability after SafeLedger is locked, and the Login wallpaper rendering incorrectly when artwork was wrapped inside SVG instead of being loaded directly.
 
 ## Detail scroll ownership
 
@@ -36,15 +36,15 @@ SafeLedger 2.5.1 previously added a repeated same-process lock/re-login test aft
 
 The same focused regression also verifies Detail scroll reset behavior and that existing-password authentication is separate from new-password creation policy.
 
-## Matching Login artwork for Dark, Light, and Colorful
+## Final approved Login artwork for Dark, Light, and Colorful
 
-The Login display now uses a coordinated pair of user-approved crypto/security compositions. Dark uses the deep navy/neon treatment, while Light and Colorful share the matching pale blue/white treatment. Both preserve a quiet left-side area for Login controls and place Bitcoin, Ethereum, Solana, wallet, lock, stablecoin-style, and Chain Games iconography on the right. Chain Games remains one icon in the broader crypto/security composition rather than the focal brand.
+The Login display now uses the final user-approved coordinated pair of crypto/security compositions. Dark uses the deep navy/neon treatment, while Light and Colorful share the matching pale blue/white treatment. Both preserve a quiet left-side area for Login controls and place the crypto icons on the right with Bitcoin in the center of the composition and the supplied Chain Games icon in the upper-left position previously occupied by Bitcoin.
 
-The earlier Dark implementation embedded a raster image inside `login-background-dark.svg`. That representation rendered incorrectly in hands-on testing. 2.6.104 replaces it with true local vector SVG artwork and updates the Light/Colorful asset to the matching vector composition. The Chain Games symbol uses the geometry from the user-supplied logo while intentionally omitting the wordmark.
+The artwork includes the approved mix of Bitcoin, Ethereum, MetaMask, Solana, Litecoin, XRP, Tether, Exodus, and Chain Games iconography without making any single non-Bitcoin project the dominant brand. The Chain Games wordmark is intentionally omitted.
 
-No Login wallpaper contains an embedded raster `<image>` element, remote image URL, or runtime network dependency. The existing theme mapping remains simple: Light and Colorful use `login-background-light.svg`; Dark uses `login-background-dark.svg`; System resolves to the corresponding active theme.
+The earlier SVG-wrapped raster approach rendered incorrectly in hands-on testing. The final assets are therefore packaged directly as local JPEG files: Light and Colorful use `login-background-light.jpg`; Dark uses `login-background-dark.jpg`; System resolves to the corresponding active theme. The retired SVG wrappers are removed so there is only one owner for each Login background.
 
-The Appearance regression protects both vector assets, both theme mappings, the Chain Games icon signature, and the no-remote-resource/no-embedded-raster requirements so this rendering failure cannot quietly return.
+The Appearance regression pins the SHA-256 digest of both approved local images, verifies the JPEG files are packaged directly, protects the theme mappings, and asserts that the retired SVG wrappers do not return.
 
 ## Security scope
 
@@ -56,7 +56,7 @@ The Login artwork remains packaged locally with SafeLedger and does not add a ru
 
 ## Test integration
 
-The existing 47 canonical regression suites remain unchanged. `navigation-relogin-regression-tests.js` is additionally owned explicitly by the package test commands and runs as part of `npm run test:regression` and `npm run test:device-security`, so supported-platform CI must exercise the two behavioral regressions on every candidate. The canonical Appearance suite verifies the matching Login artwork contract.
+The existing 47 canonical regression suites remain unchanged. `navigation-relogin-regression-tests.js` is additionally owned explicitly by the package test commands and runs as part of `npm run test:regression` and `npm run test:device-security`, so supported-platform CI must exercise the two behavioral regressions on every candidate. The canonical Appearance suite verifies the final approved Login artwork contract.
 
 ## Release safety
 
