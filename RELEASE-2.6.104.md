@@ -36,11 +36,19 @@ SafeLedger 2.5.1 previously added a repeated same-process lock/re-login test aft
 
 The same focused regression also verifies Detail scroll reset behavior and that existing-password authentication is separate from new-password creation policy.
 
+## Approved Dark login artwork
+
+The Dark-mode Login display now uses the third user-approved crypto/security composition. The artwork preserves the clear left-side area needed for the Login controls while grouping Bitcoin, Ethereum, Solana, network, wallet, lock, and Chain Games iconography on the right so Chain Games appears as one part of the broader crypto ecosystem rather than the focal brand.
+
+The approved raster is embedded inside the existing local `login-background-dark.svg` asset. This keeps the existing theme/layout ownership intact, adds no network request or remote asset dependency, and avoids introducing a second competing Dark login wallpaper. Light and Colorful login artwork are unchanged.
+
 ## Security scope
 
 This release does not weaken encryption or lock behavior. It does not cache passwords, retain the DEK through a lock, bypass Argon2id, bypass the encrypted key envelope, alter failed-password accounting, alter Self-Destruct behavior, or change encrypted vault formats.
 
 Emergency Lock still destroys the in-memory DEK. Re-login still requires the correct password to unwrap the encrypted key envelope and establish a new main-process-only DEK session.
+
+The Login artwork remains packaged locally with SafeLedger and does not add a runtime network dependency.
 
 ## Test integration
 
@@ -54,4 +62,5 @@ Do not merge this candidate to `master` until Windows Portable, Linux AppImage, 
 2. repeat the same check between Profiles and Assets;
 3. unlock SafeLedger, use Emergency Lock, return to the Login screen, and sign in again with the same password;
 4. repeat lock/re-login more than once in the same application process;
-5. confirm an actually incorrect password still produces the normal failed-password behavior and lockout protections.
+5. confirm an actually incorrect password still produces the normal failed-password behavior and lockout protections;
+6. confirm the approved Dark login artwork fits the display column without interfering with Login text or controls.
