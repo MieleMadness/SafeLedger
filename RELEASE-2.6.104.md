@@ -42,6 +42,8 @@ The Dark-mode Login display now uses the third user-approved crypto/security com
 
 The approved raster is embedded inside the existing local `login-background-dark.svg` asset. This keeps the existing theme/layout ownership intact, adds no network request or remote asset dependency, and avoids introducing a second competing Dark login wallpaper. Light and Colorful login artwork are unchanged.
 
+The appearance regression also verifies that Dark continues to use the approved local asset, that Light/Colorful retain their existing artwork mapping, and that the Dark artwork contains no remote `http` or `https` dependency.
+
 ## Security scope
 
 This release does not weaken encryption or lock behavior. It does not cache passwords, retain the DEK through a lock, bypass Argon2id, bypass the encrypted key envelope, alter failed-password accounting, alter Self-Destruct behavior, or change encrypted vault formats.
