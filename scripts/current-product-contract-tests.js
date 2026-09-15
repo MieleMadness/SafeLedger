@@ -13,13 +13,14 @@ const tokenIcons = require('../src/main/token-icons');
 
 assert(/^2\.6\.\d+$/.test(String(pkg.version || '')), 'Current product contract expects a SafeLedger 2.6.x candidate.');
 
-// Navigation columns intentionally remain solid. The short-lived focused-column
-// artwork experiment was removed; login artwork belongs only to the Detail area.
+// Navigation columns and the Detail column intentionally remain solid theme colors.
+// Decorative Login/column artwork is retired; Login reuses the normal Detail background.
 const index = read('src/main/index.html');
 const entry = read('src/main/renderer-entry.js');
 const theme = read('src/main/css/app-theme.css');
 const palettes = read('src/main/css/appearance-palettes.css');
 const dividers = read('src/main/css/workspace-dividers.css');
+const rendererBuilder = read('scripts/build-renderer.js');
 
 assert(!index.includes('column-focus-artwork.css'));
 assert(!entry.includes('column-focus-artwork.js'));
@@ -33,26 +34,27 @@ for (const relative of [
 assert(theme.includes('.dark1bg { background: var(--sl-sidebar-1) !important;'));
 assert(theme.includes('.dark2bg { background: var(--sl-sidebar-2) !important;'));
 assert(theme.includes('.dark3bg { background: var(--sl-sidebar-3) !important;'));
+assert(theme.includes('.dark4bg { background: var(--sl-bg) !important; color: var(--sl-text) !important; }'));
 assert(!index.includes('data-column-focus') && !entry.includes('data-column-focus'));
 
 for (const relative of [
   'src/main/assets/login-background-light.webp',
-  'src/main/assets/login-background-dark.webp'
-]) assert(exists(relative), `${relative} must be reconstructed and packaged for the sign-in surface.`);
-for (const relative of [
+  'src/main/assets/login-background-dark.webp',
   'src/main/assets/login-background-light.jpg',
   'src/main/assets/login-background-dark.jpg',
   'src/main/assets/login-background-light.svg',
   'src/main/assets/login-background-dark.svg'
-]) assert.strictEqual(exists(relative), false, `${relative} is a retired sign-in artwork owner and must stay removed.`);
-assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-light.webp")'));
-assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-dark.webp")'));
-assert(palettes.includes('.app-shell[data-login-mode="true"] .detail-column'));
-assert(!palettes.includes('.app-shell[data-login-mode="true"] .app-cell {'));
+]) assert.strictEqual(exists(relative), false, `${relative} is retired Login artwork and must stay out of the repository.`);
+assert.strictEqual(exists('scripts/login-artwork'), false, 'Retired Login artwork source chunks must stay removed.');
+assert(!palettes.includes('--sl-login-backdrop'));
+assert(!palettes.includes('login-background-'));
+assert(!palettes.includes('.app-shell[data-login-mode="true"] .detail-column'));
+assert(!rendererBuilder.includes('prepareLoginArtwork'));
+assert(!rendererBuilder.includes('login-artwork'));
 assert(dividers.includes('border-right: 1px solid color-mix(in srgb, currentColor 14%, transparent) !important;'));
 
-// Chain Games is a packaged local theme-aware square tile. Protect the current
-// behavior itself rather than the historical implementation steps that led here.
+// Chain Games remains available as a packaged local theme-aware square tile in
+// wallet/profile surfaces; retiring the Login wallpaper does not remove it.
 const lightPath = serviceCatalog.chainGamesAssetUrl('light');
 const colorfulPath = serviceCatalog.chainGamesAssetUrl('colorful');
 const darkPath = serviceCatalog.chainGamesAssetUrl('dark');
@@ -95,4 +97,4 @@ assert(chainToken && chainToken.key === 'CHAIN-GAMES');
 assert(chainToken && chainToken.src === lightPath);
 assert(pkg.build && Array.isArray(pkg.build.files) && pkg.build.files.includes('src/**/*'));
 
-console.log('PASS current SafeLedger product contract: solid navigation columns, scoped generated WebP login wallpaper, preserved dividers, and local theme-aware Chain Games artwork.');
+console.log('PASS current SafeLedger product contract: solid theme-color Login/Navigation surfaces, preserved dividers, and local theme-aware Chain Games artwork.');
