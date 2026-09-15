@@ -118,7 +118,7 @@ async function appendTable(doc, parent, fields) {
   parent.appendChild(table);
 }
 
-async function printBinder(binder) {
+async function printBinder(binder, options = {}) {
   const popup = window.open('', '_blank', 'width=900,height=900');
   if (!popup) return alert('Unable to open print window.');
 
@@ -135,19 +135,9 @@ async function printBinder(binder) {
   appendText(doc.body, 'div', 'meta', `Generated offline by SafeLedger on ${new Date(binder.generatedAt).toString()}.`);
 
   if (binder.privacySelections.length) {
-    appendText(
-      doc.body,
-      'div',
-      'warning',
-      `CONFIDENTIAL RECOVERY INFORMATION — This binder includes: ${binder.privacySelections.join(', ')}. Store and handle the printout securely.`
-    );
+    appendText(doc.body, 'div', 'warning', `CONFIDENTIAL RECOVERY INFORMATION — This binder includes: ${binder.privacySelections.join(', ')}. Store and handle the printout securely.`);
   } else {
-    appendText(
-      doc.body,
-      'div',
-      'safe-note',
-      'Safe-default binder: passwords, PINs, recovery links, seed phrases, private keys, balances, notes, public addresses, and sensitive custom fields were not included.'
-    );
+    appendText(doc.body, 'div', 'safe-note', 'Safe-default binder: passwords, PINs, recovery links, seed phrases, private keys, balances, notes, public addresses, and sensitive custom fields were not included.');
   }
 
   appendText(doc.body, 'h2', '', 'Profile');
@@ -177,10 +167,11 @@ async function printBinder(binder) {
   actions.className = 'print-actions';
   const printButton = doc.createElement('button');
   printButton.type = 'button';
-  printButton.textContent = 'Print Recovery Binder';
+  printButton.textContent = options.printButtonText || 'Print Recovery Binder';
   printButton.addEventListener('click', () => popup.print());
   actions.appendChild(printButton);
   doc.body.appendChild(actions);
+  return popup;
 }
 
 async function fetchBinder(profile, options, recordActivity = false) {
@@ -196,12 +187,7 @@ async function show(params = {}) {
   if (!area || !params.profile || !params.profile.file) return;
   area.innerHTML = '';
   appendText(area, 'h1', '', 'Recovery Binder');
-  appendText(
-    area,
-    'p',
-    'recovery-binder-intro',
-    `Build a printable offline recovery package for ${params.profile.name || 'this profile'}. Safe defaults include recovery planning information and asset names, but exclude high-risk secrets and financial details.`
-  );
+  appendText(area, 'p', 'recovery-binder-intro', `Build a printable offline recovery package for ${params.profile.name || 'this profile'}. Safe defaults include recovery planning information and asset names, but exclude high-risk secrets and financial details.`);
 
   const notice = document.createElement('div');
   notice.className = 'recovery-binder-safe-defaults';
@@ -209,12 +195,7 @@ async function show(params = {}) {
   icon.className = 'fa fa-shield';
   icon.setAttribute('aria-hidden', 'true');
   notice.appendChild(icon);
-  appendText(
-    notice,
-    'div',
-    '',
-    'Recovery locations and recovery instructions are included by default. Do not place seed phrases or private keys in those planning fields if you do not want them printed.'
-  );
+  appendText(notice, 'div', '', 'Recovery locations and recovery instructions are included by default. Do not place seed phrases or private keys in those planning fields if you do not want them printed.');
   area.appendChild(notice);
 
   const summary = document.createElement('div');
@@ -251,9 +232,7 @@ async function show(params = {}) {
     const options = collectOptions(checkboxes);
     const privacySelections = recoveryBinder.selectedPrivacyLabels(options);
     if (privacySelections.length) {
-      const approved = confirm(
-        `This Recovery Binder will include additional private or sensitive information: ${privacySelections.join(', ')}. Anyone who sees the printout may learn vault-item details or gain access to funds. Print only to a trusted local printer and store it securely. Continue?`
-      );
+      const approved = confirm(`This Recovery Binder will include additional private or sensitive information: ${privacySelections.join(', ')}. Anyone who sees the printout may learn vault-item details or gain access to funds. Print only to a trusted local printer and store it securely. Continue?`);
       if (!approved) return;
     }
     if (button) button.disabled = true;
@@ -275,4 +254,5 @@ async function show(params = {}) {
 }
 
 exports.show = show;
+exports.printBinder = printBinder;
 exports._test = { OPTION_DEFINITIONS, ensureStyles, collectOptions, appendQr, appendTable, printBinder, fetchBinder };

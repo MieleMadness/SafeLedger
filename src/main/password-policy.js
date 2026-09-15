@@ -2,6 +2,13 @@
 
 const MAX_MASTER_PASSWORD_LENGTH = 128;
 
+function validateExistingPassword(value) {
+  const password = String(value || '');
+  if (!password.length) return 'Password is required';
+  if (password.length > MAX_MASTER_PASSWORD_LENGTH) return `Password must be ${MAX_MASTER_PASSWORD_LENGTH} characters or fewer`;
+  return '';
+}
+
 function validatePassword(value) {
   const password = String(value || '');
   if (password.length < 8) return 'Password must be at least 8 characters';
@@ -26,4 +33,4 @@ function scorePassword(value) {
   return Math.max(0, Math.min(5, score));
 }
 
-module.exports = { MAX_MASTER_PASSWORD_LENGTH, validatePassword, scorePassword };
+module.exports = { MAX_MASTER_PASSWORD_LENGTH, validateExistingPassword, validatePassword, scorePassword };

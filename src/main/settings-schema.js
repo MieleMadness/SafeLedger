@@ -2,7 +2,7 @@
 
 const BRUTE_FORCE_MIN = 1;
 const BRUTE_FORCE_MAX = 99;
-const APPEARANCE_VALUES = Object.freeze(['system', 'light', 'dark']);
+const APPEARANCE_VALUES = Object.freeze(['system', 'light', 'colorful', 'dark']);
 
 function clampBruteForceValue(value, fallback = BRUTE_FORCE_MIN) {
   const parsed = Number.parseInt(value, 10);
