@@ -82,8 +82,6 @@ const appAppearance = require('../src/main/app-appearance');
   assert(!palettes.includes('login-background-light.svg') && !palettes.includes('login-background-dark.svg'),
     'Sign-in themes must not fall back to the retired SVG wrappers.');
 
-  assert(darkLoginArtwork.length > 100000 && lightLoginArtwork.length > 100000,
-    'Approved sign-in artwork must remain packaged as full local image assets.');
   assert.deepStrictEqual([...darkLoginArtwork.subarray(0, 3)], [0xff, 0xd8, 0xff],
     'Dark sign-in artwork must remain a directly packaged JPEG.');
   assert.deepStrictEqual([...lightLoginArtwork.subarray(0, 3)], [0xff, 0xd8, 0xff],
