@@ -56,6 +56,7 @@ const appAppearance = require('../src/main/app-appearance');
   const theme = fs.readFileSync(path.join(root, 'src/main/css/app-theme.css'), 'utf8');
   const palettes = fs.readFileSync(path.join(root, 'src/main/css/appearance-palettes.css'), 'utf8');
   const darkLoginArtwork = fs.readFileSync(path.join(root, 'src/main/assets/login-background-dark.svg'), 'utf8');
+  const lightLoginArtwork = fs.readFileSync(path.join(root, 'src/main/assets/login-background-light.svg'), 'utf8');
   const settingsUi = fs.readFileSync(path.join(root, 'src/main/settings-ui.js'), 'utf8');
   const profile = fs.readFileSync(path.join(root, 'src/main/profile.js'), 'utf8');
   assert(index.includes('./css/app.css'));
@@ -74,10 +75,23 @@ const appAppearance = require('../src/main/app-appearance');
   assert(palettes.includes('The former Light palette is intentionally preserved as Colorful.'));
   assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-light.svg")'));
   assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-dark.svg")'));
+
   assert(darkLoginArtwork.includes('SafeLedger 2.6.104 approved dark login artwork'));
-  assert(darkLoginArtwork.includes('data:image/webp;base64,'), 'Approved Dark login wallpaper must remain packaged locally/offline.');
+  assert(lightLoginArtwork.includes('SafeLedger 2.6.104 approved light/colorful login artwork'));
+  assert(darkLoginArtwork.includes('<svg') && lightLoginArtwork.includes('<svg'),
+    'Login wallpapers must remain packaged as local SVG artwork.');
+  assert(!darkLoginArtwork.includes('<image') && !lightLoginArtwork.includes('<image'),
+    'Login wallpapers must remain true vector assets rather than embedded raster images.');
   assert(!/\b(?:href|xlink:href)\s*=\s*["']https?:\/\//i.test(darkLoginArtwork),
     'Dark login wallpaper must not load a remote image/resource.');
+  assert(!/\b(?:href|xlink:href)\s*=\s*["']https?:\/\//i.test(lightLoginArtwork),
+    'Light/Colorful login wallpaper must not load a remote image/resource.');
+  const chainGamesIconSignature = 'M156 247.7 63.1 170.8 155.3 55.4';
+  assert(darkLoginArtwork.includes(chainGamesIconSignature),
+    'Dark login wallpaper must retain the Chain Games icon from the supplied logo.');
+  assert(lightLoginArtwork.includes(chainGamesIconSignature),
+    'Light/Colorful login wallpaper must retain the matching Chain Games icon.');
+
   assert(settingsUi.includes("makeSection('Appearance')"));
   assert(settingsUi.includes("addAppearanceOption(options, 'system', 'System'"));
   assert(settingsUi.includes("addAppearanceOption(options, 'light', 'Light'"));
@@ -89,7 +103,7 @@ const appAppearance = require('../src/main/app-appearance');
     'Appearance rendering must not depend on post-render repair timing.');
   assert(profile.includes("title: 'No profiles yet'"));
   assert(!profile.includes("area.textContent = 'No items'"));
-  console.log('PASS System/Light/Colorful/Dark appearance persists safely, legacy Light migrates to Colorful, and the approved Dark login artwork remains local/offline.');
+  console.log('PASS System/Light/Colorful/Dark appearance persists safely and matching local vector login artwork remains offline with the approved Chain Games icon.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
