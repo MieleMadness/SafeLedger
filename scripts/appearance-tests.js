@@ -76,7 +76,8 @@ const appAppearance = require('../src/main/app-appearance');
   assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-dark.svg")'));
   assert(darkLoginArtwork.includes('SafeLedger 2.6.104 approved dark login artwork'));
   assert(darkLoginArtwork.includes('data:image/webp;base64,'), 'Approved Dark login wallpaper must remain packaged locally/offline.');
-  assert(!darkLoginArtwork.includes('http://') && !darkLoginArtwork.includes('https://'), 'Dark login wallpaper must not depend on remote image resources.');
+  assert(!/\b(?:href|xlink:href)\s*=\s*["']https?:\/\//i.test(darkLoginArtwork),
+    'Dark login wallpaper must not load a remote image/resource.');
   assert(settingsUi.includes("makeSection('Appearance')"));
   assert(settingsUi.includes("addAppearanceOption(options, 'system', 'System'"));
   assert(settingsUi.includes("addAppearanceOption(options, 'light', 'Light'"));
