@@ -136,15 +136,15 @@ html[data-theme="light"] .recovery-binder-option {
 }
 
 /* Login wallpaper is deliberately theme-aware and display-column scoped.
- * Light and Colorful share the frosted crypto artwork; Dark uses the matching
- * navy/neon treatment. System resolves to one of these data-theme values. */
+ * Light and Colorful share the approved pale crypto artwork; Dark uses the
+ * matching navy/neon treatment. System resolves to one of these values. */
 html[data-theme="light"],
 html[data-theme="colorful"] {
-  --sl-login-backdrop: url("../assets/login-background-light.svg");
+  --sl-login-backdrop: url("../assets/login-background-light.jpg");
 }
 
 html[data-theme="dark"] {
-  --sl-login-backdrop: url("../assets/login-background-dark.svg");
+  --sl-login-backdrop: url("../assets/login-background-dark.jpg");
 }
 
 /* Only the Detail / display column receives login wallpaper. The Profiles,
