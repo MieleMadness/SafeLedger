@@ -42,9 +42,11 @@ The Login display now uses the final user-approved coordinated pair of crypto/se
 
 The artwork includes the approved mix of Bitcoin, Ethereum, MetaMask, Solana, Litecoin, XRP, Tether, Exodus, and Chain Games iconography without making any single non-Bitcoin project the dominant brand. The Chain Games wordmark is intentionally omitted.
 
-The earlier SVG-wrapped raster approach rendered incorrectly in hands-on testing. The final assets are therefore packaged directly as local JPEG files: Light and Colorful use `login-background-light.jpg`; Dark uses `login-background-dark.jpg`; System resolves to the corresponding active theme. The retired SVG wrappers are removed so there is only one owner for each Login background.
+The earlier SVG-wrapped raster approach rendered incorrectly in hands-on testing, and the first direct-JPEG maintenance upload was rejected by the Appearance gate because the binary bytes were not preserved correctly. 2.6.104 therefore keeps the approved WebP artwork as deterministic Base64 text chunks in `scripts/login-artwork/`. The existing `prepare:renderer` step reconstructs `src/main/assets/login-background-dark.webp` and `src/main/assets/login-background-light.webp`, verifies their WebP signatures and exact SHA-256 digests, then continues the renderer build. This keeps the runtime assets fully local while making the source representation safe and reproducible through the repository maintenance path.
 
-The Appearance regression pins the SHA-256 digest of both approved local images, verifies the JPEG files are packaged directly, protects the theme mappings, and asserts that the retired SVG wrappers do not return.
+Light and Colorful use `login-background-light.webp`; Dark uses `login-background-dark.webp`; System resolves to the corresponding active theme. The generated WebP outputs are ignored by Git because their canonical source is the hash-pinned text chunks, while Electron Builder still packages the generated files because `prepare:renderer` runs before supported builds.
+
+The Appearance regression pins the SHA-256 digest of both reconstructed approved images, verifies their RIFF/WebP signatures, protects the theme mappings, verifies all source chunks are present, and asserts that retired JPEG and SVG runtime owners do not return.
 
 ## Security scope
 
@@ -56,7 +58,7 @@ The Login artwork remains packaged locally with SafeLedger and does not add a ru
 
 ## Test integration
 
-The existing 47 canonical regression suites remain unchanged. `navigation-relogin-regression-tests.js` is additionally owned explicitly by the package test commands and runs as part of `npm run test:regression` and `npm run test:device-security`, so supported-platform CI must exercise the two behavioral regressions on every candidate. The canonical Appearance suite verifies the final approved Login artwork contract.
+The existing 47 canonical regression suites remain unchanged. `navigation-relogin-regression-tests.js` is additionally owned explicitly by the package test commands and runs as part of `npm run test:regression` and `npm run test:device-security`, so supported-platform CI must exercise the two behavioral regressions on every candidate. The canonical Appearance suite verifies the final approved Login artwork contract after `prepare:renderer` reconstructs and validates the local WebP assets.
 
 ## Release safety
 
