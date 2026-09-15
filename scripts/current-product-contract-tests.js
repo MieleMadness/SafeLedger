@@ -36,11 +36,17 @@ assert(theme.includes('.dark3bg { background: var(--sl-sidebar-3) !important;'))
 assert(!index.includes('data-column-focus') && !entry.includes('data-column-focus'));
 
 for (const relative of [
+  'src/main/assets/login-background-light.webp',
+  'src/main/assets/login-background-dark.webp'
+]) assert(exists(relative), `${relative} must be reconstructed and packaged for the sign-in surface.`);
+for (const relative of [
+  'src/main/assets/login-background-light.jpg',
+  'src/main/assets/login-background-dark.jpg',
   'src/main/assets/login-background-light.svg',
   'src/main/assets/login-background-dark.svg'
-]) assert(exists(relative), `${relative} must remain packaged for the sign-in surface.`);
-assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-light.svg")'));
-assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-dark.svg")'));
+]) assert.strictEqual(exists(relative), false, `${relative} is a retired sign-in artwork owner and must stay removed.`);
+assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-light.webp")'));
+assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-dark.webp")'));
 assert(palettes.includes('.app-shell[data-login-mode="true"] .detail-column'));
 assert(!palettes.includes('.app-shell[data-login-mode="true"] .app-cell {'));
 assert(dividers.includes('border-right: 1px solid color-mix(in srgb, currentColor 14%, transparent) !important;'));
@@ -89,4 +95,4 @@ assert(chainToken && chainToken.key === 'CHAIN-GAMES');
 assert(chainToken && chainToken.src === lightPath);
 assert(pkg.build && Array.isArray(pkg.build.files) && pkg.build.files.includes('src/**/*'));
 
-console.log('PASS current SafeLedger product contract: solid navigation columns, scoped login wallpaper, preserved dividers, and local theme-aware Chain Games artwork.');
+console.log('PASS current SafeLedger product contract: solid navigation columns, scoped generated WebP login wallpaper, preserved dividers, and local theme-aware Chain Games artwork.');
