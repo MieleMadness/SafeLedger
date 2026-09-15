@@ -134,31 +134,3 @@ html[data-theme="light"] .recovery-binder-summary,
 html[data-theme="light"] .recovery-binder-option {
   box-shadow: var(--sl-shadow-soft) !important;
 }
-
-/* Login wallpaper is deliberately theme-aware and display-column scoped.
- * Light and Colorful share the approved pale crypto artwork; Dark uses the
- * matching navy/neon treatment. System resolves to one of these values. */
-html[data-theme="light"],
-html[data-theme="colorful"] {
-  --sl-login-backdrop: url("../assets/login-background-light.webp");
-}
-
-html[data-theme="dark"] {
-  --sl-login-backdrop: url("../assets/login-background-dark.webp");
-}
-
-/* Only the Detail / display column receives login wallpaper. The Profiles,
- * Vault Items, Assets, search row, action row, and their existing workspace
- * divider borders stay exactly as the normal layout defines them.
- *
- * app-theme.css intentionally gives .dark4bg its normal workspace background
- * with an !important shorthand. These login-state longhands are also marked
- * !important so the wallpaper can override that background only while locked,
- * without changing layout, borders, or any other column styling. */
-.app-shell[data-login-mode="true"] .detail-column {
-  background-color: var(--sl-bg) !important;
-  background-image: var(--sl-login-backdrop) !important;
-  background-position: 72% center !important;
-  background-repeat: no-repeat !important;
-  background-size: cover !important;
-}
