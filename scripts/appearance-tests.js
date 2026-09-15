@@ -56,8 +56,8 @@ const appAppearance = require('../src/main/app-appearance');
   const manifest = fs.readFileSync(path.join(root, 'src/main/css/app.css'), 'utf8');
   const theme = fs.readFileSync(path.join(root, 'src/main/css/app-theme.css'), 'utf8');
   const palettes = fs.readFileSync(path.join(root, 'src/main/css/appearance-palettes.css'), 'utf8');
-  const darkArtworkPath = path.join(root, 'src/main/assets/login-background-dark.jpg');
-  const lightArtworkPath = path.join(root, 'src/main/assets/login-background-light.jpg');
+  const darkArtworkPath = path.join(root, 'src/main/assets/login-background-dark.webp');
+  const lightArtworkPath = path.join(root, 'src/main/assets/login-background-light.webp');
   const darkLoginArtwork = fs.readFileSync(darkArtworkPath);
   const lightLoginArtwork = fs.readFileSync(lightArtworkPath);
   const settingsUi = fs.readFileSync(path.join(root, 'src/main/settings-ui.js'), 'utf8');
@@ -77,24 +77,43 @@ const appAppearance = require('../src/main/app-appearance');
   assert(palettes.includes('--sl-sidebar-1: #fbfdff'));
   assert(palettes.includes('--sl-sidebar-1: #2563eb'));
   assert(palettes.includes('The former Light palette is intentionally preserved as Colorful.'));
-  assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-light.jpg")'));
-  assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-dark.jpg")'));
-  assert(!palettes.includes('login-background-light.svg') && !palettes.includes('login-background-dark.svg'),
-    'Sign-in themes must not fall back to the retired SVG wrappers.');
+  assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-light.webp")'));
+  assert(palettes.includes('--sl-login-backdrop: url("../assets/login-background-dark.webp")'));
+  assert(!palettes.includes('login-background-light.jpg') && !palettes.includes('login-background-dark.jpg') &&
+    !palettes.includes('login-background-light.svg') && !palettes.includes('login-background-dark.svg'),
+    'Sign-in themes must not fall back to retired JPEG or SVG runtime owners.');
 
-  assert.deepStrictEqual([...darkLoginArtwork.subarray(0, 3)], [0xff, 0xd8, 0xff],
-    'Dark sign-in artwork must remain a directly packaged JPEG.');
-  assert.deepStrictEqual([...lightLoginArtwork.subarray(0, 3)], [0xff, 0xd8, 0xff],
-    'Light/Colorful sign-in artwork must remain a directly packaged JPEG.');
+  const assertWebP = (bytes, label) => {
+    assert(bytes.length >= 12, `${label} sign-in artwork must contain a valid WebP header.`);
+    assert.strictEqual(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `${label} sign-in artwork must be RIFF WebP.`);
+    assert.strictEqual(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `${label} sign-in artwork must be RIFF WebP.`);
+  };
+  assertWebP(darkLoginArtwork, 'Dark');
+  assertWebP(lightLoginArtwork, 'Light/Colorful');
   assert.strictEqual(crypto.createHash('sha256').update(darkLoginArtwork).digest('hex'),
-    '8299d8839ebd17248c424411981e7df519a61afe96c7656c4edfea7d99521f06',
+    'f77727039a57c5afb754310a627345558347dfdfe9b773342c5234fd1b2ec6db',
     'Dark sign-in artwork must remain the approved user-selected composition.');
   assert.strictEqual(crypto.createHash('sha256').update(lightLoginArtwork).digest('hex'),
-    'd0ca310c01906c668b9465928381de3d384c770255f5213abcde4d28f82b51a6',
+    'b65e45faf3763b62213276ddf32e688d8270f5327a108a317e54e6752418c9ba',
     'Light/Colorful sign-in artwork must remain the approved matching composition.');
-  assert(!fs.existsSync(path.join(root, 'src/main/assets/login-background-dark.svg')) &&
-    !fs.existsSync(path.join(root, 'src/main/assets/login-background-light.svg')),
-    'Retired SVG wrappers must not remain as duplicate sign-in artwork.');
+
+  for (const retired of [
+    'login-background-dark.jpg',
+    'login-background-light.jpg',
+    'login-background-dark.svg',
+    'login-background-light.svg'
+  ]) {
+    assert(!fs.existsSync(path.join(root, 'src/main/assets', retired)),
+      `Retired sign-in artwork must not remain as a duplicate runtime owner: ${retired}`);
+  }
+
+  for (const source of [
+    'dark-00.b64', 'dark-01.b64', 'dark-02.b64', 'dark-03.b64', 'dark-04.b64', 'dark-05.b64',
+    'light-00.b64', 'light-01.b64', 'light-02.b64', 'light-03.b64'
+  ]) {
+    assert(fs.existsSync(path.join(root, 'scripts/login-artwork', source)),
+      `Canonical Login artwork source chunk is missing: ${source}`);
+  }
 
   assert(settingsUi.includes("makeSection('Appearance')"));
   assert(settingsUi.includes("addAppearanceOption(options, 'system', 'System'"));
@@ -107,7 +126,7 @@ const appAppearance = require('../src/main/app-appearance');
     'Appearance rendering must not depend on post-render repair timing.');
   assert(profile.includes("title: 'No profiles yet'"));
   assert(!profile.includes("area.textContent = 'No items'"));
-  console.log('PASS System/Light/Colorful/Dark appearance persists safely and approved local sign-in artwork remains pinned to the selected images.');
+  console.log('PASS System/Light/Colorful/Dark appearance persists safely and approved generated local WebP sign-in artwork remains hash-pinned.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
