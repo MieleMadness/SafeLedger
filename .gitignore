@@ -28,6 +28,8 @@ nbdist/
 /SafeLedgerData/
 /release-builds/
 /src/main/renderer.bundle.js
+/src/main/assets/login-background-dark.webp
+/src/main/assets/login-background-light.webp
 
 ### MAC
 *.DS_Store
