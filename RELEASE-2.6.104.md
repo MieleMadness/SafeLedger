@@ -1,8 +1,8 @@
 # SafeLedger 2.6.104
 
-## Navigation and re-login regression repair
+## Navigation, re-login, and login artwork repair
 
-SafeLedger 2.6.104 follows the completed 2.6.103 cleanup candidate and fixes two hands-on regressions found during testing: the Detail/display column retaining its previous scroll position when a different Profile, Vault Item, or Asset is selected, and re-login reliability after SafeLedger is locked.
+SafeLedger 2.6.104 follows the completed 2.6.103 cleanup candidate and fixes hands-on regressions found during testing: the Detail/display column retaining its previous scroll position when a different Profile, Vault Item, or Asset is selected, re-login reliability after SafeLedger is locked, and the Login wallpaper rendering incorrectly when the approved artwork was packaged as an embedded raster.
 
 ## Detail scroll ownership
 
@@ -36,13 +36,15 @@ SafeLedger 2.5.1 previously added a repeated same-process lock/re-login test aft
 
 The same focused regression also verifies Detail scroll reset behavior and that existing-password authentication is separate from new-password creation policy.
 
-## Approved Dark login artwork
+## Matching Login artwork for Dark, Light, and Colorful
 
-The Dark-mode Login display now uses the third user-approved crypto/security composition. The artwork preserves the clear left-side area needed for the Login controls while grouping Bitcoin, Ethereum, Solana, network, wallet, lock, and Chain Games iconography on the right so Chain Games appears as one part of the broader crypto ecosystem rather than the focal brand.
+The Login display now uses a coordinated pair of user-approved crypto/security compositions. Dark uses the deep navy/neon treatment, while Light and Colorful share the matching pale blue/white treatment. Both preserve a quiet left-side area for Login controls and place Bitcoin, Ethereum, Solana, wallet, lock, stablecoin-style, and Chain Games iconography on the right. Chain Games remains one icon in the broader crypto/security composition rather than the focal brand.
 
-The approved raster is embedded inside the existing local `login-background-dark.svg` asset. This keeps the existing theme/layout ownership intact, adds no network request or remote asset dependency, and avoids introducing a second competing Dark login wallpaper. Light and Colorful login artwork are unchanged.
+The earlier Dark implementation embedded a raster image inside `login-background-dark.svg`. That representation rendered incorrectly in hands-on testing. 2.6.104 replaces it with true local vector SVG artwork and updates the Light/Colorful asset to the matching vector composition. The Chain Games symbol uses the geometry from the user-supplied logo while intentionally omitting the wordmark.
 
-The appearance regression also verifies that Dark continues to use the approved local asset, that Light/Colorful retain their existing artwork mapping, and that the Dark artwork contains no remote `http` or `https` dependency.
+No Login wallpaper contains an embedded raster `<image>` element, remote image URL, or runtime network dependency. The existing theme mapping remains simple: Light and Colorful use `login-background-light.svg`; Dark uses `login-background-dark.svg`; System resolves to the corresponding active theme.
+
+The Appearance regression protects both vector assets, both theme mappings, the Chain Games icon signature, and the no-remote-resource/no-embedded-raster requirements so this rendering failure cannot quietly return.
 
 ## Security scope
 
@@ -54,7 +56,7 @@ The Login artwork remains packaged locally with SafeLedger and does not add a ru
 
 ## Test integration
 
-The existing 47 canonical regression suites remain unchanged. `navigation-relogin-regression-tests.js` is additionally owned explicitly by the package test commands and runs as part of `npm run test:regression` and `npm run test:device-security`, so supported-platform CI must exercise these two reported regressions on every candidate.
+The existing 47 canonical regression suites remain unchanged. `navigation-relogin-regression-tests.js` is additionally owned explicitly by the package test commands and runs as part of `npm run test:regression` and `npm run test:device-security`, so supported-platform CI must exercise the two behavioral regressions on every candidate. The canonical Appearance suite verifies the matching Login artwork contract.
 
 ## Release safety
 
@@ -65,4 +67,5 @@ Do not merge this candidate to `master` until Windows Portable, Linux AppImage, 
 3. unlock SafeLedger, use Emergency Lock, return to the Login screen, and sign in again with the same password;
 4. repeat lock/re-login more than once in the same application process;
 5. confirm an actually incorrect password still produces the normal failed-password behavior and lockout protections;
-6. confirm the approved Dark login artwork fits the display column without interfering with Login text or controls.
+6. confirm the Dark Login artwork renders cleanly at normal application size with the Login controls readable on the left;
+7. confirm Light and Colorful use the matching light artwork with readable theme-appropriate text and controls.
