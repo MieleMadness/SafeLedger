@@ -9,8 +9,7 @@ const TYPE_OPTIONS = [
   ['multiline', 'Multiline'],
   ['date', 'Date'],
   ['number', 'Number'],
-  ['url', 'URL'],
-  ['checkbox', 'Checkbox']
+  ['url', 'URL']
 ];
 
 const DEFAULT_TITLE = 'Custom Fields';
@@ -19,17 +18,6 @@ const normalizeLabel = (value) => String(value || '').trim().toLowerCase();
 
 function makeValueControl(host, type, value, label) {
   host.innerHTML = '';
-  if (type === 'checkbox') {
-    const shell = document.createElement('label');
-    shell.className = 'custom-field-checkbox';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.checked = value === true || String(value).toLowerCase() === 'true';
-    shell.appendChild(input);
-    shell.appendChild(document.createTextNode(' Yes'));
-    host.appendChild(shell);
-    return input;
-  }
 
   if (type === 'multiline') {
     const input = document.createElement('textarea');
@@ -84,7 +72,7 @@ function createFixedFieldsEditor(grid, initialFields, fixedFields) {
 
     controls.set(key, {
       input,
-      getValue: () => input.type === 'checkbox' ? input.checked : input.value
+      getValue: () => input.value
     });
   }
 
@@ -195,6 +183,10 @@ function createEditor(grid, initialFields, options = {}) {
     remove.innerHTML = '<i class="fa fa-times" aria-hidden="true"></i>';
     remove.title = 'Remove custom field';
     remove.setAttribute('aria-label', 'Remove custom field');
+    remove.style.display = 'inline-flex';
+    remove.style.alignItems = 'center';
+    remove.style.justifyContent = 'center';
+    remove.style.padding = '0';
 
     row.appendChild(labelWrap);
     row.appendChild(typeWrap);
@@ -211,11 +203,11 @@ function createEditor(grid, initialFields, options = {}) {
       valueCaption,
       valueHost,
       remove,
-      getValue: () => valueControl.type === 'checkbox' ? valueControl.checked : valueControl.value,
+      getValue: () => valueControl.value,
       rebuildValueControl(type) {
         const prior = rowState.getValue();
         valueControl = makeValueControl(valueHost, type, prior, labelInput.value || 'custom field');
-        rowState.getValue = () => valueControl.type === 'checkbox' ? valueControl.checked : valueControl.value;
+        rowState.getValue = () => valueControl.value;
       }
     };
     rows.push(rowState);
@@ -270,8 +262,7 @@ function createEditor(grid, initialFields, options = {}) {
       rowState.typeSelect.value = normalized.type;
       rowState.rebuildValueControl(normalized.type);
       const current = rowState.valueHost.querySelector('input, textarea');
-      if (current && current.type !== 'checkbox') current.value = prior == null ? '' : prior;
-      else if (current && current.type === 'checkbox') current.checked = prior === true || String(prior).toLowerCase() === 'true';
+      if (current) current.value = prior == null ? '' : prior;
     }
     rowState.typeSelect.tabIndex = -1;
     rowState.valueCaption.textContent = normalized.label;
