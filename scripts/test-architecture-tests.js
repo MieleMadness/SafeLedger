@@ -26,7 +26,7 @@ for (const [name, command] of Object.entries(pkg.scripts || {})) {
   assert(!retiredGatePattern.test(String(command)), `${name} must not call a retired patch/release-numbered gate.`);
 }
 
-assert.strictEqual(CANONICAL_SUITES.length, 47, 'SafeLedger must retain the complete 47-suite durable regression contract.');
+assert.strictEqual(CANONICAL_SUITES.length, 48, 'SafeLedger must retain the complete 48-suite durable regression contract.');
 const seen = new Set();
 for (const suite of CANONICAL_SUITES) {
   assert(suite && suite.name && suite.file, 'Canonical suite entries require a name and file.');
@@ -42,6 +42,7 @@ assert(seen.has('scripts/data-ownership-tests.js'));
 assert(seen.has('scripts/recovery-confidence-tests.js'));
 assert(seen.has('scripts/ui-consolidation-tests.js'));
 assert(seen.has('scripts/repository-hygiene-tests.js'));
+assert(seen.has('scripts/profile-icon-picker-tests.js'));
 
 const scriptFiles = fs.readdirSync(path.join(root, 'scripts')).filter((name) => name.endsWith('.js'));
 const retiredFiles = scriptFiles.filter(isRetiredTestFile).sort();
