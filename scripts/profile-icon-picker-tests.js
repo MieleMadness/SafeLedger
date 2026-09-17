@@ -46,8 +46,23 @@ const localCss = read('src/main/css/local-icons.css').replace(/\/\*[\s\S]*?\*\//
 const definedLocal = new Set(Array.from(localCss.matchAll(/\.(?:fa|glyphicon)-[a-z0-9]+(?:-[a-z0-9]+)*/gi), (match) => match[0].slice(1).toLowerCase()));
 definedLocal.delete('fa-spin');
 const selectableLocal = new Set(iconModel.GENERAL_ICONS.map((entry) => entry.key));
-assert.deepStrictEqual([...selectableLocal].sort(), [...definedLocal].sort(), 'General Profile icons must expose the complete SafeLedger local icon registry, excluding only the fa-spin modifier.');
+for (const key of selectableLocal) assert(definedLocal.has(key), `Selectable General Profile icon must have local artwork: ${key}`);
 assert.strictEqual(profileIconUi.entries('general').length, selectableLocal.size);
+
+const removedDuplicates = [
+  'fa-folder-open-o',
+  'fa-unlock-alt',
+  'glyphicon-save',
+  'fa-plus-circle',
+  'glyphicon-plus',
+  'fa-minus-circle',
+  'fa-exclamation-triangle'
+];
+for (const key of removedDuplicates) {
+  assert(!selectableLocal.has(key), `Duplicate General Profile icon must not be selectable: ${key}`);
+  assert(!definedLocal.has(key), `Duplicate local icon alias must be removed from CSS: ${key}`);
+  assert.throws(() => iconModel.normalizeSelection({ type: 'local', key }), /Invalid general Profile icon/);
+}
 
 const normalizedPatch = dataWrite.normalizeProfilePatch({
   name: 'Cold Storage',
@@ -86,4 +101,4 @@ for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.p
   assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
 }
 
-console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} general icons, caches catalog lookups, and renders large categories in small lazy batches.`);
+console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} curated General icons with duplicate aliases removed, caches catalog lookups, and renders large categories in small lazy batches.`);
