@@ -50,7 +50,7 @@ for (const key of selectableLocal) assert(definedLocal.has(key), `Selectable Gen
 assert.strictEqual(profileIconUi.entries('general').length, selectableLocal.size);
 
 const removedDuplicates = [
-  'fa-folder-open-o',
+  'fa-folder-open',
   'fa-unlock-alt',
   'glyphicon-save',
   'fa-plus-circle',
