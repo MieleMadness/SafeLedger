@@ -126,10 +126,13 @@ function createPicker(initialSelection) {
   const search = document.createElement('input'); search.type = 'search'; search.className = 'form-control profile-icon-picker-search'; search.placeholder = 'Search icons'; search.setAttribute('aria-label', 'Search profile icons'); root.appendChild(search);
   const grid = document.createElement('div'); grid.className = 'profile-icon-picker-grid'; root.appendChild(grid);
   const optionButtons = new Map();
+  const nameInput = document.getElementById('inputName');
+
+  const currentProfileName = () => nameInput ? nameInput.value : '';
 
   const updateSummary = () => {
     preview.innerHTML = '';
-    const visual = createIcon(selected, 'profile-icon-picker-preview-visual') || createInitial('', 'profile-icon-picker-preview-initial');
+    const visual = createIcon(selected, 'profile-icon-picker-preview-visual') || createInitial(currentProfileName(), 'profile-icon-picker-preview-initial');
     preview.appendChild(visual);
     const match = findCatalogEntry(selected);
     summaryText.textContent = match ? match.label : (selected ? 'Selected icon' : 'Using profile initial');
@@ -229,6 +232,9 @@ function createPicker(initialSelection) {
     selected = null;
     updateSummary();
     syncSelectedButton(previousId);
+  });
+  if (nameInput) nameInput.addEventListener('input', () => {
+    if (!selected) updateSummary();
   });
   updateSummary();
   renderGrid();
