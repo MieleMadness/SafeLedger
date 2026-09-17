@@ -1,6 +1,7 @@
-/* Profile creation templates and explicit Recovery Dashboard status actions. */
+/* Profile creation templates, Profile icon selection, and Recovery Dashboard status actions. */
 
-.profile-setup-section {
+.profile-setup-section,
+.profile-icon-section {
   min-width: 0;
   margin: var(--sl-space-2, 8px) 0 0;
   padding: var(--sl-space-3, 12px);
@@ -8,7 +9,8 @@
   border-radius: var(--sl-radius, 8px);
 }
 
-.profile-setup-section legend {
+.profile-setup-section legend,
+.profile-icon-section legend {
   width: auto;
   margin: 0 0 var(--sl-space-2, 8px);
   padding: 0 4px;
@@ -123,6 +125,173 @@
 .profile-wallet-template:has(input:checked) {
   border-color: var(--sl-primary, #2f6fed);
   background: var(--sl-primary-soft, rgba(47, 111, 237, .10));
+}
+
+.profile-icon-picker {
+  min-width: 0;
+}
+
+.profile-icon-picker-summary {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.profile-icon-picker-preview {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--sl-border, rgba(255, 255, 255, .22));
+  border-radius: 10px;
+  background: var(--sl-surface-soft, rgba(255, 255, 255, .06));
+}
+
+.profile-icon-picker-summary-text {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-icon-picker-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.profile-icon-picker-tab {
+  appearance: none;
+  padding: 6px 9px;
+  border: 1px solid var(--sl-border, rgba(255, 255, 255, .22));
+  border-radius: 999px;
+  background: var(--sl-surface, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: .84rem;
+  cursor: pointer;
+}
+
+.profile-icon-picker-tab.is-active {
+  border-color: var(--sl-primary, #2f6fed);
+  background: var(--sl-primary-soft, rgba(47, 111, 237, .12));
+  color: var(--sl-primary-strong, inherit);
+}
+
+.profile-icon-picker-tab:focus-visible,
+.profile-icon-option:focus-visible,
+.profile-icon-picker-more:focus-visible {
+  outline: 2px solid var(--sl-primary, #2f6fed);
+  outline-offset: 2px;
+}
+
+.profile-icon-picker-search {
+  margin-bottom: 8px;
+}
+
+.profile-icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  max-height: 320px;
+  gap: 7px;
+  overflow-y: auto;
+  padding: 2px 4px 2px 2px;
+}
+
+.profile-icon-option {
+  appearance: none;
+  display: flex;
+  min-width: 0;
+  min-height: 76px;
+  flex-direction: column;
+  gap: 7px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 5px;
+  border: 1px solid var(--sl-border, rgba(255, 255, 255, .18));
+  border-radius: 8px;
+  background: var(--sl-surface, transparent);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  contain: layout paint;
+}
+
+.profile-icon-option:hover,
+.profile-icon-option.is-selected {
+  border-color: var(--sl-primary, #2f6fed);
+  background: var(--sl-primary-soft, rgba(47, 111, 237, .10));
+}
+
+.profile-icon-option.is-selected {
+  box-shadow: inset 0 0 0 1px var(--sl-primary, #2f6fed);
+}
+
+.profile-icon-option > span:last-child {
+  width: 100%;
+  overflow: hidden;
+  font-size: .76rem;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-icon-picker-more {
+  grid-column: 1 / -1;
+  justify-self: center;
+  margin: 4px 0 2px;
+}
+
+.profile-icon-option-visual,
+.profile-icon-picker-preview-visual,
+.profile-list-icon,
+.profile-detail-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.profile-icon-option-visual { width: 30px; height: 30px; font-size: 28px; }
+.profile-icon-picker-preview-visual { width: 30px; height: 30px; font-size: 27px; }
+.profile-icon-picker-preview-initial { font-size: 1.2rem; font-weight: 800; }
+.profile-icon-picker-empty { grid-column: 1 / -1; margin: 12px 4px; color: var(--sl-muted, inherit); text-align: center; }
+
+.profile-list-icon {
+  width: 2em;
+  height: 2em;
+  font-size: 1.45em;
+  color: #fff;
+}
+
+.profile-detail-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.profile-detail-heading h1 { margin: 0; }
+.profile-detail-icon { width: 42px; height: 42px; font-size: 36px; color: var(--sl-primary, currentColor); }
+.profile-detail-initial {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--sl-primary-soft, rgba(47, 111, 237, .12));
+  color: var(--sl-primary-strong, currentColor);
+  font-size: 1.15rem;
+  font-weight: 800;
 }
 
 /* Needs Attention exposes two sibling actions: the wallet description and the

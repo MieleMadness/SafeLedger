@@ -8,7 +8,7 @@ const { EventEmitter } = require('events');
 const sessionLock = require('../src/main/session-lock-main');
 const deviceSecurity = require('../src/main/device-security-main');
 const backupHealth = require('../src/main/backup-health');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 
 async function testCentralLockController() {
   const sequence = [];
@@ -217,15 +217,22 @@ function testStaticBootstrapBoundary() {
   const root = path.join(__dirname, '..');
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   const bootstrap = fs.readFileSync(path.join(root, 'src/main/bootstrap.js'), 'utf8');
+  const main = fs.readFileSync(path.join(root, 'src/main/main.js'), 'utf8');
   const preload = fs.readFileSync(path.join(root, 'src/main/preload.js'), 'utf8');
-  const rendererBridge = fs.readFileSync(path.join(root, 'src/main/renderer-bridge.js'), 'utf8');
+  const renderer = fs.readFileSync(path.join(root, 'src/main/renderer.js'), 'utf8');
+  const rendererServices = fs.readFileSync(path.join(root, 'src/main/renderer-services.js'), 'utf8');
   const rendererSecurity = fs.readFileSync(path.join(root, 'src/main/security-enhancements.js'), 'utf8');
   const settingsUi = fs.readFileSync(path.join(root, 'src/main/settings-ui.js'), 'utf8');
   const service = fs.readFileSync(path.join(root, 'src/main/device-security-main.js'), 'utf8');
 
   assert.strictEqual(pkg.main, 'src/main/bootstrap.js');
-  assert(bootstrap.includes("ipc.removeAllListeners('panic-lock')"));
+  assert(bootstrap.includes('function startAllowedRuntime()'));
+  assert(bootstrap.includes("const mainRuntime = require('./main');"));
+  assert(bootstrap.includes('mainRuntime.registerCoreIpcHandlers();'));
+  assert(bootstrap.includes("ipc.on('panic-lock'"));
   assert(bootstrap.includes('lockController.lockSession'));
+  assert(!bootstrap.includes("removeAllListeners('panic-lock')"), 'Central lock ownership must not depend on replacing another listener.');
+  assert(!main.includes("ipc.on('panic-lock'"), 'main.js must not keep the retired Emergency Lock listener.');
   assert(bootstrap.includes('new SensitiveFingerprintSession()'));
   assert(bootstrap.includes('onLock: () => sensitiveFingerprints.clear()'));
   assert(bootstrap.includes("ipc.handle('device-storage-health'"));
@@ -240,13 +247,17 @@ function testStaticBootstrapBoundary() {
   assert(preload.includes('recordBackupSuccess'));
   assert(preload.includes('recordBackupVerified'));
   assert(preload.includes('onSecuritySessionLocked'));
-  assert(rendererBridge.includes("'security-session-locked': 'onSecuritySessionLocked'"));
-  assert(rendererBridge.includes("'device-reset-storage-identity': 'resetStorageIdentity'"));
-  assert(rendererSecurity.includes("ipc.on('security-session-locked'"));
-  assert(rendererSecurity.includes("ipc.invoke('device-record-backup-success')"));
-  assert(rendererSecurity.includes("ipc.invoke('device-record-backup-verified'"));
-  assert(rendererSecurity.includes("ipc.invoke('device-reset-storage-identity')"));
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/renderer-bridge.js')), false,
+    'Device-security UI must not depend on the retired renderer pseudo-IPC bridge.');
+  assert(renderer.includes('services.onSecuritySessionLocked'));
+  assert(rendererServices.includes('function onSecuritySessionLocked(callback)'));
+  assert(rendererSecurity.includes("const services = require('./renderer-services');"));
+  assert(rendererSecurity.includes('services.recordBackupSuccess()'));
+  assert(rendererSecurity.includes('services.recordBackupVerified(report.created || null)'));
+  assert(rendererSecurity.includes('services.resetStorageIdentity()'));
   assert(settingsUi.includes("makeSection('Device & Storage Security')"));
+  assert(settingsUi.includes('services.getStorageHealth()'));
+  assert(settingsUi.includes('services.getBackupHealth()'));
   assert(settingsUi.includes("[0, 'Off'], [90, '3 months'], [180, '6 months'], [365, '12 months']"));
   assert(service.includes("lockController.lockSession('storage-unavailable'"));
   assert(service.includes('rotateStorageIdentity'));
@@ -259,7 +270,7 @@ function testStaticBootstrapBoundary() {
   await testDeviceSecurityEvents();
   await testBackupAgeSettings();
   testStaticBootstrapBoundary();
-  console.log('PASS SafeLedger 2.3+ centralized locks, OS events, storage protection/health, restore identity rotation, session-only cleanup, startup marker repair, and backup-age metadata.');
+  console.log('PASS SafeLedger centralized locks, OS events, storage protection/health, semantic renderer services, restore identity rotation, session-only cleanup, startup marker repair, and backup-age metadata.');
 })().catch((err) => {
   console.error(err && err.stack ? err.stack : err);
   process.exit(1);
