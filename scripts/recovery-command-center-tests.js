@@ -117,12 +117,14 @@ assert(dashboardLayoutSource.includes('.dashboard-maintenance-list-shell'), 'Mai
 assert(dashboardLayoutSource.includes('background: transparent !important;'), 'Maintenance Snapshot must not render a separate filled card around its rows.');
 assert(dashboardLayoutSource.includes('border: 0 !important;'), 'Maintenance Snapshot must not render an outer border around its text rows.');
 assert(dashboardLayoutSource.includes('box-shadow: none !important;'), 'Maintenance Snapshot must not render separate card elevation.');
+const resolveOrderRule = /\.recovery-needs-attention-section\s+\.dashboard-resolve-button\s*\{[^}]*\border\s*:\s*1\s*;?[^}]*\}/m;
+const statusOrderRule = /\.recovery-needs-attention-section\s+\.dashboard-status\s*\{[^}]*\border\s*:\s*2\s*;?[^}]*\}/m;
 assert(
-  dashboardLayoutSource.includes('.recovery-needs-attention-section .dashboard-resolve-button {\n  order: 1;\n}'),
+  resolveOrderRule.test(dashboardLayoutSource),
   'Recovery Needs Attention must place Resolve before the informational status pill.'
 );
 assert(
-  dashboardLayoutSource.includes('.recovery-needs-attention-section .dashboard-status {\n  order: 2;\n}'),
+  statusOrderRule.test(dashboardLayoutSource),
   'Recovery Needs Attention status pill must follow Resolve to match health and maintenance rows.'
 );
 for (const retiredSelector of ['.dashboard-maintenance-card', '.dashboard-maintenance-icon', '.dashboard-maintenance-copy', '.dashboard-maintenance-end', '.dashboard-maintenance-cards']) {
