@@ -262,7 +262,7 @@ function renderLegacyImportSection(area) {
   const choose = document.createElement('button');
   choose.type = 'button';
   choose.className = 'btn btn-default';
-  choose.innerHTML = '<i class="fa fa-folder-open" aria-hidden="true"></i> Choose 1.x Data File';
+  choose.innerHTML = '<i class="fa fa-folder-open-o" aria-hidden="true"></i> Choose 1.x Data File';
   actions.appendChild(choose);
   section.appendChild(actions);
 
@@ -333,7 +333,7 @@ function renderBruteForceSection(area, params) {
   const save = document.createElement('button');
   save.type = 'button';
   save.className = 'btn btn-default settings-section-save';
-  save.innerHTML = '<span class="glyphicon glyphicon-save" aria-hidden="true"></span> Save Brute Force Settings';
+  save.innerHTML = '<span class="fa fa-save" aria-hidden="true"></span> Save Brute Force Settings';
   save.addEventListener('click', () => {
     const numFailAttempts = clampBruteForceValue(inputFailAttempts.value, params.settings.numFailAttempts || 5);
     const numLockoutRetries = clampBruteForceValue(inputLockoutRetry.value, params.settings.numLockoutRetries || 5);
