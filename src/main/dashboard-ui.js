@@ -323,42 +323,38 @@ function renderRecoveryHealth(area, summary) {
   area.appendChild(section);
 }
 
-function appendMaintenanceCard(host, options = {}) {
-  const card = document.createElement('div');
-  card.className = 'dashboard-maintenance-card';
+function appendMaintenanceRow(host, options = {}) {
+  const row = document.createElement('div');
+  row.className = 'dashboard-list-row';
 
-  const icon = document.createElement('span');
-  icon.className = 'recovery-simulator-topic-icon dashboard-maintenance-icon';
-  const iconClass = String(options.icon || '');
-  icon.innerHTML = `<i class="fa ${iconClass}" aria-hidden="true"></i>`;
-
-  const copy = document.createElement('span');
-  copy.className = 'recovery-simulator-topic-copy dashboard-maintenance-copy';
-  const title = document.createElement('strong');
+  const main = document.createElement('div');
+  main.className = 'dashboard-list-main';
+  const title = document.createElement('div');
+  title.className = 'dashboard-list-title';
   title.textContent = options.title || '';
-  const description = document.createElement('small');
-  description.textContent = options.description || '';
-  copy.appendChild(title);
-  copy.appendChild(description);
+  const meta = document.createElement('div');
+  meta.className = 'dashboard-list-meta';
+  meta.textContent = options.description || '';
+  main.appendChild(title);
+  main.appendChild(meta);
 
   const end = document.createElement('div');
-  end.className = 'dashboard-maintenance-end';
+  end.className = 'dashboard-list-end';
   if (options.action && typeof options.action.onActivate === 'function') {
     const button = makeResolveButton(options.action.label || 'Resolve', options.action.onActivate, options.action.title || 'Resolve this issue');
     if (button) end.appendChild(button);
   }
   if (options.statusText && options.statusKind) end.appendChild(makeLabeledStatus(options.statusText, options.statusKind));
 
-  card.appendChild(icon);
-  card.appendChild(copy);
-  card.appendChild(end);
-  host.appendChild(card);
+  row.appendChild(main);
+  row.appendChild(end);
+  host.appendChild(row);
 }
 
 function renderMaintenanceSnapshot(area, summary, device = {}) {
   const section = makeSection('Maintenance Snapshot', 'vault-maintenance-section', 'Review verification freshness, recovery coverage, and recent backup activity. Use Resolve when SafeLedger can take you directly to the next item that needs work.');
-  const cards = document.createElement('div');
-  cards.className = 'dashboard-maintenance-cards';
+  const list = document.createElement('div');
+  list.className = 'dashboard-list dashboard-maintenance-list-shell';
 
   const staleInfo = summary.stale || {};
   const staleCount = Number(staleInfo.count) || 0;
@@ -366,8 +362,7 @@ function renderMaintenanceSnapshot(area, summary, device = {}) {
   const staleDescription = staleCount
     ? `${quantity(staleCount, 'Vault Item')} need${staleCount === 1 ? 's' : ''} a verification review${staleInfo.neverVerified ? ` • ${staleInfo.neverVerified} never verified` : ''}.`
     : 'All Vault Items have been verified within the last 6 months.';
-  appendMaintenanceCard(cards, {
-    icon: 'fa-clock-o',
+  appendMaintenanceRow(list, {
     title: 'Recovery verification',
     description: staleDescription,
     statusText: staleCount ? 'Review' : 'Current',
@@ -386,8 +381,7 @@ function renderMaintenanceSnapshot(area, summary, device = {}) {
   const coverageDescription = total
     ? `Methods ${Number(rc.method) || 0}/${total} • Locations ${Number(rc.location) || 0}/${total} • Instructions ${Number(rc.instructions) || 0}/${total} • Validations ${Number(rc.drills) || 0}/${total}`
     : 'No Vault Items are available for recovery coverage yet.';
-  appendMaintenanceCard(cards, {
-    icon: 'fa-life-ring',
+  appendMaintenanceRow(list, {
     title: 'Recovery coverage',
     description: coverageDescription,
     statusText: total ? (coverageComplete ? 'Complete' : 'Review') : 'No Items',
@@ -408,8 +402,7 @@ function renderMaintenanceSnapshot(area, summary, device = {}) {
     : verifyDue
       ? { label: 'Verify Backup', title: 'Verify the current encrypted backup', onActivate: () => runBackupResolution('verify-backup') }
       : null;
-  appendMaintenanceCard(cards, {
-    icon: 'fa-archive',
+  appendMaintenanceRow(list, {
     title: 'Backup activity',
     description: `Backup ${backupAgeLabel(backupHealth.backup)} • Verified ${backupAgeLabel(backupHealth.verified)} • Latest vault activity ${formatActivityTime(activity)}`,
     statusText: backupDue || verifyDue ? 'Review' : 'Current',
@@ -417,7 +410,7 @@ function renderMaintenanceSnapshot(area, summary, device = {}) {
     action: backupAction
   });
 
-  section.appendChild(cards);
+  section.appendChild(list);
   area.appendChild(section);
 }
 
@@ -688,7 +681,7 @@ exports._test = {
   appendWalletList,
   appendAttentionGaps,
   appendHealthRow,
-  appendMaintenanceCard,
+  appendMaintenanceRow,
   quantity,
   vaultContentsLabel
 };
