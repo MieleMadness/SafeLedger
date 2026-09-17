@@ -18,6 +18,8 @@ try {
 }
 
 const categories = new Set(['tokens', 'networks', 'wallets', 'exchanges']);
+const entriesCache = new Map();
+const entryCache = new Map();
 
 function normalizeLookup(value) {
   return String(value || '')
@@ -92,16 +94,46 @@ function humanizeKey(value) {
     .trim();
 }
 
-function entries(category) {
-  if (!categories.has(category)) return [];
-  const iconMap = manifest[category] || {};
+function makeEntry(category, key, src) {
   const displayNames = manifest.displayNames && manifest.displayNames[category] || {};
-  return Object.keys(iconMap).map((key) => ({
+  return Object.freeze({
     category,
     key,
     name: String(displayNames[key] || humanizeKey(key)).trim(),
-    src: iconMap[key]
-  })).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+    src
+  });
+}
+
+function entry(category, key) {
+  if (!categories.has(category)) return null;
+  const rawKey = String(key || '').trim();
+  if (!rawKey) return null;
+  const cacheKey = `${category}:${rawKey}`;
+  if (entryCache.has(cacheKey)) return entryCache.get(cacheKey);
+
+  const iconMap = manifest[category] || {};
+  let matchResult = iconMap[rawKey] ? { category, key: rawKey, src: iconMap[rawKey] } : null;
+  if (!matchResult) matchResult = match(category, rawKey);
+  const result = matchResult ? makeEntry(category, matchResult.key, matchResult.src) : null;
+  entryCache.set(cacheKey, result);
+  if (result && result.key !== rawKey) entryCache.set(`${category}:${result.key}`, result);
+  return result;
+}
+
+function entries(category) {
+  if (!categories.has(category)) return [];
+  if (entriesCache.has(category)) return entriesCache.get(category);
+
+  const iconMap = manifest[category] || {};
+  const list = Object.keys(iconMap)
+    .map((key) => {
+      const cached = entry(category, key);
+      return cached || makeEntry(category, key, iconMap[key]);
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+  const frozen = Object.freeze(list);
+  entriesCache.set(category, frozen);
+  return frozen;
 }
 
 function createImage(src, label, className) {
@@ -111,6 +143,7 @@ function createImage(src, label, className) {
   img.src = src;
   img.alt = `${String(label || 'Web3').trim() || 'Web3'} icon`;
   img.draggable = false;
+  img.decoding = 'async';
   return img;
 }
 
@@ -120,6 +153,8 @@ exports.match = match;
 exports.resolve = resolve;
 exports.matchFirst = matchFirst;
 exports.resolveFirst = resolveFirst;
+exports.entry = entry;
 exports.entries = entries;
 exports.createImage = createImage;
 exports._manifest = manifest;
+exports._test = { categories, entriesCache, entryCache };
