@@ -89,6 +89,10 @@ const pickerSource = read('src/main/profile-icon-ui.js');
 for (const label of ['Crypto', 'Networks', 'Wallets', 'Exchanges', 'Services', 'General']) assert(pickerSource.includes(`label: '${label}'`));
 assert(pickerSource.includes("search.type = 'search'"));
 assert(pickerSource.includes("clear.textContent = 'Use initial'"));
+assert(pickerSource.includes("document.getElementById('inputName')"), 'Use initial preview must read the current Profile name input.');
+assert(pickerSource.includes("nameInput.addEventListener('input'"), 'Use initial preview must update while the Profile name changes.');
+assert(pickerSource.includes("createInitial(currentProfileName(), 'profile-icon-picker-preview-initial')"), 'Use initial must preview the current Profile initial instead of an empty-name question mark.');
+assert(!pickerSource.includes("createInitial('', 'profile-icon-picker-preview-initial')"), 'Use initial preview must not render the empty-name fallback.');
 assert(pickerSource.includes('web3Icons.entry(icon.category, icon.key)'), 'Profile visuals must use direct Web3 entry lookup instead of scanning the entire category.');
 assert(!pickerSource.includes('web3Icons.entries(icon.category).find'), 'Profile rendering must never rebuild/scan a complete Web3 category for one icon.');
 assert(profileIconUi._test.BATCH_SIZE >= 24 && profileIconUi._test.BATCH_SIZE <= 96, 'Profile picker must cap each DOM render batch to a small visible working set.');
@@ -101,4 +105,4 @@ for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.p
   assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
 }
 
-console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} curated General icons with duplicate aliases removed, caches catalog lookups, and renders large categories in small lazy batches.`);
+console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} curated General icons, previews the live Profile initial, caches catalog lookups, and renders large categories in small lazy batches.`);
