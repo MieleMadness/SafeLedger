@@ -60,90 +60,9 @@
   margin-bottom: 0;
 }
 
-/* Maintenance Snapshot follows the same one-shell / divided-row language as
- * Recovery Needs Attention. The maintenance icon treatment is intentionally
- * hidden so the row content starts at the same left edge as other dashboard
- * lists and the text/action hierarchy does the work. */
-.dashboard-maintenance-cards {
-  display: grid;
-  gap: 0;
+/* Maintenance Snapshot intentionally reuses the same dashboard-list shell and
+ * divided-row components as Recovery Needs Attention. It owns no icon/circle
+ * treatment or parallel card design. */
+.dashboard-maintenance-list-shell {
   margin-top: 12px;
-  overflow: hidden;
-  border: 1px solid var(--sl-border);
-  border-radius: 8px;
-  background: var(--sl-surface);
-}
-
-.dashboard-maintenance-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 0;
-  border-bottom: 1px solid var(--sl-border);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.dashboard-maintenance-card:last-child {
-  border-bottom: 0;
-}
-
-.dashboard-maintenance-icon {
-  display: none;
-}
-
-.dashboard-maintenance-copy {
-  display: grid;
-  flex: 1 1 auto;
-  gap: 2px;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-}
-
-.dashboard-maintenance-copy strong {
-  color: var(--sl-text-strong);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.dashboard-maintenance-copy small {
-  color: var(--sl-muted);
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.dashboard-maintenance-end {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-}
-
-html[data-theme="dark"] .dashboard-maintenance-cards {
-  background: var(--sl-surface-raised);
-  border-color: var(--sl-border);
-}
-
-html[data-theme="dark"] .dashboard-maintenance-card {
-  background: transparent;
-  border-color: var(--sl-border);
-}
-
-@media (max-width: 760px) {
-  .dashboard-maintenance-card {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .dashboard-maintenance-end {
-    width: 100%;
-    justify-content: flex-start;
-  }
 }
