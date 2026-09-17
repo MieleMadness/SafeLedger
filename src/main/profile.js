@@ -11,6 +11,7 @@ const emergencyPackageUi = require('./emergency-package-ui');
 const emptyState = require('./empty-state-ui');
 const profileSetup = require('./profile-setup');
 const walletIcons = require('./wallet-icons');
+const profileIconUi = require('./profile-icon-ui');
 
 const normalize = (value) => String(value || '').trim().toLowerCase();
 
@@ -91,10 +92,7 @@ function listProfiles(params) {
     row.className = 'profile-list-row';
     const badge = document.createElement('span');
     badge.className = params.vaultList.vaultSelected === index ? 'badge-circle badge-selected' : 'badge-circle';
-    const initial = document.createElement('span');
-    initial.className = 'profile-list-initial';
-    initial.textContent = String(item.name || '').charAt(0).toUpperCase();
-    badge.appendChild(initial);
+    badge.appendChild(profileIconUi.createProfileVisual(item, 'profile-list-icon', 'profile-list-initial'));
     row.appendChild(badge);
     const label = document.createElement('span');
     label.className = 'profile-list-name';
@@ -173,12 +171,24 @@ function createProfileSetupControls(grid) {
   return { getSetup() { return blankMode.checked ? { mode: 'blank', walletNames: [] } : { mode: 'templates', walletNames: checkboxes.filter(({ checkbox }) => checkbox.checked).map(({ template }) => template.name) }; } };
 }
 
+function createProfileIconControls(grid, profile) {
+  const section = document.createElement('fieldset');
+  section.className = 'edit-info-grid-full profile-icon-section';
+  const legend = document.createElement('legend'); legend.textContent = 'Profile icon'; section.appendChild(legend);
+  const intro = document.createElement('p'); intro.className = 'profile-setup-intro'; intro.textContent = 'Choose from SafeLedger’s local crypto, network, wallet, exchange, service, and general icon libraries. Icons stay fully offline.'; section.appendChild(intro);
+  const picker = profileIconUi.createPicker(profile && profile.profileIcon);
+  section.appendChild(picker.element);
+  grid.appendChild(section);
+  return picker;
+}
+
 function createEditProfile(params) {
   const area = document.getElementById('detailArea'); area.innerHTML = '';
   const profile = params.profile || null;
   const header = document.createElement('h1'); header.textContent = profile ? 'Modify Profile' : 'Add Profile'; area.appendChild(header); area.appendChild(document.createElement('hr'));
   const { form, grid } = editFormUi.createForm(area);
   const inputName = editFormUi.addTextInput(grid, { id: 'inputName', label: 'Name', value: profile && profile.name, maxLength: 25 });
+  const iconPicker = createProfileIconControls(grid, profile);
   const inputNotes = editFormUi.addTextarea(grid, { id: 'inputProfileNotes', label: 'Notes', value: profile && profile.notes, rows: 4, maxLength: 500, className: 'detail-notes-input', full: true });
   const customFieldEditor = customFieldsUi.createEditor(grid, profile && profile.customFields, { title: 'Profile Custom Fields', note: 'Add optional Profile-level information that does not belong to one Vault Item or Asset. Sensitive values stay encrypted and are excluded from search.' });
   const setupControls = profile ? null : createProfileSetupControls(grid);
@@ -190,7 +200,7 @@ function createEditProfile(params) {
     if (selectedSetup && selectedSetup.mode === 'templates' && !selectedSetup.walletNames.length) { if (button) button.disabled = false; return alert('Choose at least one wallet template or select Blank Profile.'); }
     if (button) button.disabled = true;
     const nextProfile = profile || { created: Date() };
-    nextProfile.name = name; nextProfile.notes = inputNotes.value; nextProfile.customFields = customFieldEditor.getFields(); if (profile) nextProfile.modified = Date();
+    nextProfile.name = name; nextProfile.profileIcon = iconPicker.getSelection(); nextProfile.notes = inputNotes.value; nextProfile.customFields = customFieldEditor.getFields(); if (profile) nextProfile.modified = Date();
     params.saving.state = true; status.loadStatus();
     const payload = { action: profile ? 'modify' : 'create', vault: nextProfile, vaultList: params.vaultList };
     if (!profile) payload.profileSetup = selectedSetup;
@@ -221,7 +231,9 @@ function appendProfileNotes(area, profile) {
 function showProfileDetail(params) {
   const area = document.getElementById('detailArea'); area.innerHTML = '';
   const profile = params.profile;
-  const header = document.createElement('h1'); header.textContent = profile.name || 'Profile'; area.appendChild(header); area.appendChild(document.createElement('hr'));
+  const heading = document.createElement('div'); heading.className = 'profile-detail-heading';
+  heading.appendChild(profileIconUi.createProfileVisual(profile, 'profile-detail-icon', 'profile-detail-initial'));
+  const header = document.createElement('h1'); header.textContent = profile.name || 'Profile'; heading.appendChild(header); area.appendChild(heading); area.appendChild(document.createElement('hr'));
   appendDateLine(area, 'Created', profile.created); appendDateLine(area, 'Modified', profile.modified);
   if (profile.path) {
     const location = document.createElement('p'); location.className = 'detail-info-line';
@@ -260,4 +272,4 @@ function confirmDelete(params) {
 exports.listProfiles = listProfiles;
 exports.createProfile = (params) => createEditProfile(params);
 exports.showProfileDetail = showProfileDetail;
-exports._test = { normalize, appendDateLine, appendProfileLine, appendProfileNotes, formatDate, pinnedSort, createProfileSetupControls, createWalletTemplateIcon };
+exports._test = { normalize, appendDateLine, appendProfileLine, appendProfileNotes, formatDate, pinnedSort, createProfileSetupControls, createWalletTemplateIcon, createProfileIconControls };
