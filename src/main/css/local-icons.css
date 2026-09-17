@@ -17,7 +17,7 @@
 .fa-home::before { content: "⌂"; }
 .fa-history::before { content: "↶"; }
 .fa-refresh::before { content: "↻"; }
-.fa-folder-open::before { content: "▣"; }
+.fa-folder-open-o::before { content: "▣"; }
 .fa-star::before { content: "★"; }
 .fa-star-o::before { content: "☆"; }
 
