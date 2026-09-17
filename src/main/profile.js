@@ -175,7 +175,7 @@ function createProfileIconControls(grid, profile) {
   const section = document.createElement('fieldset');
   section.className = 'edit-info-grid-full profile-icon-section';
   const legend = document.createElement('legend'); legend.textContent = 'Profile icon'; section.appendChild(legend);
-  const intro = document.createElement('p'); intro.className = 'profile-setup-intro'; intro.textContent = 'Choose from SafeLedger’s local crypto, network, wallet, exchange, service, and general icon libraries. Icons stay fully offline.'; section.appendChild(intro);
+  const intro = document.createElement('p'); intro.className = 'profile-setup-intro'; intro.textContent = 'Choose from SafeLedger’s local crypto, network, wallet, exchange, service, and general icon libraries.'; section.appendChild(intro);
   const picker = profileIconUi.createPicker(profile && profile.profileIcon);
   section.appendChild(picker.element);
   grid.appendChild(section);
