@@ -25,8 +25,11 @@ for (const category of iconModel.WEB3_CATEGORIES) {
   const sourceEntries = web3Icons.entries(category);
   const pickerEntries = profileIconUi.entries(category);
   assert(sourceEntries.length > 0, `${category} icon manifest should be populated by prepare:icons.`);
+  assert.strictEqual(web3Icons.entries(category), sourceEntries, `${category} Web3 entries must be cached instead of rebuilt and re-sorted on every icon render.`);
+  assert.strictEqual(profileIconUi.entries(category), pickerEntries, `${category} Profile picker catalog must be cached instead of rebuilt on every render.`);
   for (const source of sourceEntries) {
     assert(String(source.src || '').startsWith(`./assets/token-icons/${category}/`), `${category}:${source.key} must stay local.`);
+    assert.strictEqual(web3Icons.entry(category, source.key), source, `${category}:${source.key} must resolve through the constant-time cached entry lookup.`);
     assert(pickerEntries.some((entry) => entry.selection.type === 'web3' && entry.selection.category === category && entry.selection.key === source.key),
       `Profile picker must expose every packaged ${category} icon: ${source.key}`);
   }
@@ -62,14 +65,25 @@ assert(profileSource.includes('nextProfile.profileIcon = iconPicker.getSelection
 assert(profileSource.includes("createProfileVisual(item, 'profile-list-icon'"), 'Selected Profile icons must render in the Profile list.');
 assert(profileSource.includes("createProfileVisual(profile, 'profile-detail-icon'"), 'Selected Profile icons must render in Profile detail.');
 
+const web3Source = read('src/main/web3-icons.js');
+assert(web3Source.includes('const entriesCache = new Map()'), 'Web3 catalog entries must have one cached owner.');
+assert(web3Source.includes('function entry(category, key)'), 'Web3 icons must expose direct canonical entry lookup for Profile rendering.');
+assert(web3Source.includes("img.decoding = 'async'"), 'Local SVG image decode must not block Profile UI work unnecessarily.');
+
 const pickerSource = read('src/main/profile-icon-ui.js');
 for (const label of ['Crypto', 'Networks', 'Wallets', 'Exchanges', 'Services', 'General']) assert(pickerSource.includes(`label: '${label}'`));
 assert(pickerSource.includes("search.type = 'search'"));
 assert(pickerSource.includes("clear.textContent = 'Use initial'"));
+assert(pickerSource.includes('web3Icons.entry(icon.category, icon.key)'), 'Profile visuals must use direct Web3 entry lookup instead of scanning the entire category.');
+assert(!pickerSource.includes('web3Icons.entries(icon.category).find'), 'Profile rendering must never rebuild/scan a complete Web3 category for one icon.');
+assert(profileIconUi._test.BATCH_SIZE >= 24 && profileIconUi._test.BATCH_SIZE <= 96, 'Profile picker must cap each DOM render batch to a small visible working set.');
+assert(pickerSource.includes('document.createDocumentFragment()'), 'Profile picker batches should be appended with a DocumentFragment.');
+assert(pickerSource.includes('appendNextBatch'), 'Profile picker must incrementally append icon batches.');
+assert(pickerSource.includes("grid.addEventListener('scroll'"), 'Profile picker must lazily reveal additional icons while scrolling.');
 
 const profileCss = read('src/main/css/profile-setup.css');
-for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-detail-heading', '.profile-list-icon']) {
+for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-icon-picker-more', '.profile-detail-heading', '.profile-list-icon']) {
   assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
 }
 
-console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} general icons, and persists only validated identifiers.`);
+console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} general icons, caches catalog lookups, and renders large categories in small lazy batches.`);
