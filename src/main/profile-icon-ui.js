@@ -12,35 +12,58 @@ const GROUPS = Object.freeze([
   { key: 'services', label: 'Services' },
   { key: 'general', label: 'General' }
 ]);
+const BATCH_SIZE = 72;
+const catalogCache = new Map();
+const catalogBySelectionId = new Map();
+
+function rememberCatalog(items) {
+  for (const item of items) catalogBySelectionId.set(iconModel.selectionId(item.selection), item);
+  return Object.freeze(items);
+}
 
 function entries(group) {
+  if (catalogCache.has(group)) return catalogCache.get(group);
+
+  let items = [];
   if (iconModel.WEB3_CATEGORIES.includes(group)) {
-    const items = web3Icons.entries(group).map((entry) => ({
+    items = web3Icons.entries(group).map((entry) => Object.freeze({
       label: entry.name,
       search: `${entry.name} ${entry.key}`.toLowerCase(),
-      selection: { type: 'web3', category: group, key: entry.key }
+      selection: Object.freeze({ type: 'web3', category: group, key: entry.key })
     }));
     if (group === 'tokens' && !items.some((entry) => /chain games/i.test(entry.label))) {
-      items.push({ label: 'Chain Games', search: 'chain games chain', selection: { type: 'service', key: 'Chain Games' } });
+      items.push(Object.freeze({
+        label: 'Chain Games',
+        search: 'chain games chain',
+        selection: Object.freeze({ type: 'service', key: 'Chain Games' })
+      }));
       items.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
     }
-    return items;
-  }
-  if (group === 'services') {
-    return serviceCatalog.SERVICES.map((service) => ({
+  } else if (group === 'services') {
+    items = serviceCatalog.SERVICES.map((service) => Object.freeze({
       label: service.name,
       search: `${service.name} ${service.aliases.join(' ')}`.toLowerCase(),
-      selection: { type: 'service', key: service.name }
+      selection: Object.freeze({ type: 'service', key: service.name })
     })).sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
-  }
-  if (group === 'general') {
-    return iconModel.GENERAL_ICONS.map((entry) => ({
+  } else if (group === 'general') {
+    items = iconModel.GENERAL_ICONS.map((entry) => Object.freeze({
       label: entry.label,
       search: `${entry.label} ${entry.key}`.toLowerCase(),
-      selection: { type: 'local', key: entry.key }
+      selection: Object.freeze({ type: 'local', key: entry.key })
     }));
   }
-  return [];
+
+  const catalog = rememberCatalog(items);
+  catalogCache.set(group, catalog);
+  return catalog;
+}
+
+function findCatalogEntry(selection) {
+  const id = iconModel.selectionId(selection);
+  if (id === 'initial') return null;
+  if (catalogBySelectionId.has(id)) return catalogBySelectionId.get(id);
+  entries(groupForSelection(selection));
+  return catalogBySelectionId.get(id) || null;
 }
 
 function createIcon(selection, className = 'profile-icon-visual') {
@@ -48,7 +71,7 @@ function createIcon(selection, className = 'profile-icon-visual') {
   if (!icon || typeof document === 'undefined') return null;
 
   if (icon.type === 'web3') {
-    const match = web3Icons.entries(icon.category).find((entry) => entry.key === icon.key);
+    const match = web3Icons.entry(icon.category, icon.key);
     return match ? web3Icons.createImage(match.src, match.name, className) : null;
   }
   if (icon.type === 'service') return serviceCatalog.createIcon(icon.key, className);
@@ -81,6 +104,9 @@ function groupForSelection(selection) {
 function createPicker(initialSelection) {
   let selected = iconModel.tryNormalizeSelection(initialSelection);
   let activeGroup = groupForSelection(selected);
+  let matches = [];
+  let renderedCount = 0;
+  let loadMoreButton = null;
 
   const root = document.createElement('div'); root.className = 'profile-icon-picker';
   const summary = document.createElement('div'); summary.className = 'profile-icon-picker-summary';
@@ -99,47 +125,113 @@ function createPicker(initialSelection) {
 
   const search = document.createElement('input'); search.type = 'search'; search.className = 'form-control profile-icon-picker-search'; search.placeholder = 'Search icons'; search.setAttribute('aria-label', 'Search profile icons'); root.appendChild(search);
   const grid = document.createElement('div'); grid.className = 'profile-icon-picker-grid'; root.appendChild(grid);
+  const optionButtons = new Map();
 
   const updateSummary = () => {
     preview.innerHTML = '';
     const visual = createIcon(selected, 'profile-icon-picker-preview-visual') || createInitial('', 'profile-icon-picker-preview-initial');
     preview.appendChild(visual);
-    const id = iconModel.selectionId(selected);
-    if (id === 'initial') summaryText.textContent = 'Using profile initial';
-    else {
-      const all = entries(groupForSelection(selected));
-      const match = all.find((entry) => iconModel.sameSelection(entry.selection, selected));
-      summaryText.textContent = match ? match.label : 'Selected icon';
-    }
+    const match = findCatalogEntry(selected);
+    summaryText.textContent = match ? match.label : (selected ? 'Selected icon' : 'Using profile initial');
     clear.disabled = !selected;
+  };
+
+  const setOptionSelected = (button, isSelected) => {
+    if (!button) return;
+    button.classList.toggle('is-selected', isSelected);
+    button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+  };
+
+  const syncSelectedButton = (previousId) => {
+    if (previousId) setOptionSelected(optionButtons.get(previousId), false);
+    setOptionSelected(optionButtons.get(iconModel.selectionId(selected)), true);
+  };
+
+  const createOptionButton = (entry) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'profile-icon-option';
+    button.title = entry.label;
+    const visual = createIcon(entry.selection, 'profile-icon-option-visual');
+    if (visual) button.appendChild(visual);
+    const label = document.createElement('span'); label.textContent = entry.label; button.appendChild(label);
+    const id = iconModel.selectionId(entry.selection);
+    setOptionSelected(button, id === iconModel.selectionId(selected));
+    button.addEventListener('click', () => {
+      const previousId = iconModel.selectionId(selected);
+      selected = iconModel.normalizeSelection(entry.selection);
+      updateSummary();
+      syncSelectedButton(previousId);
+    });
+    optionButtons.set(id, button);
+    return button;
+  };
+
+  const appendNextBatch = () => {
+    if (renderedCount >= matches.length) return;
+    if (loadMoreButton) {
+      loadMoreButton.remove();
+      loadMoreButton = null;
+    }
+
+    const end = Math.min(renderedCount + BATCH_SIZE, matches.length);
+    const fragment = document.createDocumentFragment();
+    for (let index = renderedCount; index < end; index++) fragment.appendChild(createOptionButton(matches[index]));
+    renderedCount = end;
+    grid.appendChild(fragment);
+
+    if (renderedCount < matches.length) {
+      const remaining = matches.length - renderedCount;
+      loadMoreButton = document.createElement('button');
+      loadMoreButton.type = 'button';
+      loadMoreButton.className = 'btn btn-default btn-sm profile-icon-picker-more';
+      loadMoreButton.textContent = `Show more icons (${remaining} remaining)`;
+      loadMoreButton.addEventListener('click', appendNextBatch);
+      grid.appendChild(loadMoreButton);
+    }
   };
 
   const renderGrid = () => {
     grid.innerHTML = '';
+    grid.scrollTop = 0;
+    optionButtons.clear();
+    loadMoreButton = null;
+    renderedCount = 0;
     const query = String(search.value || '').trim().toLowerCase();
-    const matches = entries(activeGroup).filter((entry) => !query || entry.search.includes(query));
-    for (const entry of matches) {
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'profile-icon-option'; button.title = entry.label;
-      const visual = createIcon(entry.selection, 'profile-icon-option-visual');
-      if (visual) button.appendChild(visual);
-      const label = document.createElement('span'); label.textContent = entry.label; button.appendChild(label);
-      const isSelected = iconModel.sameSelection(entry.selection, selected);
-      button.classList.toggle('is-selected', isSelected); button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
-      button.addEventListener('click', () => { selected = iconModel.normalizeSelection(entry.selection); updateSummary(); renderGrid(); });
-      grid.appendChild(button);
-    }
+    matches = entries(activeGroup).filter((entry) => !query || entry.search.includes(query));
+
     if (!matches.length) {
       const empty = document.createElement('p'); empty.className = 'profile-icon-picker-empty'; empty.textContent = 'No matching icons in this category.'; grid.appendChild(empty);
+    } else {
+      appendNextBatch();
     }
+
     for (const [key, button] of tabButtons) {
-      const active = key === activeGroup; button.classList.toggle('is-active', active); button.setAttribute('aria-selected', active ? 'true' : 'false');
+      const active = key === activeGroup;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', active ? 'true' : 'false');
     }
   };
 
-  for (const [key, button] of tabButtons) button.addEventListener('click', () => { activeGroup = key; search.value = ''; renderGrid(); });
+  for (const [key, button] of tabButtons) button.addEventListener('click', () => {
+    if (activeGroup === key && !search.value) return;
+    activeGroup = key;
+    search.value = '';
+    renderGrid();
+  });
   search.addEventListener('input', renderGrid);
-  clear.addEventListener('click', () => { selected = null; updateSummary(); renderGrid(); });
-  updateSummary(); renderGrid();
+  grid.addEventListener('scroll', () => {
+    if (renderedCount >= matches.length) return;
+    if (grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 80) appendNextBatch();
+  });
+  clear.addEventListener('click', () => {
+    const previousId = iconModel.selectionId(selected);
+    selected = null;
+    updateSummary();
+    syncSelectedButton(previousId);
+  });
+  updateSummary();
+  renderGrid();
 
   return {
     element: root,
@@ -153,4 +245,4 @@ exports.createIcon = createIcon;
 exports.createInitial = createInitial;
 exports.createProfileVisual = createProfileVisual;
 exports.createPicker = createPicker;
-exports._test = { groupForSelection };
+exports._test = { groupForSelection, findCatalogEntry, BATCH_SIZE, catalogCache };
