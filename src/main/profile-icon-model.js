@@ -4,24 +4,23 @@ const serviceCatalog = require('./service-catalog');
 
 const WEB3_CATEGORIES = Object.freeze(['tokens', 'networks', 'wallets', 'exchanges']);
 
-// This is the complete SafeLedger-owned local icon registry exposed to users.
-// Keep it aligned with css/local-icons.css; the profile-icon regression suite
-// verifies that every selectable class has a real local definition and that no
-// defined general icon is accidentally omitted from the picker.
+// Curated SafeLedger-owned local icon choices exposed by the Profile picker.
+// Keep one canonical choice for visually identical aliases so the picker stays
+// useful instead of presenting duplicate artwork under multiple names.
 const GENERAL_ICONS = Object.freeze([
   ['fa-times', 'Close'], ['fa-search', 'Search'], ['fa-home', 'Home'], ['fa-history', 'History'], ['fa-refresh', 'Refresh'],
-  ['fa-folder-open-o', 'Open Folder Outline'], ['fa-folder-open', 'Open Folder'], ['fa-folder-o', 'Folder'],
+  ['fa-folder-open', 'Open Folder'], ['fa-folder-o', 'Folder'],
   ['fa-star', 'Star'], ['fa-star-o', 'Star Outline'], ['fa-life-ring', 'Recovery'], ['fa-power-off', 'Power'],
-  ['fa-unlock', 'Unlock'], ['fa-unlock-alt', 'Unlock Alternate'], ['fa-lock', 'Lock'], ['fa-external-link', 'Open External'],
+  ['fa-unlock', 'Unlock'], ['fa-lock', 'Lock'], ['fa-external-link', 'Open External'],
   ['fa-user', 'User'], ['fa-user-plus', 'Add User'], ['fa-user-times', 'Remove User'], ['fa-users', 'Users'],
-  ['fa-save', 'Save'], ['glyphicon-save', 'Save Alternate'], ['glyphicon-piggy-bank', 'Wallet'], ['fa-clock-o', 'Clock'],
+  ['fa-save', 'Save'], ['glyphicon-piggy-bank', 'Wallet'], ['fa-clock-o', 'Clock'],
   ['fa-archive', 'Archive'], ['fa-exclamation-circle', 'Alert Circle'], ['fa-mobile', 'Mobile'], ['fa-database', 'Database'],
   ['fa-map-marker', 'Location'], ['fa-globe', 'Globe'], ['fa-check-circle', 'Check Circle'], ['fa-pencil', 'Edit'],
   ['fa-paint-brush', 'Appearance'], ['fa-print', 'Print'], ['fa-book', 'Book'], ['fa-trash', 'Delete'],
   ['fa-credit-card', 'Card'], ['fa-circle-o', 'Circle'], ['fa-shield', 'Shield'], ['fa-eye', 'Visible'], ['fa-eye-slash', 'Hidden'],
-  ['fa-copy', 'Copy'], ['fa-qrcode', 'QR Code'], ['fa-exclamation-triangle', 'Warning Triangle'], ['fa-info-circle', 'Information'],
-  ['fa-plus', 'Plus'], ['fa-plus-circle', 'Plus Circle'], ['glyphicon-plus', 'Plus Alternate'], ['fa-minus', 'Minus'],
-  ['fa-minus-circle', 'Minus Circle'], ['fa-chevron-left', 'Chevron Left'], ['fa-chevron-right', 'Chevron Right'],
+  ['fa-copy', 'Copy'], ['fa-qrcode', 'QR Code'], ['fa-info-circle', 'Information'],
+  ['fa-plus', 'Plus'], ['fa-minus', 'Minus'],
+  ['fa-chevron-left', 'Chevron Left'], ['fa-chevron-right', 'Chevron Right'],
   ['fa-chevron-down', 'Chevron Down'], ['fa-chevron-up', 'Chevron Up'], ['fa-cog', 'Settings'], ['fa-download', 'Download'],
   ['fa-upload', 'Upload'], ['fa-exchange', 'Exchange'], ['fa-key', 'Key'], ['fa-file-text-o', 'Document'], ['fa-list', 'List'],
   ['fa-check', 'Check'], ['fa-warning', 'Warning']
