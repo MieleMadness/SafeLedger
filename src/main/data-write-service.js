@@ -5,6 +5,7 @@ const customFields = require('./custom-fields');
 const vaultSchema = require('./vault-schema');
 const assetPresets = require('./vault-item-asset-presets');
 const duplicateAsset = require('./duplicate-asset');
+const profileIcons = require('./profile-icon-model');
 
 const MAX_SECRET_LENGTH = 20000;
 const MAX_ADDRESS_LENGTH = 10000;
@@ -22,6 +23,7 @@ function normalizeProfilePatch(input) {
   if (Object.prototype.hasOwnProperty.call(input, 'notes')) patch.notes = text(input.notes, 500);
   if (Object.prototype.hasOwnProperty.call(input, 'customFields')) patch.customFields = customFields.normalize(input.customFields);
   if (Object.prototype.hasOwnProperty.call(input, 'pinned')) patch.pinned = normalizeBoolean(input.pinned);
+  if (Object.prototype.hasOwnProperty.call(input, 'profileIcon')) patch.profileIcon = profileIcons.normalizeSelection(input.profileIcon);
   return patch;
 }
 
