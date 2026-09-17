@@ -1,11 +1,14 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const commandCenter = require('../src/main/recovery-command-center.js');
 const simulator = require('../src/main/recovery-simulator.js');
 const duplicateAsset = require('../src/main/duplicate-asset.js');
 const dashboardSummary = require('../src/main/dashboard-summary.js');
 
+const root = path.join(__dirname, '..');
 const now = Date.parse('2026-09-07T16:00:00.000Z');
 const entries = [{
   profileName: 'Primary',
@@ -100,4 +103,19 @@ for (const sensitiveFieldName of ['seedPhrase', 'password', 'privateAddress', 'r
   assert(!summaryJson.includes(sensitiveFieldName), `Dashboard summary must not expose a raw sensitive-field name: ${sensitiveFieldName}`);
 }
 
-console.log('PASS SafeLedger recovery command center keeps redacted scenario facts, consolidated attention scoring, accordion-ready scenarios, and network-aware duplicate identities local.');
+const dashboardUiSource = fs.readFileSync(path.join(root, 'src/main/dashboard-ui.js'), 'utf8');
+assert(dashboardUiSource.includes("list.className = 'dashboard-list dashboard-maintenance-list-shell'"), 'Maintenance Snapshot must reuse the dashboard list shell used by Recovery Needs Attention.');
+assert(dashboardUiSource.includes("row.className = 'dashboard-list-row'"), 'Maintenance Snapshot must use standard dashboard list rows.');
+assert(dashboardUiSource.includes('appendMaintenanceRow'), 'Maintenance Snapshot must have a list-row renderer.');
+assert(!dashboardUiSource.includes('dashboard-maintenance-icon'), 'Maintenance Snapshot must not create icon/circle chrome.');
+assert(!dashboardUiSource.includes("icon: 'fa-clock-o'"), 'Recovery verification must not own a Maintenance Snapshot icon.');
+assert(!dashboardUiSource.includes("icon: 'fa-life-ring'"), 'Recovery coverage must not own a Maintenance Snapshot icon.');
+assert(!dashboardUiSource.includes("icon: 'fa-archive'"), 'Backup activity must not own a Maintenance Snapshot icon.');
+
+const dashboardLayoutSource = fs.readFileSync(path.join(root, 'src/main/css/dashboard-layout.css'), 'utf8');
+assert(dashboardLayoutSource.includes('.dashboard-maintenance-list-shell'), 'Maintenance Snapshot may own only list-shell spacing.');
+for (const retiredSelector of ['.dashboard-maintenance-card', '.dashboard-maintenance-icon', '.dashboard-maintenance-copy', '.dashboard-maintenance-end', '.dashboard-maintenance-cards']) {
+  assert(!dashboardLayoutSource.includes(retiredSelector), `Retired Maintenance Snapshot parallel card styling must stay removed: ${retiredSelector}`);
+}
+
+console.log('PASS SafeLedger recovery command center keeps redacted scenario facts, consolidated attention scoring, list-based Maintenance Snapshot rows, accordion-ready scenarios, and network-aware duplicate identities local.');
