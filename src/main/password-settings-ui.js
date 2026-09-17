@@ -46,7 +46,7 @@ function show() {
   editBtn.type = 'submit';
   editBtn.id = 'encryptionEditBtn';
   editBtn.className = 'btn btn-default bottom-space pull-right';
-  editBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
+  editBtn.innerHTML = "<span class='fa fa-save' aria-hidden='true'></span> Save";
   form.appendChild(editBtn);
   form.addEventListener('submit', (event) => {
     event.preventDefault();
