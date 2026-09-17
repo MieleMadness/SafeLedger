@@ -9,7 +9,7 @@ const WEB3_CATEGORIES = Object.freeze(['tokens', 'networks', 'wallets', 'exchang
 // useful instead of presenting duplicate artwork under multiple names.
 const GENERAL_ICONS = Object.freeze([
   ['fa-times', 'Close'], ['fa-search', 'Search'], ['fa-home', 'Home'], ['fa-history', 'History'], ['fa-refresh', 'Refresh'],
-  ['fa-folder-open', 'Open Folder'], ['fa-folder-o', 'Folder'],
+  ['fa-folder-open-o', 'Open Folder'], ['fa-folder-o', 'Folder'],
   ['fa-star', 'Star'], ['fa-star-o', 'Star Outline'], ['fa-life-ring', 'Recovery'], ['fa-power-off', 'Power'],
   ['fa-unlock', 'Unlock'], ['fa-lock', 'Lock'], ['fa-external-link', 'Open External'],
   ['fa-user', 'User'], ['fa-user-plus', 'Add User'], ['fa-user-times', 'Remove User'], ['fa-users', 'Users'],
