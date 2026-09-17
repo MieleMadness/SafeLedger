@@ -11,10 +11,12 @@ const exists = (relative) => fs.existsSync(path.join(root, relative));
 
 const pkg = JSON.parse(read('package.json'));
 const index = read('src/main/index.html');
+const manifest = read('src/main/css/app.css');
 const main = read('src/main/main.js');
 const preload = read('src/main/preload.js');
 const build = read('scripts/build-renderer.js');
-const bridge = read('src/main/renderer-bridge.js');
+const services = read('src/main/renderer-services.js');
+const rendererState = read('src/main/renderer-state.js');
 
 const versionParts = String(pkg.version || '').split('.').map(Number);
 assert.strictEqual(versionParts[0], 2, 'runtime-modernization gates apply to SafeLedger 2.x');
@@ -22,17 +24,23 @@ assert(versionParts[1] >= 2, 'runtime-modernization gates require SafeLedger 2.2
 assert.strictEqual(pkg.dependencies.bootstrap, undefined);
 assert.strictEqual(pkg.dependencies['font-awesome'], undefined);
 assert.strictEqual(exists('src/main/renderer-electron-shim.js'), false);
-assert(exists('src/main/renderer-bridge.js'));
+assert.strictEqual(exists('src/main/renderer-bridge.js'), false,
+  'Renderer pseudo-IPC compatibility must stay retired.');
+assert(exists('src/main/renderer-services.js'));
+assert(exists('src/main/renderer-state.js'));
 assert(exists('src/main/css/foundation.css'));
 assert(exists('src/main/css/local-icons.css'));
 assert(!index.includes('bootstrap.min.css'));
 assert(!index.includes('font-awesome.min.css'));
-assert(index.includes('./css/foundation.css'));
-assert(index.includes('./css/local-icons.css'));
+assert(index.includes('./css/app.css'), 'Application shell must load the canonical stylesheet manifest.');
+assert(manifest.includes('@import url("foundation.css");'), 'Foundation styles must remain loaded through app.css.');
+assert(manifest.includes('@import url("local-icons.css");'), 'Local icon styles must remain loaded through app.css.');
 assert(index.includes('app-grid app-search-row'));
 assert(index.includes('app-grid app-main-row'));
 assert(index.includes('app-grid app-button-row'));
-assert(index.includes('Search assets...'));
+assert(index.includes('id="recordSearch"'), 'Asset search control must remain present.');
+assert(index.includes('placeholder="Search assets"'), 'Asset search should use the current punctuation-free wording.');
+assert(!index.includes('placeholder="Search assets..."'), 'The retired Asset search ellipsis must not return.');
 assert(index.includes('Add Asset'));
 assert(!index.includes('Search coins...'));
 assert(!index.includes('Add Coin'));
@@ -42,12 +50,14 @@ assert(main.includes('nodeIntegration: false'));
 assert(main.includes('contextIsolation: true'));
 assert(main.includes('sandbox: true'));
 assert(preload.includes("contextBridge.exposeInMainWorld('safeLedgerApi'"));
-assert(bridge.includes('window.safeLedgerApi'));
-assert(!bridge.includes("require('electron')"));
+assert(services.includes('window.safeLedgerApi'));
+assert(!services.includes("require('electron')"));
+assert(rendererState.includes('sessionUnlocked'));
+assert(rendererState.includes('function clearWorkspace()'));
 
 const rendererFiles = [
-  'renderer.js', 'profile.js', 'group.js', 'record.js',
-  'crypto-ui-bridge.js', 'security-ui.js', 'security-enhancements.js'
+  'renderer.js', 'renderer-services.js', 'renderer-state.js', 'profile.js', 'group.js', 'record.js',
+  'crypto-ui-bridge.js', 'security-ui.js', 'security-enhancements.js', 'settings-ui.js'
 ];
 for (const name of rendererFiles) {
   const source = read(`src/main/${name}`);
@@ -61,10 +71,10 @@ for (const name of fs.readdirSync(path.join(root, 'src', 'main')).filter((value)
 }
 
 for (const relative of [
-  'src/main/renderer-bridge.js', 'src/main/renderer.js', 'src/main/profile.js',
+  'src/main/renderer-services.js', 'src/main/renderer-state.js', 'src/main/renderer.js', 'src/main/profile.js',
   'src/main/group.js', 'src/main/record.js', 'src/main/security-ui.js',
-  'src/main/security-enhancements.js', 'src/main/crypto-ui-bridge.js',
+  'src/main/security-enhancements.js', 'src/main/crypto-ui-bridge.js', 'src/main/settings-ui.js',
   'scripts/build-renderer.js', 'scripts/runtime-modernization-tests.js'
 ]) execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
-console.log('PASS SafeLedger 2.2+ renderer boundary, native shell, terminology, and local-time modernization gates.');
+console.log('PASS SafeLedger 2.2+ sandbox boundary, semantic renderer services/state, native shell, terminology, and local-time modernization gates.');

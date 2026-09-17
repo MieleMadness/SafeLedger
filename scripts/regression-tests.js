@@ -157,10 +157,12 @@ async function run() {
 
     await check('runtime separates password failure from vault corruption before vault read', async () => {
       const mainSource = fs.readFileSync(path.join(__dirname, '../src/main/main.js'), 'utf8');
-      const bridgeSource = fs.readFileSync(path.join(__dirname, '../src/main/crypto-ui-bridge.js'), 'utf8');
+      const cryptoUiSource = fs.readFileSync(path.join(__dirname, '../src/main/crypto-ui-bridge.js'), 'utf8');
+      const servicesSource = fs.readFileSync(path.join(__dirname, '../src/main/renderer-services.js'), 'utf8');
       assert(mainSource.includes("ipc.on('record-password-failure'"));
-      assert(bridgeSource.includes("unlocked.type === 'password-failed'"));
-      assert(bridgeSource.includes("ipc.send('record-password-failure')"));
+      assert(cryptoUiSource.includes("unlocked.type === 'password-failed'"));
+      assert(cryptoUiSource.includes('services.recordPasswordFailure()'));
+      assert(servicesSource.includes("const recordPasswordFailure = () => required('recordPasswordFailure')();"));
       assert(mainSource.includes("type: 'vault-corrupt'"));
       assert(mainSource.includes('Your failed-login counter was not changed.'));
     });
