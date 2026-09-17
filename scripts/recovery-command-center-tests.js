@@ -104,7 +104,7 @@ for (const sensitiveFieldName of ['seedPhrase', 'password', 'privateAddress', 'r
 }
 
 const dashboardUiSource = fs.readFileSync(path.join(root, 'src/main/dashboard-ui.js'), 'utf8');
-assert(dashboardUiSource.includes("list.className = 'dashboard-list dashboard-maintenance-list-shell'"), 'Maintenance Snapshot must reuse the dashboard list shell used by Recovery Needs Attention.');
+assert(dashboardUiSource.includes("list.className = 'dashboard-list dashboard-maintenance-list-shell'"), 'Maintenance Snapshot must continue to reuse standard dashboard list-row structure.');
 assert(dashboardUiSource.includes("row.className = 'dashboard-list-row'"), 'Maintenance Snapshot must use standard dashboard list rows.');
 assert(dashboardUiSource.includes('appendMaintenanceRow'), 'Maintenance Snapshot must have a list-row renderer.');
 assert(!dashboardUiSource.includes('dashboard-maintenance-icon'), 'Maintenance Snapshot must not create icon/circle chrome.');
@@ -113,9 +113,20 @@ assert(!dashboardUiSource.includes("icon: 'fa-life-ring'"), 'Recovery coverage m
 assert(!dashboardUiSource.includes("icon: 'fa-archive'"), 'Backup activity must not own a Maintenance Snapshot icon.');
 
 const dashboardLayoutSource = fs.readFileSync(path.join(root, 'src/main/css/dashboard-layout.css'), 'utf8');
-assert(dashboardLayoutSource.includes('.dashboard-maintenance-list-shell'), 'Maintenance Snapshot may own only list-shell spacing.');
+assert(dashboardLayoutSource.includes('.dashboard-maintenance-list-shell'), 'Maintenance Snapshot must have an explicit shell presentation contract.');
+assert(dashboardLayoutSource.includes('background: transparent !important;'), 'Maintenance Snapshot must not render a separate filled card around its rows.');
+assert(dashboardLayoutSource.includes('border: 0 !important;'), 'Maintenance Snapshot must not render an outer border around its text rows.');
+assert(dashboardLayoutSource.includes('box-shadow: none !important;'), 'Maintenance Snapshot must not render separate card elevation.');
+assert(
+  dashboardLayoutSource.includes('.recovery-needs-attention-section .dashboard-resolve-button {\n  order: 1;\n}'),
+  'Recovery Needs Attention must place Resolve before the informational status pill.'
+);
+assert(
+  dashboardLayoutSource.includes('.recovery-needs-attention-section .dashboard-status {\n  order: 2;\n}'),
+  'Recovery Needs Attention status pill must follow Resolve to match health and maintenance rows.'
+);
 for (const retiredSelector of ['.dashboard-maintenance-card', '.dashboard-maintenance-icon', '.dashboard-maintenance-copy', '.dashboard-maintenance-end', '.dashboard-maintenance-cards']) {
   assert(!dashboardLayoutSource.includes(retiredSelector), `Retired Maintenance Snapshot parallel card styling must stay removed: ${retiredSelector}`);
 }
 
-console.log('PASS SafeLedger recovery command center keeps redacted scenario facts, consolidated attention scoring, list-based Maintenance Snapshot rows, accordion-ready scenarios, and network-aware duplicate identities local.');
+console.log('PASS SafeLedger recovery command center keeps redacted scenario facts, consolidated attention scoring, borderless Maintenance Snapshot rows, health-aligned attention controls, accordion-ready scenarios, and network-aware duplicate identities local.');
