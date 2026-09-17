@@ -60,9 +60,30 @@
   margin-bottom: 0;
 }
 
-/* Maintenance Snapshot intentionally reuses the same dashboard-list shell and
- * divided-row components as Recovery Needs Attention. It owns no icon/circle
- * treatment or parallel card design. */
+/* Maintenance Snapshot keeps the same divided-row language as Device & Backup
+ * Health, but drops the outer dashboard-list card so the copy is not boxed in. */
 .dashboard-maintenance-list-shell {
   margin-top: 12px;
+  margin-bottom: 0;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  overflow: visible;
+}
+
+/* Recovery Needs Attention uses the same trailing control order as the health
+ * and maintenance rows: action first, informational status pill second. */
+.recovery-needs-attention-section .dashboard-list-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recovery-needs-attention-section .dashboard-resolve-button {
+  order: 1;
+}
+
+.recovery-needs-attention-section .dashboard-status {
+  order: 2;
 }
