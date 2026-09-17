@@ -1,0 +1,75 @@
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const iconModel = require('../src/main/profile-icon-model');
+const profileIconUi = require('../src/main/profile-icon-ui');
+const web3Icons = require('../src/main/web3-icons');
+const serviceCatalog = require('../src/main/service-catalog');
+const dataWrite = require('../src/main/data-write-service');
+
+const root = path.join(__dirname, '..');
+const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+assert.deepStrictEqual(iconModel.WEB3_CATEGORIES, ['tokens', 'networks', 'wallets', 'exchanges']);
+assert.strictEqual(iconModel.normalizeSelection(null), null);
+assert.deepStrictEqual(iconModel.normalizeSelection({ type: 'web3', category: 'tokens', key: 'BTC' }), { type: 'web3', category: 'tokens', key: 'BTC' });
+assert.deepStrictEqual(iconModel.normalizeSelection({ type: 'service', key: 'github' }), { type: 'service', key: 'GitHub' });
+assert.deepStrictEqual(iconModel.normalizeSelection({ type: 'local', key: 'FA-USER' }), { type: 'local', key: 'fa-user' });
+assert.throws(() => iconModel.normalizeSelection({ type: 'web3', category: 'unknown', key: 'BTC' }), /Invalid crypto Profile icon/);
+assert.throws(() => iconModel.normalizeSelection({ type: 'local', key: 'fa-not-real' }), /Invalid general Profile icon/);
+assert.throws(() => iconModel.normalizeSelection({ type: 'service', key: '<script>' }), /Invalid service Profile icon/);
+
+for (const category of iconModel.WEB3_CATEGORIES) {
+  const sourceEntries = web3Icons.entries(category);
+  const pickerEntries = profileIconUi.entries(category);
+  assert(sourceEntries.length > 0, `${category} icon manifest should be populated by prepare:icons.`);
+  for (const source of sourceEntries) {
+    assert(String(source.src || '').startsWith(`./assets/token-icons/${category}/`), `${category}:${source.key} must stay local.`);
+    assert(pickerEntries.some((entry) => entry.selection.type === 'web3' && entry.selection.category === category && entry.selection.key === source.key),
+      `Profile picker must expose every packaged ${category} icon: ${source.key}`);
+  }
+}
+assert(profileIconUi.entries('tokens').some((entry) => entry.label === 'Chain Games'), 'Profile Crypto picker must include the SafeLedger-owned Chain Games icon.');
+
+const serviceEntries = profileIconUi.entries('services');
+assert.strictEqual(serviceEntries.length, serviceCatalog.SERVICES.length, 'Profile picker must expose the complete existing SafeLedger service icon catalog.');
+for (const service of serviceCatalog.SERVICES) {
+  assert(serviceEntries.some((entry) => entry.selection.type === 'service' && entry.selection.key === service.name), `Missing service Profile icon: ${service.name}`);
+}
+
+const localCss = read('src/main/css/local-icons.css').replace(/\/\*[\s\S]*?\*\//g, '');
+const definedLocal = new Set(Array.from(localCss.matchAll(/\.(?:fa|glyphicon)-[a-z0-9]+(?:-[a-z0-9]+)*/gi), (match) => match[0].slice(1).toLowerCase()));
+definedLocal.delete('fa-spin');
+const selectableLocal = new Set(iconModel.GENERAL_ICONS.map((entry) => entry.key));
+assert.deepStrictEqual([...selectableLocal].sort(), [...definedLocal].sort(), 'General Profile icons must expose the complete SafeLedger local icon registry, excluding only the fa-spin modifier.');
+assert.strictEqual(profileIconUi.entries('general').length, selectableLocal.size);
+
+const normalizedPatch = dataWrite.normalizeProfilePatch({
+  name: 'Cold Storage',
+  profileIcon: { type: 'web3', category: 'wallets', key: 'ledger' },
+  injectedIconHtml: '<img src=x onerror=alert(1)>'
+});
+assert.deepStrictEqual(normalizedPatch.profileIcon, { type: 'web3', category: 'wallets', key: 'ledger' });
+assert.strictEqual(normalizedPatch.injectedIconHtml, undefined, 'Profile icon persistence must not grant renderer authority over arbitrary markup.');
+assert.throws(() => dataWrite.normalizeProfilePatch({ name: 'Bad', profileIcon: { type: 'local', key: 'fa-evil' } }), /Invalid general Profile icon/);
+
+const profileSource = read('src/main/profile.js');
+assert(profileSource.includes("require('./profile-icon-ui')"));
+assert(profileSource.includes('createProfileIconControls(grid, profile)'));
+assert(profileSource.includes('nextProfile.profileIcon = iconPicker.getSelection()'));
+assert(profileSource.includes("createProfileVisual(item, 'profile-list-icon'"), 'Selected Profile icons must render in the Profile list.');
+assert(profileSource.includes("createProfileVisual(profile, 'profile-detail-icon'"), 'Selected Profile icons must render in Profile detail.');
+
+const pickerSource = read('src/main/profile-icon-ui.js');
+for (const label of ['Crypto', 'Networks', 'Wallets', 'Exchanges', 'Services', 'General']) assert(pickerSource.includes(`label: '${label}'`));
+assert(pickerSource.includes("search.type = 'search'"));
+assert(pickerSource.includes("clear.textContent = 'Use initial'"));
+
+const profileCss = read('src/main/css/profile-setup.css');
+for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-detail-heading', '.profile-list-icon']) {
+  assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
+}
+
+console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} general icons, and persists only validated identifiers.`);
