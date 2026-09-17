@@ -40,6 +40,7 @@ const CANONICAL_SUITES = Object.freeze([
   ['Appearance', 'scripts/appearance-tests.js'],
   ['Global search', 'scripts/global-search-tests.js'],
   ['Local icon registry', 'scripts/icon-registry-tests.js'],
+  ['Profile icon picker', 'scripts/profile-icon-picker-tests.js'],
   ['UI polish', 'scripts/ui-polish-tests.js'],
   ['Runtime modernization', 'scripts/runtime-modernization-tests.js'],
   ['Device security', 'scripts/device-security-tests.js'],
