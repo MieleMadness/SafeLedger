@@ -17,7 +17,6 @@
 .fa-home::before { content: "⌂"; }
 .fa-history::before { content: "↶"; }
 .fa-refresh::before { content: "↻"; }
-.fa-folder-open-o::before,
 .fa-folder-open::before { content: "▣"; }
 .fa-star::before { content: "★"; }
 .fa-star-o::before { content: "☆"; }
@@ -52,8 +51,7 @@
 /* Activity History uses CSS-drawn power and open-lock artwork instead of
  * generic Unicode placeholders. These stay fully local and themeable. */
 .fa-power-off,
-.fa-unlock,
-.fa-unlock-alt {
+.fa-unlock {
   position: relative;
   width: 1em;
   min-width: 1em;
@@ -83,8 +81,7 @@
   border-radius: 50%;
   box-sizing: border-box;
 }
-.fa-unlock::before,
-.fa-unlock-alt::before {
+.fa-unlock::before {
   content: "";
   position: absolute;
   left: .42em;
@@ -97,8 +94,7 @@
   border-radius: .40em .40em 0 0;
   box-sizing: border-box;
 }
-.fa-unlock::after,
-.fa-unlock-alt::after {
+.fa-unlock::after {
   content: "";
   position: absolute;
   left: .12em;
@@ -212,16 +208,14 @@
 }
 
 /* Floppy-disk Save icon drawn in CSS so it stays local, monochrome, and themeable. */
-.fa-save,
-.glyphicon-save {
+.fa-save {
   position: relative;
   width: 1em;
   min-width: 1em;
   height: 1em;
   vertical-align: -.08em;
 }
-.fa-save::before,
-.glyphicon-save::before {
+.fa-save::before {
   content: "";
   position: absolute;
   inset: .07em .08em;
@@ -229,8 +223,7 @@
   border-radius: .08em;
   box-sizing: border-box;
 }
-.fa-save::after,
-.glyphicon-save::after {
+.fa-save::after {
   content: "";
   position: absolute;
   left: .27em;
@@ -595,13 +588,9 @@
 .fa-eye-slash::before { content: "○"; }
 .fa-copy::before { content: "⧉"; }
 .fa-qrcode::before { content: "▦"; }
-.fa-exclamation-triangle::before { content: "!"; }
 .fa-info-circle::before { content: "i"; }
-.fa-plus::before,
-.fa-plus-circle::before,
-.glyphicon-plus::before { content: "+"; }
-.fa-minus::before,
-.fa-minus-circle::before { content: "−"; }
+.fa-plus::before { content: "+"; }
+.fa-minus::before { content: "−"; }
 .fa-chevron-left::before { content: "‹"; }
 .fa-chevron-right::before { content: "›"; }
 .fa-chevron-down::before { content: "⌄"; }
