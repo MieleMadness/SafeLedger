@@ -101,7 +101,7 @@ assert(pickerSource.includes('appendNextBatch'), 'Profile picker must incrementa
 assert(pickerSource.includes("grid.addEventListener('scroll'"), 'Profile picker must lazily reveal additional icons while scrolling.');
 
 const profileCss = read('src/main/css/profile-setup.css');
-for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-icon-option-frame', '.profile-icon-picker-more', '.profile-detail-heading', '.profile-list-icon']) {
+for (const selector of ['.profile-icon-picker', '.profile-icon-picker-results', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-icon-option-frame', '.profile-icon-picker-more', '.profile-detail-heading', '.profile-list-icon']) {
   assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
 }
 
@@ -123,9 +123,13 @@ const iconNoteCss = selectorBody(profileCss, '.profile-icon-note');
 assert(/font-size:\s*12px\s*;/.test(iconNoteCss),
   'Profile icon helper copy must match the compact helper text used by other menu sections.');
 const iconSearchCss = selectorBody(profileCss, '.profile-icon-picker-search');
-const searchGap = iconSearchCss.match(/margin-bottom:\s*(\d+)px\s*;/);
-assert(searchGap && Number(searchGap[1]) >= 24,
-  'Profile icon search must keep the requested extra 10px of breathing room before the icon tiles.');
+assert(/margin-bottom:\s*0\s*;/.test(iconSearchCss),
+  'Profile icon search must not own the results spacing through a form-control margin.');
+const iconResultsCss = selectorBody(profileCss, '.profile-icon-picker-results');
+assert(/padding-top:\s*10px\s*;/.test(iconResultsCss),
+  'Profile icon results wrapper must own an explicit 10px gap below Search icons.');
+assert(pickerSource.includes("results.className = 'profile-icon-picker-results'"),
+  'Profile icon picker must render a dedicated results wrapper so the 10px gap cannot collapse into form-control styling.');
 const iconOptionCss = selectorBody(profileCss, '.profile-icon-option');
 assert(iconOptionCss.includes('var(--sl-border-strong'),
   'Profile icon tiles must use the stronger shared border for definition.');
