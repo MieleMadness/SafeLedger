@@ -101,7 +101,7 @@ assert(pickerSource.includes('appendNextBatch'), 'Profile picker must incrementa
 assert(pickerSource.includes("grid.addEventListener('scroll'"), 'Profile picker must lazily reveal additional icons while scrolling.');
 
 const profileCss = read('src/main/css/profile-setup.css');
-for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-icon-picker-more', '.profile-detail-heading', '.profile-list-icon']) {
+for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-icon-option-frame', '.profile-icon-picker-more', '.profile-detail-heading', '.profile-list-icon']) {
   assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
 }
 
@@ -124,12 +124,19 @@ assert(/font-size:\s*12px\s*;/.test(iconNoteCss),
   'Profile icon helper copy must match the compact helper text used by other menu sections.');
 const iconSearchCss = selectorBody(profileCss, '.profile-icon-picker-search');
 const searchGap = iconSearchCss.match(/margin-bottom:\s*(\d+)px\s*;/);
-assert(searchGap && Number(searchGap[1]) >= 12,
-  'Profile icon search needs visible breathing room before the icon tiles.');
+assert(searchGap && Number(searchGap[1]) >= 24,
+  'Profile icon search must keep the requested extra 10px of breathing room before the icon tiles.');
 const iconOptionCss = selectorBody(profileCss, '.profile-icon-option');
 assert(iconOptionCss.includes('var(--sl-border-strong'),
   'Profile icon tiles must use the stronger shared border for definition.');
 assert(iconOptionCss.includes('var(--sl-surface-soft'),
   'Profile icon tiles must use the shared soft surface so their boundaries remain visible across themes.');
+const iconFrameCss = selectorBody(profileCss, '.profile-icon-option-frame');
+assert(iconFrameCss.includes('var(--sl-border-strong'),
+  'Each Profile icon visual must be wrapped in a visible shared border.');
+assert(/width:\s*40px\s*;/.test(iconFrameCss) && /height:\s*40px\s*;/.test(iconFrameCss),
+  'Profile icon frames must keep a consistent 40px footprint.');
+assert(pickerSource.includes("frame.className = 'profile-icon-option-frame'"),
+  'Profile picker must wrap each rendered icon in the dedicated bordered frame.');
 
 console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} curated General icons, previews the live Profile initial, caches catalog lookups, and renders large categories in small lazy batches.`);
