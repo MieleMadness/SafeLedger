@@ -124,7 +124,8 @@ function createPicker(initialSelection) {
   root.appendChild(tabs);
 
   const search = document.createElement('input'); search.type = 'search'; search.className = 'form-control profile-icon-picker-search'; search.placeholder = 'Search icons'; search.setAttribute('aria-label', 'Search profile icons'); root.appendChild(search);
-  const grid = document.createElement('div'); grid.className = 'profile-icon-picker-grid'; root.appendChild(grid);
+  const results = document.createElement('div'); results.className = 'profile-icon-picker-results';
+  const grid = document.createElement('div'); grid.className = 'profile-icon-picker-grid'; results.appendChild(grid); root.appendChild(results);
   const optionButtons = new Map();
   const nameInput = document.getElementById('inputName');
 
