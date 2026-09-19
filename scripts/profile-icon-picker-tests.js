@@ -105,4 +105,36 @@ for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.p
   assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
 }
 
+assert(profileSource.includes("const section = document.createElement('section');"), 'Profile icon picker should use a plain section instead of a bordered fieldset.');
+assert(profileSource.includes("heading.className = 'product-section-title'"), 'Profile icon heading must use the shared menu-section heading style.');
+assert(profileSource.includes("intro.className = 'profile-icon-note'"), 'Profile icon helper copy must use its shared-size note style.');
+assert(!profileSource.includes("legend.textContent = 'Profile icon'"), 'Profile icon picker must not restore the old fieldset legend/ring.');
+
+function selectorBody(source, selector) {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\const profileCss = read('src/main/css/profile-setup.css');
+for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-icon-picker-more', '.profile-detail-heading', '.profile-list-icon']) {
+  assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
+}
+');
+  const match = source.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+  assert(match, `Missing CSS rule for ${selector}.`);
+  return match[1];
+}
+
+const iconSectionCss = selectorBody(profileCss, '.profile-icon-section');
+assert(/padding:\s*0\s*;/.test(iconSectionCss) && /border:\s*0\s*;/.test(iconSectionCss),
+  'Profile icon section must remain borderless with no outer card padding.');
+const iconNoteCss = selectorBody(profileCss, '.profile-icon-note');
+assert(/font-size:\s*12px\s*;/.test(iconNoteCss),
+  'Profile icon helper copy must match the compact helper text used by other menu sections.');
+const iconSearchCss = selectorBody(profileCss, '.profile-icon-picker-search');
+const searchGap = iconSearchCss.match(/margin-bottom:\s*(\d+)px\s*;/);
+assert(searchGap && Number(searchGap[1]) >= 12,
+  'Profile icon search needs visible breathing room before the icon tiles.');
+const iconOptionCss = selectorBody(profileCss, '.profile-icon-option');
+assert(iconOptionCss.includes('var(--sl-border-strong'),
+  'Profile icon tiles must use the stronger shared border for definition.');
+assert(iconOptionCss.includes('var(--sl-surface-soft'),
+  'Profile icon tiles must use the shared soft surface so their boundaries remain visible across themes.');
+
 console.log(`PASS Profile icon picker exposes all packaged Web3 icons, ${serviceEntries.length} service icons, ${selectableLocal.size} curated General icons, previews the live Profile initial, caches catalog lookups, and renders large categories in small lazy batches.`);
