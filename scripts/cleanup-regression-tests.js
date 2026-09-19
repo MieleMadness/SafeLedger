@@ -8,14 +8,17 @@ const { execFileSync } = require('child_process');
 const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const exists = (relative) => fs.existsSync(path.join(root, relative));
+const retiredSettingsManagerFile = ['src/main', 'installManager', 'installManager', 'settingsManager.js'].join('/');
+const retiredSettingsManagerImport = ['installManager', 'installManager', 'settingsManager'].join('/');
 const main = read('src/main/main.js');
 const cryptoSession = read('src/main/crypto-session-main.js');
 const cryptoUi = read('src/main/crypto-ui-bridge.js');
 const renderer = read('src/main/renderer.js');
+const services = read('src/main/renderer-services.js');
 const profile = read('src/main/profile.js');
 const group = read('src/main/group.js');
 const record = read('src/main/record.js');
-const settingsManager = read('src/main/installManager/installManager/settingsManager.js');
+const settingsManager = read('src/main/settings-manager.js');
 const encryption = read('src/main/encryption.js');
 const keyEnvelope = read('src/main/key-envelope.js');
 const runtimeUtils = read('src/main/runtime-utils.js');
@@ -25,13 +28,19 @@ const security = read('src/main/security-enhancements.js');
 for (const removed of [
   'src/main/vault.js',
   'src/main/installManager/installManager/installCodeManager.js',
+  retiredSettingsManagerFile,
   'src/main/master-key-verifier.js',
   'src/main/login-failure-policy.js',
   'src/main/settings-enhancements.js',
   'src/main/detail-action-enhancements.js',
-  'src/main/login-retry-guard.js'
+  'src/main/login-retry-guard.js',
+  'src/main/renderer-bridge.js',
+  'src/main/settings-shortcut-ui.js'
 ]) assert.strictEqual(exists(removed), false, `${removed} should remain removed`);
 
+assert(main.includes("const settingsManager = require('./settings-manager');"),
+  'main.js must own settings through the canonical top-level settings-manager module.');
+assert(!main.includes(retiredSettingsManagerImport));
 assert(!main.includes('activeVaultData'));
 assert(!main.includes('activeCryptoKey'));
 assert(!main.includes('params.cryptoKey'));
@@ -43,7 +52,8 @@ assert(!settingsManager.includes("activationCode: 'FREE'"));
 assert(cryptoSession.includes('activeDataKey.fill(0)'));
 assert(cryptoSession.includes('exports.isUnlocked'));
 assert(!cryptoSession.includes('dataKeyHex:'));
-assert(cryptoUi.includes("ipc.send('read-vaultlist-init')"));
+assert(cryptoUi.includes('services.loadVaultList()'));
+assert(services.includes("const loadVaultList = () => required('readVaultListInit')();"));
 assert(!cryptoUi.includes('dataKeyHex'));
 assert(!cryptoUi.includes('cryptoKey'));
 assert(encryption.includes("createCipheriv('aes-256-gcm'"));
@@ -58,7 +68,11 @@ assert(!preload.includes("require('./"));
 assert(!security.includes("require('fs')"));
 assert(!security.includes("require('path')"));
 
-for (const relative of ['src/main/main.js','src/main/preload.js','src/main/security-main.js','src/main/crypto-session-main.js','src/main/crypto-ui-bridge.js','src/main/security-enhancements.js']) {
+for (const relative of [
+  'src/main/main.js','src/main/preload.js','src/main/security-main.js','src/main/crypto-session-main.js',
+  'src/main/crypto-ui-bridge.js','src/main/renderer-services.js','src/main/renderer-state.js','src/main/security-enhancements.js',
+  'src/main/settings-manager.js'
+]) {
   execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 }
-console.log('PASS sandbox cleanup preserves main-only DEK, encryption, portability, and offline invariants.');
+console.log('PASS sandbox cleanup preserves main-only DEK, semantic renderer services, canonical settings ownership, encryption, portability, and offline invariants.');

@@ -1,6 +1,5 @@
 'use strict';
 
-const { ipcRenderer: ipc } = require('./renderer-bridge');
 const lockoutState = require('./lockout-state');
 
 let countdownTimer = null;
@@ -126,9 +125,6 @@ function handleSecurityResult(params) {
   if (!params || !params.settings) return false;
   return renderLockout(params.settings);
 }
-
-ipc.on('result-init-system', (_event, params) => handleSecurityResult(params));
-ipc.on('result', (_event, params) => handleSecurityResult(params));
 
 window.addEventListener('beforeunload', clearCountdownTimer);
 

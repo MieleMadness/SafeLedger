@@ -3,6 +3,7 @@
 const detailActions = require('./detail-actions');
 const passwordControls = require('./password-controls');
 const passwordPolicy = require('./password-policy');
+const cryptoUi = require('./crypto-ui-bridge');
 
 function addPasswordField(parent, id, labelText, autocomplete, strength = false) {
   const label = document.createElement('label');
@@ -30,7 +31,6 @@ function show() {
   intro.textContent = 'Change Password';
   area.appendChild(intro);
   const form = document.createElement('form');
-  form.addEventListener('submit', (event) => event.preventDefault());
   area.appendChild(form);
   const formGroup = document.createElement('div');
   formGroup.className = 'form-group';
@@ -46,8 +46,12 @@ function show() {
   editBtn.type = 'submit';
   editBtn.id = 'encryptionEditBtn';
   editBtn.className = 'btn btn-default bottom-space pull-right';
-  editBtn.innerHTML = "<span class='glyphicon glyphicon-save' aria-hidden='true'></span> Save";
+  editBtn.innerHTML = "<span class='fa fa-save' aria-hidden='true'></span> Save";
   form.appendChild(editBtn);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    cryptoUi.handlePasswordChange(editBtn);
+  });
 }
 
 module.exports = { show };

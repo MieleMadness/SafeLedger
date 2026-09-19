@@ -1,0 +1,14 @@
+/* SafeLedger 2.6.60 workspace hierarchy dividers.
+ * Uses currentColor so Light receives subtle navy separators while Colorful
+ * and Dark receive low-contrast light separators without separate layouts. */
+.app-search-row > .app-cell:nth-child(-n+3),
+.app-main-row > .app-cell:nth-child(-n+3),
+.app-button-row > .app-cell:nth-child(-n+3) {
+  border-right: 1px solid color-mix(in srgb, currentColor 14%, transparent) !important;
+}
+
+/* Subtle row dividers make individual Profiles, Vault Items, and Assets easier
+ * to scan when the navigation surfaces are pale. */
+.content-middle .nav > li + li {
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
