@@ -3,7 +3,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 const { sha256Bytes, bytesToHex } = require('../src/main/sha256');
 
 const root = path.join(__dirname, '..');
@@ -30,13 +30,18 @@ function testPrivacyModeDefaultsAndPersistence() {
   assert.strictEqual(settingsManager._test.normalizeSettings({ privacyMode: 'true' }).privacyMode, true);
 
   const securityUi = read('src/main/security-ui.js');
-  const privacyUi = read('src/main/privacy-mode-ui.js');
+  const settingsUi = read('src/main/settings-ui.js');
   const renderer = read('src/main/renderer.js');
   assert(securityUi.includes('let privacyMode = true'));
   assert(securityUi.includes('actions.style.display = privacyMode'));
   assert(securityUi.includes('exports.setPrivacyMode'));
-  assert(privacyUi.includes("id = 'privacyModeEnabled'"));
-  assert(privacyUi.includes("ipc.send('save-settings'"));
+  assert(settingsUi.includes("const section = makeSection('Privacy Mode');"));
+  assert(settingsUi.includes("checkbox.id = 'privacyModeEnabled';"));
+  assert(settingsUi.includes('saveUserSetting(params, { privacyMode: checkbox.checked === true }, save)'));
+  assert(!settingsUi.includes('MutationObserver') && !settingsUi.includes('setTimeout('),
+    'Privacy Mode must be rendered directly by the canonical Settings owner.');
+  assert.strictEqual(fs.existsSync(path.join(root, 'src/main/privacy-mode-ui.js')), false,
+    'The old post-render Privacy Mode injector must stay retired.');
   assert(renderer.includes('securityUi.setPrivacyMode'));
 }
 
@@ -46,7 +51,8 @@ function testGuidedRecoveryIsEphemeral() {
   assert(drillUi.includes("require('./bip39-validator')"));
   assert(drillUi.includes("input.type = 'password'"));
   assert(drillUi.includes("input.value = ''"), 'temporary BIP39 input must be cleared immediately');
-  assert(drillUi.includes('Test Recovery'));
+  assert(drillUi.includes("appendText(header, 'h1', '', 'Recovery Validation')"));
+  assert(!drillUi.includes("appendText(header, 'h1', '', 'Test Recovery')"));
   assert(!drillUi.includes('clipboard'));
   assert(!drillUi.includes('ipc.send'));
   assert(!drillUi.includes('fetch('));
@@ -58,14 +64,16 @@ function testGuidedRecoveryIsEphemeral() {
 function testRecoveryIntelligenceBoundary() {
   const bootstrap = read('src/main/bootstrap.js');
   const preload = read('src/main/preload.js');
-  const bridge = read('src/main/renderer-bridge.js');
+  const services = read('src/main/renderer-services.js');
   const dashboard = read('src/main/recovery-intelligence-dashboard-ui.js');
 
   assert(bootstrap.includes("ipc.handle('recovery-intelligence-summary'"));
   assert(bootstrap.includes('sensitiveFingerprints.findDuplicates'));
   assert(bootstrap.includes('onLock: () => sensitiveFingerprints.clear()'));
   assert(preload.includes('getRecoveryIntelligence'));
-  assert(bridge.includes("'recovery-intelligence-summary': 'getRecoveryIntelligence'"));
+  assert(services.includes("const getRecoveryIntelligence = () => required('getRecoveryIntelligence')();"));
+  assert(!services.includes('recovery-intelligence-summary'),
+    'Renderer services should expose application operations, not transport channel names.');
   assert(dashboard.includes('never addresses, seed phrases, private keys, fingerprints, or backup paths'));
   assert(!dashboard.includes('item.publicAddress'));
   assert(!dashboard.includes('item.privateAddress'));
@@ -86,4 +94,4 @@ testPrivacyModeDefaultsAndPersistence();
 testGuidedRecoveryIsEphemeral();
 testRecoveryIntelligenceBoundary();
 testBip39RendererBoundary();
-console.log('PASS SafeLedger 2.4 Privacy Mode, Guided Test Recovery, renderer-safe BIP39, and sanitized intelligence boundaries.');
+console.log('PASS SafeLedger 2.4 Privacy Mode, guided Recovery Validation, renderer-safe BIP39, sanitized intelligence boundaries, and semantic renderer services.');

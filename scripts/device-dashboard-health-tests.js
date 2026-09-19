@@ -9,7 +9,10 @@ const root = path.join(__dirname, '..');
 const dashboard = fs.readFileSync(path.join(root, 'src/main/dashboard-ui.js'), 'utf8');
 const preload = fs.readFileSync(path.join(root, 'src/main/preload.js'), 'utf8');
 
-assert(dashboard.includes("makeSection('Device & Backup Health'"));
+assert(dashboard.includes("'Device & Backup Health'"));
+assert(dashboard.includes("'device-health-section'"));
+assert(dashboard.includes('Check SafeLedgerData storage availability and encrypted-backup freshness. These checks stay local to this device.'),
+  'Device & Backup Health should explain the local-only storage/backup checks below its title.');
 assert(dashboard.includes('window.safeLedgerApi.getStorageHealth()'));
 assert(dashboard.includes('window.safeLedgerApi.getBackupHealth()'));
 assert(dashboard.includes("'Portable storage'"));
@@ -25,4 +28,4 @@ assert(preload.includes('getBackupHealth'));
 
 execFileSync(process.execPath, ['--check', path.join(root, 'src/main/dashboard-ui.js')], { stdio: 'pipe' });
 
-console.log('PASS Vault Overview surfaces only sanitized storage and backup-age health.');
+console.log('PASS Vault Overview surfaces only sanitized local storage/backup-age health with direct explanatory guidance.');

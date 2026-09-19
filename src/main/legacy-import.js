@@ -55,6 +55,25 @@ function resolveLegacySourceDir(selectedDir) {
   throw new Error('The selected folder does not contain SafeLedger 1.x data. Choose the old safeledgerdata folder or its parent folder.');
 }
 
+function resolveLegacySourceSelection(selectedPath) {
+  const selected = path.resolve(String(selectedPath || ''));
+  let stats;
+  try {
+    stats = fs.statSync(selected);
+  } catch (_) {
+    throw new Error('The selected SafeLedger 1.x file or folder could not be read.');
+  }
+
+  if (stats.isDirectory()) return resolveLegacySourceDir(selected);
+  if (!stats.isFile()) throw new Error('Choose a SafeLedger 1.x data file or folder.');
+
+  const name = path.basename(selected);
+  if (name.toLowerCase() !== 'vaultlist.json' && !safeLegacyFileName(name)) {
+    throw new Error('Choose vaultlist.json or a zvault-#.json file from the old SafeLedger 1.x safeledgerdata folder.');
+  }
+  return resolveLegacySourceDir(path.dirname(selected));
+}
+
 function countVaultData(vaultData) {
   const groups = Array.isArray(vaultData && vaultData.groups) ? vaultData.groups : [];
   let assets = 0;
@@ -167,6 +186,7 @@ module.exports = {
   parseLegacyJson,
   safeLegacyFileName,
   resolveLegacySourceDir,
+  resolveLegacySourceSelection,
   countVaultData,
   uniqueProfileName,
   readLegacyBundle,
