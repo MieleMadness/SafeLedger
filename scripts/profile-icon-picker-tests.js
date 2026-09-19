@@ -111,16 +111,11 @@ assert(profileSource.includes("intro.className = 'profile-icon-note'"), 'Profile
 assert(!profileSource.includes("legend.textContent = 'Profile icon'"), 'Profile icon picker must not restore the old fieldset legend/ring.');
 
 function selectorBody(source, selector) {
-  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\const profileCss = read('src/main/css/profile-setup.css');
-for (const selector of ['.profile-icon-picker', '.profile-icon-picker-grid', '.profile-icon-option', '.profile-icon-picker-more', '.profile-detail-heading', '.profile-list-icon']) {
-  assert(profileCss.includes(selector), `Profile icon UI styling is missing ${selector}.`);
-}
-');
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, (character) => `\\${character}`);
   const match = source.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
   assert(match, `Missing CSS rule for ${selector}.`);
   return match[1];
 }
-
 const iconSectionCss = selectorBody(profileCss, '.profile-icon-section');
 assert(/padding:\s*0\s*;/.test(iconSectionCss) && /border:\s*0\s*;/.test(iconSectionCss),
   'Profile icon section must remain borderless with no outer card padding.');
