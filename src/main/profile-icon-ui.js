@@ -156,7 +156,12 @@ function createPicker(initialSelection) {
     button.className = 'profile-icon-option';
     button.title = entry.label;
     const visual = createIcon(entry.selection, 'profile-icon-option-visual');
-    if (visual) button.appendChild(visual);
+    if (visual) {
+      const frame = document.createElement('span');
+      frame.className = 'profile-icon-option-frame';
+      frame.appendChild(visual);
+      button.appendChild(frame);
+    }
     const label = document.createElement('span'); label.textContent = entry.label; button.appendChild(label);
     const id = iconModel.selectionId(entry.selection);
     setOptionSelected(button, id === iconModel.selectionId(selected));
