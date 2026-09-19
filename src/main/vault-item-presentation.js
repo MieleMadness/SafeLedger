@@ -83,12 +83,12 @@ const WEBSITE_GROUP_BY_NAME = Object.freeze({
 const WEBSITE_EXTRA_PRESETS = Object.freeze(['CoinGecko', 'CoinTracker', 'Etherscan', 'Koinly', 'Solscan']);
 const WEB3_PRESETS = Object.freeze(WEB3_PRESET_GROUPS.flatMap((group) => group.names));
 const WEB3_NAMES = new Set(WEB3_PRESETS.map((name) => normalize(name)));
+const RETIRED_EMPTY_ACCOUNT_FIELDS = Object.freeze(['Login method', 'Connected wallet(s)']);
 
 const EXCHANGE_FIELDS = Object.freeze([
   ['Login email / username', 'text'],
   ['Account / customer ID', 'text'],
   ['Website', 'url'],
-  ['Login method', 'text'],
   ['2FA method', 'text'],
   ['2FA recovery / backup codes', 'sensitive'],
   ['KYC / identity notes', 'multiline']
@@ -97,8 +97,6 @@ const EXCHANGE_FIELDS = Object.freeze([
 const WEB3_FIELDS = Object.freeze([
   ['Login email / username', 'text'],
   ['Website', 'url'],
-  ['Login method', 'text'],
-  ['Connected wallet(s)', 'text'],
   ['Account / profile ID', 'text'],
   ['2FA method', 'text'],
   ['2FA recovery / backup codes', 'sensitive']
@@ -107,7 +105,6 @@ const WEB3_FIELDS = Object.freeze([
 const WEBSITE_FIELDS = Object.freeze([
   ['Login email / username', 'text'],
   ['Website', 'url'],
-  ['Login method', 'text'],
   ['Account / profile ID', 'text'],
   ['2FA method', 'text'],
   ['2FA recovery / backup codes', 'sensitive']
@@ -343,6 +340,11 @@ function renderPresetField(form, categoryInput, nameInput, customEditor) {
   wrap.style.display = groups.some((group) => group.names.length) ? '' : 'none';
 }
 
+function removeRetiredEmptyAccountFields(customEditor) {
+  if (!customEditor || typeof customEditor.removeEmptyField !== 'function') return;
+  for (const label of RETIRED_EMPTY_ACCOUNT_FIELDS) customEditor.removeEmptyField(label);
+}
+
 function updateEditLayout(form, categoryInput, nameInput, customEditor) {
   const category = categoryInput.value;
   const account = ACCOUNT_CATEGORIES.has(category);
@@ -359,6 +361,7 @@ function updateEditLayout(form, categoryInput, nameInput, customEditor) {
       : 'Add optional information that does not fit the standard wallet fields. Sensitive values stay encrypted and are excluded from search.';
   }
 
+  removeRetiredEmptyAccountFields(customEditor);
   for (const [fieldLabel, type] of accountFields(category)) {
     if (customEditor && typeof customEditor.ensureField === 'function') customEditor.ensureField({ label: fieldLabel, type, value: '' });
   }
@@ -401,4 +404,4 @@ exports.renderTypeOptions = renderTypeOptions;
 exports.configureEditForm = configureEditForm;
 exports.updateEditLayout = updateEditLayout;
 exports.detailInformationTitle = detailInformationTitle;
-exports._test = { normalize, isWeb3Name, presetPresentation, renderPresetField, fieldWrap, setFieldVisible, setLabel };
+exports._test = { normalize, isWeb3Name, presetPresentation, renderPresetField, fieldWrap, setFieldVisible, setLabel, removeRetiredEmptyAccountFields, RETIRED_EMPTY_ACCOUNT_FIELDS };
