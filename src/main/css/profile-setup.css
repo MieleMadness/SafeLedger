@@ -1,7 +1,6 @@
 /* Profile creation templates, Profile icon selection, and Recovery Dashboard status actions. */
 
-.profile-setup-section,
-.profile-icon-section {
+.profile-setup-section {
   min-width: 0;
   margin: var(--sl-space-2, 8px) 0 0;
   padding: var(--sl-space-3, 12px);
@@ -9,8 +8,14 @@
   border-radius: var(--sl-radius, 8px);
 }
 
-.profile-setup-section legend,
-.profile-icon-section legend {
+.profile-icon-section {
+  min-width: 0;
+  margin: var(--sl-space-2, 8px) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.profile-setup-section legend {
   width: auto;
   margin: 0 0 var(--sl-space-2, 8px);
   padding: 0 4px;
@@ -18,6 +23,13 @@
   color: inherit;
   font-size: 1rem;
   font-weight: 700;
+}
+
+.profile-icon-note {
+  margin: -2px 0 12px;
+  color: var(--sl-muted, #667085);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .profile-setup-intro {
@@ -192,7 +204,7 @@
 }
 
 .profile-icon-picker-search {
-  margin-bottom: 8px;
+  margin-bottom: 14px;
 }
 
 .profile-icon-picker-grid {
@@ -214,9 +226,9 @@
   align-items: center;
   justify-content: center;
   padding: 8px 5px;
-  border: 1px solid var(--sl-border, rgba(255, 255, 255, .18));
+  border: 1px solid var(--sl-border-strong, #b7c3d2);
   border-radius: 8px;
-  background: var(--sl-surface, transparent);
+  background: var(--sl-surface-soft, rgba(255, 255, 255, .06));
   color: inherit;
   font: inherit;
   cursor: pointer;
