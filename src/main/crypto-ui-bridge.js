@@ -19,6 +19,22 @@ function failButton(button, message) {
   status.showStatus({ status: 'ERROR', statusMsg: message });
 }
 
+function loginRetryAllowed(result, now = Date.now()) {
+  const settings = result && result.settings;
+  if (!settings) return false;
+  if (settings.lockLogin !== true) return true;
+  const deadline = Number(settings.lockLoginTime || 0)
+    + (Number(settings.minutesToWaitBetweenLockout || 0) * 60000);
+  return deadline <= Number(now);
+}
+
+function restoreLoginRetry(button, input, result, now = Date.now()) {
+  if (!loginRetryAllowed(result, now)) return false;
+  if (button) button.disabled = false;
+  if (input && typeof input.focus === 'function') input.focus();
+  return true;
+}
+
 function loadUnlockedVaultList() {
   return services.deliver(services.loadVaultList(), onCommandResult, 'Unable to load SafeLedger Profiles.');
 }
@@ -50,7 +66,17 @@ async function handleLogin(button) {
     input.value = '';
     if (unlocked && unlocked.ok) return loadUnlockedVaultList();
     if (unlocked && unlocked.type === 'password-failed') {
-      return services.deliver(services.recordPasswordFailure(), onCommandResult, 'Unable to update login security state.');
+      const failure = await services.deliver(
+        services.recordPasswordFailure(),
+        onCommandResult,
+        'Unable to update login security state.'
+      );
+      // A failed password attempt is not itself a UI lockout. Restore the
+      // submit control only after the main process confirms the updated retry
+      // state. If the configured lockout threshold was reached (or the retry
+      // state could not be persisted), remain fail-closed.
+      restoreLoginRetry(button, input, failure);
+      return failure;
     }
     return failButton(button, (unlocked && unlocked.message) || 'Unable to unlock SafeLedger key envelope');
   } catch (err) {
@@ -97,6 +123,8 @@ module.exports = {
   handlePasswordChange,
   _test: {
     validateExistingPassword: passwordPolicy.validateExistingPassword,
-    validatePassword: passwordPolicy.validatePassword
+    validatePassword: passwordPolicy.validatePassword,
+    loginRetryAllowed,
+    restoreLoginRetry
   }
 };
