@@ -42,6 +42,49 @@ for (const service of serviceCatalog.SERVICES) {
   assert(serviceEntries.some((entry) => entry.selection.type === 'service' && entry.selection.key === service.name), `Missing service Profile icon: ${service.name}`);
 }
 
+// Service brands are curated, bundled SVGs: no runtime CDN requests or
+// hand-built initial tiles for the reviewed Services catalog.
+const serviceAssetRoot = path.join(root, 'src/main/assets/service-icons');
+const brandManifest = JSON.parse(read('src/main/assets/service-icons/manifest.json'));
+assert.strictEqual(brandManifest.assetMode, 'packaged-local-svg');
+assert.strictEqual(brandManifest.version, 1);
+assert.strictEqual(Object.keys(brandManifest.icons).length, serviceCatalog.SERVICES.length - 1,
+  'Every built-in service other than SafeLedger-owned Chain Games needs real packaged brand artwork.');
+
+for (const service of serviceCatalog.SERVICES) {
+  if (service.name === 'Chain Games') {
+    assert.strictEqual(serviceCatalog.localBrandUrl(service), null, 'Chain Games must retain its own themed artwork.');
+    assert(serviceCatalog.iconDataUrl(service).startsWith('./assets/chain-games-'));
+    continue;
+  }
+  const iconPath = serviceCatalog.localBrandUrl(service);
+  assert.strictEqual(iconPath, brandManifest.icons[service.name],
+    `The canonical service ID for ${service.name} must map to one reviewed SVG file.`);
+  assert(/^\.\/assets\/service-icons\/[a-z0-9-]+\.svg$/.test(iconPath),
+    `Service ${service.name} must use a fixed relative local SVG path.`);
+  assert.strictEqual(serviceCatalog.iconDataUrl(service.name), iconPath,
+    `Service ${service.name} must not regenerate a generic initial tile.`);
+  const fullPath = path.join(root, 'src/main', iconPath);
+  assert(fs.existsSync(fullPath), `Missing packaged brand asset for ${service.name}: ${iconPath}`);
+  const svg = fs.readFileSync(fullPath, 'utf8');
+  assert(/<svg\b/i.test(svg) && /<\/svg\s*>/i.test(svg),
+    `Service ${service.name} must ship actual SVG artwork.`);
+  assert(!/<(?:script|foreignObject|iframe)\b/i.test(svg) &&
+    !/\bon[a-z]+\s*=/i.test(svg) &&
+    !/\b(?:href|xlink:href)\s*=\s*["'](?:https?:|data:)/i.test(svg),
+    `Service ${service.name} SVG must not contain executable or remote linked artwork.`);
+}
+assert.strictEqual(serviceCatalog.localBrandUrl('unknown-service'), null);
+assert.strictEqual(serviceCatalog.iconDataUrl('unknown-service'), null);
+assert.deepStrictEqual(iconModel.normalizeSelection({ type: 'service', key: 'github' }),
+  { type: 'service', key: 'GitHub' }, 'Existing saved Profile service icon IDs must not change.');
+const serviceSource = read('src/main/service-catalog.js');
+assert(serviceSource.includes("require('./assets/service-icons/manifest.json')"));
+assert(serviceSource.includes('known-service-brand-image'),
+  'Service brand artwork must receive a neutral surface for visibility in dark mode.');
+assert(!/https?:\/\//.test(JSON.stringify(brandManifest.icons)),
+  'The packaged icon manifest must never contain runtime network addresses.');
+
 const localCss = read('src/main/css/local-icons.css').replace(/\/\*[\s\S]*?\*\//g, '');
 const definedLocal = new Set(Array.from(localCss.matchAll(/\.(?:fa|glyphicon)-[a-z0-9]+(?:-[a-z0-9]+)*/gi), (match) => match[0].slice(1).toLowerCase()));
 definedLocal.delete('fa-spin');
