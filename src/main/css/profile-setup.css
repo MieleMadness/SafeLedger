@@ -278,6 +278,16 @@
   margin: 4px 0 2px;
 }
 
+/* Preserve dark/monochrome brand mark legibility in Light, Colorful and Dark.
+ * The local SVG is always painted as an image on its own neutral surface;
+ * brand colors and paths are never altered at runtime. */
+.known-service-brand-image {
+  box-sizing: border-box;
+  padding: 2px;
+  border-radius: 6px;
+  background-color: #fff;
+}
+
 .profile-icon-option-visual,
 .profile-icon-picker-preview-visual,
 .profile-list-icon,
