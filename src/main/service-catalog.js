@@ -1,7 +1,17 @@
 'use strict';
 
+// Curated, fully bundled artwork: safe in the sandbox and available offline.
+// All persistent Profile icon IDs continue to resolve through service.name.
+const brandIcons = Object.freeze(require('./assets/service-icons/manifest.json').icons);
+
+const CHAIN_GAMES_ARTWORK = Object.freeze({
+  light: './assets/chain-games-light-colorful.svg',
+  colorful: './assets/chain-games-light-colorful.svg',
+  dark: './assets/chain-games-dark.svg'
+});
+
 const SERVICES = Object.freeze([
-  ['Chain Games','CG','#0b1030',['chain games','chaingames','chaingames.io'],'chain-games'],
+  ['Chain Games','CG','#000000',['chain games','chaingames','chaingames.io'],'chain-games'],
   ['Facebook','f','#1877f2',['facebook','facebook.com','fb']],
   ['Yahoo','Y!','#6001d2',['yahoo','yahoo.com']],
   ['Google','G','#4285f4',['google','google.com']],
@@ -54,11 +64,14 @@ function escapeXml(value) {
   return String(value || '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
 }
 
-function chainGamesSvg(label) {
-  // Local/offline rendition of the current Chain Games angular interlocking
-  // brand motif. The artwork is intentionally vector-only so it stays crisp
-  // at small list sizes and requires no favicon or network request.
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${label}"><defs><linearGradient id="chain-games-gradient" x1="16" y1="16" x2="80" y2="80" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#20c8ff"/><stop offset="1" stop-color="#a935ff"/></linearGradient></defs><rect width="96" height="96" rx="22" fill="#0b1030"/><path d="M16 48 36 28h18L34 48l20 20H36L16 48Z" fill="url(#chain-games-gradient)"/><path d="M80 48 60 28H42l20 20-20 20h18l20-20Z" fill="url(#chain-games-gradient)"/><path d="M37 48 48 37l11 11-11 11-11-11Z" fill="#f7f8ff" opacity=".96"/></svg>`;
+function currentTheme() {
+  if (typeof document === 'undefined' || !document.documentElement) return 'light';
+  const theme = String(document.documentElement.dataset.theme || '').toLowerCase();
+  return theme === 'dark' ? 'dark' : theme === 'colorful' ? 'colorful' : 'light';
+}
+
+function chainGamesAssetUrl(theme = currentTheme()) {
+  return theme === 'dark' ? CHAIN_GAMES_ARTWORK.dark : CHAIN_GAMES_ARTWORK.light;
 }
 
 function textTileSvg(service, label) {
@@ -67,28 +80,48 @@ function textTileSvg(service, label) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${label}"><rect width="96" height="96" rx="22" fill="${service.color}"/><text x="48" y="52" fill="white" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" font-weight="700" font-size="${fontSize}" text-anchor="middle" dominant-baseline="middle">${mark}</text></svg>`;
 }
 
+function localBrandUrl(value) {
+  const service = typeof value === 'object' && value ? value : find(value);
+  if (!service) return null;
+  return Object.prototype.hasOwnProperty.call(brandIcons, service.name)
+    ? brandIcons[service.name]
+    : null;
+}
+
 function iconDataUrl(value) {
   const service = typeof value === 'object' && value ? value : find(value);
   if (!service) return null;
-  const label = escapeXml(service.name);
-  const svg = service.artwork === 'chain-games'
-    ? chainGamesSvg(label)
-    : textTileSvg(service, label);
+  if (service.artwork === 'chain-games') return chainGamesAssetUrl();
 
-  // Renderer code runs inside Electron's sandbox with Node globals disabled.
-  // URI-encode the SVG instead of relying on Buffer/btoa so the same local
-  // icon generator works in both the trusted Node test process and renderer.
+  // Never resolve brand artwork through the network. Only reviewed files in
+  // the packaged service icon manifest may be loaded as Profile visuals.
+  const localBrand = localBrandUrl(service);
+  if (localBrand) return localBrand;
+
+  const label = escapeXml(service.name);
+  const svg = textTileSvg(service, label);
+  // Genuine future catalog gaps retain the original data-only SVG fallback.
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
 function createIcon(value, className = 'known-service-brand-image') {
   const service = find(value);
   if (!service || typeof document === 'undefined') return null;
+  if (service.artwork === 'chain-games') {
+    const icon = document.createElement('span');
+    icon.className = `${className} chain-games-brand-image`.trim();
+    icon.setAttribute('role', 'img');
+    icon.setAttribute('aria-label', `${service.name} icon`);
+    icon.dataset.chainGamesIcon = 'true';
+    return icon;
+  }
   const img = document.createElement('img');
-  img.className = className;
-  img.src = iconDataUrl(service);
+  const localBrand = localBrandUrl(service);
+  img.className = localBrand ? `${className} known-service-brand-image`.trim() : className;
+  img.src = localBrand || iconDataUrl(service);
   img.alt = `${service.name} icon`;
   img.draggable = false;
+  img.decoding = 'async';
   return img;
 }
 
@@ -96,5 +129,7 @@ exports.SERVICES = SERVICES;
 exports.normalize = normalize;
 exports.find = find;
 exports.iconDataUrl = iconDataUrl;
+exports.localBrandUrl = localBrandUrl;
 exports.createIcon = createIcon;
-exports._test = { chainGamesSvg, textTileSvg };
+exports.chainGamesAssetUrl = chainGamesAssetUrl;
+exports._test = { CHAIN_GAMES_ARTWORK, currentTheme, textTileSvg };

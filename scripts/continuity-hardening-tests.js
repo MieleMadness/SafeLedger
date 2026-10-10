@@ -10,7 +10,7 @@ const vaultSchema = require('../src/main/vault-schema');
 const legacyImport = require('../src/main/legacy-import');
 const robustVault = require('../src/main/robust-vault');
 const securityMain = require('../src/main/security-main');
-const settingsManager = require('../src/main/installManager/installManager/settingsManager');
+const settingsManager = require('../src/main/settings-manager');
 
 function encryptLegacy(password, value, ivHex = '00112233445566778899aabbccddeeff') {
   const key = legacyImport.deriveLegacyKey(password);

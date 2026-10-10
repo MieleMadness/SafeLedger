@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "assetMode": "packaged-local-svg",
+  "icons": {
+    "Facebook": "./assets/service-icons/facebook.svg",
+    "Yahoo": "./assets/service-icons/yahoo.svg",
+    "Google": "./assets/service-icons/google.svg",
+    "Gmail": "./assets/service-icons/gmail.svg",
+    "Microsoft": "./assets/service-icons/microsoft.svg",
+    "Outlook": "./assets/service-icons/outlook.svg",
+    "Apple": "./assets/service-icons/apple.svg",
+    "Amazon": "./assets/service-icons/amazon.svg",
+    "PayPal": "./assets/service-icons/paypal.svg",
+    "eBay": "./assets/service-icons/ebay.svg",
+    "Instagram": "./assets/service-icons/instagram.svg",
+    "X / Twitter": "./assets/service-icons/x.svg",
+    "LinkedIn": "./assets/service-icons/linkedin.svg",
+    "Reddit": "./assets/service-icons/reddit.svg",
+    "Discord": "./assets/service-icons/discord.svg",
+    "Dropbox": "./assets/service-icons/dropbox.svg",
+    "GitHub": "./assets/service-icons/github.svg",
+    "Netflix": "./assets/service-icons/netflix.svg",
+    "Spotify": "./assets/service-icons/spotify.svg",
+    "Steam": "./assets/service-icons/steam.svg",
+    "Twitch": "./assets/service-icons/twitch.svg",
+    "TikTok": "./assets/service-icons/tiktok.svg",
+    "YouTube": "./assets/service-icons/youtube.svg",
+    "Proton": "./assets/service-icons/proton.svg",
+    "Adobe": "./assets/service-icons/adobe.svg",
+    "Slack": "./assets/service-icons/slack.svg",
+    "Zoom": "./assets/service-icons/zoom.svg"
+  }
+}

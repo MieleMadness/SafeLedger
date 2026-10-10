@@ -8,7 +8,9 @@ const root = path.join(__dirname, '..');
 const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const pkg = JSON.parse(read('package.json'));
 const index = read('src/main/index.html');
+const manifest = read('src/main/css/app.css');
 const theme = read('src/main/css/app-theme.css');
+const uiPolish = read('src/main/css/ui-polish.css');
 const group = read('src/main/group.js');
 const record = read('src/main/record.js');
 const foundation = read('src/main/css/foundation.css');
@@ -34,9 +36,15 @@ function contrast(a, b) {
 }
 
 assert(/^2\.\d+\.\d+$/.test(pkg.version));
-assert(index.indexOf('./css/app-theme.css') > index.indexOf('./css/local-icons.css'), 'theme stylesheet must load after the legacy icon/foundation layers');
-assert(index.indexOf('./css/ui-2.5.8.css') > index.indexOf('./css/app-theme.css'), 'targeted UI refinements must load after the base theme');
-assert(foundation.includes('grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 3fr) minmax(0, 5fr)'));
+assert(index.includes('./css/app.css'), 'application shell must load the canonical stylesheet manifest');
+assert(manifest.indexOf('@import url("app-theme.css");') > manifest.indexOf('@import url("local-icons.css");'), 'theme stylesheet must load after the legacy icon/foundation layers');
+assert(manifest.indexOf('@import url("ui-current.css");') > manifest.indexOf('@import url("app-theme.css");'), 'current UI refinements must load after the base theme');
+assert(foundation.includes('--sl-profile-column: minmax(0, 2fr);'));
+assert(foundation.includes('--sl-vault-column: minmax(0, 2fr);'));
+assert(foundation.includes('--sl-asset-column: minmax(0, 2fr);'));
+assert(foundation.includes('--sl-detail-column: minmax(0, 5fr);'));
+assert(foundation.includes('grid-template-columns: var(--sl-profile-column) var(--sl-vault-column) var(--sl-asset-column) var(--sl-detail-column)'));
+assert(foundation.includes('--sl-compact-nav-column: 98px;'));
 
 const mainArea = index.indexOf('id="mainArea"');
 const buttonArea = index.indexOf('id="buttonArea"');
@@ -59,9 +67,11 @@ assert(theme.includes('--sl-top-action-size: 34px'));
 assert(theme.includes('.top-utility-cell {'));
 assert(theme.includes('.top-utility-actions {'));
 assert(theme.includes('width: var(--sl-top-action-size) !important'));
-assert(theme.includes('.detail-action-button,\n.panic-lock-inline') || /\.detail-action-button,\s*\.panic-lock-inline/.test(theme));
-assert(theme.includes('width: var(--sl-action-size) !important'));
-assert(theme.includes('height: var(--sl-action-size) !important'));
+assert(uiPolish.includes('.detail-action-button,\n.panic-lock-inline') || /\.detail-action-button,\s*\.panic-lock-inline/.test(uiPolish));
+assert(uiPolish.includes('width: var(--sl-action-size) !important'));
+assert(uiPolish.includes('height: var(--sl-action-size) !important'));
+assert(!theme.includes('width: var(--sl-action-size) !important'), 'base theme must not duplicate the component-owned action width');
+assert(!theme.includes('height: var(--sl-action-size) !important'), 'base theme must not duplicate the component-owned action height');
 assert(theme.includes('.panic-lock-inline {'));
 assert(theme.includes('margin-left: auto !important'));
 assert(theme.includes('.detail-action-area {'));
@@ -89,7 +99,9 @@ const darkMuted = cssVar(dark[1], '--sl-muted');
 assert(contrast(darkText, darkBg) >= 7, 'dark body text should exceed enhanced contrast guidance');
 assert(contrast(darkMuted, darkSurface) >= 4.5, 'dark muted/small text should meet normal-text contrast guidance');
 assert(theme.includes('html[data-theme="dark"] .search-field-wrap .form-control'));
-assert(theme.includes('.wallet-list-category { color: rgba(255,255,255,.84) !important;'));
+assert(uiPolish.includes('.wallet-list-category {'));
+assert(uiPolish.includes('color: var(--sl-sidebar-muted) !important'));
+assert(!theme.includes('.wallet-list-category {'), 'base theme must not duplicate wallet category component styling');
 assert(theme.includes('.column-empty-text { max-width: 180px; font-size: 12px;'));
 
-console.log(`PASS UI polish ${pkg.version} keeps Home/History/Settings/Search in the top utility bar, Emergency Lock fixed bottom-right, native 2/2/3/5 layout, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);
+console.log(`PASS UI polish ${pkg.version} keeps Home/History/Settings/Search in the top utility bar, Emergency Lock fixed bottom-right, equal 2/2/2 navigation columns with a 5fr Detail column plus explicit 98px balanced compact rails, edit cancellation, responsive custom fields, and readable dark-mode contrast.`);

@@ -6,15 +6,18 @@ const vault = require('./robust-vault');
 const vaultSchema = require('./vault-schema');
 const runtimeUtils = require('./runtime-utils');
 const utils = require('./utils');
-const settingsManager = require('./installManager/installManager/settingsManager');
+const settingsManager = require('./settings-manager');
 const cryptoSession = require('./crypto-session-main');
 const securityMain = require('./security-main');
 const profileSetup = require('./profile-setup');
+const profileTransaction = require('./profile-transaction');
+const dataWriteService = require('./data-write-service');
 
 let mainWindow;
 let vaultDir;
 let settingsDir;
 let currentSettings;
+let coreIpcRegistered = false;
 const currentVault = 'zvault-0.json';
 const GUI_SMOKE = process.env.SAFELEDGER_GUI_SMOKE === '1';
 const SAFELEDGER_SITE_URL = 'https://safeledger.tnypg.com';
@@ -27,29 +30,19 @@ function getDataRoot() {
   return path.join(getPortableRoot(), 'SafeLedgerData');
 }
 
+function getMainWindow() {
+  return mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+}
+
 function assertTrustedEvent(event) {
-  if (!mainWindow || mainWindow.isDestroyed() || !event || event.sender !== mainWindow.webContents) {
+  const win = getMainWindow();
+  if (!win || !event || event.sender !== win.webContents) {
     throw new Error('Untrusted SafeLedger IPC request.');
   }
 }
 
 function isPlainObject(value) {
   return !!value && typeof value === 'object' && !Array.isArray(value);
-}
-
-function safeActivityReason(value) {
-  const reason = String(value || 'security-event').trim().slice(0, 80);
-  return /^[a-z0-9-]+$/i.test(reason) ? reason : 'security-event';
-}
-
-function validateVaultList(list) {
-  if (!vault.validVaultListStructure(list)) throw new Error('Invalid SafeLedger profile list.');
-  return list;
-}
-
-function validateVaultData(data) {
-  if (!isPlainObject(data) || !vault.safeVaultFileName(data.file)) throw new Error('Invalid SafeLedger vault data.');
-  return vaultSchema.prepareForSave(data);
 }
 
 function resolveNewProfileWalletNames(setup) {
@@ -70,20 +63,15 @@ function resolveNewProfileWalletNames(setup) {
   return selected;
 }
 
-cryptoSession.registerIpcHandlers({ getMainWindow: () => mainWindow });
-securityMain.registerIpcHandlers({
-  ipc,
-  dialog,
-  clipboard,
-  cryptoSession,
-  getMainWindow: () => mainWindow,
-  getDataRoot
-});
-
 function configureStorage() {
   const root = getPortableRoot();
   vaultDir = path.join(root, 'SafeLedgerData', 'vaults');
   settingsDir = path.join(root, 'SafeLedgerData', 'settings');
+}
+
+function showSettings() {
+  const win = getMainWindow();
+  if (win) win.webContents.send('show-settings');
 }
 
 function buildMenu() {
@@ -91,9 +79,10 @@ function buildMenu() {
     // Windows/Linux use the SafeLedger-owned themed renderer menu because the
     // native Electron menu bar cannot inherit the app light/dark palette.
     Menu.setApplicationMenu(null);
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      if (typeof mainWindow.setMenuBarVisibility === 'function') mainWindow.setMenuBarVisibility(false);
-      if (typeof mainWindow.setAutoHideMenuBar === 'function') mainWindow.setAutoHideMenuBar(true);
+    const win = getMainWindow();
+    if (win) {
+      if (typeof win.setMenuBarVisibility === 'function') win.setMenuBarVisibility(false);
+      if (typeof win.setAutoHideMenuBar === 'function') win.setAutoHideMenuBar(true);
     }
     return;
   }
@@ -142,8 +131,9 @@ async function setSelfDestructProtection(enabled) {
   currentSettings = saved.settings;
   await securityMain.audit(getDataRoot(), 'self-destruct-protection-changed');
   buildMenu();
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('result-save-settings', {
+  const win = getMainWindow();
+  if (win) {
+    win.webContents.send('result-save-settings', {
       status: 'SUCCESS',
       statusMsg: enabled
         ? 'Self-Destruct Protection enabled. Vaults will be destroyed after all configured lockouts are exhausted.'
@@ -162,7 +152,8 @@ async function initializeModernVault(vaultName, cryptoKey, walletNames = profile
 }
 
 function sendResult(payload) {
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('result', payload);
+  const win = getMainWindow();
+  if (win) win.webContents.send('result', payload);
 }
 
 function getSessionKey() {
@@ -213,8 +204,9 @@ async function enforceRetryExhaustion() {
       currentSettings = settings;
       await settingsManager.saveSettings(settingsDir, settings);
       await securityMain.audit(getDataRoot(), 'self-destruct-triggered');
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('result-lockout-destroy', {
+      const win = getMainWindow();
+      if (win) {
+        win.webContents.send('result-lockout-destroy', {
           status: 'ERROR',
           statusMsg: 'Self-destruct protection triggered. Encrypted vault data has been destroyed after repeated failed password attempts.',
           settings
@@ -297,6 +289,9 @@ function installGuiSmokeProbe(win) {
 }
 
 function createWindow() {
+  const existing = getMainWindow();
+  if (existing) return existing;
+
   configureStorage();
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -327,242 +322,273 @@ function createWindow() {
     mainWindow = null;
   });
   buildMenu();
+  return mainWindow;
 }
 
-const showSettings = () => mainWindow && mainWindow.webContents.send('show-settings');
+function registerCoreIpcHandlers() {
+  if (coreIpcRegistered) return false;
+  coreIpcRegistered = true;
 
-app.whenReady().then(createWindow);
-app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
-app.on('before-quit', () => cryptoSession.clearSession());
+  cryptoSession.registerIpcHandlers({ getMainWindow });
+  securityMain.registerIpcHandlers({
+    ipc,
+    dialog,
+    clipboard,
+    cryptoSession,
+    getMainWindow,
+    getDataRoot
+  });
 
-ipc.on('request-settings', (event) => {
-  try { assertTrustedEvent(event); } catch (_) { return; }
-  showSettings();
-});
+  ipc.on('request-settings', (event) => {
+    try { assertTrustedEvent(event); } catch (_) { return; }
+    showSettings();
+  });
 
-ipc.handle('set-self-destruct-protection', async (event, enabled) => {
-  assertTrustedEvent(event);
-  await setSelfDestructProtection(enabled === true);
-  const settings = await ensureCurrentSettings();
-  return { ok: true, enabled: settings.scrubContentAfterRetries === true };
-});
-
-ipc.on('panic-lock', (event, params = {}) => {
-  try { assertTrustedEvent(event); } catch (_) { return; }
-  cryptoSession.clearSession();
-  securityMain.audit(getDataRoot(), safeActivityReason(params && params.reason));
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    // Discard decrypted renderer state as well as the main-process DEK. A
-    // trusted main-process reload is not blocked by the renderer navigation
-    // policy and rebuilds SafeLedger at the login screen.
-    mainWindow.minimize();
-    mainWindow.webContents.reload();
-  }
-});
-
-ipc.on('record-password-failure', (event) => {
-  try { assertTrustedEvent(event); } catch (_) { return; }
-  recordPasswordFailure().catch(() => sendResult({ status: 'ERROR', statusMsg: 'Unable to update login security state.' }));
-});
-
-ipc.on('read', (event, params = {}) => {
-  try {
+  ipc.handle('set-self-destruct-protection', async (event, enabled) => {
     assertTrustedEvent(event);
-    if (!isPlainObject(params) || !vault.safeVaultFileName(params.file)) throw new Error('Invalid profile selection.');
-  } catch (err) {
-    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile selection.' });
-  }
-  const key = getSessionKey();
-  if (!key) return sendLocked();
-  vault.readVault(path.join(vaultDir, params.file), key)
-    .then((val) => sendResult({ status: 'SUCCESS', statusMsg: 'Load successful.', type: String(params.type || '').slice(0, 40), vaultData: val }))
-    .catch((val) => sendResult(val));
-});
+    await setSelfDestructProtection(enabled === true);
+    const settings = await ensureCurrentSettings();
+    return { ok: true, enabled: settings.scrubContentAfterRetries === true };
+  });
 
-ipc.on('read-vaultlist-init', async (event) => {
-  try {
-    assertTrustedEvent(event);
-    if (await enforceRetryExhaustion()) return;
+  ipc.on('record-password-failure', (event) => {
+    try { assertTrustedEvent(event); } catch (_) { return; }
+    recordPasswordFailure().catch(() => sendResult({ status: 'ERROR', statusMsg: 'Unable to update login security state.' }));
+  });
+
+  ipc.on('read', (event, params = {}) => {
+    try {
+      assertTrustedEvent(event);
+      if (!isPlainObject(params) || !vault.safeVaultFileName(params.file)) throw new Error('Invalid profile selection.');
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile selection.' });
+    }
     const key = getSessionKey();
     if (!key) return sendLocked();
-    const state = await vault.makeDir(vaultDir);
-    if (state === 'CREATE') {
-      await vault.initVaultList(vaultDir, key);
-      await initializeModernVault(currentVault, key);
-    }
-    let valList;
+    vault.readVault(path.join(vaultDir, params.file), key)
+      .then((val) => sendResult({ status: 'SUCCESS', statusMsg: 'Load successful.', type: String(params.type || '').slice(0, 40), vaultData: val }))
+      .catch((val) => sendResult(val));
+  });
+
+  ipc.on('read-vaultlist-init', async (event) => {
     try {
-      valList = await vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
-    } catch (_) {
-      return sendResult({
-        status: 'ERROR',
-        statusMsg: 'The master password was accepted, but the encrypted vault list could not be authenticated or read. Your failed-login counter was not changed.',
-        type: 'vault-corrupt'
-      });
-    }
-    const settings = await ensureCurrentSettings();
-    settings.failAttemptCount = 0;
-    settings.lockOutCount = 0;
-    settings.lockLogin = false;
-    settings.lockLoginTime = 0;
-    currentSettings = settings;
-    const saved = await settingsManager.saveSettings(settingsDir, settings);
-    currentSettings = saved.settings;
-    await securityMain.audit(getDataRoot(), 'vault-unlocked');
-    sendResult({
-      status: 'SUCCESS',
-      statusMsg: 'Loaded Successfully',
-      type: 'vaultlist-init',
-      vaultList: valList,
-      sessionUnlocked: true,
-      settings: currentSettings
-    });
-  } catch (err) {
-    sendResult({ status: 'ERROR', statusMsg: err && err.message ? err.message : 'Unable to access vault list' });
-  }
-});
-
-ipc.on('process-vault-list', (event, params = {}) => {
-  let nextList;
-  let nextProfile;
-  let idInfo = null;
-  let newProfileWalletNames = null;
-  try {
-    assertTrustedEvent(event);
-    if (!isPlainObject(params) || !['create', 'modify'].includes(params.action) || !isPlainObject(params.vault) || !isPlainObject(params.vaultList)) {
-      throw new Error('Invalid profile update.');
-    }
-    validateVaultList(params.vaultList);
-    nextList = JSON.parse(JSON.stringify(params.vaultList));
-    nextProfile = JSON.parse(JSON.stringify(params.vault));
-    nextProfile.name = String(nextProfile.name || '').trim().slice(0, 100);
-    if (!nextProfile.name) throw new Error('Profile name is required.');
-
-    if (params.action === 'create') {
-      newProfileWalletNames = resolveNewProfileWalletNames(params.profileSetup);
-      idInfo = vault.nextVaultFileName(nextList);
-      nextProfile.id = idInfo.id;
-      nextProfile.file = idInfo.fileName;
-      nextProfile.path = vaultDir;
-      nextProfile.created = nextProfile.created || new Date().toISOString();
-      nextList.vaults.push(nextProfile);
-    } else {
-      const index = nextList.vaults.findIndex((item) => Number(item && item.id) === Number(nextProfile.id));
-      if (index < 0) throw new Error('Profile was not found.');
-      const existing = nextList.vaults[index];
-      nextProfile.id = existing.id;
-      nextProfile.file = existing.file;
-      nextProfile.path = vaultDir;
-      nextProfile.created = existing.created || nextProfile.created || new Date().toISOString();
-      nextList.vaults[index] = nextProfile;
-    }
-    nextList.vaults.sort(utils.compareIgnoreCase);
-    nextList.vaultSelected = nextList.vaults.indexOf(nextProfile);
-    validateVaultList(nextList);
-  } catch (err) {
-    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile update.' });
-  }
-
-  const key = getSessionKey();
-  if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key)
-    .then(async (val) => {
-      if (params.action === 'create' && val === 'SUCCESS') {
-        const data = await initializeModernVault(idInfo.fileName, key, newProfileWalletNames);
-        await securityMain.audit(getDataRoot(), 'profile-created');
-        return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: nextList, vaultData: data });
+      assertTrustedEvent(event);
+      if (await enforceRetryExhaustion()) return;
+      const key = getSessionKey();
+      if (!key) return sendLocked();
+      const state = await vault.makeDir(vaultDir);
+      if (state === 'CREATE') {
+        await vault.initVaultList(vaultDir, key);
+        await initializeModernVault(currentVault, key);
       }
-      await securityMain.audit(getDataRoot(), 'profile-updated');
-      sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
-    })
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
-});
+      await profileTransaction.recoverPending(vaultDir, key, vault.readVaultList);
+      let valList;
+      try {
+        valList = await vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
+      } catch (_) {
+        return sendResult({
+          status: 'ERROR',
+          statusMsg: 'The master password was accepted, but the encrypted vault list could not be authenticated or read. Your failed-login counter was not changed.',
+          type: 'vault-corrupt'
+        });
+      }
+      const settings = await ensureCurrentSettings();
+      settings.failAttemptCount = 0;
+      settings.lockOutCount = 0;
+      settings.lockLogin = false;
+      settings.lockLoginTime = 0;
+      currentSettings = settings;
+      const saved = await settingsManager.saveSettings(settingsDir, settings);
+      currentSettings = saved.settings;
+      await securityMain.audit(getDataRoot(), 'vault-unlocked');
+      sendResult({
+        status: 'SUCCESS',
+        statusMsg: 'Loaded Successfully',
+        type: 'vaultlist-init',
+        vaultList: valList,
+        sessionUnlocked: true,
+        settings: currentSettings
+      });
+    } catch (err) {
+      sendResult({ status: 'ERROR', statusMsg: err && err.message ? err.message : 'Unable to access vault list' });
+    }
+  });
 
-ipc.on('vault-list-delete', (event, params = {}) => {
-  let nextList;
-  try {
-    assertTrustedEvent(event);
-    if (!isPlainObject(params) || !vault.safeVaultFileName(params.fileName) || !isPlainObject(params.vaultList)) throw new Error('Invalid profile deletion.');
-    nextList = JSON.parse(JSON.stringify(params.vaultList));
-    validateVaultList(nextList);
-    if (nextList.vaults.some((item) => item.file === params.fileName)) throw new Error('Profile list still references the file being deleted.');
-  } catch (err) {
-    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile deletion.' });
-  }
-  const key = getSessionKey();
-  if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), key)
-    .then(() => vault.deleteVault(path.join(vaultDir, params.fileName)))
-    .then(async () => {
+  ipc.on('process-vault-list', async (event, params = {}) => {
+    try {
+      assertTrustedEvent(event);
+      if (!isPlainObject(params) || !['create', 'modify'].includes(params.action) || !isPlainObject(params.vault)) {
+        throw new Error('Invalid profile update.');
+      }
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile update.' });
+    }
+
+    const key = getSessionKey();
+    if (!key) return sendLocked();
+    try {
+      if (params.action === 'modify') {
+        const nextList = await dataWriteService.modifyProfile({ vault, vaultDir, key, profile: params.vault });
+        await securityMain.audit(getDataRoot(), 'profile-updated');
+        return sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
+      }
+
+      const listFile = path.join(vaultDir, 'vaultlist.json');
+      const authoritativeList = await vault.readVaultList(listFile, key);
+      const profilePatch = dataWriteService.normalizeProfilePatch(params.vault);
+      const newProfileWalletNames = resolveNewProfileWalletNames(params.profileSetup);
+      const idInfo = vault.nextVaultFileName(authoritativeList);
+      const nextProfile = Object.assign({}, profilePatch, {
+        id: idInfo.id,
+        file: idInfo.fileName,
+        path: vaultDir,
+        created: new Date().toISOString()
+      });
+      authoritativeList.vaults.push(nextProfile);
+      authoritativeList.vaults.sort(utils.compareIgnoreCase);
+      const selected = authoritativeList.vaults.indexOf(nextProfile);
+      const persistedList = dataWriteService.stripProfileViewState(authoritativeList);
+      const viewList = dataWriteService.withProfileViewState(authoritativeList, selected);
+      const data = await profileTransaction.createProfile({
+        vaultDir,
+        nextList: persistedList,
+        profileFile: idInfo.fileName,
+        cryptoKey: key,
+        walletNames: newProfileWalletNames,
+        initializeProfile: initializeModernVault,
+        saveList: vault.saveVault,
+        readList: vault.readVaultList
+      });
+      await securityMain.audit(getDataRoot(), 'profile-created');
+      return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: viewList, vaultData: data });
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: (err && (err.message || err.statusMsg)) || 'Save failed' });
+    }
+  });
+
+  ipc.on('vault-list-delete', async (event, params = {}) => {
+    try {
+      assertTrustedEvent(event);
+      if (!isPlainObject(params) || !vault.safeVaultFileName(params.fileName)) throw new Error('Invalid profile deletion.');
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile deletion.' });
+    }
+    const key = getSessionKey();
+    if (!key) return sendLocked();
+    try {
+      const nextList = await dataWriteService.deleteProfile({ vault, vaultDir, key, fileName: params.fileName });
       await securityMain.audit(getDataRoot(), 'profile-deleted');
-      sendResult({ type: 'vault-delete', status: 'SUCCESS', statusMsg: 'Delete successful' });
-    })
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Delete failed' }));
-});
+      return sendResult({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted', vaultList: nextList });
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Delete failed' });
+    }
+  });
 
-ipc.on('process-group', (event, params = {}) => {
-  let data;
-  try {
-    assertTrustedEvent(event);
-    data = validateVaultData(params.vaultData);
-  } catch (err) {
-    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid wallet update.' });
+  ipc.on('process-group', async (event, params = {}) => {
+    let request;
+    try {
+      assertTrustedEvent(event);
+      request = dataWriteService.legacyGroupRequest(params);
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid vault item update.' });
+    }
+    const key = getSessionKey();
+    if (!key) return sendLocked();
+    try {
+      const data = await dataWriteService.mutateGroup({ vault, vaultDir, key, request });
+      await securityMain.audit(getDataRoot(), groupActivityEvent(request));
+      const deleted = request.type === 'group-delete';
+      return sendResult({
+        status: deleted ? 'DELETED' : 'SUCCESS',
+        statusMsg: deleted ? 'Item Deleted' : 'Save successful',
+        type: request.type,
+        vaultData: data
+      });
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
+    }
+  });
+
+  ipc.on('process-record', async (event, params = {}) => {
+    let request;
+    try {
+      assertTrustedEvent(event);
+      request = dataWriteService.legacyRecordRequest(params);
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
+    }
+    const key = getSessionKey();
+    if (!key) return sendLocked();
+    try {
+      const data = await dataWriteService.mutateRecord({ vault, vaultDir, key, request });
+      await securityMain.audit(getDataRoot(), recordActivityEvent(request));
+      const deleted = request.action === 'delete';
+      return sendResult({
+        status: deleted ? 'DELETED' : 'SUCCESS',
+        statusMsg: deleted ? 'Item Deleted' : 'Save successful',
+        type: 'record',
+        vaultData: data
+      });
+    } catch (err) {
+      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
+    }
+  });
+
+  ipc.on('init-system', (event) => {
+    try { assertTrustedEvent(event); } catch (_) { return; }
+    securityMain.audit(getDataRoot(), 'app-opened');
+    settingsManager.loadSettings(settingsDir)
+      .then((valSettings) => {
+        currentSettings = valSettings.settings;
+        buildMenu();
+        const win = getMainWindow();
+        if (win) win.webContents.send('result-init-system', { settings: valSettings.settings, portableRoot: getPortableRoot() });
+      })
+      .catch(() => {
+        const win = getMainWindow();
+        if (win) win.webContents.send('result-init-system', { status: 'ERROR', statusMsg: 'Not able to load settings file' });
+      });
+  });
+
+  ipc.on('save-settings', (event, params = {}) => {
+    try {
+      assertTrustedEvent(event);
+      if (!isPlainObject(params.newSettings)) throw new Error('Invalid settings update.');
+    } catch (err) {
+      const win = getMainWindow();
+      if (win) win.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Invalid settings update.' });
+      return;
+    }
+    settingsManager.saveUserSettings(settingsDir, params.newSettings)
+      .then(async (val) => {
+        currentSettings = val.settings;
+        await securityMain.audit(getDataRoot(), 'settings-updated');
+        buildMenu();
+        const win = getMainWindow();
+        if (win) win.webContents.send('result-save-settings', { status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings });
+      })
+      .catch((err) => {
+        const win = getMainWindow();
+        if (win) win.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Unable to save settings' });
+      });
+  });
+
+  return true;
+}
+
+function clearSession() {
+  cryptoSession.clearSession();
+}
+
+module.exports = {
+  createWindow,
+  registerCoreIpcHandlers,
+  getMainWindow,
+  getPortableRoot,
+  getDataRoot,
+  clearSession,
+  _test: {
+    configureStorage,
+    resolveNewProfileWalletNames
   }
-  const key = getSessionKey();
-  if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, data.file), JSON.stringify(data), key)
-    .then(async () => {
-      await securityMain.audit(getDataRoot(), groupActivityEvent(params));
-      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: params.type, vaultData: data });
-    })
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
-});
-
-ipc.on('process-record', (event, params = {}) => {
-  let data;
-  try {
-    assertTrustedEvent(event);
-    data = validateVaultData(params.vaultData);
-  } catch (err) {
-    return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
-  }
-  const key = getSessionKey();
-  if (!key) return sendLocked();
-  vault.saveVault(path.join(vaultDir, data.file), JSON.stringify(data), key)
-    .then(async () => {
-      await securityMain.audit(getDataRoot(), recordActivityEvent(params));
-      sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'record', vaultData: data });
-    })
-    .catch(() => sendResult({ status: 'ERROR', statusMsg: 'Save failed' }));
-});
-
-ipc.on('init-system', (event) => {
-  try { assertTrustedEvent(event); } catch (_) { return; }
-  securityMain.audit(getDataRoot(), 'app-opened');
-  settingsManager.loadSettings(settingsDir)
-    .then((valSettings) => {
-      currentSettings = valSettings.settings;
-      buildMenu();
-      mainWindow.webContents.send('result-init-system', { settings: valSettings.settings, portableRoot: getPortableRoot() });
-    })
-    .catch(() => mainWindow.webContents.send('result-init-system', { status: 'ERROR', statusMsg: 'Not able to load settings file' }));
-});
-
-ipc.on('save-settings', (event, params = {}) => {
-  try {
-    assertTrustedEvent(event);
-    if (!isPlainObject(params.newSettings)) throw new Error('Invalid settings update.');
-  } catch (err) {
-    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Invalid settings update.' });
-    return;
-  }
-  settingsManager.saveSettings(settingsDir, params.newSettings)
-    .then(async (val) => {
-      currentSettings = val.settings;
-      await securityMain.audit(getDataRoot(), 'settings-updated');
-      buildMenu();
-      mainWindow.webContents.send('result-save-settings', { status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings });
-    })
-    .catch((err) => mainWindow.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Unable to save settings' }));
-});
+};

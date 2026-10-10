@@ -6,8 +6,7 @@ const TYPES = Object.freeze([
   'multiline',
   'date',
   'number',
-  'url',
-  'checkbox'
+  'url'
 ]);
 const MAX_FIELDS = 50;
 const MAX_LABEL_LENGTH = 80;
@@ -18,8 +17,7 @@ function normalizeType(value) {
   return TYPES.includes(type) ? type : 'text';
 }
 
-function normalizeValue(type, value) {
-  if (type === 'checkbox') return value === true || String(value).toLowerCase() === 'true';
+function normalizeValue(_type, value) {
   return String(value == null ? '' : value).slice(0, MAX_VALUE_LENGTH);
 }
 
@@ -37,9 +35,7 @@ function normalize(fields) {
 
 function displayValue(field) {
   const normalized = normalize([field])[0];
-  if (!normalized) return '';
-  if (normalized.type === 'checkbox') return normalized.value ? 'Yes' : 'No';
-  return String(normalized.value || '');
+  return normalized ? String(normalized.value || '') : '';
 }
 
 function searchableValues(fields) {
