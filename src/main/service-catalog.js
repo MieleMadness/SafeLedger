@@ -1,5 +1,9 @@
 'use strict';
 
+// Curated, fully bundled artwork: safe in the sandbox and available offline.
+// All persistent Profile icon IDs continue to resolve through service.name.
+const brandIcons = Object.freeze(require('./assets/service-icons/manifest.json').icons);
+
 const CHAIN_GAMES_ARTWORK = Object.freeze({
   light: './assets/chain-games-light-colorful.svg',
   colorful: './assets/chain-games-light-colorful.svg',
@@ -76,15 +80,27 @@ function textTileSvg(service, label) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${label}"><rect width="96" height="96" rx="22" fill="${service.color}"/><text x="48" y="52" fill="white" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif" font-weight="700" font-size="${fontSize}" text-anchor="middle" dominant-baseline="middle">${mark}</text></svg>`;
 }
 
+function localBrandUrl(value) {
+  const service = typeof value === 'object' && value ? value : find(value);
+  if (!service) return null;
+  return Object.prototype.hasOwnProperty.call(brandIcons, service.name)
+    ? brandIcons[service.name]
+    : null;
+}
+
 function iconDataUrl(value) {
   const service = typeof value === 'object' && value ? value : find(value);
   if (!service) return null;
   if (service.artwork === 'chain-games') return chainGamesAssetUrl();
+
+  // Never resolve brand artwork through the network. Only reviewed files in
+  // the packaged service icon manifest may be loaded as Profile visuals.
+  const localBrand = localBrandUrl(service);
+  if (localBrand) return localBrand;
+
   const label = escapeXml(service.name);
   const svg = textTileSvg(service, label);
-
-  // Renderer code runs inside Electron's sandbox with Node globals disabled.
-  // URI-encode generic SVG tiles instead of relying on Buffer/btoa.
+  // Genuine future catalog gaps retain the original data-only SVG fallback.
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
@@ -100,10 +116,12 @@ function createIcon(value, className = 'known-service-brand-image') {
     return icon;
   }
   const img = document.createElement('img');
-  img.className = className;
-  img.src = iconDataUrl(service);
+  const localBrand = localBrandUrl(service);
+  img.className = localBrand ? `${className} known-service-brand-image`.trim() : className;
+  img.src = localBrand || iconDataUrl(service);
   img.alt = `${service.name} icon`;
   img.draggable = false;
+  img.decoding = 'async';
   return img;
 }
 
@@ -111,6 +129,7 @@ exports.SERVICES = SERVICES;
 exports.normalize = normalize;
 exports.find = find;
 exports.iconDataUrl = iconDataUrl;
+exports.localBrandUrl = localBrandUrl;
 exports.createIcon = createIcon;
 exports.chainGamesAssetUrl = chainGamesAssetUrl;
 exports._test = { CHAIN_GAMES_ARTWORK, currentTheme, textTileSvg };
