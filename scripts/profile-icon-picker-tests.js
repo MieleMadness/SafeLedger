@@ -44,7 +44,6 @@ for (const service of serviceCatalog.SERVICES) {
 
 // Service brands are curated, bundled SVGs: no runtime CDN requests or
 // hand-built initial tiles for the reviewed Services catalog.
-const serviceAssetRoot = path.join(root, 'src/main/assets/service-icons');
 const brandManifest = JSON.parse(read('src/main/assets/service-icons/manifest.json'));
 assert.strictEqual(brandManifest.assetMode, 'packaged-local-svg');
 assert.strictEqual(brandManifest.version, 1);
@@ -84,6 +83,36 @@ assert(serviceSource.includes('known-service-brand-image'),
   'Service brand artwork must receive a neutral surface for visibility in dark mode.');
 assert(!/https?:\/\//.test(JSON.stringify(brandManifest.icons)),
   'The packaged icon manifest must never contain runtime network addresses.');
+
+// Verify the renderer creates an actual <img>, not the previous generated
+// initial tile, without needing a graphical Electron window for this contract.
+const originalDocument = global.document;
+global.document = {
+  createElement(tag) {
+    return {
+      tagName: tag.toLowerCase(),
+      dataset: {},
+      setAttribute() {}
+    };
+  }
+};
+try {
+  const githubLogo = serviceCatalog.createIcon('GitHub', 'profile-icon-option-visual');
+  assert.strictEqual(githubLogo.tagName, 'img');
+  assert.strictEqual(githubLogo.src, './assets/service-icons/github.svg');
+  assert(githubLogo.className.includes('known-service-brand-image'));
+  assert.strictEqual(githubLogo.decoding, 'async');
+
+  const chainGamesLogo = serviceCatalog.createIcon('Chain Games', 'profile-icon-option-visual');
+  assert.strictEqual(chainGamesLogo.tagName, 'span', 'Existing themed Chain Games artwork must remain untouched.');
+} finally {
+  if (originalDocument === undefined) delete global.document;
+  else global.document = originalDocument;
+}
+const brandCss = read('src/main/css/profile-setup.css');
+assert(brandCss.includes('.known-service-brand-image') &&
+  /\.known-service-brand-image\s*\{[^}]*background-color:\s*#fff\s*;/s.test(brandCss),
+  'Real brand logos need a consistent contrasting backing across light and dark themes.');
 
 const localCss = read('src/main/css/local-icons.css').replace(/\/\*[\s\S]*?\*\//g, '');
 const definedLocal = new Set(Array.from(localCss.matchAll(/\.(?:fa|glyphicon)-[a-z0-9]+(?:-[a-z0-9]+)*/gi), (match) => match[0].slice(1).toLowerCase()));
