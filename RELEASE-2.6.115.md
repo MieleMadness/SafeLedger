@@ -23,9 +23,9 @@ migration.
 ## Licensing and provenance
 
 Every asset has an upstream link and license in
-`src/main/assets/service-icons/SOURCES.md`. Redistribution notices are in
+`docs/service-icon-sources.md`. Redistribution notices are in
 `THIRD-PARTY-NOTICES.md`, with the full MIT license for the Outlook icon
-packaged alongside the assets. Brand trademarks belong to the respective owners.
+packaged in those notices. Brand trademarks belong to the respective owners.
 
 ## Regression coverage
 
