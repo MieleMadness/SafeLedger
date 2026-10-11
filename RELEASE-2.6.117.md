@@ -14,7 +14,11 @@ After: a supplied creation identifier must match exactly one authoritative
 encrypted record. If it does not, the operation rejects with the existing
 reload message. Legacy entries without any creation identifier retain a
 restricted index-only compatibility path, but cannot edit modern entries
-that have an identifier. No vault schema change or migration is required.
+that have an identifier. Existing starter Wallets sometimes share one
+creation timestamp; current Wallet/Asset edit flows now send their original
+Wallet snapshot so the trusted main process can identify the exact unchanged
+entry rather than guessing from a duplicated timestamp or row index.
+No vault schema change or migration is required.
 
 Tests exercise stale and ambiguous IDs, reordering and old vault entries.
 
