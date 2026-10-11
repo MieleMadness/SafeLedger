@@ -8,6 +8,7 @@ const runtimeUtils = require('./runtime-utils');
 const utils = require('./utils');
 const settingsManager = require('./settings-manager');
 const cryptoSession = require('./crypto-session-main');
+const { createLoginAttemptHandler } = require('./login-attempt-main');
 const securityMain = require('./security-main');
 const profileSetup = require('./profile-setup');
 const profileTransaction = require('./profile-transaction');
@@ -232,7 +233,6 @@ async function enforceRetryExhaustion() {
 }
 
 async function recordPasswordFailure() {
-  if (await enforceRetryExhaustion()) return;
   const settings = await ensureCurrentSettings();
   cryptoSession.clearSession();
   settings.failAttemptCount++;
@@ -242,9 +242,11 @@ async function recordPasswordFailure() {
     settings.lockLogin = true;
     settings.lockLoginTime = Date.now();
   }
-  currentSettings = settings;
-  await settingsManager.saveSettings(settingsDir, settings);
-  sendResult({ status: 'ERROR', statusMsg: 'Invalid Password', type: 'password-failed', settings });
+  // An attempt is not considered recorded until the atomic settings write
+  // succeeds. A write failure fails closed in login-attempt-main.js.
+  const saved = await settingsManager.saveSettings(settingsDir, settings);
+  currentSettings = saved.settings;
+  return saved;
 }
 
 function installGuiSmokeProbe(win) {
@@ -329,7 +331,18 @@ function registerCoreIpcHandlers() {
   if (coreIpcRegistered) return false;
   coreIpcRegistered = true;
 
-  cryptoSession.registerIpcHandlers({ getMainWindow });
+  const loginAttempt = createLoginAttemptHandler({
+    loadSettings: async () => {
+      const loaded = await settingsManager.loadSettings(settingsDir);
+      currentSettings = loaded.settings;
+      return currentSettings;
+    },
+    verifyPassword: (password) => cryptoSession.loginWithEnvelope(password),
+    recordFailure: recordPasswordFailure,
+    onExhaustion: enforceRetryExhaustion,
+    clearSession: () => cryptoSession.clearSession()
+  });
+  cryptoSession.registerIpcHandlers({ getMainWindow, loginAttempt });
   securityMain.registerIpcHandlers({
     ipc,
     dialog,
@@ -349,11 +362,6 @@ function registerCoreIpcHandlers() {
     await setSelfDestructProtection(enabled === true);
     const settings = await ensureCurrentSettings();
     return { ok: true, enabled: settings.scrubContentAfterRetries === true };
-  });
-
-  ipc.on('record-password-failure', (event) => {
-    try { assertTrustedEvent(event); } catch (_) { return; }
-    recordPasswordFailure().catch(() => sendResult({ status: 'ERROR', statusMsg: 'Unable to update login security state.' }));
   });
 
   ipc.on('read', (event, params = {}) => {
