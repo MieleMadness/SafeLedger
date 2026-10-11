@@ -335,7 +335,9 @@ function installGuiSmokeProbe(win) {
               if (background !== 'rgb(255, 255, 255)') throw Error(appearance + ': brand mark neutral backing missing');
               checks.push(appearance);
             }
-            return checks;
+            return { ok: true, checks };
+          } catch (error) {
+            return { ok: false, message: String(error && error.message || error) };
           } finally {
             fixture.remove();
             if (savedAppearance == null) html.removeAttribute('data-appearance');
@@ -344,7 +346,8 @@ function installGuiSmokeProbe(win) {
             else html.setAttribute('data-theme', savedTheme);
           }
         })()`, true);
-        if (layout.join(',') !== 'light,colorful,dark') throw new Error('Profile layout contract did not cover all appearances');
+        if (!layout || layout.ok !== true) throw new Error('Profile layout: ' + (layout && layout.message || 'unknown render error'));
+        if (layout.checks.join(',') !== 'light,colorful,dark') throw new Error('Profile layout contract did not cover all appearances');
         finish(true, 'sandboxed UI, invoke bridge, and real Light/Colorful/Dark Profile layout passed');
       } catch (err) {
         finish(false, err && err.message ? err.message : String(err));
