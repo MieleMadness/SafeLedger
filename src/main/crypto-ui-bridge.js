@@ -4,6 +4,7 @@ const services = require('./renderer-services');
 const rendererState = require('./renderer-state');
 const status = require('./status');
 const passwordPolicy = require('./password-policy');
+const lockoutState = require('./lockout-state');
 
 const MAX_MASTER_PASSWORD_LENGTH = passwordPolicy.MAX_MASTER_PASSWORD_LENGTH;
 let onCommandResult = null;
@@ -23,9 +24,8 @@ function loginRetryAllowed(result, now = Date.now()) {
   const settings = result && result.settings;
   if (!settings) return false;
   if (settings.lockLogin !== true) return true;
-  const deadline = Number(settings.lockLoginTime || 0)
-    + (Number(settings.minutesToWaitBetweenLockout || 0) * 60000);
-  return deadline <= Number(now);
+  // Invalid active lockout metadata is not permission to retry.
+  return lockoutState.lockoutDeadline(settings) > 0 && !lockoutState.isLockoutActive(settings, now);
 }
 
 function restoreLoginRetry(button, input, result, now = Date.now()) {
@@ -65,18 +65,13 @@ async function handleLogin(button) {
     const unlocked = await services.cryptoLogin(password);
     input.value = '';
     if (unlocked && unlocked.ok) return loadUnlockedVaultList();
-    if (unlocked && unlocked.type === 'password-failed') {
-      const failure = await services.deliver(
-        services.recordPasswordFailure(),
-        onCommandResult,
-        'Unable to update login security state.'
-      );
-      // A failed password attempt is not itself a UI lockout. Restore the
-      // submit control only after the main process confirms the updated retry
-      // state. If the configured lockout threshold was reached (or the retry
-      // state could not be persisted), remain fail-closed.
-      restoreLoginRetry(button, input, failure);
-      return failure;
+    if (unlocked && ['password-failed', 'locked-out', 'security-state-error'].includes(unlocked.type)) {
+      // Main process already checked the lockout and atomically persisted any
+      // failed-attempt transition. Never send a separate increment request.
+      if (onCommandResult) onCommandResult(unlocked);
+      if (unlocked.type === 'password-failed') restoreLoginRetry(button, input, unlocked);
+      // Active lockouts and unconfirmed persistence always stay fail-closed.
+      return unlocked;
     }
     return failButton(button, (unlocked && unlocked.message) || 'Unable to unlock SafeLedger key envelope');
   } catch (err) {
