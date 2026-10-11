@@ -91,6 +91,7 @@ function resolveExistingIndex(items, requestedIndex, candidate) {
   // Backward compatibility for old encrypted entries with no created field:
   // only allow index lookup when BOTH sides lack an identity. A missing
   // request identity must not silently target a modern identified item.
+  if (requestedIndex == null || requestedIndex === '') return -1;
   const index = Number(requestedIndex);
   if (!Number.isInteger(index) || index < 0 || index >= items.length) return -1;
   return items[index] && !items[index].created ? index : -1;
