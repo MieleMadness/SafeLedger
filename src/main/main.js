@@ -139,7 +139,7 @@ async function setSelfDestructProtection(enabled) {
     win.webContents.send('result-save-settings', {
       status: 'SUCCESS',
       statusMsg: enabled
-        ? 'Self-Destruct Protection enabled. Vaults will be destroyed after all configured lockouts are exhausted.'
+        ? 'Self-Destruct Protection enabled. SafeLedger will attempt to overwrite and remove local encrypted vault files after the configured lockouts; storage copies may remain.'
         : 'Self-Destruct Protection disabled. Failed logins will result in lockouts only.',
       settings: currentSettings
     });
