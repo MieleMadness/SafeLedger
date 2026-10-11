@@ -159,10 +159,11 @@ async function run() {
       const mainSource = fs.readFileSync(path.join(__dirname, '../src/main/main.js'), 'utf8');
       const cryptoUiSource = fs.readFileSync(path.join(__dirname, '../src/main/crypto-ui-bridge.js'), 'utf8');
       const servicesSource = fs.readFileSync(path.join(__dirname, '../src/main/renderer-services.js'), 'utf8');
-      assert(mainSource.includes("ipc.on('record-password-failure'"));
+      assert(mainSource.includes('createLoginAttemptHandler('), 'Trusted main process must own failed attempts.');
+      assert(!mainSource.includes("ipc.on('record-password-failure'"), 'No renderer-controlled failed-attempt IPC may remain.');
       assert(cryptoUiSource.includes("unlocked.type === 'password-failed'"));
-      assert(cryptoUiSource.includes('services.recordPasswordFailure()'));
-      assert(servicesSource.includes("const recordPasswordFailure = () => required('recordPasswordFailure')();"));
+      assert(!cryptoUiSource.includes('services.recordPasswordFailure()'));
+      assert(!servicesSource.includes('recordPasswordFailure'));
       assert(mainSource.includes("type: 'vault-corrupt'"));
       assert(mainSource.includes('Your failed-login counter was not changed.'));
     });
