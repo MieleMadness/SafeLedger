@@ -80,11 +80,19 @@ function resolveExistingIndex(items, requestedIndex, candidate) {
   if (!Array.isArray(items) || !items.length) return -1;
   const created = candidate && String(candidate.created || '');
   if (created) {
-    const matches = items.map((item, index) => ({ item, index })).filter(({ item }) => String(item && item.created || '') === created);
-    if (matches.length === 1) return matches[0].index;
+    // A supplied stable identity is authoritative. Never fall back to the
+    // selected row if it is missing or ambiguous: that row may now be a
+    // different wallet/asset after a deletion or resort.
+    const matches = items.map((item, index) => ({ item, index }))
+      .filter(({ item }) => String(item && item.created || '') === created);
+    return matches.length === 1 ? matches[0].index : -1;
   }
+  // Backward compatibility for old encrypted entries with no created field:
+  // only allow index lookup when BOTH sides lack an identity. A missing
+  // request identity must not silently target a modern identified item.
   const index = Number(requestedIndex);
-  return Number.isInteger(index) && index >= 0 && index < items.length ? index : -1;
+  if (!Number.isInteger(index) || index < 0 || index >= items.length) return -1;
+  return items[index] && !items[index].created ? index : -1;
 }
 
 function resolveRecordModifyIndex(items, requestedIndex, originalRecord, candidate) {
