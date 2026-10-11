@@ -313,6 +313,11 @@ function installGuiSmokeProbe(win) {
           logo.className = 'known-service-brand-image';
           frame.appendChild(logo);
           option.appendChild(frame);
+          // The real icon tile has a trailing label span. Without it the
+          // existing :last-child label rule stretches the frame to 100%.
+          const label = document.createElement('span');
+          label.textContent = 'GitHub';
+          option.appendChild(label);
           grid.appendChild(option);
           results.appendChild(grid);
           fixture.appendChild(search);
