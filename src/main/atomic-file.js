@@ -65,5 +65,6 @@ async function atomicWriteJson(file, value, options = {}) {
 module.exports = {
   atomicWriteFile,
   atomicWriteJson,
+  syncParentDirectory,
   _test: { tempPathFor, syncParentDirectory }
 };
