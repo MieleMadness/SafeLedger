@@ -38,8 +38,9 @@ const readProfile = (file, type = 'vault-read') => required('readVault')({ type,
 const loadVaultList = () => required('readVaultListInit')();
 const saveProfile = (params) => required('processVaultList')(params);
 const deleteProfile = (params) => required('deleteVault')(params);
-const saveVaultItem = (params) => required('processGroup')(params);
-const saveAsset = (params) => required('processRecord')(params);
+const mutationCommand = require('./workspace-mutation-command');
+const saveVaultItem = (params) => required('processGroup')(mutationCommand.groupCommand(params));
+const saveAsset = (params) => required('processRecord')(mutationCommand.recordCommand(params));
 const saveSettings = (patch) => required('saveSettings')({ newSettings: patch });
 const panicLock = (reason) => required('panicLock')({ reason });
 

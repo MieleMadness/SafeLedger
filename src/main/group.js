@@ -490,13 +490,14 @@ const confirmDelete = (params) => {
     {
       icon: 'fa-trash', title: 'Confirm delete vault item', className: 'detail-action-delete',
       onClick: () => {
+        const originalGroup = JSON.parse(JSON.stringify(params.vaultData.groups[params.vaultData.groupSelected]));
         params.vaultData.groups.splice(params.vaultData.groupSelected, 1);
         params.vaultData.groupSelected = null;
         params.vaultData.recordSelected = null;
         params.saving.state = true;
         statusMgr.loadStatus();
         services.deliver(
-          services.saveVaultItem({ type: 'group-delete', vaultData: params.vaultData }),
+          services.saveVaultItem({ type: 'group-delete', vaultData: params.vaultData, originalGroup }),
           params.onResult,
           'Unable to delete Vault Item.'
         );

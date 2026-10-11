@@ -14,6 +14,7 @@ const profileSetup = require('./profile-setup');
 const profileTransaction = require('./profile-transaction');
 const profileDeleteTransaction = require('./profile-delete-transaction');
 const dataWriteService = require('./data-write-service');
+const { createWorkspaceOperationQueue } = require('./workspace-operation-queue');
 
 let mainWindow;
 let vaultDir;
@@ -164,9 +165,13 @@ function getSessionKey() {
   return key;
 }
 
-function sendLocked() {
-  sendResult({ status: 'ERROR', statusMsg: 'SafeLedger is locked. Please log in again.', type: 'session-locked' });
+function lockedResult() {
+  return { status: 'ERROR', statusMsg: 'SafeLedger is locked. Please log in again.', type: 'session-locked' };
 }
+
+// The trusted main process owns workspace operation ordering, while each
+// ipc.invoke caller receives its own response rather than a shared event.
+const runWorkspaceOperation = createWorkspaceOperationQueue();
 
 function groupActivityEvent(params = {}) {
   if (params.activityEvent === 'recovery-verified' || params.activityEvent === 'recovery-drill-completed') return params.activityEvent;
@@ -283,7 +288,72 @@ function installGuiSmokeProbe(win) {
         if (!state.rendererReady) throw new Error('renderer bundle did not report ready');
         if (!state.hasApi || !state.hasInitSystem) throw new Error('sandbox preload bridge is unavailable');
         if (!state.hasDetailArea || !state.hasPanicButton) throw new Error('core SafeLedger UI did not render');
-        finish(true, 'real sandboxed window, preload bridge, renderer bundle, and core UI loaded');
+        // Real Chromium layout contract, not CSS-string snapshots. Exercise
+        // Profile Search→results spacing and the icon frame in all three
+        // appearance modes using the application's loaded stylesheets.
+        const layout = await win.webContents.executeJavaScript(`(() => {
+          const html = document.documentElement;
+          const savedAppearance = html.getAttribute('data-appearance');
+          const savedTheme = html.getAttribute('data-theme');
+          const fixture = document.createElement('div');
+          fixture.className = 'profile-icon-picker';
+          fixture.style.cssText = 'position:fixed;top:12px;left:12px;width:360px;visibility:hidden;z-index:-1';
+          const search = document.createElement('div');
+          search.className = 'profile-icon-picker-search';
+          search.style.height = '32px';
+          const results = document.createElement('div');
+          results.className = 'profile-icon-picker-results';
+          const grid = document.createElement('div');
+          grid.className = 'profile-icon-picker-grid';
+          const option = document.createElement('button');
+          option.className = 'profile-icon-option';
+          const frame = document.createElement('span');
+          frame.className = 'profile-icon-option-frame';
+          const logo = document.createElement('img');
+          logo.className = 'known-service-brand-image';
+          frame.appendChild(logo);
+          option.appendChild(frame);
+          // The real icon tile has a trailing label span. Without it the
+          // existing :last-child label rule stretches the frame to 100%.
+          const label = document.createElement('span');
+          label.textContent = 'GitHub';
+          option.appendChild(label);
+          grid.appendChild(option);
+          results.appendChild(grid);
+          fixture.appendChild(search);
+          fixture.appendChild(results);
+          document.body.appendChild(fixture);
+          const checks = [];
+          try {
+            for (const appearance of ['light', 'colorful', 'dark']) {
+              html.setAttribute('data-appearance', appearance);
+              html.setAttribute('data-theme', appearance === 'dark' ? 'dark' : 'light');
+              const gap = grid.getBoundingClientRect().top - search.getBoundingClientRect().bottom;
+              const bounds = frame.getBoundingClientRect();
+              const background = getComputedStyle(logo).backgroundColor;
+              const gridDisplay = getComputedStyle(grid).display;
+              if (gap < 9.5 || gap > 11.5) throw Error(appearance + ': icon results gap is ' + gap + 'px (expected 10px)');
+              if (Math.abs(bounds.width - 40) > 0.5 || Math.abs(bounds.height - 40) > 0.5) {
+                throw Error(appearance + ': icon frame dimensions are ' + bounds.width + 'x' + bounds.height);
+              }
+              if (gridDisplay !== 'grid') throw Error(appearance + ': Profile icon grid does not use CSS grid');
+              if (background !== 'rgb(255, 255, 255)') throw Error(appearance + ': brand mark neutral backing missing');
+              checks.push(appearance);
+            }
+            return { ok: true, checks };
+          } catch (error) {
+            return { ok: false, message: String(error && error.message || error) };
+          } finally {
+            fixture.remove();
+            if (savedAppearance == null) html.removeAttribute('data-appearance');
+            else html.setAttribute('data-appearance', savedAppearance);
+            if (savedTheme == null) html.removeAttribute('data-theme');
+            else html.setAttribute('data-theme', savedTheme);
+          }
+        })()`, true);
+        if (!layout || layout.ok !== true) throw new Error('Profile layout: ' + (layout && layout.message || 'unknown render error'));
+        if (layout.checks.join(',') !== 'light,colorful,dark') throw new Error('Profile layout contract did not cover all appearances');
+        finish(true, 'sandboxed UI, invoke bridge, and real Light/Colorful/Dark Profile layout passed');
       } catch (err) {
         finish(false, err && err.message ? err.message : String(err));
       }
@@ -365,26 +435,25 @@ function registerCoreIpcHandlers() {
     return { ok: true, enabled: settings.scrubContentAfterRetries === true };
   });
 
-  ipc.on('read', (event, params = {}) => {
+  ipc.handle('read', (event, params = {}) => runWorkspaceOperation(async () => {
     try {
       assertTrustedEvent(event);
       if (!isPlainObject(params) || !vault.safeVaultFileName(params.file)) throw new Error('Invalid profile selection.');
+      const key = getSessionKey();
+      if (!key) return lockedResult();
+      const val = await vault.readVault(path.join(vaultDir, params.file), key);
+      return { status: 'SUCCESS', statusMsg: 'Load successful.', type: String(params.type || '').slice(0, 40), vaultData: val };
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile selection.' });
+      return err && err.status === 'ERROR' ? err : { status: 'ERROR', statusMsg: err && err.message || 'Unable to load Profile.' };
     }
-    const key = getSessionKey();
-    if (!key) return sendLocked();
-    vault.readVault(path.join(vaultDir, params.file), key)
-      .then((val) => sendResult({ status: 'SUCCESS', statusMsg: 'Load successful.', type: String(params.type || '').slice(0, 40), vaultData: val }))
-      .catch((val) => sendResult(val));
-  });
+  }));
 
-  ipc.on('read-vaultlist-init', async (event) => {
+  ipc.handle('read-vaultlist-init', (event) => runWorkspaceOperation(async () => {
     try {
       assertTrustedEvent(event);
-      if (await enforceRetryExhaustion()) return;
+      if (await enforceRetryExhaustion()) return { status: 'ERROR', statusMsg: 'Login protection limit reached.', type: 'password-failed', settings: await ensureCurrentSettings() };
       const key = getSessionKey();
-      if (!key) return sendLocked();
+      if (!key) return lockedResult();
       const state = await vault.makeDir(vaultDir);
       if (state === 'CREATE') {
         await vault.initVaultList(vaultDir, key);
@@ -396,7 +465,7 @@ function registerCoreIpcHandlers() {
       try {
         valList = await vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
       } catch (_) {
-        return sendResult({
+        return ({
           status: 'ERROR',
           statusMsg: 'The master password was accepted, but the encrypted vault list could not be authenticated or read. Your failed-login counter was not changed.',
           type: 'vault-corrupt'
@@ -411,7 +480,7 @@ function registerCoreIpcHandlers() {
       const saved = await settingsManager.saveSettings(settingsDir, settings);
       currentSettings = saved.settings;
       await securityMain.audit(getDataRoot(), 'vault-unlocked');
-      sendResult({
+      return ({
         status: 'SUCCESS',
         statusMsg: 'Loaded Successfully',
         type: 'vaultlist-init',
@@ -420,27 +489,27 @@ function registerCoreIpcHandlers() {
         settings: currentSettings
       });
     } catch (err) {
-      sendResult({ status: 'ERROR', statusMsg: err && err.message ? err.message : 'Unable to access vault list' });
+      return ({ status: 'ERROR', statusMsg: err && err.message ? err.message : 'Unable to access vault list' });
     }
-  });
+  }));
 
-  ipc.on('process-vault-list', async (event, params = {}) => {
+  ipc.handle('process-vault-list', (event, params = {}) => runWorkspaceOperation(async () => {
     try {
       assertTrustedEvent(event);
       if (!isPlainObject(params) || !['create', 'modify'].includes(params.action) || !isPlainObject(params.vault)) {
         throw new Error('Invalid profile update.');
       }
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile update.' });
+      return ({ status: 'ERROR', statusMsg: err.message || 'Invalid profile update.' });
     }
 
     const key = getSessionKey();
-    if (!key) return sendLocked();
+    if (!key) return lockedResult();
     try {
       if (params.action === 'modify') {
         const nextList = await dataWriteService.modifyProfile({ vault, vaultDir, key, profile: params.vault });
         await securityMain.audit(getDataRoot(), 'profile-updated');
-        return sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
+        return ({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
       }
 
       // Resolve a pending deletion before choosing a new Profile file ID:
@@ -474,79 +543,79 @@ function registerCoreIpcHandlers() {
         readList: vault.readVaultList
       });
       await securityMain.audit(getDataRoot(), 'profile-created');
-      return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: viewList, vaultData: data });
+      return ({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: viewList, vaultData: data });
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: (err && (err.message || err.statusMsg)) || 'Save failed' });
+      return ({ status: 'ERROR', statusMsg: (err && (err.message || err.statusMsg)) || 'Save failed' });
     }
-  });
+  }));
 
-  ipc.on('vault-list-delete', async (event, params = {}) => {
+  ipc.handle('vault-list-delete', (event, params = {}) => runWorkspaceOperation(async () => {
     try {
       assertTrustedEvent(event);
       if (!isPlainObject(params) || !vault.safeVaultFileName(params.fileName)) throw new Error('Invalid profile deletion.');
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile deletion.' });
+      return ({ status: 'ERROR', statusMsg: err.message || 'Invalid profile deletion.' });
     }
     const key = getSessionKey();
-    if (!key) return sendLocked();
+    if (!key) return lockedResult();
     try {
       const nextList = await dataWriteService.deleteProfile({ vault, vaultDir, key, fileName: params.fileName });
       await securityMain.audit(getDataRoot(), 'profile-deleted');
-      return sendResult({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted', vaultList: nextList });
+      return ({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted', vaultList: nextList });
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Delete failed' });
+      return ({ status: 'ERROR', statusMsg: (err && err.message) || 'Delete failed' });
     }
-  });
+  }));
 
-  ipc.on('process-group', async (event, params = {}) => {
+  ipc.handle('process-group', (event, params = {}) => runWorkspaceOperation(async () => {
     let request;
     try {
       assertTrustedEvent(event);
-      request = dataWriteService.legacyGroupRequest(params);
+      request = dataWriteService.groupCommandRequest(params);
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid vault item update.' });
+      return ({ status: 'ERROR', statusMsg: err.message || 'Invalid vault item update.' });
     }
     const key = getSessionKey();
-    if (!key) return sendLocked();
+    if (!key) return lockedResult();
     try {
       const data = await dataWriteService.mutateGroup({ vault, vaultDir, key, request });
       await securityMain.audit(getDataRoot(), groupActivityEvent(request));
       const deleted = request.type === 'group-delete';
-      return sendResult({
+      return ({
         status: deleted ? 'DELETED' : 'SUCCESS',
         statusMsg: deleted ? 'Item Deleted' : 'Save successful',
         type: request.type,
         vaultData: data
       });
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
+      return ({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
     }
-  });
+  }));
 
-  ipc.on('process-record', async (event, params = {}) => {
+  ipc.handle('process-record', (event, params = {}) => runWorkspaceOperation(async () => {
     let request;
     try {
       assertTrustedEvent(event);
-      request = dataWriteService.legacyRecordRequest(params);
+      request = dataWriteService.recordCommandRequest(params);
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
+      return ({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
     }
     const key = getSessionKey();
-    if (!key) return sendLocked();
+    if (!key) return lockedResult();
     try {
       const data = await dataWriteService.mutateRecord({ vault, vaultDir, key, request });
       await securityMain.audit(getDataRoot(), recordActivityEvent(request));
       const deleted = request.action === 'delete';
-      return sendResult({
+      return ({
         status: deleted ? 'DELETED' : 'SUCCESS',
         statusMsg: deleted ? 'Item Deleted' : 'Save successful',
         type: 'record',
         vaultData: data
       });
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
+      return ({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
     }
-  });
+  }));
 
   ipc.on('init-system', (event) => {
     try { assertTrustedEvent(event); } catch (_) { return; }

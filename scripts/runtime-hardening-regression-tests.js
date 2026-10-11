@@ -53,8 +53,9 @@ assert(sessionLock.includes('win.webContents.reload()'), 'Central session lock m
 
 assert(preload.includes("const { contextBridge, ipcRenderer } = require('electron')"));
 assert(preload.includes("contextBridge.exposeInMainWorld('safeLedgerApi'"));
-assert(preload.includes('function requestResult('),
-  'Shared legacy result transport must be serialized behind the preload boundary.');
+assert(!preload.includes('function requestResult(') && !preload.includes('resultRequestQueue'),
+  'Trusted workspace APIs must use per-request invoke results, not shared event listeners.');
+assert(preload.includes("readVault: (params) => invoke('read', params)"));
 assert(!preload.includes("require('./"));
 assert(index.includes('./renderer.bundle.js'));
 assert(!index.includes('bootstrap.min.css'));

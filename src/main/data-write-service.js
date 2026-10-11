@@ -151,6 +151,44 @@ function legacyRecordRequest(params) {
   };
 }
 
+// Narrow commands are the sole runtime transport format as of 2.6.118.
+// Legacy full-snapshot adapters remain test-only until all saved-structure
+// compatibility cases have dedicated narrow-command coverage.
+function groupCommandRequest(params) {
+  if (!isPlainObject(params) || isPlainObject(params.vaultData)) throw new Error('Full Vault Item snapshots are no longer accepted.');
+  if (!['group-create', 'group-modify', 'group-delete'].includes(params.type)) throw new Error('Invalid Vault Item action.');
+  if (typeof params.file !== 'string') throw new Error('Invalid Profile identifier.');
+  if (params.type !== 'group-create' && !isPlainObject(params.originalGroup)) throw new Error('Missing original Vault Item snapshot.');
+  if (params.type !== 'group-delete' && !isPlainObject(params.group)) throw new Error('Missing selected Vault Item.');
+  return {
+    type: params.type, file: params.file, index: params.index,
+    group: params.group || null, originalGroup: params.originalGroup || null,
+    activityEvent: params.activityEvent
+  };
+}
+
+function recordCommandRequest(params) {
+  if (!isPlainObject(params) || isPlainObject(params.vaultData)) throw new Error('Full Asset snapshots are no longer accepted.');
+  if (!['create', 'modify', 'delete'].includes(params.action)) throw new Error('Invalid Asset action.');
+  if (typeof params.file !== 'string' || !isPlainObject(params.originalGroup)) throw new Error('Missing original Wallet identity.');
+  if (params.action !== 'create' && !isPlainObject(params.originalRecord)) throw new Error('Missing original Asset identity.');
+  if (params.action !== 'delete' && !isPlainObject(params.record)) throw new Error('Missing selected Asset.');
+  return {
+    action: params.action, file: params.file,
+    groupIndex: params.groupIndex, groupCreated: params.groupCreated,
+    originalGroup: params.originalGroup,
+    recordIndex: params.recordIndex, record: params.record || null,
+    originalRecord: params.originalRecord || null,
+    duplicateConfirmed: params.duplicateConfirmed === true
+  };
+}
+
+function findExactOriginalIndex(items, original) {
+  if (!Array.isArray(items) || !isPlainObject(original)) return -1;
+  const matches = items.map((item, index) => ({ item, index })).filter(({ item }) => exactEqual(item, original));
+  return matches.length === 1 ? matches[0].index : -1;
+}
+
 async function readAuthoritativeVault(vault, vaultDir, file, key) {
   if (!vault.safeVaultFileName(file)) throw new Error('Invalid SafeLedger vault file.');
   return vault.readVault(path.join(vaultDir, file), key);
@@ -170,7 +208,9 @@ async function mutateGroup({ vault, vaultDir, key, request }) {
     const existing = data.groups[index]; const updated = Object.assign({}, existing, normalizeGroupPatch(request.group), { modified: new Date().toISOString() }); if (!updated.name) throw new Error('Vault item name is required.');
     data.groups[index] = updated; data.groups.sort(compareByName); selected = data.groups.indexOf(updated);
   } else if (request.type === 'group-delete') {
-    const index = findSingleDeletionIndex(data.groups, request.submittedGroups); if (index < 0) throw new Error('Vault item delete request did not match the current encrypted Profile. Reload and try again.'); data.groups.splice(index, 1);
+    const index = request.originalGroup
+      ? findExactOriginalIndex(data.groups, request.originalGroup)
+      : findSingleDeletionIndex(data.groups, request.submittedGroups); if (index < 0) throw new Error('Vault item delete request did not match the current encrypted Profile. Reload and try again.'); data.groups.splice(index, 1);
   } else throw new Error('Invalid vault item update.');
   const saved = await saveAuthoritativeVault(vault, vaultDir, request.file, key, data);
   return withViewState(saved, selected, null);
@@ -212,7 +252,9 @@ async function mutateRecord({ vault, vaultDir, key, request }) {
     group.records.sort(compareByName);
     recordSelected = group.records.indexOf(updated);
   } else if (request.action === 'delete') {
-    const index = findSingleDeletionIndex(group.records, request.submittedRecords);
+    const index = request.originalRecord
+      ? findExactOriginalIndex(group.records, request.originalRecord)
+      : findSingleDeletionIndex(group.records, request.submittedRecords);
     if (index < 0) throw new Error('Asset delete request did not match the current encrypted vault item. Reload and try again.');
     group.records.splice(index, 1);
   } else throw new Error('Invalid asset update.');
@@ -254,7 +296,7 @@ async function deleteProfile({ vault, vaultDir, key, fileName }) {
 }
 
 module.exports = {
-  normalizeProfilePatch, normalizeGroupPatch, normalizeRecordPatch, legacyGroupRequest, legacyRecordRequest, mutateGroup, mutateRecord, modifyProfile, deleteProfile,
+  normalizeProfilePatch, normalizeGroupPatch, normalizeRecordPatch, legacyGroupRequest, legacyRecordRequest, groupCommandRequest, recordCommandRequest, mutateGroup, mutateRecord, modifyProfile, deleteProfile,
   stripViewState, stripProfileViewState, withViewState, withProfileViewState, findSingleDeletionIndex, resolveExistingIndex, resolveRecordModifyIndex, buildTrustedStarterRecords,
   _test: { clone, text, normalizeTimestamp, compareByName, exactEqual, assertDuplicateApproved }
 };

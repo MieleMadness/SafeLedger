@@ -4,7 +4,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const LOCKED_MESSAGE = 'SafeLedger is locked. Please log in again.';
 const REQUEST_TIMEOUT_MS = 30000;
-let resultRequestQueue = Promise.resolve();
 
 function subscribe(channel, callback) {
   if (typeof callback !== 'function') return;
@@ -60,26 +59,16 @@ function request(sendChannel, responseChannels, ...args) {
   });
 }
 
-// The established main-process data protocol returns workspace operations on a
-// shared `result` channel. Serialize those requests at the preload boundary so
-// one renderer command can never consume another command's response. Renderer
-// modules see ordinary Promise-returning semantic methods and never channel
-// names; a later main-process transport conversion can happen behind this API.
-function requestResult(sendChannel, responseChannels, ...args) {
-  const run = () => request(sendChannel, responseChannels, ...args);
-  const pending = resultRequestQueue.then(run, run);
-  resultRequestQueue = pending.then(() => undefined, () => undefined);
-  return pending;
-}
-
+// Core workspace operations use request-specific invoke replies. Only
+// legacy initialization/settings notifications retain dedicated events.
 contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   initSystem: () => request('init-system', 'result-init-system'),
-  readVault: (params) => requestResult('read', 'result', params),
-  readVaultListInit: () => requestResult('read-vaultlist-init', ['result', 'result-lockout-destroy']),
-  processVaultList: (params) => requestResult('process-vault-list', 'result', params),
-  deleteVault: (params) => requestResult('vault-list-delete', 'result', params),
-  processGroup: (params) => requestResult('process-group', 'result', params),
-  processRecord: (params) => requestResult('process-record', 'result', params),
+  readVault: (params) => invoke('read', params),
+  readVaultListInit: () => invoke('read-vaultlist-init'),
+  processVaultList: (params) => invoke('process-vault-list', params),
+  deleteVault: (params) => invoke('vault-list-delete', params),
+  processGroup: (params) => invoke('process-group', params),
+  processRecord: (params) => invoke('process-record', params),
   saveSettings: (params) => request('save-settings', 'result-save-settings', params),
   prepareAppMenu: () => invoke('app-menu-prepare'),
   appMenuCommand: (command) => ipcRenderer.send('app-menu-command', String(command || '')),
