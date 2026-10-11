@@ -14,6 +14,7 @@ const profileSetup = require('./profile-setup');
 const profileTransaction = require('./profile-transaction');
 const profileDeleteTransaction = require('./profile-delete-transaction');
 const dataWriteService = require('./data-write-service');
+const { createWorkspaceOperationQueue } = require('./workspace-operation-queue');
 
 let mainWindow;
 let vaultDir;
@@ -170,12 +171,7 @@ function lockedResult() {
 
 // The trusted main process owns workspace operation ordering, while each
 // ipc.invoke caller receives its own response rather than a shared event.
-let workspaceOperations = Promise.resolve();
-function runWorkspaceOperation(fn) {
-  const next = workspaceOperations.then(fn, fn);
-  workspaceOperations = next.then(() => undefined, () => undefined);
-  return next;
-}
+const runWorkspaceOperation = createWorkspaceOperationQueue();
 
 function groupActivityEvent(params = {}) {
   if (params.activityEvent === 'recovery-verified' || params.activityEvent === 'recovery-drill-completed') return params.activityEvent;
