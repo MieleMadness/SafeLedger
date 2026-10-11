@@ -30,6 +30,7 @@ const CANONICAL_SUITES = Object.freeze([
   ['Continuity hardening', 'scripts/continuity-hardening-tests.js'],
   ['Recovery confidence', 'scripts/recovery-confidence-tests.js'],
   ['Authoritative data ownership', 'scripts/data-ownership-tests.js'],
+  ['Profile deletion recovery', 'scripts/profile-delete-transaction-tests.js'],
   ['UI consolidation', 'scripts/ui-consolidation-tests.js'],
   ['Recovery readiness', 'scripts/recovery-readiness-tests.js'],
   ['Cross-feature roadmap smoke', 'scripts/roadmap-regression-tests.js'],
