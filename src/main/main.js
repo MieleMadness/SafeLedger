@@ -288,7 +288,64 @@ function installGuiSmokeProbe(win) {
         if (!state.rendererReady) throw new Error('renderer bundle did not report ready');
         if (!state.hasApi || !state.hasInitSystem) throw new Error('sandbox preload bridge is unavailable');
         if (!state.hasDetailArea || !state.hasPanicButton) throw new Error('core SafeLedger UI did not render');
-        finish(true, 'real sandboxed window, preload bridge, renderer bundle, and core UI loaded');
+        // Real Chromium layout contract, not CSS-string snapshots. Exercise
+        // Profile Search→results spacing and the icon frame in all three
+        // appearance modes using the application's loaded stylesheets.
+        const layout = await win.webContents.executeJavaScript(\`(() => {
+          const html = document.documentElement;
+          const savedAppearance = html.getAttribute('data-appearance');
+          const savedTheme = html.getAttribute('data-theme');
+          const fixture = document.createElement('div');
+          fixture.className = 'profile-icon-picker';
+          fixture.style.cssText = 'position:fixed;top:12px;left:12px;width:360px;visibility:hidden;z-index:-1';
+          const search = document.createElement('div');
+          search.className = 'profile-icon-picker-search';
+          search.style.height = '32px';
+          const results = document.createElement('div');
+          results.className = 'profile-icon-picker-results';
+          const grid = document.createElement('div');
+          grid.className = 'profile-icon-picker-grid';
+          const option = document.createElement('button');
+          option.className = 'profile-icon-option';
+          const frame = document.createElement('span');
+          frame.className = 'profile-icon-option-frame';
+          const logo = document.createElement('img');
+          logo.className = 'known-service-brand-image';
+          frame.appendChild(logo);
+          option.appendChild(frame);
+          grid.appendChild(option);
+          results.appendChild(grid);
+          fixture.appendChild(search);
+          fixture.appendChild(results);
+          document.body.appendChild(fixture);
+          const checks = [];
+          try {
+            for (const appearance of ['light', 'colorful', 'dark']) {
+              html.setAttribute('data-appearance', appearance);
+              html.setAttribute('data-theme', appearance === 'dark' ? 'dark' : 'light');
+              const gap = grid.getBoundingClientRect().top - search.getBoundingClientRect().bottom;
+              const bounds = frame.getBoundingClientRect();
+              const background = getComputedStyle(logo).backgroundColor;
+              const gridDisplay = getComputedStyle(grid).display;
+              if (gap < 9.5 || gap > 11.5) throw Error(appearance + ': icon results gap is ' + gap + 'px (expected 10px)');
+              if (Math.abs(bounds.width - 40) > 0.5 || Math.abs(bounds.height - 40) > 0.5) {
+                throw Error(appearance + ': icon frame dimensions are ' + bounds.width + 'x' + bounds.height);
+              }
+              if (gridDisplay !== 'grid') throw Error(appearance + ': Profile icon grid does not use CSS grid');
+              if (background !== 'rgb(255, 255, 255)') throw Error(appearance + ': brand mark neutral backing missing');
+              checks.push(appearance);
+            }
+            return checks;
+          } finally {
+            fixture.remove();
+            if (savedAppearance == null) html.removeAttribute('data-appearance');
+            else html.setAttribute('data-appearance', savedAppearance);
+            if (savedTheme == null) html.removeAttribute('data-theme');
+            else html.setAttribute('data-theme', savedTheme);
+          }
+        })()\`, true);
+        if (layout.join(',') !== 'light,colorful,dark') throw new Error('Profile layout contract did not cover all appearances');
+        finish(true, 'sandboxed UI, invoke bridge, and real Light/Colorful/Dark Profile layout passed');
       } catch (err) {
         finish(false, err && err.message ? err.message : String(err));
       }
