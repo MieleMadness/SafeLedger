@@ -6,6 +6,7 @@ const runtimeUtils = require('./runtime-utils');
 const cryptoSession = require('./crypto-session-main');
 const securityMain = require('./security-main');
 const settingsManager = require('./settings-manager');
+const { runStorageOperation } = require('./workspace-operation-queue');
 const backupHealth = require('./backup-health');
 const robustVault = require('./robust-vault');
 const dashboardSummary = require('./dashboard-summary');
@@ -233,7 +234,7 @@ function startAllowedRuntime() {
     return { ok: true, health: backupHealth.summarize(loaded.settings), settings: loaded.settings };
   });
 
-  ipc.handle('device-record-backup-success', async (event) => {
+  ipc.handle('device-record-backup-success', (event) => runStorageOperation(async () => {
     assertTrustedEvent(event);
     const loaded = await settingsManager.loadSettings(getSettingsDir());
     const saved = await settingsManager.saveSettings(getSettingsDir(), Object.assign({}, loaded.settings, {
@@ -243,9 +244,9 @@ function startAllowedRuntime() {
     // event. This endpoint records only non-secret reminder metadata.
     syncRendererSettings(saved.settings);
     return { ok: true, settings: saved.settings, health: backupHealth.summarize(saved.settings) };
-  });
+  }));
 
-  ipc.handle('device-record-backup-verified', async (event, createdAt) => {
+  ipc.handle('device-record-backup-verified', (event, createdAt) => runStorageOperation(async () => {
     assertTrustedEvent(event);
     const loaded = await settingsManager.loadSettings(getSettingsDir());
     const saved = await settingsManager.saveSettings(getSettingsDir(), Object.assign({}, loaded.settings, {
@@ -255,7 +256,7 @@ function startAllowedRuntime() {
     // Backup verification itself owns its Activity History entry.
     syncRendererSettings(saved.settings);
     return { ok: true, settings: saved.settings, health: backupHealth.summarize(saved.settings) };
-  });
+  }));
 
   ipc.handle('recovery-intelligence-summary', async (event) => {
     assertTrustedEvent(event);
