@@ -14,4 +14,8 @@ function createWorkspaceOperationQueue() {
   };
 }
 
-module.exports = { createWorkspaceOperationQueue };
+// Shared trusted storage queue: both normal workspace writes and security
+// backup/restore/import actions participate in the same ordering.
+const runStorageOperation = createWorkspaceOperationQueue();
+
+module.exports = { createWorkspaceOperationQueue, runStorageOperation };
