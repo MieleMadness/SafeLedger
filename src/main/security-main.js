@@ -13,6 +13,7 @@ const dashboardSummary = require('./dashboard-summary');
 const recoveryBinder = require('./recovery-binder');
 const activityHistory = require('./activity-history');
 const globalSearch = require('./global-search');
+const { runStorageOperation } = require('./workspace-operation-queue');
 
 const BACKUP_FORMAT = 'safeledger-complete-data-backup';
 const BACKUP_VERSION = 3;
@@ -397,11 +398,12 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     }
   });
 
-  ipc.handle('security-backup-all', async (event) => {
+  ipc.handle('security-backup-all', (event) => runStorageOperation(async () => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
     const dataRoot = getDataRoot();
     const files = await collectFiles(dataRoot);
+    assertUnlocked(cryptoSession);
     if (!files['vaults/vaultlist.json']) return { ok: false, message: 'No SafeLedger vault data was found to back up.' };
     const selection = await dialog.showSaveDialog(getMainWindow(), {
       title: 'Export Complete SafeLedger Backup',
@@ -409,6 +411,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
       filters: [{ name: 'SafeLedger Backup', extensions: ['slgbak'] }]
     });
     if (!selection || selection.canceled || !selection.filePath) return { ok: false, canceled: true };
+    assertUnlocked(cryptoSession);
     const payload = {
       format: BACKUP_FORMAT,
       version: BACKUP_VERSION,
@@ -420,9 +423,9 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     await writeBackupFile(selection.filePath, payload);
     await audit(dataRoot, 'complete-data-backup-exported');
     return { ok: true, fileCount: Object.keys(files).length };
-  });
+  }));
 
-  ipc.handle('security-verify-backup', async (event, password) => {
+  ipc.handle('security-verify-backup', (event, password) => runStorageOperation(async () => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
     const selection = await dialog.showOpenDialog(getMainWindow(), {
@@ -431,6 +434,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
       filters: [{ name: 'SafeLedger Backup', extensions: ['slgbak'] }]
     });
     if (!selection || selection.canceled || !selection.filePaths || !selection.filePaths.length) return { ok: false, canceled: true };
+    assertUnlocked(cryptoSession);
     try {
       const payload = JSON.parse(await fs.promises.readFile(selection.filePaths[0], 'utf8'));
       const report = await verifyBackupPayloadWithPassword(payload, password, getSessionKey(cryptoSession));
@@ -439,9 +443,9 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     } catch (err) {
       return { ok: false, message: err && err.message ? err.message : 'Backup verification failed.' };
     }
-  });
+  }));
 
-  ipc.handle('security-restore-all', async (event) => {
+  ipc.handle('security-restore-all', (event) => runStorageOperation(async () => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
     const selection = await dialog.showOpenDialog(getMainWindow(), {
@@ -462,12 +466,13 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
       detail: 'SafeLedger will stage and re-check every backup file before touching current data, then preserve the current SafeLedgerData folder as a pre-restore safety copy. The application will lock after the restore.'
     });
     if (confirmation.response !== 0) return { ok: false, canceled: true };
+    assertUnlocked(cryptoSession);
     cryptoSession.clearSession();
     const dataRoot = getDataRoot();
     const restored = await stageRestore(dataRoot, payload);
     await audit(dataRoot, 'complete-data-backup-restored');
     return { ok: true, safetyDir: restored.safetyDir };
-  });
+  }));
 
   ipc.handle('legacy-import-select-source', async (event) => {
     assertTrustedEvent(event, getMainWindow);
@@ -487,7 +492,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     }
   });
 
-  ipc.handle('legacy-import-run', async (event, password) => {
+  ipc.handle('legacy-import-run', (event, password) => runStorageOperation(async () => {
     assertTrustedEvent(event, getMainWindow);
     assertUnlocked(cryptoSession);
     if (!selectedLegacySource) return { ok: false, message: 'Choose a SafeLedger 1.x data file first.' };
@@ -512,7 +517,7 @@ function registerIpcHandlers({ ipc, dialog, clipboard, cryptoSession, getMainWin
     } catch (err) {
       return { ok: false, message: err && err.message ? err.message : 'SafeLedger 1.x import failed.' };
     }
-  });
+  }));
 
   ipc.handle('security-clipboard-write', async (event, text) => {
     assertTrustedEvent(event, getMainWindow);
