@@ -351,7 +351,7 @@ function renderBruteForceSection(area, params) {
 function renderSelfDestructSection(area, params) {
   const section = makeSection('Self-Destruct Protection');
   section.id = 'selfDestructSettingsSection';
-  addNote(section, 'Optional protection for high-risk situations. When enabled, SafeLedger permanently destroys the encrypted vault files after all configured failed-login lockouts are exhausted.');
+  addNote(section, 'Optional protection for high-risk situations. When enabled, SafeLedger attempts to overwrite and delete local encrypted vault files after all configured failed-login lockouts are exhausted. SSDs, removable drives and backups may retain recoverable copies.');
   const warning = document.createElement('div');
   warning.className = 'settings-protection-note';
   warning.textContent = 'This can permanently destroy your SafeLedger vault data. Keep a verified backup on separate storage before enabling it.';
