@@ -22,7 +22,7 @@ function addEditFields(editFormUi, grid, group = {}) {
   }
   controls.recoveryInstructions = editFormUi.addTextarea(grid, {
     id: 'inputRecoveryInstructions', label: 'Recovery instructions', value: group.recoveryInstructions,
-    rows: 5, maxLength: 2000, full: true
+    rows: 5, maxLength: 2000, full: true, resize: 'vertical'
   });
   return controls;
 }

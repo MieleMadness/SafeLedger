@@ -1,0 +1,28 @@
+/* SafeLedger QR presentation refinements.
+ * Keep QR contrast high enough for reliable scanning while avoiding a pure-white
+ * panel that is visually harsh in dark mode. Printed Recovery Binder QR codes
+ * are intentionally unaffected by these screen-only styles.
+ */
+.qr-area {
+  background: var(--sl-surface) !important;
+  color: var(--sl-text) !important;
+  border-color: var(--sl-border) !important;
+  transition: background-color .18s ease, border-color .18s ease;
+}
+
+html[data-theme="dark"] .qr-area {
+  background: #0c1728 !important;
+  border-color: var(--sl-border-strong) !important;
+}
+
+html[data-theme="dark"] .qr-area .address-qr {
+  /* qrcode still supplies a light quiet zone for scanner reliability; this
+   * lowers the display luminance without altering the encoded QR modules. */
+  filter: brightness(.84) contrast(1.06);
+  border-radius: 5px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08);
+}
+
+html[data-theme="dark"] .qr-area .qr-caption {
+  color: var(--sl-muted) !important;
+}
