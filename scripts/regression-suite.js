@@ -17,6 +17,7 @@ const CANONICAL_SUITES = Object.freeze([
   ['Repository hygiene', 'scripts/repository-hygiene-tests.js'],
   ['Brute force protection', 'scripts/brute-force-regression-tests.js'],
   ['Lockout behavior', 'scripts/lockout-regression-tests.js'],
+  ['Main-process login attempts', 'scripts/login-attempt-main-tests.js'],
   ['Style consolidation', 'scripts/style-consolidation-regression-tests.js'],
   ['Visual contracts', 'scripts/visual-contract-regression-tests.js'],
   ['Runtime hardening', 'scripts/runtime-hardening-regression-tests.js'],
