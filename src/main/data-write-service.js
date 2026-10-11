@@ -6,6 +6,7 @@ const vaultSchema = require('./vault-schema');
 const assetPresets = require('./vault-item-asset-presets');
 const duplicateAsset = require('./duplicate-asset');
 const profileIcons = require('./profile-icon-model');
+const profileDeleteTransaction = require('./profile-delete-transaction');
 
 const MAX_SECRET_LENGTH = 20000;
 const MAX_ADDRESS_LENGTH = 10000;
@@ -229,9 +230,14 @@ async function deleteProfile({ vault, vaultDir, key, fileName }) {
   const index = list.vaults.findIndex((item) => item && item.file === fileName);
   if (index < 0) throw new Error('Profile was not found.');
   list.vaults.splice(index, 1);
-  await vault.saveVault(listFile, JSON.stringify(stripProfileViewState(list)), key);
-  await vault.deleteVault(path.join(vaultDir, fileName));
-  return withProfileViewState(list, null);
+  const outcome = await profileDeleteTransaction.deleteProfile({
+    vaultDir, profileFile: fileName, cryptoKey: key,
+    nextList: stripProfileViewState(list),
+    readList: vault.readVaultList, saveList: vault.saveVault
+  });
+  const view = withProfileViewState(list, null);
+  if (outcome.cleanupPending) view.profileDeleteCleanupPending = true;
+  return view;
 }
 
 module.exports = {
