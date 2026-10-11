@@ -238,6 +238,55 @@ async function testSharedStarterTimestampRecordOwnership(root, key) {
   );
 }
 
+async function testStaleIdentityProtection(root, key) {
+  const { vaultDir, profile } = await makeVaultFixture(path.join(root, 'stale-identity'), key);
+  const groups = profile.groups;
+  assert.strictEqual(dataWrite.resolveExistingIndex(groups, 0, { created: 'missing-id' }), -1,
+    'A stale wallet creation identity must never fall back to the selected row.');
+  assert.strictEqual(dataWrite.resolveExistingIndex(groups, 0, {}), -1,
+    'A missing identity may not mutate a modern wallet with a stable creation marker.');
+  assert.strictEqual(dataWrite.resolveExistingIndex(groups, 0, { created: groups[1].created }), 1,
+    'Resorted wallets must be located by their stable identity, not their old array index.');
+  assert.strictEqual(dataWrite.resolveExistingIndex([{ created: 'same' }, { created: 'same' }], 0, { created: 'same' }), -1,
+    'Ambiguous identities must fail closed.');
+  assert.strictEqual(dataWrite.resolveExistingIndex([{ name: 'legacy entry' }], 0, {}), 0,
+    'Existing legacy records without a creation marker must retain their exact-index compatibility path.');
+  assert.strictEqual(dataWrite.resolveExistingIndex([{ created: 'new' }], 0, {}), -1);
+
+  const staleGroupView = dataWrite.withViewState(profile, 0, null);
+  staleGroupView.groups[0] = Object.assign({}, staleGroupView.groups[0], {
+    created: 'deleted-or-resorted-wallet', name: 'Do not mutate Alpha'
+  });
+  await assert.rejects(
+    dataWrite.mutateGroup({
+      vault: robustVault, vaultDir, key,
+      request: dataWrite.legacyGroupRequest({ type: 'group-modify', vaultData: staleGroupView })
+    }), /changed or no longer exists/,
+    'A stale Wallet edit must never silently modify the row currently at its previous index.'
+  );
+
+  const staleAssetView = dataWrite.withViewState(profile, 0, 0);
+  staleAssetView.groups[0] = Object.assign({}, staleAssetView.groups[0], {
+    created: 'deleted-wallet',
+    records: [Object.assign({}, staleAssetView.groups[0].records[0], { publicAddress: 'do-not-save' }),
+      ...staleAssetView.groups[0].records.slice(1)]
+  });
+  await assert.rejects(
+    dataWrite.mutateRecord({
+      vault: robustVault, vaultDir, key,
+      request: dataWrite.legacyRecordRequest({
+        action: 'modify', vaultData: staleAssetView,
+        originalRecord: profile.groups[0].records[0]
+      })
+    }), /vault item changed or no longer exists/,
+    'An Asset edit must not drift into another wallet after its original parent is deleted.'
+  );
+
+  const persisted = await robustVault.readVault(path.join(vaultDir, 'zvault-0.json'), key);
+  assert.strictEqual(persisted.groups[0].name, 'Alpha Wallet');
+  assert.strictEqual(persisted.groups[0].records[0].publicAddress, 'bc1-old');
+}
+
 async function testSettingsOwnership(root) {
   const settingsDir = path.join(root, 'settings');
   await fs.promises.mkdir(settingsDir, { recursive: true });
@@ -295,6 +344,7 @@ async function testSettingsOwnership(root) {
     await testGroupOwnership(root, key);
     await testRecordOwnership(root, key);
     await testSharedStarterTimestampRecordOwnership(root, key);
+    await testStaleIdentityProtection(root, key);
     await testSettingsOwnership(root);
     console.log('PASS SafeLedger data ownership: main-owned profile/vault-item/asset/settings mutations preserve unrelated data, exact selected-Asset targeting, and reject renderer authority escalation.');
   } finally {
