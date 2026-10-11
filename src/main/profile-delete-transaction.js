@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { atomicWriteJson } = require('./atomic-file');
+const { atomicWriteJson, syncParentDirectory } = require('./atomic-file');
 
 const MARKER_FILE = '.profile-delete.pending.json';
 const MARKER_FORMAT = 'safeledger-profile-delete-transaction';
@@ -52,9 +52,10 @@ async function recoverPending(vaultDir, cryptoKey, readList, io = fs.promises) {
     if (hasStaged && hasOriginal) {
       throw new Error('Ambiguous Profile deletion recovery: both Profile copies exist. No data was removed.');
     }
-    if (hasStaged) await io.rename(staged, original);
+    if (hasStaged) { await io.rename(staged, original); await syncParentDirectory(vaultDir); }
     else if (!hasOriginal) throw new Error('Referenced Profile file is missing. Pending deletion preserved for manual recovery.');
     await removeIfPresent(markerPath(vaultDir), io);
+    await syncParentDirectory(vaultDir);
     return { recovered: true, committed: false, file: marker.file };
   }
 
@@ -64,6 +65,7 @@ async function recoverPending(vaultDir, cryptoKey, readList, io = fs.promises) {
   if (hasOriginal) throw new Error('Unreferenced Profile file is still present. Pending deletion preserved for manual recovery.');
   if (hasStaged) await removeIfPresent(staged, io);
   await removeIfPresent(markerPath(vaultDir), io);
+  await syncParentDirectory(vaultDir);
   return { recovered: true, committed: true, file: marker.file };
 }
 
@@ -91,6 +93,7 @@ async function deleteProfile({
   try {
     // Stage the encrypted file BEFORE removing it from the encrypted index.
     await io.rename(original, staged);
+    await syncParentDirectory(vaultDir);
     await saveList(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), cryptoKey);
   } catch (error) {
     try {
