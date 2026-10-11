@@ -164,8 +164,17 @@ function getSessionKey() {
   return key;
 }
 
-function sendLocked() {
-  sendResult({ status: 'ERROR', statusMsg: 'SafeLedger is locked. Please log in again.', type: 'session-locked' });
+function lockedResult() {
+  return { status: 'ERROR', statusMsg: 'SafeLedger is locked. Please log in again.', type: 'session-locked' };
+}
+
+// The trusted main process owns workspace operation ordering, while each
+// ipc.invoke caller receives its own response rather than a shared event.
+let workspaceOperations = Promise.resolve();
+function runWorkspaceOperation(fn) {
+  const next = workspaceOperations.then(fn, fn);
+  workspaceOperations = next.then(() => undefined, () => undefined);
+  return next;
 }
 
 function groupActivityEvent(params = {}) {
@@ -365,26 +374,25 @@ function registerCoreIpcHandlers() {
     return { ok: true, enabled: settings.scrubContentAfterRetries === true };
   });
 
-  ipc.on('read', (event, params = {}) => {
+  ipc.handle('read', (event, params = {}) => runWorkspaceOperation(async () => {
     try {
       assertTrustedEvent(event);
       if (!isPlainObject(params) || !vault.safeVaultFileName(params.file)) throw new Error('Invalid profile selection.');
+      const key = getSessionKey();
+      if (!key) return lockedResult();
+      const val = await vault.readVault(path.join(vaultDir, params.file), key);
+      return { status: 'SUCCESS', statusMsg: 'Load successful.', type: String(params.type || '').slice(0, 40), vaultData: val };
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile selection.' });
+      return err && err.status === 'ERROR' ? err : { status: 'ERROR', statusMsg: err && err.message || 'Unable to load Profile.' };
     }
-    const key = getSessionKey();
-    if (!key) return sendLocked();
-    vault.readVault(path.join(vaultDir, params.file), key)
-      .then((val) => sendResult({ status: 'SUCCESS', statusMsg: 'Load successful.', type: String(params.type || '').slice(0, 40), vaultData: val }))
-      .catch((val) => sendResult(val));
-  });
+  }));
 
-  ipc.on('read-vaultlist-init', async (event) => {
+  ipc.handle('read-vaultlist-init', (event) => runWorkspaceOperation(async () => {
     try {
       assertTrustedEvent(event);
-      if (await enforceRetryExhaustion()) return;
+      if (await enforceRetryExhaustion()) return { status: 'ERROR', statusMsg: 'Login protection limit reached.', type: 'password-failed', settings: await ensureCurrentSettings() };
       const key = getSessionKey();
-      if (!key) return sendLocked();
+      if (!key) return lockedResult();
       const state = await vault.makeDir(vaultDir);
       if (state === 'CREATE') {
         await vault.initVaultList(vaultDir, key);
@@ -396,7 +404,7 @@ function registerCoreIpcHandlers() {
       try {
         valList = await vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
       } catch (_) {
-        return sendResult({
+        return ({
           status: 'ERROR',
           statusMsg: 'The master password was accepted, but the encrypted vault list could not be authenticated or read. Your failed-login counter was not changed.',
           type: 'vault-corrupt'
@@ -411,7 +419,7 @@ function registerCoreIpcHandlers() {
       const saved = await settingsManager.saveSettings(settingsDir, settings);
       currentSettings = saved.settings;
       await securityMain.audit(getDataRoot(), 'vault-unlocked');
-      sendResult({
+      return ({
         status: 'SUCCESS',
         statusMsg: 'Loaded Successfully',
         type: 'vaultlist-init',
@@ -420,27 +428,27 @@ function registerCoreIpcHandlers() {
         settings: currentSettings
       });
     } catch (err) {
-      sendResult({ status: 'ERROR', statusMsg: err && err.message ? err.message : 'Unable to access vault list' });
+      return ({ status: 'ERROR', statusMsg: err && err.message ? err.message : 'Unable to access vault list' });
     }
-  });
+  }));
 
-  ipc.on('process-vault-list', async (event, params = {}) => {
+  ipc.handle('process-vault-list', (event, params = {}) => runWorkspaceOperation(async () => {
     try {
       assertTrustedEvent(event);
       if (!isPlainObject(params) || !['create', 'modify'].includes(params.action) || !isPlainObject(params.vault)) {
         throw new Error('Invalid profile update.');
       }
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile update.' });
+      return ({ status: 'ERROR', statusMsg: err.message || 'Invalid profile update.' });
     }
 
     const key = getSessionKey();
-    if (!key) return sendLocked();
+    if (!key) return lockedResult();
     try {
       if (params.action === 'modify') {
         const nextList = await dataWriteService.modifyProfile({ vault, vaultDir, key, profile: params.vault });
         await securityMain.audit(getDataRoot(), 'profile-updated');
-        return sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
+        return ({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
       }
 
       // Resolve a pending deletion before choosing a new Profile file ID:
@@ -474,79 +482,79 @@ function registerCoreIpcHandlers() {
         readList: vault.readVaultList
       });
       await securityMain.audit(getDataRoot(), 'profile-created');
-      return sendResult({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: viewList, vaultData: data });
+      return ({ status: 'SUCCESS', statusMsg: 'Save successful', type: 'vault-create', vaultList: viewList, vaultData: data });
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: (err && (err.message || err.statusMsg)) || 'Save failed' });
+      return ({ status: 'ERROR', statusMsg: (err && (err.message || err.statusMsg)) || 'Save failed' });
     }
-  });
+  }));
 
-  ipc.on('vault-list-delete', async (event, params = {}) => {
+  ipc.handle('vault-list-delete', (event, params = {}) => runWorkspaceOperation(async () => {
     try {
       assertTrustedEvent(event);
       if (!isPlainObject(params) || !vault.safeVaultFileName(params.fileName)) throw new Error('Invalid profile deletion.');
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid profile deletion.' });
+      return ({ status: 'ERROR', statusMsg: err.message || 'Invalid profile deletion.' });
     }
     const key = getSessionKey();
-    if (!key) return sendLocked();
+    if (!key) return lockedResult();
     try {
       const nextList = await dataWriteService.deleteProfile({ vault, vaultDir, key, fileName: params.fileName });
       await securityMain.audit(getDataRoot(), 'profile-deleted');
-      return sendResult({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted', vaultList: nextList });
+      return ({ type: 'vault-delete', status: 'DELETED', statusMsg: 'Item Deleted', vaultList: nextList });
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Delete failed' });
+      return ({ status: 'ERROR', statusMsg: (err && err.message) || 'Delete failed' });
     }
-  });
+  }));
 
-  ipc.on('process-group', async (event, params = {}) => {
+  ipc.handle('process-group', (event, params = {}) => runWorkspaceOperation(async () => {
     let request;
     try {
       assertTrustedEvent(event);
       request = dataWriteService.legacyGroupRequest(params);
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid vault item update.' });
+      return ({ status: 'ERROR', statusMsg: err.message || 'Invalid vault item update.' });
     }
     const key = getSessionKey();
-    if (!key) return sendLocked();
+    if (!key) return lockedResult();
     try {
       const data = await dataWriteService.mutateGroup({ vault, vaultDir, key, request });
       await securityMain.audit(getDataRoot(), groupActivityEvent(request));
       const deleted = request.type === 'group-delete';
-      return sendResult({
+      return ({
         status: deleted ? 'DELETED' : 'SUCCESS',
         statusMsg: deleted ? 'Item Deleted' : 'Save successful',
         type: request.type,
         vaultData: data
       });
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
+      return ({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
     }
-  });
+  }));
 
-  ipc.on('process-record', async (event, params = {}) => {
+  ipc.handle('process-record', (event, params = {}) => runWorkspaceOperation(async () => {
     let request;
     try {
       assertTrustedEvent(event);
       request = dataWriteService.legacyRecordRequest(params);
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
+      return ({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
     }
     const key = getSessionKey();
-    if (!key) return sendLocked();
+    if (!key) return lockedResult();
     try {
       const data = await dataWriteService.mutateRecord({ vault, vaultDir, key, request });
       await securityMain.audit(getDataRoot(), recordActivityEvent(request));
       const deleted = request.action === 'delete';
-      return sendResult({
+      return ({
         status: deleted ? 'DELETED' : 'SUCCESS',
         statusMsg: deleted ? 'Item Deleted' : 'Save successful',
         type: 'record',
         vaultData: data
       });
     } catch (err) {
-      return sendResult({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
+      return ({ status: 'ERROR', statusMsg: (err && err.message) || 'Save failed' });
     }
-  });
+  }));
 
   ipc.on('init-system', (event) => {
     try { assertTrustedEvent(event); } catch (_) { return; }
