@@ -76,4 +76,4 @@ previous candidate. Do not merge without owner authorization. Run canonical
 regressions, Electron crypto, real GUI smoke, and all three platform packaging
 jobs on the exact final commit.
 
-Phase 1 is implemented in 2.6.116. Phase 2 is implemented in the 2.6.117 development candidate, pending build verification and review. Phase 3 remains planned.
+Phase 1 (2.6.116) and Phase 2 (2.6.117) both passed Windows, Linux and macOS build workflows. Phase 3 is implemented in the 2.6.118 development candidate, pending cross-platform build verification and owner review. All three phases remain unmerged until approved.
