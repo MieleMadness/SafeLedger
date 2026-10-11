@@ -506,7 +506,7 @@ function registerCoreIpcHandlers() {
     let request;
     try {
       assertTrustedEvent(event);
-      request = dataWriteService.legacyGroupRequest(params);
+      request = dataWriteService.groupCommandRequest(params);
     } catch (err) {
       return ({ status: 'ERROR', statusMsg: err.message || 'Invalid vault item update.' });
     }
@@ -531,7 +531,7 @@ function registerCoreIpcHandlers() {
     let request;
     try {
       assertTrustedEvent(event);
-      request = dataWriteService.legacyRecordRequest(params);
+      request = dataWriteService.recordCommandRequest(params);
     } catch (err) {
       return ({ status: 'ERROR', statusMsg: err.message || 'Invalid asset update.' });
     }
