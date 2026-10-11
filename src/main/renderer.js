@@ -471,7 +471,7 @@ const showLockoutDestroy = () => {
   area.appendChild(document.createElement('hr'));
   const text = document.createElement('p');
   const strong = document.createElement('b');
-  strong.textContent = 'You have exceeded your password attempts and SafeLedger self-destruct protection has destroyed the encrypted vault data. The next login will create a new initial system setup.';
+  strong.textContent = 'You have exceeded your password attempts. SafeLedger attempted to overwrite and remove the local encrypted vault files. Storage-level copies and backups may remain. Verify your data and backups before creating a new setup.';
   text.appendChild(strong);
   area.appendChild(text);
   const button = document.createElement('button');
