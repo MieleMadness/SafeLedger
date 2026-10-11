@@ -229,6 +229,7 @@ const createEditRecord = (params) => {
       if (button) button.disabled = false;
       return alert('SafeLedger could not identify the selected Vault Item. Reload the Profile and try again.');
     }
+    const originalGroup = cloneValue(submittedGroup);
 
     const rec = originalRecord ? cloneValue(originalRecord) : { created: Date() };
     rec.name = inputName.value;
@@ -274,6 +275,7 @@ const createEditRecord = (params) => {
         action: originalRecord ? 'modify' : 'create',
         vaultData: submittedVaultData,
         originalRecord,
+        originalGroup,
         duplicateConfirmed
       }),
       params.onResult,
@@ -296,6 +298,7 @@ function persistRecordUpdate(params, updates, button) {
   const groupIndex = Number(submittedVaultData && submittedVaultData.groupSelected);
   const submittedGroup = Number.isInteger(groupIndex) && submittedVaultData.groups ? submittedVaultData.groups[groupIndex] : null;
   const records = submittedGroup && Array.isArray(submittedGroup.records) ? submittedGroup.records : null;
+  const originalGroup = cloneValue(submittedGroup);
   const recordIndex = exactRecordIndex(records, originalRecord, params.vaultData.recordSelected);
   if (recordIndex < 0) return alert('The selected Asset changed or is no longer available. Reload the Vault Item and try again.');
 
@@ -306,7 +309,7 @@ function persistRecordUpdate(params, updates, button) {
   if (button) button.disabled = true;
   statusMgr.loadStatus();
   services.deliver(
-    services.saveAsset({ action: 'modify', vaultData: submittedVaultData, originalRecord, duplicateConfirmed: false }),
+    services.saveAsset({ action: 'modify', vaultData: submittedVaultData, originalRecord, originalGroup, duplicateConfirmed: false }),
     params.onResult,
     'Unable to update Asset.'
   );
@@ -374,12 +377,13 @@ const confirmDelete = (params) => {
   detailActions.set([
     { icon: 'fa-times', title: 'Cancel delete asset', className: 'detail-action-cancel', onClick: () => renderRecordDetail(params) },
     { icon: 'fa-trash', title: 'Confirm delete asset', className: 'detail-action-delete', onClick: () => {
+      const originalGroup = cloneValue(params.vaultData.groups[params.vaultData.groupSelected]);
       params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected, 1);
       params.vaultData.recordSelected = null;
       params.saving.state = true;
       statusMgr.loadStatus();
       services.deliver(
-        services.saveAsset({ action: 'delete', vaultData: params.vaultData }),
+        services.saveAsset({ action: 'delete', vaultData: params.vaultData, originalGroup }),
         params.onResult,
         'Unable to delete Asset.'
       );
