@@ -109,6 +109,7 @@ function appendVaultItemHeader(area, group, category = getWalletCategory(group))
 
 function persistWalletUpdate(params, updates, button, activityEvent) {
   if (params.saving.state) return alert('Please wait for processing to complete');
+  const originalGroup = JSON.parse(JSON.stringify(params.group));
   Object.assign(params.group, updates || {});
   params.group.modified = Date();
   params.vaultData.groups[params.vaultData.groupSelected] = params.group;
@@ -116,7 +117,7 @@ function persistWalletUpdate(params, updates, button, activityEvent) {
   if (button) button.disabled = true;
   statusMgr.loadStatus();
   services.deliver(
-    services.saveVaultItem({ type: 'group-modify', vaultData: params.vaultData, activityEvent }),
+    services.saveVaultItem({ type: 'group-modify', vaultData: params.vaultData, originalGroup, activityEvent }),
     params.onResult,
     'Unable to update Vault Item.'
   );
@@ -355,6 +356,7 @@ const createEditGroup = (params) => {
     }
     if (button) button.disabled = true;
 
+    const originalGroup = params.group ? JSON.parse(JSON.stringify(params.group)) : null;
     const g = params.group || { created: Date() };
     g.name = inputName.value;
     g.category = vaultItemPresentation.normalizeCategory(g.name, inputCategory.value);
@@ -377,7 +379,8 @@ const createEditGroup = (params) => {
     services.deliver(
       services.saveVaultItem({
         type: params.group ? 'group-modify' : 'group-create',
-        vaultData: params.vaultData
+        vaultData: params.vaultData,
+        originalGroup
       }),
       params.onResult,
       'Unable to save Vault Item.'
