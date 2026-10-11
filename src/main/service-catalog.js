@@ -117,7 +117,9 @@ function createIcon(value, className = 'known-service-brand-image') {
   }
   const img = document.createElement('img');
   const localBrand = localBrandUrl(service);
-  img.className = localBrand ? `${className} known-service-brand-image`.trim() : className;
+  const classes = new Set(String(className || '').split(/\s+/).filter(Boolean));
+  if (localBrand) classes.add('known-service-brand-image');
+  img.className = [...classes].join(' ');
   img.src = localBrand || iconDataUrl(service);
   img.alt = `${service.name} icon`;
   img.draggable = false;
