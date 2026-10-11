@@ -17,6 +17,41 @@ async function run() {
     await atomicFile.atomicWriteFile(textFile, 'second');
     assert.strictEqual(fs.readFileSync(textFile, 'utf8'), 'second');
 
+    // Directory fsync closes its handle on both success and unexpected I/O
+    // failure, but falls back on filesystems that cannot sync directories.
+    let opens = 0;
+    let closes = 0;
+    let syncs = 0;
+    const fakeIo = {
+      open: async () => {
+        opens++;
+        return { sync: async () => { syncs++; }, close: async () => { closes++; } };
+      }
+    };
+    assert.strictEqual(await atomicFile._test.syncParentDirectory(root, fakeIo, 'linux'), true);
+    assert.deepStrictEqual({ opens, syncs, closes }, { opens: 1, syncs: 1, closes: 1 });
+    assert.strictEqual(await atomicFile._test.syncParentDirectory(root, fakeIo, 'win32'), false,
+      'Windows directory handles must not be treated as portable fsync handles.');
+    assert.strictEqual(opens, 1, 'Windows fallback must not open the directory.');
+
+    let unsupportedClosed = false;
+    assert.strictEqual(await atomicFile._test.syncParentDirectory(root, {
+      open: async () => ({
+        sync: async () => { throw Object.assign(new Error('not supported'), { code: 'EINVAL' }); },
+        close: async () => { unsupportedClosed = true; }
+      })
+    }, 'darwin'), false);
+    assert.strictEqual(unsupportedClosed, true);
+
+    let failedClosed = false;
+    await assert.rejects(atomicFile._test.syncParentDirectory(root, {
+      open: async () => ({
+        sync: async () => { throw Object.assign(new Error('I/O error'), { code: 'EIO' }); },
+        close: async () => { failedClosed = true; }
+      })
+    }, 'linux'), /I\/O error/);
+    assert.strictEqual(failedClosed, true, 'Real sync failures must not be silently ignored.');
+
     const jsonFile = path.join(root, 'settings', 'sample.json');
     await atomicFile.atomicWriteJson(jsonFile, { ok: true, value: 7 });
     assert.deepStrictEqual(JSON.parse(fs.readFileSync(jsonFile, 'utf8')), { ok: true, value: 7 });
@@ -36,7 +71,7 @@ async function run() {
       ['src/main/robust-vault.js', "require('./atomic-file')"],
       ['src/main/crypto-session-main.js', "require('./atomic-file')"],
       ['src/main/security-main.js', "require('./atomic-file')"],
-      ['src/main/installManager/installManager/settingsManager.js', "require('../../atomic-file')"]
+      ['src/main/settings-manager.js', "require('./atomic-file')"]
     ];
     for (const [relative, token] of sourceChecks) {
       const source = fs.readFileSync(path.join(__dirname, '..', relative), 'utf8');

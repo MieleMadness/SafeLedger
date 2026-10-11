@@ -10,14 +10,19 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), 'utf8');
 const exists = (relative) => fs.existsSync(path.join(root, relative));
 const syntaxCheck = (relative) => execFileSync(process.execPath, ['--check', path.join(root, relative)], { stdio: 'pipe' });
 
+const pkg = JSON.parse(read('package.json'));
 const main = read('src/main/main.js');
+const bootstrap = read('src/main/bootstrap.js');
+const windowSizing = read('src/main/window-sizing-main.js');
 const preload = read('src/main/preload.js');
 const index = read('src/main/index.html');
 const entry = read('src/main/renderer-entry.js');
-const bridge = read('src/main/renderer-bridge.js');
 const renderer = read('src/main/renderer.js');
+const services = read('src/main/renderer-services.js');
+const rendererState = read('src/main/renderer-state.js');
 const settings = read('src/main/settings-ui.js');
 const passwordUi = read('src/main/password-settings-ui.js');
+const cryptoUi = read('src/main/crypto-ui-bridge.js');
 const security = read('src/main/security-enhancements.js');
 const securityUi = read('src/main/security-ui.js');
 const profile = read('src/main/profile.js');
@@ -28,18 +33,36 @@ const css = read('src/main/css/site.css');
 
 assert(main.includes('width: 1200'));
 assert(main.includes('height: 750'));
+assert.strictEqual(pkg.main, 'src/main/bootstrap.js');
+assert(bootstrap.includes('function installPreferredWindowSizing()'));
+assert(bootstrap.includes("app.on('browser-window-created'"));
+assert(bootstrap.indexOf('installPreferredWindowSizing();') < bootstrap.indexOf("require('./main');"));
+assert(windowSizing.includes('const PREFERRED_WIDTH = ') && windowSizing.includes('const PREFERRED_HEIGHT = '),
+  'Trusted startup sizing must keep explicit preferred width and height constants.');
+const sizingPolicy = require('../src/main/window-sizing-main.js');
+assert(Number.isInteger(sizingPolicy.PREFERRED_WIDTH) && sizingPolicy.PREFERRED_WIDTH >= 1200,
+  'Trusted main-process sizing must keep an explicit desktop preferred width.');
+assert(Number.isInteger(sizingPolicy.PREFERRED_HEIGHT) && sizingPolicy.PREFERRED_HEIGHT >= 750,
+  'Trusted main-process sizing must not regress below the established desktop opening height.');
+assert(!entry.includes("require('./ui-scale-2.6.7.js');"));
+assert.strictEqual(exists('src/main/ui-scale-2.6.7.js'), false);
+assert.strictEqual(exists('src/main/startup.js'), false);
+assert.strictEqual(exists('src/main/settings-shortcut-ui.js'), false,
+  'Settings must be local renderer navigation rather than an IPC roundtrip helper.');
+assert.strictEqual(exists('src/main/renderer-bridge.js'), false,
+  'Renderer pseudo-IPC compatibility must stay retired.');
 assert(index.includes('id="detailActionArea"'));
 assert(index.includes('<script src="./renderer.bundle.js"></script>'));
-assert(index.includes('Search assets...'));
+assert(index.includes('placeholder="Search assets"'));
+assert(!index.includes('placeholder="Search assets..."'));
 assert(index.includes('Add Asset'));
 assert(preload.includes("contextBridge.exposeInMainWorld('safeLedgerApi'"));
 assert(!preload.includes("require('./renderer.js')"));
 assert(entry.includes("require('./renderer.js')"));
-assert(entry.includes("require('./security-enhancements.js')"));
-assert(entry.includes("require('./lockout-ui-enhancements.js')"));
-assert(bridge.includes('Blocked SafeLedger bridge send'));
-assert(bridge.includes('Blocked SafeLedger bridge invoke'));
-assert(!bridge.includes("require('electron')"));
+assert(renderer.includes("const services = require('./renderer-services');"));
+assert(renderer.includes("const rendererState = require('./renderer-state');"));
+assert(services.includes('window.safeLedgerApi'));
+assert(rendererState.includes('sessionUnlocked'));
 assert.strictEqual(exists('src/main/renderer-electron-shim.js'), false);
 assert.strictEqual(exists('src/main/settings-enhancements.js'), false);
 assert.strictEqual(exists('src/main/detail-action-enhancements.js'), false);
@@ -51,6 +74,13 @@ assert(settings.includes("const passwordSettingsUi = require('./password-setting
 assert(settings.includes('passwordSettingsUi.show()'));
 assert(passwordUi.includes("'inputConfirmNewPassword'"));
 assert(passwordUi.includes('passwordControls.configure'));
+assert(passwordUi.includes('cryptoUi.handlePasswordChange(editBtn)'),
+  'Password Settings must bind the password-change controller while rendering the form.');
+assert(cryptoUi.includes('async function handleLogin(button)'));
+assert(!cryptoUi.includes("document.addEventListener('click'"),
+  'Crypto UI must not intercept document clicks after rendering.');
+assert(!cryptoUi.includes('stopImmediatePropagation'),
+  'Crypto UI must not override control ownership with capture-phase event suppression.');
 assert(profile.includes("title: 'Cancel delete profile'"));
 assert(record.includes("title: 'Cancel delete asset'"));
 assert(group.includes("title: 'Cancel delete vault item'"));
@@ -68,7 +98,9 @@ assert(record.includes("notesValue.className = 'outData detail-notes-value'"));
 assert(group.includes("notesValue.className = 'outData detail-notes-value'"));
 assert(group.includes("appendDetailLine(area, 'Created', params.group.created, formatLocalDate)"));
 assert(group.includes("appendDetailLine(area, 'Modified', params.group.modified, formatLocalDate)"));
-assert(group.includes("header.className = 'wallet-detail-title'"));
+assert(group.includes("header.className = 'wallet-detail-header'"));
+assert(group.includes("title.className = 'wallet-detail-title'"));
+assert(group.includes("icon.classList.add('wallet-detail-brand-image')"));
 assert(css.includes('#detailArea { padding-top: 2px; font-size: 14px; line-height: 1.45; }'));
 assert(css.includes('.wallet-list-category { display: block; margin-top: 2px; font-size: 12px;'));
 assert(css.includes('.wallet-detail-title { margin: 0 !important; font-size: 30px;'));
@@ -83,7 +115,8 @@ assert(securityUi.includes("meta.className = 'sensitive-field-meta'"));
 assert(css.includes('.sensitive-field-meta { margin: 8px 0 0; color: #5f6672; font-size: 13px;'));
 
 for (const relative of [
-  'src/main/preload.js', 'src/main/renderer-entry.js', 'src/main/renderer-bridge.js',
+  'src/main/bootstrap.js', 'src/main/window-sizing-main.js',
+  'src/main/preload.js', 'src/main/renderer-entry.js', 'src/main/renderer-services.js', 'src/main/renderer-state.js',
   'src/main/security-main.js', 'src/main/security-enhancements.js', 'src/main/security-ui.js',
   'src/main/password-policy.js', 'src/main/password-controls.js', 'src/main/password-settings-ui.js',
   'src/main/crypto-ui-bridge.js', 'src/main/settings-ui.js', 'src/main/main.js',
@@ -91,4 +124,4 @@ for (const relative of [
   'src/main/custom-fields-ui.js'
 ]) syntaxCheck(relative);
 
-console.log('PASS direct UI modules use consistent Asset/Vault Item detail typography behind the explicit sandbox bridge.');
+console.log('PASS direct UI modules, semantic renderer services/state, trusted-bootstrap startup sizing, and shared Asset/Vault Item typography remain behind the sandbox bridge.');

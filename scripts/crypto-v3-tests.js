@@ -189,11 +189,13 @@ async function run() {
     assert.strictEqual(typeof robustVault.migrateLegacyEncryption, 'undefined');
     assert.strictEqual(typeof robustVault.rotateCrypto, 'undefined');
     assert.strictEqual(typeof controller.migrateLegacySession, 'undefined');
-    const bridge = fs.readFileSync(path.join(__dirname, '../src/main/crypto-ui-bridge.js'), 'utf8');
-    assert(bridge.includes("ipc.invoke('crypto-v3-initialize', password)"));
-    assert(!bridge.includes('crypto-v3-migrate-legacy'));
-    assert(!bridge.includes('deriveLegacyKey'));
-    assert(!bridge.includes('dataKeyHex'));
+    const cryptoUi = fs.readFileSync(path.join(__dirname, '../src/main/crypto-ui-bridge.js'), 'utf8');
+    const services = fs.readFileSync(path.join(__dirname, '../src/main/renderer-services.js'), 'utf8');
+    assert(cryptoUi.includes('services.cryptoInitialize(password)'));
+    assert(services.includes("const cryptoInitialize = (password) => required('cryptoInitialize')(password);"));
+    assert(!cryptoUi.includes('crypto-v3-migrate-legacy'));
+    assert(!cryptoUi.includes('deriveLegacyKey'));
+    assert(!cryptoUi.includes('dataKeyHex'));
   });
 
   dataKey.fill(0);

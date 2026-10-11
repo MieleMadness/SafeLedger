@@ -155,6 +155,11 @@ exports.ENVELOPE_FILE = ENVELOPE_FILE;
 exports._test = { atomicWriteJson };
 
 function registerIpcHandlers(options = {}) {
+  // Password verification must never be exported as an unaccounted IPC action.
+  // main.js supplies the only main-process login/lockout coordinator.
+  if (typeof options.loginAttempt !== 'function') {
+    throw new Error('SafeLedger crypto IPC requires a trusted password-attempt handler.');
+  }
   const { ipcMain } = require('electron');
   const marker = '__safeLedgerCryptoV3IpcRegistered';
   if (global[marker]) return;
@@ -162,7 +167,7 @@ function registerIpcHandlers(options = {}) {
 
   const assertTrusted = (event) => {
     const win = typeof options.getMainWindow === 'function' ? options.getMainWindow() : null;
-    if (win && (!event || event.sender !== win.webContents)) throw new Error('Untrusted SafeLedger IPC request.');
+    if (!win || !event || event.sender !== win.webContents) throw new Error('Untrusted SafeLedger IPC request.');
   };
 
   ipcMain.handle('crypto-v3-has-envelope', (event) => {
@@ -175,10 +180,15 @@ function registerIpcHandlers(options = {}) {
   });
   ipcMain.handle('crypto-v3-login', (event, password) => {
     assertTrusted(event);
-    return getDefaultController().loginWithEnvelope(password);
+    return options.loginAttempt(password);
   });
   ipcMain.handle('crypto-v3-change-password', (event, oldPassword, newPassword) => {
     assertTrusted(event);
+    // A locked renderer must not obtain a second password-checking oracle
+    // through Change Password, bypassing the login failure counter.
+    if (!getDefaultController().isUnlocked()) {
+      return { ok: false, type: 'session-locked', message: 'SafeLedger is locked. Please log in again.' };
+    }
     return getDefaultController().changePassword(oldPassword, newPassword);
   });
 

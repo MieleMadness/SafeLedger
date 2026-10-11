@@ -1,0 +1,136 @@
+/*
+ * SafeLedger appearance palettes.
+ *
+ * This is the final color-only layer in the renderer. Structural layout stays
+ * in the existing UI styles; appearance-specific tokens and contrast rules
+ * live here so Light, Colorful, and Dark do not require duplicated layouts.
+ */
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --sl-bg: #eef6ff;
+  --sl-surface: #ffffff;
+  --sl-surface-soft: #f7fbff;
+  --sl-surface-raised: #ffffff;
+  --sl-text: #17345f;
+  --sl-text-strong: #0d2a55;
+  --sl-muted: #627b9f;
+  --sl-border: #dbe8f8;
+  --sl-border-strong: #c5d9f1;
+  --sl-primary: #1688f8;
+  --sl-primary-strong: #0968d8;
+  --sl-primary-soft: #e8f3ff;
+  --sl-sidebar-1: #fbfdff;
+  --sl-sidebar-2: #f8fbff;
+  --sl-sidebar-3: #f4f9ff;
+  --sl-selected: #dcecff;
+  --sl-danger: #bd2c2c;
+  --sl-success: #167149;
+  --sl-warning: #8a5a00;
+  --sl-shadow: 0 10px 28px rgba(37, 112, 196, .10);
+  --sl-shadow-soft: 0 3px 12px rgba(37, 112, 196, .08);
+  --sl-focus-ring: 0 0 0 3px rgba(22, 136, 248, .18);
+}
+
+/* The former Light palette is intentionally preserved as Colorful. */
+html[data-theme="colorful"] {
+  color-scheme: light;
+  --sl-bg: #eef2f7;
+  --sl-surface: #ffffff;
+  --sl-surface-soft: #f7f9fc;
+  --sl-surface-raised: #ffffff;
+  --sl-text: #172033;
+  --sl-text-strong: #0f172a;
+  --sl-muted: #667085;
+  --sl-border: #d7dee8;
+  --sl-border-strong: #b7c3d2;
+  --sl-primary: #2563eb;
+  --sl-primary-strong: #1d4ed8;
+  --sl-primary-soft: #eaf2ff;
+  --sl-sidebar-1: #2563eb;
+  --sl-sidebar-2: #1d4ed8;
+  --sl-sidebar-3: #1e40af;
+  --sl-selected: #0b1220;
+  --sl-danger: #c62828;
+  --sl-success: #216e39;
+  --sl-warning: #875d00;
+  --sl-shadow: 0 8px 24px rgba(15, 23, 42, .08);
+  --sl-shadow-soft: 0 2px 8px rgba(15, 23, 42, .06);
+  --sl-focus-ring: 0 0 0 3px color-mix(in srgb, var(--sl-primary) 24%, transparent);
+}
+
+/*
+ * The reference Light design uses white / pale-blue navigation instead of the
+ * bold blue rails used by Colorful. These selectors only correct color and
+ * contrast; sizing, spacing, interaction, and feature ownership remain shared.
+ */
+html[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 72% 8%, rgba(255, 255, 255, .98) 0, rgba(247, 251, 255, .92) 34%, rgba(238, 246, 255, .98) 100%) !important;
+}
+
+html[data-theme="light"] .dark1bg,
+html[data-theme="light"] .dark2bg,
+html[data-theme="light"] .dark3bg {
+  color: var(--sl-text) !important;
+  border-color: var(--sl-border) !important;
+}
+
+html[data-theme="light"] .dark1bg { background: var(--sl-sidebar-1) !important; }
+html[data-theme="light"] .dark2bg { background: var(--sl-sidebar-2) !important; }
+html[data-theme="light"] .dark3bg { background: var(--sl-sidebar-3) !important; }
+
+html[data-theme="light"] .search-field-wrap .form-control {
+  background: rgba(255, 255, 255, .98) !important;
+  border-color: var(--sl-border-strong) !important;
+  color: var(--sl-text) !important;
+  box-shadow: 0 2px 8px rgba(37, 112, 196, .04) !important;
+}
+html[data-theme="light"] .search-field-wrap .form-control::placeholder { color: var(--sl-muted); }
+html[data-theme="light"] .search-clear { color: var(--sl-muted); }
+html[data-theme="light"] .search-clear:hover,
+html[data-theme="light"] .search-clear:focus { background: var(--sl-primary-soft); color: var(--sl-primary-strong); }
+
+html[data-theme="light"] .content-middle .nav > li > a {
+  color: var(--sl-text) !important;
+}
+html[data-theme="light"] .content-middle .nav > li > a:hover,
+html[data-theme="light"] .content-middle .nav > li > a:focus {
+  background: var(--sl-primary-soft) !important;
+  color: var(--sl-text-strong) !important;
+}
+html[data-theme="light"] .content-middle .nav > li > a.item-selected,
+html[data-theme="light"] .content-middle .nav > li > a.item-selected:hover,
+html[data-theme="light"] .content-middle .nav > li > a.item-selected:focus {
+  background: var(--sl-selected) !important;
+  color: var(--sl-primary-strong) !important;
+  border-color: #b9d8fb !important;
+  box-shadow: 0 3px 10px rgba(37, 112, 196, .10) !important;
+}
+html[data-theme="light"] .wallet-list-category {
+  color: var(--sl-muted) !important;
+  opacity: 1 !important;
+}
+html[data-theme="light"] .badge-circle {
+  background: var(--sl-primary-soft) !important;
+  color: var(--sl-primary-strong) !important;
+}
+
+html[data-theme="light"] .top-utility-cell,
+html[data-theme="light"] .emergency-lock-cell {
+  background: rgba(255, 255, 255, .92) !important;
+}
+
+html[data-theme="light"] .settings-section,
+html[data-theme="light"] .recovery-readiness-card,
+html[data-theme="light"] .dashboard-stat,
+html[data-theme="light"] .dashboard-list,
+html[data-theme="light"] .activity-list,
+html[data-theme="light"] .sensitive-field,
+html[data-theme="light"] .detail-notes-value,
+html[data-theme="light"] .custom-field-edit-row,
+html[data-theme="light"] .recovery-drill-step,
+html[data-theme="light"] .recovery-binder-summary,
+html[data-theme="light"] .recovery-binder-option {
+  box-shadow: var(--sl-shadow-soft) !important;
+}

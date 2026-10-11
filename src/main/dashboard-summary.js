@@ -2,6 +2,7 @@
 
 const recoveryHealth = require('./recovery-health');
 const walletCatalog = require('./wallet-catalog');
+const commandCenter = require('./recovery-command-center');
 require('./wallet-catalog-extensions');
 
 const STALE_VERIFICATION_DAYS = 180;
@@ -48,6 +49,17 @@ function safeHealthChecks(health) {
   }));
 }
 
+function safeNavigationTarget(item) {
+  if (!item) return null;
+  return {
+    profileName: item.profileName,
+    profileFile: item.profileFile,
+    profileIndex: item.profileIndex,
+    walletName: item.walletName,
+    walletIndex: item.walletIndex
+  };
+}
+
 function summarize(profileEntries = [], options = {}) {
   const counts = {
     profiles: profileEntries.length,
@@ -78,6 +90,8 @@ function summarize(profileEntries = [], options = {}) {
   };
   const needsAttention = [];
   const recentlyVerified = [];
+  let verificationMaintenanceTarget = null;
+  let coverageMaintenanceTarget = null;
   let profileReadErrors = 0;
   let scoreTotal = 0;
 
@@ -101,14 +115,19 @@ function summarize(profileEntries = [], options = {}) {
         else counts.otherWallets++;
       }
 
+      const hasMethod = recoveryHealth.hasRecoveryMethod(group);
+      const hasLocation = recoveryHealth.hasRecoveryLocation(group);
+      const hasRecoveryInstructions = recoveryHealth.hasInstructions(group);
+      const hasRecoveryDrill = Boolean(group && group.lastRecoveryDrill);
       recoveryCoverage.total++;
-      if (recoveryHealth.hasRecoveryMethod(group)) recoveryCoverage.method++;
-      if (recoveryHealth.hasRecoveryLocation(group)) recoveryCoverage.location++;
-      if (recoveryHealth.hasInstructions(group)) recoveryCoverage.instructions++;
+      if (hasMethod) recoveryCoverage.method++;
+      if (hasLocation) recoveryCoverage.location++;
+      if (hasRecoveryInstructions) recoveryCoverage.instructions++;
       if (group && group.lastVerified) recoveryCoverage.verified++;
-      if (group && group.lastRecoveryDrill) recoveryCoverage.drills++;
+      if (hasRecoveryDrill) recoveryCoverage.drills++;
 
       const verificationAge = recoveryHealth.daysSince(group && group.lastVerified, options.now == null ? Date.now() : options.now);
+      const needsVerificationReview = verificationAge === null || verificationAge > STALE_VERIFICATION_DAYS;
       if (verificationAge === null) {
         stale.count++;
         stale.neverVerified++;
@@ -125,7 +144,6 @@ function summarize(profileEntries = [], options = {}) {
       else if (health.status === 'Needs Review') counts.needsReview++;
       else counts.incomplete++;
 
-      const checks = safeHealthChecks(health);
       const item = {
         profileName,
         profileFile,
@@ -136,18 +154,21 @@ function summarize(profileEntries = [], options = {}) {
         status: health.status,
         score: health.score,
         lastVerified: group && group.lastVerified ? String(group.lastVerified) : '',
-        checks,
+        checks: safeHealthChecks(health),
         actions: health.actions.map((entry) => ({ id: entry.id, action: entry.action }))
       };
       if (health.status !== 'Ready') needsAttention.push(item);
       if (item.lastVerified) recentlyVerified.push(item);
+
+      if (!verificationMaintenanceTarget && needsVerificationReview) verificationMaintenanceTarget = safeNavigationTarget(item);
+      if (!coverageMaintenanceTarget && (!hasMethod || !hasLocation || !hasRecoveryInstructions || !hasRecoveryDrill)) {
+        coverageMaintenanceTarget = safeNavigationTarget(item);
+      }
     }
   }
 
-  needsAttention.sort((a, b) => {
-    const rank = (status) => status === 'Incomplete' ? 0 : status === 'Needs Review' ? 1 : 2;
-    return rank(a.status) - rank(b.status) || a.score - b.score || a.walletName.localeCompare(b.walletName);
-  });
+  const statusRank = (status) => status === 'Incomplete' ? 0 : status === 'Needs Review' ? 1 : 2;
+  needsAttention.sort((a, b) => statusRank(a.status) - statusRank(b.status) || a.score - b.score || a.walletName.localeCompare(b.walletName));
   recentlyVerified.sort((a, b) => new Date(b.lastVerified).getTime() - new Date(a.lastVerified).getTime());
 
   return {
@@ -156,11 +177,17 @@ function summarize(profileEntries = [], options = {}) {
     stale,
     readinessPercent: counts.vaultItems ? Math.round(scoreTotal / counts.vaultItems) : 0,
     profileReadErrors,
-    needsAttention: needsAttention.slice(0, 8),
-    recentlyVerified: recentlyVerified.slice(0, 6)
+    needsAttention: needsAttention.slice(0, 12),
+    recentlyVerified: recentlyVerified.slice(0, 6),
+    maintenanceTargets: {
+      verification: verificationMaintenanceTarget,
+      coverage: coverageMaintenanceTarget
+    },
+    simulationFacts: commandCenter.buildSimulationFacts(profileEntries),
+    resolutionTargets: commandCenter.buildResolutionTargets(profileEntries)
   };
 }
 
 exports.STALE_VERIFICATION_DAYS = STALE_VERIFICATION_DAYS;
 exports.summarize = summarize;
-exports._test = { safeName, safeHealthChecks, walletKind, vaultItemKind };
+exports._test = { safeName, safeHealthChecks, safeNavigationTarget, walletKind, vaultItemKind };
