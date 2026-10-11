@@ -239,7 +239,9 @@ async function enforceRetryExhaustion() {
 }
 
 async function recordPasswordFailure() {
-  const settings = await ensureCurrentSettings();
+  // A Settings update may have been queued after the initial login read.
+  // Refresh under the shared storage queue before changing retry counters.
+  const settings = (await settingsManager.loadSettings(settingsDir)).settings;
   cryptoSession.clearSession();
   settings.failAttemptCount++;
   if (settings.failAttemptCount >= settings.numFailAttempts) {
@@ -409,7 +411,7 @@ function registerCoreIpcHandlers() {
       return currentSettings;
     },
     verifyPassword: (password) => cryptoSession.loginWithEnvelope(password),
-    recordFailure: recordPasswordFailure,
+    recordFailure: () => runStorageOperation(recordPasswordFailure),
     onExhaustion: () => runStorageOperation(enforceRetryExhaustion),
     clearSession: () => cryptoSession.clearSession()
   });
@@ -428,12 +430,12 @@ function registerCoreIpcHandlers() {
     showSettings();
   });
 
-  ipc.handle('set-self-destruct-protection', async (event, enabled) => {
+  ipc.handle('set-self-destruct-protection', (event, enabled) => runStorageOperation(async () => {
     assertTrustedEvent(event);
     await setSelfDestructProtection(enabled === true);
     const settings = await ensureCurrentSettings();
     return { ok: true, enabled: settings.scrubContentAfterRetries === true };
-  });
+  }));
 
   ipc.handle('read', (event, params = {}) => runWorkspaceOperation(async () => {
     try {
@@ -617,44 +619,43 @@ function registerCoreIpcHandlers() {
     }
   }));
 
-  ipc.on('init-system', (event) => {
-    try { assertTrustedEvent(event); } catch (_) { return; }
-    securityMain.audit(getDataRoot(), 'app-opened');
-    settingsManager.loadSettings(settingsDir)
-      .then((valSettings) => {
-        currentSettings = valSettings.settings;
-        buildMenu();
-        const win = getMainWindow();
-        if (win) win.webContents.send('result-init-system', { settings: valSettings.settings, portableRoot: getPortableRoot() });
-      })
-      .catch(() => {
-        const win = getMainWindow();
-        if (win) win.webContents.send('result-init-system', { status: 'ERROR', statusMsg: 'Not able to load settings file' });
-      });
-  });
-
-  ipc.on('save-settings', (event, params = {}) => {
+  ipc.handle('init-system', (event) => runStorageOperation(async () => {
+    assertTrustedEvent(event);
+    await securityMain.audit(getDataRoot(), 'app-opened');
     try {
-      assertTrustedEvent(event);
-      if (!isPlainObject(params.newSettings)) throw new Error('Invalid settings update.');
-    } catch (err) {
+      const loaded = await settingsManager.loadSettings(settingsDir);
+      currentSettings = loaded.settings;
+      buildMenu();
+      const payload = { settings: loaded.settings, portableRoot: getPortableRoot() };
       const win = getMainWindow();
-      if (win) win.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Invalid settings update.' });
-      return;
+      // Menus and startup components still observe initialization as a
+      // notification, but the request itself receives its own invoke reply.
+      if (win) win.webContents.send('result-init-system', payload);
+      return payload;
+    } catch (_) {
+      return { status: 'ERROR', statusMsg: 'Not able to load settings file' };
     }
-    settingsManager.saveUserSettings(settingsDir, params.newSettings)
-      .then(async (val) => {
-        currentSettings = val.settings;
-        await securityMain.audit(getDataRoot(), 'settings-updated');
-        buildMenu();
-        const win = getMainWindow();
-        if (win) win.webContents.send('result-save-settings', { status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings });
-      })
-      .catch((err) => {
-        const win = getMainWindow();
-        if (win) win.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Unable to save settings' });
-      });
-  });
+  }));
+
+  ipc.handle('save-settings', (event, params = {}) => runStorageOperation(async () => {
+    assertTrustedEvent(event);
+    if (!isPlainObject(params.newSettings)) {
+      return { status: 'ERROR', statusMsg: 'Invalid settings update.' };
+    }
+    try {
+      const saved = await settingsManager.saveUserSettings(settingsDir, params.newSettings);
+      currentSettings = saved.settings;
+      await securityMain.audit(getDataRoot(), 'settings-updated');
+      buildMenu();
+      const result = { status: 'SUCCESS', statusMsg: 'Settings saved', settings: saved.settings };
+      const win = getMainWindow();
+      // This event is a passive menu/settings notification, not a reply.
+      if (win) win.webContents.send('result-save-settings', result);
+      return result;
+    } catch (err) {
+      return { status: 'ERROR', statusMsg: err && err.message || 'Unable to save settings' };
+    }
+  }));
 
   return true;
 }
