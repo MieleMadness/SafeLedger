@@ -443,6 +443,10 @@ function registerCoreIpcHandlers() {
         return sendResult({ type: 'vault-modify', vaultList: nextList, status: 'SUCCESS', statusMsg: 'Save successful' });
       }
 
+      // Resolve a pending deletion before choosing a new Profile file ID:
+      // otherwise a new Profile could reuse the old ID while staged
+      // ciphertext for the deleted Profile still occupies that identity.
+      await profileDeleteTransaction.recoverPending(vaultDir, key, vault.readVaultList);
       const listFile = path.join(vaultDir, 'vaultlist.json');
       const authoritativeList = await vault.readVaultList(listFile, key);
       const profilePatch = dataWriteService.normalizeProfilePatch(params.vault);
