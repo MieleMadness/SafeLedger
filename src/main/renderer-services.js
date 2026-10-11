@@ -41,7 +41,6 @@ const deleteProfile = (params) => required('deleteVault')(params);
 const saveVaultItem = (params) => required('processGroup')(params);
 const saveAsset = (params) => required('processRecord')(params);
 const saveSettings = (patch) => required('saveSettings')({ newSettings: patch });
-const recordPasswordFailure = () => required('recordPasswordFailure')();
 const panicLock = (reason) => required('panicLock')({ reason });
 
 const cryptoHasEnvelope = () => required('cryptoHasEnvelope')();
@@ -91,7 +90,6 @@ module.exports = {
   saveVaultItem,
   saveAsset,
   saveSettings,
-  recordPasswordFailure,
   panicLock,
   cryptoHasEnvelope,
   cryptoInitialize,
