@@ -84,7 +84,6 @@ contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
   prepareAppMenu: () => invoke('app-menu-prepare'),
   appMenuCommand: (command) => ipcRenderer.send('app-menu-command', String(command || '')),
   setSelfDestructProtection: (enabled) => invoke('set-self-destruct-protection', enabled === true),
-  recordPasswordFailure: () => requestResult('record-password-failure', ['result', 'result-lockout-destroy']),
   panicLock: (params) => ipcRenderer.send('panic-lock', params),
   cryptoHasEnvelope: () => invoke('crypto-v3-has-envelope'),
   cryptoInitialize: (password) => invoke('crypto-v3-initialize', password),
