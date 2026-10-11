@@ -34,8 +34,12 @@ assert(ui.includes('safeLedgerLockoutCountdown'));
 assert(ui.includes('window.setInterval(updateCountdown, 1000)'));
 assert(!preload.includes('login-retry-guard'));
 assert(cryptoUi.includes('rendererState.getSettings()'));
-assert(cryptoUi.includes('services.recordPasswordFailure()'));
-assert(services.includes("const recordPasswordFailure = () => required('recordPasswordFailure')();"));
+assert(!cryptoUi.includes('services.recordPasswordFailure()'),
+  'Renderer must not decide whether a wrong password counts as a failed login.');
+assert(!services.includes('recordPasswordFailure'),
+  'Renderer facade must not expose a separate failed-attempt accounting operation.');
+assert(cryptoUi.includes("unlocked.type === 'password-failed'"),
+  'Wrong password retry must use the persisted settings returned by the trusted login request.');
 assert(!cryptoUi.includes("document.addEventListener('click'"));
 assert(!cryptoUi.includes('stopImmediatePropagation'));
 
