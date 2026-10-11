@@ -96,6 +96,19 @@ function resolveExistingIndex(items, requestedIndex, candidate) {
   return items[index] && !items[index].created ? index : -1;
 }
 
+function resolveOriginalGroupIndex(items, originalGroup, requestedIndex, candidate) {
+  if (isPlainObject(originalGroup)) {
+    // Starter templates historically share one creation timestamp. A full
+    // original snapshot, captured before the edit, identifies one exact group
+    // without depending on row order or a non-unique timestamp.
+    const matches = (Array.isArray(items) ? items : [])
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => exactEqual(item, originalGroup));
+    return matches.length === 1 ? matches[0].index : -1;
+  }
+  return resolveExistingIndex(items, requestedIndex, candidate);
+}
+
 function resolveRecordModifyIndex(items, requestedIndex, originalRecord, candidate) {
   if (!Array.isArray(items) || !items.length) return -1;
   if (isPlainObject(originalRecord)) {
@@ -115,7 +128,7 @@ function legacyGroupRequest(params) {
   const index = Number(vaultData.groupSelected);
   const group = Number.isInteger(index) && Array.isArray(vaultData.groups) ? vaultData.groups[index] : null;
   if (!group) throw new Error('SafeLedger could not identify the requested vault item.');
-  return { type, file, index, group: clone(group), activityEvent: params.activityEvent };
+  return { type, file, index, group: clone(group), originalGroup: isPlainObject(params.originalGroup) ? clone(params.originalGroup) : null, activityEvent: params.activityEvent };
 }
 
 function legacyRecordRequest(params) {
@@ -127,12 +140,12 @@ function legacyRecordRequest(params) {
   const groupIndex = Number(vaultData.groupSelected);
   const submittedGroup = Number.isInteger(groupIndex) && Array.isArray(vaultData.groups) ? vaultData.groups[groupIndex] : null;
   if (!submittedGroup) throw new Error('SafeLedger could not identify the requested vault item for this asset.');
-  if (action === 'delete') return { action, file, groupIndex, groupCreated: String(submittedGroup.created || ''), submittedRecords: Array.isArray(submittedGroup.records) ? clone(submittedGroup.records) : [] };
+  if (action === 'delete') return { action, file, groupIndex, groupCreated: String(submittedGroup.created || ''), originalGroup: isPlainObject(params.originalGroup) ? clone(params.originalGroup) : null, submittedRecords: Array.isArray(submittedGroup.records) ? clone(submittedGroup.records) : [] };
   const recordIndex = Number(vaultData.recordSelected);
   const record = Number.isInteger(recordIndex) && Array.isArray(submittedGroup.records) ? submittedGroup.records[recordIndex] : null;
   if (!record) throw new Error('SafeLedger could not identify the requested asset.');
   return {
-    action, file, groupIndex, groupCreated: String(submittedGroup.created || ''), recordIndex, record: clone(record),
+    action, file, groupIndex, groupCreated: String(submittedGroup.created || ''), originalGroup: isPlainObject(params.originalGroup) ? clone(params.originalGroup) : null, recordIndex, record: clone(record),
     originalRecord: action === 'modify' && isPlainObject(params.originalRecord) ? clone(params.originalRecord) : null,
     duplicateConfirmed: params.duplicateConfirmed === true
   };
@@ -153,7 +166,7 @@ async function mutateGroup({ vault, vaultDir, key, request }) {
     const created = new Date().toISOString(); const patch = normalizeGroupPatch(request.group); if (!patch.name) throw new Error('Vault item name is required.');
     const group = Object.assign({ created, records: buildTrustedStarterRecords(patch, created) }, patch); data.groups.push(group); data.groups.sort(compareByName); selected = data.groups.indexOf(group);
   } else if (request.type === 'group-modify') {
-    const index = resolveExistingIndex(data.groups, request.index, request.group); if (index < 0) throw new Error('The vault item changed or no longer exists. Reload the Profile and try again.');
+    const index = resolveOriginalGroupIndex(data.groups, request.originalGroup, request.index, request.group); if (index < 0) throw new Error('The vault item changed or no longer exists. Reload the Profile and try again.');
     const existing = data.groups[index]; const updated = Object.assign({}, existing, normalizeGroupPatch(request.group), { modified: new Date().toISOString() }); if (!updated.name) throw new Error('Vault item name is required.');
     data.groups[index] = updated; data.groups.sort(compareByName); selected = data.groups.indexOf(updated);
   } else if (request.type === 'group-delete') {
@@ -171,7 +184,7 @@ function assertDuplicateApproved(records, candidate, excludeIndex, request) {
 async function mutateRecord({ vault, vaultDir, key, request }) {
   const data = await readAuthoritativeVault(vault, vaultDir, request.file, key);
   if (!Array.isArray(data.groups)) throw new Error('The selected Profile has no vault items.');
-  const groupIndex = resolveExistingIndex(data.groups, request.groupIndex, { created: request.groupCreated });
+  const groupIndex = resolveOriginalGroupIndex(data.groups, request.originalGroup, request.groupIndex, { created: request.groupCreated });
   if (groupIndex < 0) throw new Error('The vault item changed or no longer exists. Reload the Profile and try again.');
   const group = data.groups[groupIndex];
   if (!Array.isArray(group.records)) group.records = [];
