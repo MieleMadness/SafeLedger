@@ -12,6 +12,7 @@ const { createLoginAttemptHandler } = require('./login-attempt-main');
 const securityMain = require('./security-main');
 const profileSetup = require('./profile-setup');
 const profileTransaction = require('./profile-transaction');
+const profileDeleteTransaction = require('./profile-delete-transaction');
 const dataWriteService = require('./data-write-service');
 
 let mainWindow;
@@ -390,6 +391,7 @@ function registerCoreIpcHandlers() {
         await initializeModernVault(currentVault, key);
       }
       await profileTransaction.recoverPending(vaultDir, key, vault.readVaultList);
+      await profileDeleteTransaction.recoverPending(vaultDir, key, vault.readVaultList);
       let valList;
       try {
         valList = await vault.readVaultList(path.join(vaultDir, 'vaultlist.json'), key);
