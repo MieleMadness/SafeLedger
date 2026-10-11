@@ -291,7 +291,7 @@ function installGuiSmokeProbe(win) {
         // Real Chromium layout contract, not CSS-string snapshots. Exercise
         // Profile Search→results spacing and the icon frame in all three
         // appearance modes using the application's loaded stylesheets.
-        const layout = await win.webContents.executeJavaScript(\`(() => {
+        const layout = await win.webContents.executeJavaScript(`(() => {
           const html = document.documentElement;
           const savedAppearance = html.getAttribute('data-appearance');
           const savedTheme = html.getAttribute('data-theme');
@@ -343,7 +343,7 @@ function installGuiSmokeProbe(win) {
             if (savedTheme == null) html.removeAttribute('data-theme');
             else html.setAttribute('data-theme', savedTheme);
           }
-        })()\`, true);
+        })()`, true);
         if (layout.join(',') !== 'light,colorful,dark') throw new Error('Profile layout contract did not cover all appearances');
         finish(true, 'sandboxed UI, invoke bridge, and real Light/Colorful/Dark Profile layout passed');
       } catch (err) {
