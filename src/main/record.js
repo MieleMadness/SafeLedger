@@ -378,12 +378,13 @@ const confirmDelete = (params) => {
     { icon: 'fa-times', title: 'Cancel delete asset', className: 'detail-action-cancel', onClick: () => renderRecordDetail(params) },
     { icon: 'fa-trash', title: 'Confirm delete asset', className: 'detail-action-delete', onClick: () => {
       const originalGroup = cloneValue(params.vaultData.groups[params.vaultData.groupSelected]);
+      const originalRecord = cloneValue(params.vaultData.groups[params.vaultData.groupSelected].records[params.vaultData.recordSelected]);
       params.vaultData.groups[params.vaultData.groupSelected].records.splice(params.vaultData.recordSelected, 1);
       params.vaultData.recordSelected = null;
       params.saving.state = true;
       statusMgr.loadStatus();
       services.deliver(
-        services.saveAsset({ action: 'delete', vaultData: params.vaultData, originalGroup }),
+        services.saveAsset({ action: 'delete', vaultData: params.vaultData, originalGroup, originalRecord }),
         params.onResult,
         'Unable to delete Asset.'
       );
