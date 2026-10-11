@@ -76,4 +76,4 @@ previous candidate. Do not merge without owner authorization. Run canonical
 regressions, Electron crypto, real GUI smoke, and all three platform packaging
 jobs on the exact final commit.
 
-This plan describes work to be done. Only Phase 1 is implemented in 2.6.116.
+Phase 1 is implemented in 2.6.116. Phase 2 is implemented in the 2.6.117 development candidate, pending build verification and review. Phase 3 remains planned.
