@@ -26,7 +26,7 @@ for (const [name, command] of Object.entries(pkg.scripts || {})) {
   assert(!retiredGatePattern.test(String(command)), `${name} must not call a retired patch/release-numbered gate.`);
 }
 
-assert.strictEqual(CANONICAL_SUITES.length, 48, 'SafeLedger must retain the complete 48-suite durable regression contract.');
+assert.strictEqual(CANONICAL_SUITES.length, 49, 'SafeLedger must retain the complete 49-suite durable regression contract.');
 const seen = new Set();
 for (const suite of CANONICAL_SUITES) {
   assert(suite && suite.name && suite.file, 'Canonical suite entries require a name and file.');
