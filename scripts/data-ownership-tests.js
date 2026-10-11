@@ -287,6 +287,56 @@ async function testStaleIdentityProtection(root, key) {
   assert.strictEqual(persisted.groups[0].records[0].publicAddress, 'bc1-old');
 }
 
+async function testSharedStarterWalletIdentity(root, key) {
+  const { vaultDir, profile } = await makeVaultFixture(path.join(root, 'shared-wallet-created'), key);
+  const sameCreated = profile.groups[0].created;
+  profile.groups[1].created = sameCreated;
+  await saveEncrypted(path.join(vaultDir, 'zvault-0.json'), profile, key);
+
+  assert.strictEqual(dataWrite.resolveExistingIndex(profile.groups, 1, { created: sameCreated }), -1,
+    'Starter Wallet creation timestamps are sometimes shared, and cannot alone identify one Wallet.');
+
+  const betaBefore = JSON.parse(JSON.stringify(profile.groups[1]));
+  const walletView = dataWrite.withViewState(profile, 1, null);
+  walletView.groups[1].notes = 'Beta can still be edited safely';
+  const modified = await dataWrite.mutateGroup({
+    vault: robustVault, vaultDir, key,
+    request: dataWrite.legacyGroupRequest({
+      type: 'group-modify', vaultData: walletView, originalGroup: betaBefore
+    })
+  });
+  assert.strictEqual(modified.groups.find((g) => g.name === 'Beta Wallet').notes,
+    'Beta can still be edited safely', 'A unique original snapshot disambiguates shared-template timestamps.');
+
+  const alphaBefore = JSON.parse(JSON.stringify(profile.groups[0]));
+  const bitcoinBefore = JSON.parse(JSON.stringify(alphaBefore.records[0]));
+  const recordView = dataWrite.withViewState(modified, modified.groups.findIndex((g) => g.name === 'Alpha Wallet'), 0);
+  recordView.groups[recordView.groupSelected].records[0].publicAddress = 'bc1q-shared-wallet-safe';
+  const savedRecord = await dataWrite.mutateRecord({
+    vault: robustVault, vaultDir, key,
+    request: dataWrite.legacyRecordRequest({
+      action: 'modify', vaultData: recordView,
+      originalGroup: alphaBefore, originalRecord: bitcoinBefore
+    })
+  });
+  assert.strictEqual(savedRecord.groups.find((g) => g.name === 'Alpha Wallet').records[0].publicAddress,
+    'bc1q-shared-wallet-safe');
+  assert.strictEqual(savedRecord.groups.find((g) => g.name === 'Beta Wallet').notes,
+    'Beta can still be edited safely');
+
+  const stale = JSON.parse(JSON.stringify(alphaBefore));
+  stale.notes = 'Outdated snapshot';
+  const secondView = dataWrite.withViewState(savedRecord, 0, null);
+  secondView.groups[0].notes = 'Must not write';
+  await assert.rejects(dataWrite.mutateGroup({
+    vault: robustVault, vaultDir, key,
+    request: dataWrite.legacyGroupRequest({
+      type: 'group-modify', vaultData: secondView, originalGroup: stale
+    })
+  }), /changed or no longer exists/,
+  'When a Wallet snapshot is stale, no index or shared timestamp fallback may edit another Wallet.');
+}
+
 async function testSettingsOwnership(root) {
   const settingsDir = path.join(root, 'settings');
   await fs.promises.mkdir(settingsDir, { recursive: true });
@@ -345,6 +395,7 @@ async function testSettingsOwnership(root) {
     await testRecordOwnership(root, key);
     await testSharedStarterTimestampRecordOwnership(root, key);
     await testStaleIdentityProtection(root, key);
+    await testSharedStarterWalletIdentity(root, key);
     await testSettingsOwnership(root);
     console.log('PASS SafeLedger data ownership: main-owned profile/vault-item/asset/settings mutations preserve unrelated data, exact selected-Asset targeting, and reject renderer authority escalation.');
   } finally {
