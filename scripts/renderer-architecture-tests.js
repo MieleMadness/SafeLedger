@@ -58,11 +58,13 @@ assert(passwordUi.includes("form.addEventListener('submit'"),
   'Change Password must attach its handler while rendering the form.');
 assert(!passwordUi.includes('stopImmediatePropagation'));
 
-assert(preload.includes('let resultRequestQueue = Promise.resolve();'),
-  'Shared legacy result-channel requests must be serialized at the preload boundary.');
-assert(preload.includes('function requestResult('));
-assert(preload.includes("readVault: (params) => requestResult('read', 'result', params)"));
-assert(preload.includes("processRecord: (params) => requestResult('process-record', 'result', params)"));
+assert(!preload.includes('resultRequestQueue') && !preload.includes('function requestResult('),
+  'Core workspace replies must not depend on renderer-side listener matching.');
+assert(preload.includes("readVault: (params) => invoke('read', params)"));
+assert(preload.includes("processRecord: (params) => invoke('process-record', params)"));
+assert(services.includes('mutationCommand.groupCommand(params)') &&
+  services.includes('mutationCommand.recordCommand(params)'),
+  'Renderer services must send targeted Wallet and Asset commands, not full vault snapshots.');
 assert(entry.includes("require('./renderer.js');"));
 assert(!entry.includes('crypto-ui-bridge.js') && !entry.includes('settings-shortcut-ui.js'),
   'Renderer helpers must be composed by the coordinator rather than loaded as independent page patches.');
