@@ -121,7 +121,7 @@ async function setSelfDestructProtection(enabled) {
       noLink: true,
       title: 'Enable Self-Destruct Protection',
       message: 'Enable Self-Destruct Protection?',
-      detail: 'After the configured failed-login and lockout limits are exhausted, SafeLedger will permanently destroy the encrypted vault files. This action cannot be undone. Keep a verified backup on separate storage before enabling this protection.'
+      detail: 'After the configured failed-login and lockout limits are exhausted, SafeLedger attempts to overwrite and delete the local encrypted vault files. Storage devices and backups may retain recoverable copies, so physical erasure cannot be guaranteed. Keep a verified backup on separate storage before enabling this protection.'
     });
     if (response.response !== 0) {
       buildMenu();
@@ -210,7 +210,7 @@ async function enforceRetryExhaustion() {
       if (win) {
         win.webContents.send('result-lockout-destroy', {
           status: 'ERROR',
-          statusMsg: 'Self-destruct protection triggered. Encrypted vault data has been destroyed after repeated failed password attempts.',
+          statusMsg: 'Self-destruct protection triggered. Local encrypted vault files were overwritten and removed. Storage-level copies and backups may remain.',
           settings
         });
       }
