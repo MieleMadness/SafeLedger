@@ -3,7 +3,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 const LOCKED_MESSAGE = 'SafeLedger is locked. Please log in again.';
-const REQUEST_TIMEOUT_MS = 30000;
 
 function subscribe(channel, callback) {
   if (typeof callback !== 'function') return;
@@ -18,58 +17,18 @@ function invoke(channel, ...args) {
   });
 }
 
-function request(sendChannel, responseChannels, ...args) {
-  const channels = Array.isArray(responseChannels) ? responseChannels : [responseChannels];
-  return new Promise((resolve, reject) => {
-    let settled = false;
-    const handlers = new Map();
-    let timeout = null;
-
-    const cleanup = () => {
-      if (timeout) clearTimeout(timeout);
-      for (const [channel, handler] of handlers) ipcRenderer.removeListener(channel, handler);
-      handlers.clear();
-    };
-    const finish = (payload) => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      resolve(payload);
-    };
-
-    for (const channel of channels) {
-      const handler = (_event, payload) => finish(payload);
-      handlers.set(channel, handler);
-      ipcRenderer.on(channel, handler);
-    }
-    timeout = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      reject(new Error('SafeLedger operation timed out.'));
-    }, REQUEST_TIMEOUT_MS);
-
-    try {
-      ipcRenderer.send(sendChannel, ...args);
-    } catch (error) {
-      settled = true;
-      cleanup();
-      reject(error);
-    }
-  });
-}
-
-// Core workspace operations use request-specific invoke replies. Only
-// legacy initialization/settings notifications retain dedicated events.
+// Requests receive dedicated invoke replies. Initialization and Settings
+// still broadcast passive notifications to menu observers; they are never
+// used as reply-matching channels.
 contextBridge.exposeInMainWorld('safeLedgerApi', Object.freeze({
-  initSystem: () => request('init-system', 'result-init-system'),
+  initSystem: () => invoke('init-system'),
   readVault: (params) => invoke('read', params),
   readVaultListInit: () => invoke('read-vaultlist-init'),
   processVaultList: (params) => invoke('process-vault-list', params),
   deleteVault: (params) => invoke('vault-list-delete', params),
   processGroup: (params) => invoke('process-group', params),
   processRecord: (params) => invoke('process-record', params),
-  saveSettings: (params) => request('save-settings', 'result-save-settings', params),
+  saveSettings: (params) => invoke('save-settings', params),
   prepareAppMenu: () => invoke('app-menu-prepare'),
   appMenuCommand: (command) => ipcRenderer.send('app-menu-command', String(command || '')),
   setSelfDestructProtection: (enabled) => invoke('set-self-destruct-protection', enabled === true),
