@@ -123,7 +123,9 @@ async function main() {
     'Raw envelope verifier must not be directly callable through IPC.');
   assert(cryptoIpcSource.includes("if (!getDefaultController().isUnlocked())"),
     'Change Password must not provide a second password verification oracle while the vault is locked.');
-  for (const source of [mainSource, preloadSource, uiSource, read('src/main/renderer-services.js')]) {
+  assert(!mainSource.includes("ipc.on('record-password-failure'"),
+    'No standalone failed-attempt IPC listener may remain.');
+  for (const source of [preloadSource, uiSource, read('src/main/renderer-services.js')]) {
     assert(!source.includes('record-password-failure') && !source.includes('recordPasswordFailure()'),
       'Renderer must not control a separate failed-attempt IPC operation.');
   }
