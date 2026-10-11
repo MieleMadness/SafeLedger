@@ -5,7 +5,8 @@
 // Vault Item and Asset in the renderer's current workspace.
 const copy = (value) => value == null ? null : JSON.parse(JSON.stringify(value));
 function selectedGroup(vaultData) {
-  const index = Number(vaultData && vaultData.groupSelected);
+  if (!vaultData || vaultData.groupSelected == null || vaultData.groupSelected === '') return null;
+  const index = Number(vaultData.groupSelected);
   if (!Number.isInteger(index) || !vaultData || !Array.isArray(vaultData.groups)) return null;
   return { index, group: vaultData.groups[index] || null };
 }
@@ -47,6 +48,7 @@ function recordCommand(params = {}) {
       originalGroup: copy(params.originalGroup), originalRecord: copy(params.originalRecord)
     };
   }
+  if (data.recordSelected == null || data.recordSelected === '') throw new Error('Choose an Asset before saving.');
   const index = Number(data.recordSelected);
   if (!target.group || !Array.isArray(target.group.records) || !Number.isInteger(index)
     || index < 0 || index >= target.group.records.length) {
