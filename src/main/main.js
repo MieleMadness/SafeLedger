@@ -14,7 +14,8 @@ const profileSetup = require('./profile-setup');
 const profileTransaction = require('./profile-transaction');
 const profileDeleteTransaction = require('./profile-delete-transaction');
 const dataWriteService = require('./data-write-service');
-const { createWorkspaceOperationQueue } = require('./workspace-operation-queue');
+const { runStorageOperation } = require('./workspace-operation-queue');
+const guiSmokeLayout = require('./gui-smoke-layout');
 
 let mainWindow;
 let vaultDir;
@@ -139,7 +140,7 @@ async function setSelfDestructProtection(enabled) {
     win.webContents.send('result-save-settings', {
       status: 'SUCCESS',
       statusMsg: enabled
-        ? 'Self-Destruct Protection enabled. Vaults will be destroyed after all configured lockouts are exhausted.'
+        ? 'Self-Destruct Protection enabled. SafeLedger will attempt to overwrite and remove local encrypted vault files after the configured lockouts; storage copies may remain.'
         : 'Self-Destruct Protection disabled. Failed logins will result in lockouts only.',
       settings: currentSettings
     });
@@ -171,7 +172,7 @@ function lockedResult() {
 
 // The trusted main process owns workspace operation ordering, while each
 // ipc.invoke caller receives its own response rather than a shared event.
-const runWorkspaceOperation = createWorkspaceOperationQueue();
+const runWorkspaceOperation = runStorageOperation;
 
 function groupActivityEvent(params = {}) {
   if (params.activityEvent === 'recovery-verified' || params.activityEvent === 'recovery-drill-completed') return params.activityEvent;
@@ -239,7 +240,9 @@ async function enforceRetryExhaustion() {
 }
 
 async function recordPasswordFailure() {
-  const settings = await ensureCurrentSettings();
+  // A Settings update may have been queued after the initial login read.
+  // Refresh under the shared storage queue before changing retry counters.
+  const settings = (await settingsManager.loadSettings(settingsDir)).settings;
   cryptoSession.clearSession();
   settings.failAttemptCount++;
   if (settings.failAttemptCount >= settings.numFailAttempts) {
@@ -291,68 +294,7 @@ function installGuiSmokeProbe(win) {
         // Real Chromium layout contract, not CSS-string snapshots. Exercise
         // Profile Search→results spacing and the icon frame in all three
         // appearance modes using the application's loaded stylesheets.
-        const layout = await win.webContents.executeJavaScript(`(() => {
-          const html = document.documentElement;
-          const savedAppearance = html.getAttribute('data-appearance');
-          const savedTheme = html.getAttribute('data-theme');
-          const fixture = document.createElement('div');
-          fixture.className = 'profile-icon-picker';
-          fixture.style.cssText = 'position:fixed;top:12px;left:12px;width:360px;visibility:hidden;z-index:-1';
-          const search = document.createElement('div');
-          search.className = 'profile-icon-picker-search';
-          search.style.height = '32px';
-          const results = document.createElement('div');
-          results.className = 'profile-icon-picker-results';
-          const grid = document.createElement('div');
-          grid.className = 'profile-icon-picker-grid';
-          const option = document.createElement('button');
-          option.className = 'profile-icon-option';
-          const frame = document.createElement('span');
-          frame.className = 'profile-icon-option-frame';
-          const logo = document.createElement('img');
-          logo.className = 'known-service-brand-image';
-          frame.appendChild(logo);
-          option.appendChild(frame);
-          // The real icon tile has a trailing label span. Without it the
-          // existing :last-child label rule stretches the frame to 100%.
-          const label = document.createElement('span');
-          label.textContent = 'GitHub';
-          option.appendChild(label);
-          grid.appendChild(option);
-          results.appendChild(grid);
-          fixture.appendChild(search);
-          fixture.appendChild(results);
-          document.body.appendChild(fixture);
-          const checks = [];
-          try {
-            for (const appearance of ['light', 'colorful', 'dark']) {
-              html.setAttribute('data-appearance', appearance);
-              html.setAttribute('data-theme', appearance === 'dark' ? 'dark' : 'light');
-              const gap = grid.getBoundingClientRect().top - search.getBoundingClientRect().bottom;
-              const bounds = frame.getBoundingClientRect();
-              const background = getComputedStyle(logo).backgroundColor;
-              const gridDisplay = getComputedStyle(grid).display;
-              if (gap < 9.5 || gap > 11.5) throw Error(appearance + ': icon results gap is ' + gap + 'px (expected 10px)');
-              if (Math.abs(bounds.width - 40) > 0.5 || Math.abs(bounds.height - 40) > 0.5) {
-                throw Error(appearance + ': icon frame dimensions are ' + bounds.width + 'x' + bounds.height);
-              }
-              if (gridDisplay !== 'grid') throw Error(appearance + ': Profile icon grid does not use CSS grid');
-              if (background !== 'rgb(255, 255, 255)') throw Error(appearance + ': brand mark neutral backing missing');
-              checks.push(appearance);
-            }
-            return { ok: true, checks };
-          } catch (error) {
-            return { ok: false, message: String(error && error.message || error) };
-          } finally {
-            fixture.remove();
-            if (savedAppearance == null) html.removeAttribute('data-appearance');
-            else html.setAttribute('data-appearance', savedAppearance);
-            if (savedTheme == null) html.removeAttribute('data-theme');
-            else html.setAttribute('data-theme', savedTheme);
-          }
-        })()`, true);
-        if (!layout || layout.ok !== true) throw new Error('Profile layout: ' + (layout && layout.message || 'unknown render error'));
-        if (layout.checks.join(',') !== 'light,colorful,dark') throw new Error('Profile layout contract did not cover all appearances');
+        await guiSmokeLayout.verifyProfileIconGeometry(win.webContents);
         finish(true, 'sandboxed UI, invoke bridge, and real Light/Colorful/Dark Profile layout passed');
       } catch (err) {
         finish(false, err && err.message ? err.message : String(err));
@@ -409,8 +351,8 @@ function registerCoreIpcHandlers() {
       return currentSettings;
     },
     verifyPassword: (password) => cryptoSession.loginWithEnvelope(password),
-    recordFailure: recordPasswordFailure,
-    onExhaustion: enforceRetryExhaustion,
+    recordFailure: () => runStorageOperation(recordPasswordFailure),
+    onExhaustion: () => runStorageOperation(enforceRetryExhaustion),
     clearSession: () => cryptoSession.clearSession()
   });
   cryptoSession.registerIpcHandlers({ getMainWindow, loginAttempt });
@@ -428,12 +370,12 @@ function registerCoreIpcHandlers() {
     showSettings();
   });
 
-  ipc.handle('set-self-destruct-protection', async (event, enabled) => {
+  ipc.handle('set-self-destruct-protection', (event, enabled) => runStorageOperation(async () => {
     assertTrustedEvent(event);
     await setSelfDestructProtection(enabled === true);
     const settings = await ensureCurrentSettings();
     return { ok: true, enabled: settings.scrubContentAfterRetries === true };
-  });
+  }));
 
   ipc.handle('read', (event, params = {}) => runWorkspaceOperation(async () => {
     try {
@@ -617,44 +559,43 @@ function registerCoreIpcHandlers() {
     }
   }));
 
-  ipc.on('init-system', (event) => {
-    try { assertTrustedEvent(event); } catch (_) { return; }
-    securityMain.audit(getDataRoot(), 'app-opened');
-    settingsManager.loadSettings(settingsDir)
-      .then((valSettings) => {
-        currentSettings = valSettings.settings;
-        buildMenu();
-        const win = getMainWindow();
-        if (win) win.webContents.send('result-init-system', { settings: valSettings.settings, portableRoot: getPortableRoot() });
-      })
-      .catch(() => {
-        const win = getMainWindow();
-        if (win) win.webContents.send('result-init-system', { status: 'ERROR', statusMsg: 'Not able to load settings file' });
-      });
-  });
-
-  ipc.on('save-settings', (event, params = {}) => {
+  ipc.handle('init-system', (event) => runStorageOperation(async () => {
+    assertTrustedEvent(event);
+    await securityMain.audit(getDataRoot(), 'app-opened');
     try {
-      assertTrustedEvent(event);
-      if (!isPlainObject(params.newSettings)) throw new Error('Invalid settings update.');
-    } catch (err) {
+      const loaded = await settingsManager.loadSettings(settingsDir);
+      currentSettings = loaded.settings;
+      buildMenu();
+      const payload = { settings: loaded.settings, portableRoot: getPortableRoot() };
       const win = getMainWindow();
-      if (win) win.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Invalid settings update.' });
-      return;
+      // Menus and startup components still observe initialization as a
+      // notification, but the request itself receives its own invoke reply.
+      if (win) win.webContents.send('result-init-system', payload);
+      return payload;
+    } catch (_) {
+      return { status: 'ERROR', statusMsg: 'Not able to load settings file' };
     }
-    settingsManager.saveUserSettings(settingsDir, params.newSettings)
-      .then(async (val) => {
-        currentSettings = val.settings;
-        await securityMain.audit(getDataRoot(), 'settings-updated');
-        buildMenu();
-        const win = getMainWindow();
-        if (win) win.webContents.send('result-save-settings', { status: 'SUCCESS', statusMsg: 'Settings saved', settings: val.settings });
-      })
-      .catch((err) => {
-        const win = getMainWindow();
-        if (win) win.webContents.send('result-save-settings', { status: 'ERROR', statusMsg: err.message || 'Unable to save settings' });
-      });
-  });
+  }));
+
+  ipc.handle('save-settings', (event, params = {}) => runStorageOperation(async () => {
+    assertTrustedEvent(event);
+    if (!isPlainObject(params.newSettings)) {
+      return { status: 'ERROR', statusMsg: 'Invalid settings update.' };
+    }
+    try {
+      const saved = await settingsManager.saveUserSettings(settingsDir, params.newSettings);
+      currentSettings = saved.settings;
+      await securityMain.audit(getDataRoot(), 'settings-updated');
+      buildMenu();
+      const result = { status: 'SUCCESS', statusMsg: 'Settings saved', settings: saved.settings };
+      const win = getMainWindow();
+      // This event is a passive menu/settings notification, not a reply.
+      if (win) win.webContents.send('result-save-settings', result);
+      return result;
+    } catch (err) {
+      return { status: 'ERROR', statusMsg: err && err.message || 'Unable to save settings' };
+    }
+  }));
 
   return true;
 }

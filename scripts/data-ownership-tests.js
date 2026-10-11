@@ -7,6 +7,7 @@ const os = require('os');
 const path = require('path');
 const robustVault = require('../src/main/robust-vault');
 const dataWrite = require('../src/main/data-write-service');
+const legacyFixtures = require('./legacy-mutation-fixtures');
 const settingsManager = require('../src/main/settings-manager');
 
 async function saveEncrypted(file, value, key) {
@@ -111,7 +112,7 @@ async function testGroupOwnership(root, key) {
   });
   rendererState.groups[1].notes = 'renderer tried to alter unrelated group';
 
-  const request = dataWrite.legacyGroupRequest({ type: 'group-modify', vaultData: rendererState });
+  const request = legacyFixtures.legacyGroupRequest({ type: 'group-modify', vaultData: rendererState });
   const result = await dataWrite.mutateGroup({ vault: robustVault, vaultDir, key, request });
   assert.strictEqual(result.groupSelected, 0);
 
@@ -132,7 +133,7 @@ async function testGroupOwnership(root, key) {
   deleteView.groups.splice(1, 1);
   deleteView.groupSelected = null;
   deleteView.recordSelected = null;
-  const deleteRequest = dataWrite.legacyGroupRequest({ type: 'group-delete', vaultData: deleteView });
+  const deleteRequest = legacyFixtures.legacyGroupRequest({ type: 'group-delete', vaultData: deleteView });
   await dataWrite.mutateGroup({ vault: robustVault, vaultDir, key, request: deleteRequest });
   const deleted = await robustVault.readVault(path.join(vaultDir, 'zvault-0.json'), key);
   assert.deepStrictEqual(deleted.groups.map((item) => item.name), ['Alpha Wallet Updated'], 'Delete compatibility path must accept exactly one unchanged-item omission.');
@@ -143,7 +144,7 @@ async function testGroupOwnership(root, key) {
   maliciousDelete.groups[0].notes = 'smuggled change';
   maliciousDelete.groupSelected = null;
   await assert.rejects(
-    dataWrite.mutateGroup({ vault: robustVault, vaultDir, key, request: dataWrite.legacyGroupRequest({ type: 'group-delete', vaultData: maliciousDelete }) }),
+    dataWrite.mutateGroup({ vault: robustVault, vaultDir, key, request: legacyFixtures.legacyGroupRequest({ type: 'group-delete', vaultData: maliciousDelete }) }),
     /did not match the current encrypted Profile/,
     'A delete request must not be usable to smuggle a second modification.'
   );
@@ -163,7 +164,7 @@ async function testRecordOwnership(root, key) {
   rendererState.groups[0].notes = 'renderer tried to alter parent group';
   rendererState.groups[1].name = 'renderer tried to alter unrelated group';
 
-  const request = dataWrite.legacyRecordRequest({ action: 'modify', vaultData: rendererState });
+  const request = legacyFixtures.legacyRecordRequest({ action: 'modify', vaultData: rendererState });
   const result = await dataWrite.mutateRecord({ vault: robustVault, vaultDir, key, request });
   assert.strictEqual(result.groupSelected, 0);
   assert.strictEqual(result.recordSelected, 0);
@@ -183,7 +184,7 @@ async function testRecordOwnership(root, key) {
   const deleteView = dataWrite.withViewState(persisted, 0, 0);
   deleteView.groups[0].records.splice(1, 1);
   deleteView.recordSelected = null;
-  const deleteRequest = dataWrite.legacyRecordRequest({ action: 'delete', vaultData: deleteView });
+  const deleteRequest = legacyFixtures.legacyRecordRequest({ action: 'delete', vaultData: deleteView });
   await dataWrite.mutateRecord({ vault: robustVault, vaultDir, key, request: deleteRequest });
   const deleted = await robustVault.readVault(path.join(vaultDir, 'zvault-0.json'), key);
   assert.deepStrictEqual(deleted.groups[0].records.map((item) => item.name), ['Bitcoin Main']);
@@ -207,7 +208,7 @@ async function testSharedStarterTimestampRecordOwnership(root, key) {
     JSON.parse(JSON.stringify(profile.groups[0].records[0]))
   ];
 
-  const request = dataWrite.legacyRecordRequest({
+  const request = legacyFixtures.legacyRecordRequest({
     action: 'modify',
     vaultData: rendererState,
     originalRecord: originalBitcoin
@@ -231,7 +232,7 @@ async function testSharedStarterTimestampRecordOwnership(root, key) {
       vault: robustVault,
       vaultDir,
       key,
-      request: dataWrite.legacyRecordRequest({ action: 'modify', vaultData: staleRendererState, originalRecord: staleOriginal })
+      request: legacyFixtures.legacyRecordRequest({ action: 'modify', vaultData: staleRendererState, originalRecord: staleOriginal })
     }),
     /asset changed or no longer exists/i,
     'A stale Asset edit must fail closed instead of falling back to a potentially wrong sibling index.'
@@ -260,7 +261,7 @@ async function testStaleIdentityProtection(root, key) {
   await assert.rejects(
     dataWrite.mutateGroup({
       vault: robustVault, vaultDir, key,
-      request: dataWrite.legacyGroupRequest({ type: 'group-modify', vaultData: staleGroupView })
+      request: legacyFixtures.legacyGroupRequest({ type: 'group-modify', vaultData: staleGroupView })
     }), /changed or no longer exists/,
     'A stale Wallet edit must never silently modify the row currently at its previous index.'
   );
@@ -274,7 +275,7 @@ async function testStaleIdentityProtection(root, key) {
   await assert.rejects(
     dataWrite.mutateRecord({
       vault: robustVault, vaultDir, key,
-      request: dataWrite.legacyRecordRequest({
+      request: legacyFixtures.legacyRecordRequest({
         action: 'modify', vaultData: staleAssetView,
         originalRecord: profile.groups[0].records[0]
       })
@@ -301,7 +302,7 @@ async function testSharedStarterWalletIdentity(root, key) {
   walletView.groups[1].notes = 'Beta can still be edited safely';
   const modified = await dataWrite.mutateGroup({
     vault: robustVault, vaultDir, key,
-    request: dataWrite.legacyGroupRequest({
+    request: legacyFixtures.legacyGroupRequest({
       type: 'group-modify', vaultData: walletView, originalGroup: betaBefore
     })
   });
@@ -314,7 +315,7 @@ async function testSharedStarterWalletIdentity(root, key) {
   recordView.groups[recordView.groupSelected].records[0].publicAddress = 'bc1q-shared-wallet-safe';
   const savedRecord = await dataWrite.mutateRecord({
     vault: robustVault, vaultDir, key,
-    request: dataWrite.legacyRecordRequest({
+    request: legacyFixtures.legacyRecordRequest({
       action: 'modify', vaultData: recordView,
       originalGroup: alphaBefore, originalRecord: bitcoinBefore
     })
@@ -330,7 +331,7 @@ async function testSharedStarterWalletIdentity(root, key) {
   secondView.groups[0].notes = 'Must not write';
   await assert.rejects(dataWrite.mutateGroup({
     vault: robustVault, vaultDir, key,
-    request: dataWrite.legacyGroupRequest({
+    request: legacyFixtures.legacyGroupRequest({
       type: 'group-modify', vaultData: secondView, originalGroup: stale
     })
   }), /changed or no longer exists/,

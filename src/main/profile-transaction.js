@@ -50,8 +50,10 @@ async function recoverPending(vaultDir, cryptoKey, readList, io = fs.promises) {
   }
 
   const list = await readList(path.join(vaultDir, 'vaultlist.json'), cryptoKey);
-  const referenced = Array.isArray(list && list.vaults)
-    && list.vaults.some((profile) => profile && profile.file === marker.file);
+  if (!list || !Array.isArray(list.vaults)) {
+    throw new Error('Cannot authenticate the Profile list. Pending creation is preserved for recovery.');
+  }
+  const referenced = list.vaults.some((profile) => profile && profile.file === marker.file);
 
   if (!referenced) await removeIfPresent(path.join(vaultDir, marker.file), io);
   await removeIfPresent(pendingPath, io);
@@ -74,41 +76,58 @@ async function createProfile({
     throw new Error('SafeLedger profile transaction dependencies are unavailable.');
   }
 
+  const pending = markerPath(vaultDir);
+  // A pending marker or existing Profile is never safe to overwrite. Resolve
+  // unfinished operations from authenticated data before creating anything.
+  try {
+    await io.stat(pending);
+    throw new Error('Resolve the pending Profile creation before starting another.');
+  } catch (err) { if (!err || err.code !== 'ENOENT') throw err; }
+  try {
+    await io.stat(path.join(vaultDir, profileFile));
+    throw new Error('An encrypted Profile with this name already exists.');
+  } catch (err) { if (!err || err.code !== 'ENOENT') throw err; }
+
   await writeMarker(vaultDir, profileFile);
   let profileData;
-  let profileCreated = false;
   try {
     profileData = await initializeProfile(profileFile, cryptoKey, walletNames);
-    profileCreated = true;
+    await saveList(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), cryptoKey);
+  } catch (error) {
+    // Both profile creation and list commit can succeed at the rename but
+    // fail at the later directory fsync. Never infer rollback from an error.
+    // Re-check BOTH durable artifacts before touching the encrypted file.
+    let listed;
+    let profilePresent;
     try {
-      await saveList(path.join(vaultDir, 'vaultlist.json'), JSON.stringify(nextList), cryptoKey);
-    } catch (saveError) {
-      // An atomic rename can theoretically succeed even if a later filesystem
-      // operation reports an error. Re-read the authoritative list before
-      // deciding whether the new encrypted profile is an orphan.
-      try {
-        const current = await readList(path.join(vaultDir, 'vaultlist.json'), cryptoKey);
-        const committed = Array.isArray(current && current.vaults)
-          && current.vaults.some((profile) => profile && profile.file === profileFile);
-        if (committed) {
-          await removeIfPresent(markerPath(vaultDir), io);
-          return profileData;
-        }
-      } catch (_) {
-        throw new Error('Profile creation could not be confirmed. SafeLedger kept the encrypted profile transaction for recovery on the next unlock instead of deleting potentially recoverable data.');
+      const current = await readList(path.join(vaultDir, 'vaultlist.json'), cryptoKey);
+      if (!current || !Array.isArray(current.vaults)) throw new Error('Invalid encrypted Profile list');
+      listed = current.vaults.some((profile) => profile && profile.file === profileFile);
+      try { await io.stat(path.join(vaultDir, profileFile)); profilePresent = true; }
+      catch (statError) {
+        if (statError && statError.code === 'ENOENT') profilePresent = false;
+        else throw statError;
       }
-
-      await removeIfPresent(path.join(vaultDir, profileFile), io);
-      await removeIfPresent(markerPath(vaultDir), io);
-      throw saveError;
+    } catch (_) {
+      // Uncertain state means retain the journal and ciphertext for the
+      // trusted next-unlock recovery path, not a best-effort deletion.
+      throw new Error('Profile creation outcome is uncertain. The encrypted transaction was retained for recovery on the next unlock.');
     }
-
-    await removeIfPresent(markerPath(vaultDir), io);
-    return profileData;
-  } catch (err) {
-    if (!profileCreated) await removeIfPresent(markerPath(vaultDir), io).catch(() => {});
-    throw err;
+    if (listed) {
+      if (!profilePresent) throw new Error('The Profile list references a missing Profile file. The recovery marker has been preserved.');
+      // Initialization may have returned an error after writing the file. The
+      // list can only be committed if initializeProfile returned successfully.
+      await removeIfPresent(pending, io);
+      return profileData;
+    }
+    if (profilePresent) await removeIfPresent(path.join(vaultDir, profileFile), io);
+    await removeIfPresent(pending, io);
+    throw error;
   }
+  // A cleanup error following a successful list commit should not prompt
+  // callers to retry creating the same Profile; recovery can clear the marker.
+  await removeIfPresent(pending, io).catch(() => {});
+  return profileData;
 }
 
 module.exports = {

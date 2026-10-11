@@ -1,6 +1,7 @@
 'use strict';
 
 const lockoutState = require('./lockout-state');
+const { createWorkspaceOperationQueue } = require('./workspace-operation-queue');
 
 // All renderer login requests enter through this trusted, serialized boundary.
 // The caller cannot verify a password and then omit a separate "count failure"
@@ -12,7 +13,7 @@ function createLoginAttemptHandler(options = {}) {
     if (typeof fn !== 'function') throw new Error(`SafeLedger login requires trusted ${name}().`);
   }
 
-  let pending = Promise.resolve();
+  const serializeAttempt = createWorkspaceOperationQueue();
   const deny = (type, message, settings) => ({
     ok: false,
     type,
@@ -71,9 +72,7 @@ function createLoginAttemptHandler(options = {}) {
   }
 
   return function handleLoginAttempt(password) {
-    const next = pending.then(() => authenticate(password), () => authenticate(password));
-    pending = next.then(() => undefined, () => undefined);
-    return next;
+    return serializeAttempt(() => authenticate(password));
   };
 }
 
