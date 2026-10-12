@@ -19,7 +19,7 @@ function buildHtml(markdown) {
 <html>
 <head>
 <meta charset="utf-8">
-<title>SafeLedger README</title>
+<title>SafeLedger User and Technical Guide</title>
 <style>
   @page { size: Letter; margin: 0.55in; }
   * { box-sizing: border-box; }
@@ -33,6 +33,8 @@ function buildHtml(markdown) {
   }
   h1, h2, h3, h4 { color: #0D47A1; line-height: 1.2; break-after: avoid; }
   h1 { margin: 0 0 16px; padding-bottom: 8px; font-size: 26pt; border-bottom: 2px solid #1976D2; }
+  h1:first-of-type { margin-top: 0; }
+  h2 { break-before: auto; }
   h2 { margin: 24px 0 10px; padding-bottom: 5px; font-size: 17pt; border-bottom: 1px solid #d8dee4; }
   h3 { margin: 18px 0 8px; font-size: 13pt; }
   h4 { margin: 15px 0 7px; font-size: 11pt; }
@@ -80,6 +82,9 @@ function buildHtml(markdown) {
   hr { height: 1px; margin: 18px 0; border: 0; background: #d8dee4; }
   a { color: #1565C0; text-decoration: none; }
   img { max-width: 100%; }
+  h1, h2, h3 { page-break-after: avoid; }
+  li, blockquote, pre, tr { break-inside: avoid; }
+  a { overflow-wrap: anywhere; }
 </style>
 </head>
 <body>${body}</body>
@@ -87,7 +92,10 @@ function buildHtml(markdown) {
 }
 
 async function generatePdf() {
-  const readmePath = path.join(process.cwd(), 'README.md');
+  // Packaged README.pdf is generated from the dedicated evergreen manual.
+  // The repository README remains project/release-facing and may contain
+  // historical details that are not suitable for a first-run PDF guide.
+  const readmePath = path.join(process.cwd(), 'docs', 'USER_GUIDE.md');
   const outputPath = resolveOutputPath();
   const markdown = await fs.promises.readFile(readmePath, 'utf8');
   const html = buildHtml(markdown);
