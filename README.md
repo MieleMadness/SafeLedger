@@ -4,203 +4,44 @@ SafeLedger is a **free, local-first, offline encrypted information vault** for o
 
 Vault Items can represent cryptocurrency wallets, exchange accounts, Web3 accounts, or ordinary website accounts. SafeLedger does not require a cloud account, subscription, license server, or network connection for normal vault operation.
 
-## Release status
+## Start here: user guide and technical manual
 
-### Current stable release: SafeLedger 2.6.6
+**[Read the current SafeLedger User Guide & Technical Field Manual](docs/USER_GUIDE.md).** The Windows portable download includes its PDF version as `README.pdf`. The guide contains step-by-step procedures for setting up, using, backing up, verifying, restoring and securely moving the vault, with deeper explanations of Argon2id, AES-GCM, main-process key custody, offline validations, lockout accounting, transaction recovery and portable storage.
 
-SafeLedger **2.6.6** is the current source release on the repository's `master` release line.
+### Version status - do not confuse development with a release
 
-2.6.6 is an interaction-reliability patch that fixes the actual Add Asset null-selection bug and stops the self-triggering Web3/Website account DOM render loop found during real-user testing.
+- **`master` package version checked on 12 October 2026: 2.6.10.** This describes the source branch; it does not claim that a separately signed GitHub Release has been published.
+- **Current stacked development functionality: through 2.6.119.** This work is kept in unmerged development PRs until explicitly approved. It includes significant security, recovery, and reliability changes not present in the older `master` line.
+- **2.6.120: documentation refresh.** The manual and bundled PDF source have been updated; this docs-only revision does not imply a new encryption format or changed runtime functionality.
+- **Check your actual application version** before following instructions for a newer development feature. A newer manual cannot add features to an older executable.
 
-### What's new in SafeLedger 2.6.6
+### Quick start
 
-- Fixed **Add Asset** when no Vault Item is selected. The prior helper converted `groupSelected: null` with `Number(null)`, which becomes `0` in JavaScript and could incorrectly treat an unselected Profile as if Vault Item index 0 were already selected.
-- The renderer bridge now creates **one preload subscription per result channel** and fans the same renderer-world payload object to all SafeLedger UI listeners, so the core renderer and Vault Item selection helper operate on the same `vaultData` state.
-- Add Asset now repairs a missing selection synchronously through the normal Vault Item click path and then allows the **original Add Asset click** to continue. It no longer cancels the click, calls `stopImmediatePropagation`, or relies on a second synthetic Add Asset click.
-- Fixed the **Web3 Account freeze** caused by UI code observing and repeatedly rebuilding its own grouped dropdown and labels. Grouped option rendering is signature-based and becomes a no-op when the DOM is already correct.
-- The Web3/Website MutationObserver disconnects while applying its own patch and reconnects afterward, preventing self-triggered render loops.
-- The older combined-account UI explicitly leaves **Web3 Account** and **Website Account** forms alone so two UI helpers cannot fight over the same preset controls.
-- New regressions verify `null` is never treated as Vault Item index 0, renderer listeners share the same vault object, repeated Web3 dropdown rendering creates **zero additional DOM mutations**, and the legacy account helper does not touch split account forms.
-- No vault schema, AES-256-GCM, Argon2id, main-process DEK, backup, Self-Destruct, cloud, or network behavior changed in this patch.
+1. Place the Windows EXE, Linux AppImage, or macOS Apple Silicon app in a **writable folder**; SafeLedger uses an adjacent `SafeLedgerData` directory. Keep the application and data together.
+2. Create a long, unique master password and retain it through your approved offline recovery method.
+3. Make a test **Profile**, then add a **Vault Item** (Wallet, Exchange Account, Web3 Account or Website Account). Add an **Asset** only if appropriate.
+4. Review privacy masking, recovery notes, custom fields, offline icon catalogs and Recovery Intelligence.
+5. Open **Settings → Backup & Recovery**, create a full `.slgbak` backup on **separate storage**, and use **Verify Backup**. Verify that your master password can actually unlock it.
+6. Practice **Emergency Lock** and a **non-destructive Test Recovery** with disposable data before entering real secrets.
 
-### 2.6.5 account organization retained
+### What's new in development since the older master branch
 
-- **Web3 Account** and **Website Account** remain distinct Vault Item types instead of the long combined `Web3 / Website Account` label.
-- Existing combined-category Vault Items remain readable without a vault-format migration. Known Web3 services are presented as Web3 Accounts; other legacy combined items are presented as Website Accounts and convert cleanly when edited and saved.
-- The Vault Item Type chooser remains grouped into **Accounts** and **Wallets** and alphabetized within each group.
-- Known Web3 and Website preset dropdowns remain **grouped and alphabetized** by purpose. Web3 groups include DeFi, Gaming, Identity & Naming, and NFT. Website groups include Developer, Email, Entertainment, Finance & Crypto, Productivity & Cloud, Shopping & Payments, and Social & Community.
-- Chain Games remains under **Web3 Account → Gaming → Chain Games** and retains its three reviewed CHAIN starter entries for Ethereum, Polygon, and Chain Games Supernet.
+- **Offline service graphics and clearer account models:** Local website/service brand marks, independent Web3 Account and Website Account presets, local wallet/token/network icon catalogs, Colorful/Light/Dark appearance choices.
+- **Login security:** Main-process ownership of wrong-password accounting, serialized login attempts, controlled lockouts, and a blocked password-change verification path while locked (2.6.116).
+- **Profile and record integrity:** Rejection of ambiguous/stale Wallet and Asset edits, recoverable Profile deletion, and improved atomic-write durability (2.6.117).
+- **Smaller and safer app communication:** Per-request IPC responses, narrow mutation commands, and real cross-theme GUI layout tests (2.6.118).
+- **Recovery and concurrency:** More conservative Profile-creation recovery, shared main-process storage operation ordering across backup/restore/import and ordinary writes, and complete Settings/startup IPC cleanup (2.6.119).
+- **Self-Destruct accuracy:** Attempts to overwrite/delete encrypted files are **not guarantees of physical erasure** on SSDs, removable drives, backups or snapshots. Self-Destruct is off by default for new settings and requires deliberate understanding.
 
-### 2.6.4 reliability retained
+See `RELEASE-2.6.115.md` through `RELEASE-2.6.119.md` for the detailed patch history; the earlier release notes remain preserved in this repository.
 
-- Fixed the original Add Asset missing-selection condition when a Profile was open and Vault Items were visible.
-- Replaced the Chain Games `CG` initials tile with dedicated local/offline vector artwork using the angular interlocking Chain Games visual motif.
-- Chain Games Vault Items and reviewed `CHAIN` Assets share the same local artwork source.
-- Vault Item and Asset navigation icons use the same **28px** desktop size and **24px** compact size across branded, generic, catalog, and fallback artwork.
+### Supported platforms and distribution limitations
 
-### 2.6.3 reliability retained
+- Windows **x64 Portable EXE**
+- Linux **x64 AppImage**
+- macOS **Apple Silicon arm64** ZIP containing `.app` (unsigned and not Apple-notarized in the current CI distribution)
 
-- Chain Games Vault Item saves no longer get stuck in **processing** when reviewed CHAIN starter assets are prepared in the sandboxed renderer.
-- Local website/service SVG icons use renderer-safe URI encoding instead of depending on Node's `Buffer` global.
-- Optional preset asset seeding cannot prevent the core encrypted Vault Item save request from being sent. If preset enrichment fails, SafeLedger logs the enrichment error and continues with the Vault Item save.
-
-### 2.6.2 features retained
-
-- **Shit Coin Mode** in Settings → Asset Display. When enabled, unknown assets with no recognized local icon use **💩** instead of the generic ticker fallback. The setting is visual-only and off by default.
-- Standard **Network** and **Contract address** fields for Assets, stored through the existing encrypted field structure without requiring a vault-format migration.
-- **Chain Games** support with reviewed `CHAIN` starter assets for Ethereum, Polygon, and the Chain Games Supernet.
-- Deterministic local Chain Games artwork for reviewed CHAIN entries so a ticker collision cannot select an unrelated icon.
-- A local known-site catalog for ordinary account/password records including Facebook, Yahoo, Google, Gmail, Microsoft, Outlook, Apple, Amazon, PayPal, eBay, Instagram, X/Twitter, LinkedIn, Reddit, Discord, Dropbox, GitHub, Netflix, Spotify, Steam, Twitch, TikTok, YouTube, Proton, Adobe, Slack, and Zoom.
-- Known website icons are generated and bundled locally. SafeLedger does not fetch favicons or call an online icon service at runtime.
-- Unknown websites continue to use the generic local globe icon.
-- The 2.6.1 **macOS Apple Silicon (`arm64`)** foundation is retained, including native packaging, native Apple Silicon CI, portable `.app` root handling, and fail-closed App Translocation/read-only startup checks.
-
-### 2.6 foundation retained
-
-- User-facing hierarchy: **Profile → Vault Item → Asset**
-- Vault Items can represent **Wallets**, **Exchange Accounts**, **Web3 Accounts**, and **Website Accounts**
-- Full local Web3Icons preparation for tokens, networks, wallets, and exchanges
-- Icon-backed New Profile wallet picker with responsive layout
-- Nine Standard starter wallets with reviewed starter configuration
-- Reviewed wallet, exchange, and service asset presets
-- Vault Overview inventory, maintenance, stale-information, recovery coverage, and direct navigation
-- Profile Notes stored with encrypted Profile metadata
-- Recovery Binder dark-mode improvements and optional local QR-code printing
-- Explicit Cancel actions for New Profile, Add Vault Item, and Add Asset workflows
-- FIO Protocol support in reviewed Ledger and MetaMask catalogs and in the FIO App service preset
-
-SafeLedger remains local-first and offline. Runtime icon lookup uses local data URLs and generated local service artwork; the vault does not fetch wallet, exchange, token, network, or website artwork from the internet.
-
-### Core capabilities
-
-- Portable `SafeLedgerData` storage beside the packaged application
-- AES-256-GCM authenticated vault encryption
-- Argon2id master-password protection
-- Random 256-bit Data Encryption Key (DEK) protected by a key envelope
-- Main-process-only DEK handling
-- Versioned vault `schemaVersion` support
-- Read-only SafeLedger 1.x import into current encrypted vaults
-- Complete backup format v3 with SHA-256 integrity manifests
-- Version-2 complete-backup restore compatibility
-- Non-destructive **Verify Backup**
-- Staged restore with a pre-restore safety copy
-- Brute-force lockout protection
-- Self-Destruct Protection disabled by default for new settings
-- Hardened Electron sandbox / IPC boundaries
-- Explicit preload/renderer bridge with no renderer-side Electron compatibility shim
-- SafeLedger-owned CSS Grid/Flexbox application shell
-- Host operating-system locale/timezone for displayed timestamps
-- Global Search, Vault Overview, Activity History, recovery sheets, custom fields, and Vault Item metadata
-- Centralized main-process locking for Emergency Lock and device-security events
-- OS lock, suspend/resume, idle-state, and portable-storage session protection where supported
-- Sanitized Storage Health and backup-age awareness
-- Explainable recovery-health scoring
-- Guided, non-destructive **Test Recovery** workflow
-- Offline BIP39 mnemonic validation using the official English word list
-- Offline Bitcoin Base58Check, Bech32, and Bech32m validation
-- Offline Ethereum/EVM format and EIP-55 checksum validation
-- Privacy-preserving duplicate recovery-data detection
-- Session-only keyed fingerprints for sensitive duplicate checks, cleared on lock
-- **Privacy Mode**, enabled by default, for masked sensitive information
-- Sanitized Recovery Intelligence output that does not expose seeds, private keys, raw fingerprints, recovery locations, or backup paths
-- Emergency Lock that clears the active encryption session, minimizes SafeLedger, resets the renderer, and returns to a fresh login state
-- Windows, Linux, and macOS Apple Silicon validation/build workflows
-- SHA-256 release/checksum tooling, release-manifest tooling, SBOM support, and release-verification documentation
-- Apache 2.0 license, NOTICE, third-party attribution, contributor, and security documentation
-
-### Supported release platforms
-
-The currently implemented packaged targets are:
-
-- **Windows x64 Portable EXE**
-- **Linux x64 AppImage**
-- **macOS Apple Silicon (`arm64`) ZIP**
-
-The macOS build is native Apple Silicon and is validated on GitHub-hosted Apple Silicon hardware. The project does not currently have Apple Developer Program credentials, so the Mac artifact is **not Developer ID signed or Apple-notarized**. SafeLedger does not claim a notarized consumer distribution until signing credentials are available.
-
-## Release roadmap
-
-### SafeLedger 2.1 — Continuity & Hardening
-
-Released foundation covering authenticated encryption continuity, versioned vault schemas, read-only 1.x import, backup verification, hardened Electron boundaries, and safer restore behavior.
-
-### SafeLedger 2.2 — Runtime Modernization
-
-Released modernization covering the explicit renderer/preload bridge, removal of the renderer Electron compatibility shim, SafeLedger-owned native layout/styles/icons, Profile → Wallet → Asset terminology, and host-local time display.
-
-### SafeLedger 2.3 — Device Security & Recovery Health
-
-Released as **2.3.0**.
-
-Included:
-
-- One centralized main-process session-lock path
-- OS lock and suspend/resume protection where supported
-- Removable-storage / `SafeLedgerData` availability monitoring
-- Local random storage identity checks
-- Sanitized Storage Health reporting
-- Backup-age and verification-age awareness
-- Generic privacy-safe device-security activity events
-- Dashboard and Settings health presentation
-
-Storage removal, suspend, resume, OS-lock, or idle-state handling **locks only**. These events never trigger Self-Destruct.
-
-### SafeLedger 2.4 — Recovery Intelligence & Validation
-
-Released as **2.4.0**.
-
-Included:
-
-- Explainable recovery-health scoring
-- Verified-backup context in recovery readiness
-- Guided non-destructive Test Recovery
-- Optional ephemeral BIP39 validation
-- Offline Bitcoin and EVM address-format/checksum validation
-- Public recovery-metadata duplicate detection
-- Session-only keyed sensitive duplicate detection
-- Privacy Mode enabled by default
-- Sanitized Recovery Intelligence Dashboard
-- Dedicated privacy, sandbox, validation, and duplicate-detection regression gates
-
-Recovery-intelligence features remain offline. Seeds, private keys, passwords, PINs, raw duplicate fingerprints, recovery locations, and backup paths are not returned by Recovery Intelligence or sent to external APIs.
-
-### SafeLedger 2.5 — Distribution, Trust & Open Source Readiness
-
-Released as **2.5.0**.
-
-2.5 established the distribution/trust foundation, including Windows/Linux artifact contracts, checksum/SBOM/release-manifest tooling, open-source legal and contributor documentation, and release-verification guidance.
-
-### SafeLedger 2.6 — Vault Item Experience & Local Web3 Catalog
-
-Released as **2.6.0**.
-
-2.6 introduced the Profile → Vault Item → Asset model, Wallet/Exchange/Web3 account Vault Items, the local Web3 catalog, reviewed starter presets, Profile Notes, Vault Overview improvements, Recovery Binder improvements, and interface refinements.
-
-### SafeLedger 2.6.1 — macOS Apple Silicon Foundation
-
-2.6.1 introduced native `arm64` packaging and validation, macOS `.app` portable-root resolution, App Translocation detection, portable-folder writability checks, and fail-closed startup handling that refuses to create a hidden second `SafeLedgerData` location.
-
-### SafeLedger 2.6.2 — Asset Identity & Account Catalog
-
-2.6.2 added Network/Contract Address asset identity, Chain Games/CHAIN support, the local known-website catalog, and opt-in Shit Coin Mode while retaining the 2.6.1 Apple Silicon foundation.
-
-### SafeLedger 2.6.3 — Chain Games Save Hotfix
-
-2.6.3 fixed the Chain Games save freeze caused by renderer-sandbox-incompatible local icon encoding and hardened preset enrichment so an optional preset error cannot prevent the encrypted Vault Item save IPC request.
-
-### SafeLedger 2.6.4 — Add Asset & Icon Usability Hotfix
-
-2.6.4 fixed the original missing Vault Item selection behind Add Asset, replaced the Chain Games initials tile with dedicated local vector artwork, and standardized larger Vault Item/Asset navigation icons.
-
-### SafeLedger 2.6.5 — Account Types & Add Asset Reliability Candidate
-
-2.6.5 was an **unmerged release candidate** that introduced the separate Web3 Account and Website Account types plus grouped/alphabetized preset dropdowns. Real-user testing showed its Add Asset select-then-retry repair was still incomplete, so PR #48 was closed without promotion to `master`. Its account-organization work is retained in 2.6.6.
-
-### SafeLedger 2.6.6 — Add Asset & Web3 Interaction Reliability
-
-2.6.6 fixes the Add Asset `null`-selection/index-0 bug, shares one renderer-world vault state across result listeners, removes the synthetic Add Asset retry path, and prevents the Web3/Website account MutationObserver from retriggering itself or competing with the legacy combined-account helper.
-
-See `RELEASE-2.6.md`, `RELEASE-2.6.1.md`, `RELEASE-2.6.2.md`, `RELEASE-2.6.3.md`, `RELEASE-2.6.4.md`, `RELEASE-2.6.5.md`, and `RELEASE-2.6.6.md` for the detailed 2.6 release history.
+The normal vault works **offline**. The local-first design does not create a cloud account, fetch crypto prices, synchronize keys or use an online icon service.
 
 ## How SafeLedger is organized
 
@@ -306,7 +147,7 @@ For packaged builds, SafeLedger creates and uses `SafeLedgerData` beside the Saf
 
 ```text
 D:\My SafeLedger\
-├─ SafeLedger-2.6.6-Portable.exe
+├─ SafeLedger-<version>-Portable.exe
 └─ SafeLedgerData\
    ├─ settings\
    └─ vaults\
@@ -316,7 +157,7 @@ D:\My SafeLedger\
 
 ```text
 /home/user/Apps/SafeLedger/
-├─ SafeLedger-2.6.6-x86_64.AppImage
+├─ SafeLedger-<version>-x86_64.AppImage
 └─ SafeLedgerData/
    ├─ settings/
    └─ vaults/
@@ -508,6 +349,9 @@ npm run dist:mac:arm64
 Release changes are expected to pass regression, crypto, GUI, device-security, Recovery Intelligence, distribution-trust, and packaging checks before an official downloadable binary is considered validated.
 
 ## Release documents
+
+For the **current step-by-step manual**, use [docs/USER_GUIDE.md](docs/USER_GUIDE.md); its Windows distribution PDF is `README.pdf`. For architecture and migration details, consult [RELEASE-2.6.119.md](RELEASE-2.6.119.md), [RELEASE-2.6.118.md](RELEASE-2.6.118.md), [RELEASE-2.6.117.md](RELEASE-2.6.117.md), and [RELEASE-2.6.116.md](RELEASE-2.6.116.md). Older feature history follows below.
+
 
 - `RELEASE-2.1.md` — Continuity & Hardening
 - `RELEASE-2.2.md` — Runtime Modernization
