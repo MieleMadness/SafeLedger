@@ -623,6 +623,7 @@ async function showDashboard() {
   if (!area || !window.safeLedgerApi || typeof window.safeLedgerApi.getDashboardSummary !== 'function') return;
   const loading = document.createElement('p');
   loading.className = 'dashboard-loading';
+  loading.setAttribute('role', 'status');
   loading.textContent = 'Reviewing encrypted vault records locally…';
   area.appendChild(loading);
   try {
@@ -633,6 +634,7 @@ async function showDashboard() {
       typeof window.safeLedgerApi.getActivityHistory === 'function' ? window.safeLedgerApi.getActivityHistory(1).catch(() => null) : Promise.resolve(null),
       typeof window.safeLedgerApi.getRecoveryIntelligence === 'function' ? window.safeLedgerApi.getRecoveryIntelligence().catch(() => null) : Promise.resolve(null)
     ]);
+    if (!area.isConnected || loading.parentNode !== area) return;
     if (!result || !result.ok) throw new Error(result && result.message ? result.message : 'Unable to build Vault Overview.');
     render(result.summary, {
       storage,
@@ -640,9 +642,11 @@ async function showDashboard() {
       activity: activityResult && Array.isArray(activityResult.entries) ? activityResult.entries : []
     }, intelligenceResult && intelligenceResult.ok === true ? intelligenceResult.intelligence : null);
   } catch (err) {
+    if (!area.isConnected || loading.parentNode !== area) return;
     area.innerHTML = '';
     const message = document.createElement('p');
     message.className = 'alert alert-warning';
+    message.setAttribute('role', 'alert');
     message.textContent = err && err.message ? err.message : 'Unable to build Vault Overview.';
     area.appendChild(message);
   }

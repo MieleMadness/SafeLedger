@@ -200,15 +200,18 @@ async function show(params = {}) {
 
   const summary = document.createElement('div');
   summary.className = 'recovery-binder-summary';
+  summary.setAttribute('role', 'status');
   appendText(summary, 'span', 'recovery-binder-loading', 'Reading the selected encrypted profile…');
   area.appendChild(summary);
 
   try {
     const safeBinder = await fetchBinder(params.profile, recoveryBinder.DEFAULT_OPTIONS, false);
+    if (!area.isConnected || summary.parentNode !== area) return;
     summary.innerHTML = '';
     appendText(summary, 'strong', '', `${safeBinder.walletCount} vault item${safeBinder.walletCount === 1 ? '' : 's'}`);
     appendText(summary, 'span', '', `${safeBinder.assetCount} asset${safeBinder.assetCount === 1 ? '' : 's'}`);
   } catch (err) {
+    if (!area.isConnected || summary.parentNode !== area) return;
     summary.textContent = err && err.message ? err.message : 'Unable to read the selected profile.';
   }
 
