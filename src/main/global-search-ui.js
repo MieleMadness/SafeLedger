@@ -4,6 +4,8 @@ let configured = false;
 let params = {};
 let overlay = null;
 let requestToken = 0;
+let searchTimer = null;
+let returnFocus = null;
 
 function appendText(parent, tagName, className, value) {
   const node = document.createElement(tagName);
@@ -15,8 +17,13 @@ function appendText(parent, tagName, className, value) {
 
 function close() {
   requestToken++;
+  clearTimeout(searchTimer);
+  searchTimer = null;
   if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
   overlay = null;
+  const target = returnFocus;
+  returnFocus = null;
+  if (target && target.isConnected) target.focus();
 }
 
 function resultIcon(type) {
@@ -99,6 +106,7 @@ async function runSearch(input, host) {
 function open() {
   if (overlay) return;
   if (typeof params.isUnlocked === 'function' && !params.isUnlocked()) return;
+  returnFocus = document.activeElement;
   overlay = document.createElement('div');
   overlay.className = 'global-search-overlay';
   overlay.setAttribute('role', 'dialog');
@@ -115,8 +123,10 @@ function open() {
   appendText(heading, 'h2', '', 'Global Search');
   appendText(heading, 'p', '', 'Search Profiles, Vault Items, and Assets without indexing secret values.');
   header.appendChild(heading);
-  const esc = appendText(header, 'span', 'global-search-shortcut', 'ESC');
-  esc.setAttribute('aria-hidden', 'true');
+  const dismiss = appendText(header, 'button', 'global-search-close', 'Close');
+  dismiss.type = 'button';
+  dismiss.setAttribute('aria-label', 'Close Global Search');
+  dismiss.addEventListener('click', close);
   panel.appendChild(header);
 
   const searchWrap = document.createElement('div');
@@ -127,6 +137,7 @@ function open() {
   searchWrap.appendChild(icon);
   const input = document.createElement('input');
   input.type = 'search';
+  input.setAttribute('aria-label', 'Search Profiles, Vault Items, and Assets');
   input.className = 'form-control global-search-input';
   input.placeholder = 'Search names, tags, symbols, models, public addresses…';
   input.autocomplete = 'off';
@@ -145,13 +156,30 @@ function open() {
 
   const results = document.createElement('div');
   results.className = 'global-search-results';
+  results.setAttribute('aria-live', 'polite');
+  results.setAttribute('aria-relevant', 'additions text');
   panel.appendChild(results);
   renderResults(results, [], '');
 
-  let timer = null;
   input.addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => runSearch(input, results), 100);
+    clearTimeout(searchTimer);
+    // Invalidate in-flight replies immediately, including the debounce gap.
+    requestToken++;
+    results.innerHTML = '';
+    searchTimer = setTimeout(() => runSearch(input, results), 100);
+  });
+  overlay.addEventListener('keydown', (event) => {
+    if (event.key !== 'Tab') return;
+    const controls = Array.from(overlay.querySelectorAll('button, input'));
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
   });
   input.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -164,7 +192,7 @@ function open() {
   });
   overlay.addEventListener('mousedown', (event) => { if (event.target === overlay) close(); });
   document.body.appendChild(overlay);
-  setTimeout(() => input.focus(), 0);
+  input.focus();
 }
 
 function configure(options = {}) {

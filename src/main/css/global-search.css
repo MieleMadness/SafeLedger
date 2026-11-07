@@ -48,7 +48,11 @@
 }
 .global-search-header h2 { margin: 0 0 4px; color: var(--sl-text-strong); font-size: 22px; font-weight: 700; }
 .global-search-header p { margin: 0; color: var(--sl-muted); font-size: 12px; line-height: 1.45; }
-.global-search-shortcut { flex: 0 0 auto; padding: 4px 7px; border: 1px solid var(--sl-border); border-radius: 6px; background: var(--sl-surface-soft); color: var(--sl-muted); font-size: 10px; font-weight: 700; }
+.global-search-close { flex: 0 0 auto; min-height: 36px; padding: 6px 12px; border: 1px solid var(--sl-border); border-radius: var(--sl-radius-sm); background: var(--sl-surface-soft); color: var(--sl-text); font: inherit; cursor: pointer; }
+.global-search-close:hover { background: var(--sl-primary-soft); }
+.global-search-close:focus-visible,
+.global-search-panel .global-search-result:focus-visible { outline: 2px solid var(--sl-primary-strong); outline-offset: -3px; }
+.global-search-header > div { min-width: 0; overflow-wrap: anywhere; }
 .global-search-input-wrap { position: relative; padding: 8px 20px; }
 .global-search-input-wrap > .fa { position: absolute; left: 33px; top: 50%; transform: translateY(-50%); color: var(--sl-muted); z-index: 2; }
 .global-search-input { height: 44px; padding-left: 38px !important; font-size: 14px; }

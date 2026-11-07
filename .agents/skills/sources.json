@@ -1,0 +1,24 @@
+{
+  "skills": [
+    {
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "path": ".claude/skills/ui-ux-pro-max",
+      "name": "ui-ux-pro-max",
+      "adaptation": "SKILL.md script examples changed from Claude plugin paths to project-local .agents/skills paths.",
+      "commit": "28b3b8dee8c976df4fa3e94aed4e092ad43fcb03"
+    },
+    {
+      "repo": "emilkowalski/skills",
+      "path": "skills/emil-design-eng",
+      "name": "emil-design-eng",
+      "commit": "a81dbca07f2217b7103e510c0f13f8d5b017afc9"
+    },
+    {
+      "repo": "pbakaus/impeccable",
+      "path": ".agents/skills/impeccable",
+      "name": "impeccable",
+      "commit": "e945845762eb5898b2b705dcc763a6f1818fdf33"
+    }
+  ],
+  "notes": "Project-local Codex skills. Upstream LICENSE retained in each skill directory. Optional integrations and hooks were not installed."
+}
