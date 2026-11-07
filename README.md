@@ -13,6 +13,7 @@ Vault Items can represent cryptocurrency wallets, exchange accounts, Web3 accoun
 - **`master` package version checked on 12 October 2026: 2.6.10.** This describes the source branch; it does not claim that a separately signed GitHub Release has been published.
 - **Current stacked development functionality: through 2.6.119.** This work is kept in unmerged development PRs until explicitly approved. It includes significant security, recovery, and reliability changes not present in the older `master` line.
 - **2.6.120: documentation refresh.** The manual and bundled PDF source have been updated; this docs-only revision does not imply a new encryption format or changed runtime functionality.
+- **2.6.121: integrated test candidate.** Combines the 2.6.120 guide with the latest search/accessibility and delayed-view fixes from PR #162. Windows test packaging uses this combined development branch; this is not a stable release. See `RELEASE-2.6.121.md`.
 - **Check your actual application version** before following instructions for a newer development feature. A newer manual cannot add features to an older executable.
 
 ### Quick start

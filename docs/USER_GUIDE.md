@@ -1,8 +1,8 @@
 # SafeLedger User Guide & Technical Field Manual
 
-**Documentation revision:** 12 October 2026 | Documentation patch **2.6.120**, covering functionality through development candidate **2.6.119**
+**Documentation revision:** 7 November 2026 | Integrated development candidate **2.6.121**
 
-> **Read this first:** This manual describes the features present in the **SafeLedger 2.6.119 development candidate**, not a statement that those features are already in the public `master` build. The repository's current `master` package was **2.6.10** when this edition was checked. Verify your installed version and use the manual appropriate to that build. Some screens or controls can differ in older copies.
+> **Read this first:** This manual accompanies the **SafeLedger 2.6.121 development candidate**, including the 2.6.119 functionality, the 2.6.120 guide, and the later search/accessibility and delayed-view fixes. It does not claim those changes are released on `master`. The `master` package was **2.6.10** at the earlier 12 October 2026 documentation check. Verify your installed version; some screens or controls can differ in older copies.
 
 **What this guide is:** Part everyday how-to, part technical reference. The numbered procedures explain where to begin and what to do. The **Under the hood** notes explain what SafeLedger is actually doing so you can make informed security and recovery decisions.
 
