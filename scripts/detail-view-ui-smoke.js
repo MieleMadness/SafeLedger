@@ -66,6 +66,8 @@ if (!process.versions.electron) {
           win.setContentSize(width, 760);
           for (const theme of ['light', 'dark', 'colorful']) {
             const geometry = await win.webContents.executeJavaScript(`(() => {
+              document.documentElement.style.setProperty('transition', 'none', 'important');
+              document.body.style.setProperty('transition', 'none', 'important');
               document.documentElement.dataset.theme = ${JSON.stringify(theme)};
               document.documentElement.dataset.appearance = ${JSON.stringify(theme)};
               document.body.style.background = 'var(--sl-bg)';
