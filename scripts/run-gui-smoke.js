@@ -38,3 +38,17 @@ if (result.signal) {
   process.exit(1);
 }
 if (result.status !== 0) process.exit(result.status == null ? 1 : result.status);
+
+// Exercise delayed navigation and modal interactions in isolated Chromium
+// fixtures as part of the existing cross-platform GUI validation job.
+for (const fixture of ['global-search-ui-smoke.js', 'detail-view-ui-smoke.js']) {
+  const check = spawnSync(process.execPath, [path.join(__dirname, fixture)], {
+    cwd: path.join(__dirname, '..'),
+    env: process.env,
+    stdio: 'inherit',
+    timeout: 30000,
+    windowsHide: true
+  });
+  if (check.error) console.error(check.error.message);
+  if (check.status !== 0) process.exit(check.status == null ? 1 : check.status);
+}

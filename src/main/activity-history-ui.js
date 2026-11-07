@@ -129,6 +129,8 @@ function render(entries) {
 
   const filters = document.createElement('div');
   filters.className = 'activity-filters';
+  filters.setAttribute('role', 'group');
+  filters.setAttribute('aria-label', 'Filter activity history');
   const timeline = document.createElement('div');
   timeline.className = 'activity-timeline';
   let active = 'all';
@@ -137,10 +139,15 @@ function render(entries) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = `activity-filter${key === active ? ' is-active' : ''}`;
+    button.setAttribute('aria-pressed', String(key === active));
     button.textContent = label;
     button.addEventListener('click', () => {
       active = key;
-      buttons.forEach((item) => item.classList.toggle('is-active', item.dataset.filter === active));
+      buttons.forEach((item) => {
+        const selected = item.dataset.filter === active;
+        item.classList.toggle('is-active', selected);
+        item.setAttribute('aria-pressed', String(selected));
+      });
       renderTimeline(timeline, entries, active);
     });
     button.dataset.filter = key;
@@ -164,16 +171,21 @@ async function show() {
   area.innerHTML = '';
   const loading = document.createElement('p');
   loading.className = 'activity-loading';
+  loading.setAttribute('role', 'status');
   loading.textContent = 'Reading local activity history…';
   area.appendChild(loading);
   try {
     const result = await window.safeLedgerApi.getActivityHistory(activityHistory.DEFAULT_READ_LIMIT);
+    // Navigation (including lock) removes this request's loading node.
+    if (!area.isConnected || loading.parentNode !== area) return;
     if (!result || result.ok !== true || !Array.isArray(result.entries)) throw new Error(result && result.message ? result.message : 'Unable to read activity history.');
     render(result.entries);
   } catch (err) {
+    if (!area.isConnected || loading.parentNode !== area) return;
     area.innerHTML = '';
     const warning = document.createElement('p');
     warning.className = 'alert alert-warning';
+    warning.setAttribute('role', 'alert');
     warning.textContent = err && err.message ? err.message : 'Unable to read activity history.';
     area.appendChild(warning);
   }
